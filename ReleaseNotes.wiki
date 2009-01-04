@@ -23,7 +23,7 @@ The following are expected, but not yet implemented.  They may be pushed to a la
 The following features have been implemented.  It is still possible they will get pushed to a later release.
 
  * Stackable read filter support.
- * Much improved Windows support, thanks largely to Michihiro NAKAJIMA.
+ * Much improved Windows support, thanks largely to Michihiro NAKAJIMA.  In particular, libarchive_test now builds and runs on Windows.
 
 = Libarchive 2.6 =
 
