@@ -29,12 +29,13 @@ The following features have been implemented.  It is still possible they will ge
 
 _Released December, 2008_
 
- * LZMA read support
+ * LZMA read support, thanks to Miklos Vajna
+ * Windows build improvements, thanks to Ivailo Petrov, Kees Zeelenberg, and Vishant Singh
  * New command-line parser provides uniform long-option support on all platforms
- * Birthtime support
+ * Birthtime support, thanks to Pedro Giffuni
  * archive_entry now tracks which values have been set.  In particular, this fixes a problem with extracting from zip archives that don't provide the file size in advance.  The restore-to-disk code now enforces file sizes only if a file size was specified.
  * Many small improvements to UTF8 and unicode handling.
- * mtree and shar performance improvements
+ * mtree and shar performance improvements, thanks to Joerg Sonnenberger
 
 = Libarchive 2.5 =
 
