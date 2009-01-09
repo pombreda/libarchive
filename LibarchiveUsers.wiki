@@ -1,0 +1,11 @@
+#summary One-sentence summary of this page.
+
+= Who Uses Libarchive? =
+
+ * libarchive was originally developed for [http://freebsd.org/ FreeBSD]
+ * bsdtar is the default system tar on FreeBSD
+ * bsdcpio will be the default system cpio on FreeBSD
+ * Kai Wang has built a drop-in "ar" on libarchive
+ * Nautilus file browser uses libarchive
+ * Several FUSE filesystems are based on libarchive
+ * [http://www.archlinux.org/pacman/ Pacman] package manager on Arch Linux uses libarchive
