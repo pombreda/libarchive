@@ -8,4 +8,4 @@
  * Kai Wang has built a drop-in "ar" on libarchive
  * [http://projects.gnome.org/nautilus/ Nautilus] file browser uses libarchive
  * Several FUSE filesystems are based on libarchive
- * [http://www.archlinux.org/pacman/ Pacman] package manager on Arch Linux uses libarchive
+ * [http://www.archlinux.org/pacman/ Pacman] package manager on [http://www.archlinux.org/ Arch Linux] uses libarchive
