@@ -2,11 +2,25 @@
 
 = Who Uses Libarchive? =
 
- * libarchive was originally developed for [http://freebsd.org/ FreeBSD]
- * bsdtar is the default system tar on FreeBSD
- * bsdcpio will be the default system cpio on FreeBSD
- * Kai Wang has built a drop-in "ar" on libarchive
- * [http://projects.gnome.org/nautilus/ Nautilus] file browser uses libarchive
- * Several FUSE filesystems are based on libarchive
- * Windows ports of libarchive and bsdtar are available from [http://gnuwin32.sourceforge.net/ GnuWin32] and [http://cygwin.org/ Cygwin].  Cygwin also has a port of bsdcpio.
- * [http://www.archlinux.org/pacman/ Pacman] package manager on [http://www.archlinux.org/ Arch Linux] uses libarchive
+ * FreeBSD
+  * libarchive was originally developed for [http://freebsd.org/ FreeBSD]
+  * bsdtar is the default system tar on FreeBSD
+  * bsdcpio will be the default system cpio on FreeBSD
+
+ * Package Managers
+  * [http://www.archlinux.org/pacman/ Pacman] package manager on [http://www.archlinux.org/ Arch Linux] uses libarchive
+  * [http://www.netbsd.org/ NetBSD]'s pkg_install package manager uses libarchive.
+
+ * Archiving tools
+  * The [http://www.tarsnap.com/ tarsnap] service uses libarchive in its client software.
+  * Kai Wang has built a drop-in "ar" on libarchive
+
+ * File browsers
+  * [http://projects.gnome.org/nautilus/ Nautilus] file browser uses libarchive
+  * The [http://www.cybernoia.de/software/archivemount/ archivemount] filesystem (part of [http://fuse.sourceforge.net/ FUSE]) uses libarchive
+
+ * Ports of libarchive, bsdtar, etc.
+  * [http://gnuwin32.sourceforge.net/ GnuWin32] and [http://cygwin.org/ Cygwin] for Windows.
+  * [http://libarchive.darwinports.com/ Darwinports] for MacOS
+  * [http://packages.debian.org/sid/libarchive-dev Debian Linux]
+  * [http://packages.gentoo.org/package/app-arch/libarchive Gentoo]
