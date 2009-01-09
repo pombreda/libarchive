@@ -8,4 +8,5 @@
  * Kai Wang has built a drop-in "ar" on libarchive
  * [http://projects.gnome.org/nautilus/ Nautilus] file browser uses libarchive
  * Several FUSE filesystems are based on libarchive
+ * Windows ports of libarchive and bsdtar are available from [http://gnuwin32.sourceforge.net/ GnuWin32] and [http://cygwin.org/ Cygwin].  Cygwin also has a port of bsdcpio.
  * [http://www.archlinux.org/pacman/ Pacman] package manager on [http://www.archlinux.org/ Arch Linux] uses libarchive
