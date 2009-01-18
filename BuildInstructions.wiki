@@ -1,0 +1,27 @@
+#summary How to compile and install libarchive, bsdtar, and bsdcpio from source code.
+
+= For most POSIX-like systems =
+
+The libarchive distribution includes a standard
+autoconf-generated "configure" script that should
+build and install libarchive, bsdtar, and bsdcpio
+on almost any POSIX-like system.
+
+Typical installation:
+ # `tar xzf libarchive-2.6.1.tar.gz`
+ # `cd libarchive-2.6.1`
+ # `./configure`
+ # `make`
+ # `make install`
+
+= For most everything else =
+
+*Starting with libarchive 2.7*, there is a cmake-based
+build system that supports a variety of IDEs, including
+Visual Studio on Windows and XCode on Mac OS.
+
+You will first need to obtain and install the appropriate
+version of the cmake tool for your platform.
+If your favorite package manager doesn't have a version
+already configured for your platform, you should check
+http://cmake.org/
