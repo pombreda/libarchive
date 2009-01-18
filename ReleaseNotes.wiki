@@ -24,6 +24,16 @@ The following features have been implemented.  It is still possible they will ge
 
  * Stackable read filter support.
  * Much improved Windows support, thanks largely to Michihiro NAKAJIMA.  In particular, libarchive_test now builds and runs on Windows.
+ * Support for building with "cmake" on a wide variety of platforms, thanks to Christian Ehrlicher and Michihiro.
+
+= Libarchive 2.6.1 =
+
+_Released January, 2009_
+ * Fixed Issue 1: archive.h doesn't export required definitions
+ * Fixed Issue 3: Some empty entries in .zip files not extracted correctly
+ * Fixed multiple substitutions in bsdtar -s
+ * Fix an occasional failure extracting gzip-compressed archives
+ * Fix minor build problems on Cygwin and a few other platforms
 
 = Libarchive 2.6 =
 
