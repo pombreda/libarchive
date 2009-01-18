@@ -1,0 +1,34 @@
+#summary Summary of formats supported by the library and command-line tools.
+
+= Introduction =
+
+Libarchive is highly modular.
+It was designed from the beginning to make it relatively easy to add new archive formats and compression algorithms.
+Note, however, that each program that uses libarchive chooses which formats it wants to use, so support in libarchive does not guarantee support in any particular program.
+Of course, the bsdtar and bsdcpio programs included in the libarchive formats do enable all libarchive formats by default.
+
+For developers:  Note that libarchive is modularized in such a way that you pay nothing for formats you don't use.
+If you choose to omit a particular format, no code for that format will be linked into your program.
+In particular, you only need zlib, bzlib, or lzmadec libraries if you specifically enable the corresponding formats.
+
+= Filter Support =
+
+Starting with libarchive 2.6, there is now support for multiple filters when reading archives.
+This is not of much practical use yet (it is rarely helpful to bzip2 a file that has already been gzipped), but will allow a future version of libarchive to automatically support tar.gz.uu and similar combinations.
+
+ * gzip (read and write, uses zlib)
+ * bzip2 (read and write, uses bzlib)
+ * compress (read and write, uses an internal implementation)
+ * separate command-line compressors (no auto-detect for these)
+ * lzma (read-only, uses lzmadec library, still somewhat experimental)
+
+= Archive Formats Supported =
+
+ * tar (read and write, including GNU extensions)
+ * pax (read and write, including GNU and star extensions)
+ * cpio (read and write, including odc and newc variants)
+ * ISO9660 (read only, with some limitations)
+ * Zip (read only, with some limitations, uses zlib)
+ * mtree (read and write)
+ * shar (write only)
+ * ar (read and write, including BSD and GNU/SysV variants)
