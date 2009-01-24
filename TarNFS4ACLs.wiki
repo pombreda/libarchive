@@ -1,4 +1,5 @@
 #summary Storing NFSv4/NTFS ACLs in tar archives.
+#labels tar,format
 
 = Introduction =
 
