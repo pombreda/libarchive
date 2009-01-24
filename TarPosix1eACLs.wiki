@@ -1,0 +1,36 @@
+#summary Storing POSIX.1e-style ACLs in tar files
+
+= Introduction =
+
+I currently know of two approaches for storing POSIX.1e ACLs
+in tar archives.  The first was originally developed by
+Joerg Schilling for _star_ and subsequently adopted by libarchive.
+The other was developed by Sun Microsystems for Solaris.
+
+= star's approach =
+
+Star stores POSIX.1e ACLs in pax attributes with the
+names SCHILY.acl.access and SCHILY.acl.default.  The
+values of these attributes are the textual ACL entries
+for the access and default ACLs, respectively.  The
+textual format follows POSIX.1e draft 17:
+* Individual entries are separated by commas.
+* A fourth colon-separated field is added to user and group entries with the numeric uid or gid.
+
+In particular, note the necessity for storing both user/group
+names and IDs for each user or group referenced.  The names
+are critical when transferring data across systems, as IDs
+may differ.  The IDs are critical for system backup/restore,
+as the user/group databases may be unavailable at restore time.
+(For example, you might be restoring a damaged user or group
+database.)
+
+= Solaris approach =
+
+Prior to the standardization of the pax extended format,
+Sun introduced a separate entry in tar files to hold the
+ACL information.  This entry has type "A" and immediately
+precedes the file to which it applies.  The body of this
+entry consists of the following:
+* A null-terminated octal number.  This is the number of following entries with an extra high bit set.  As far as I can tell, it is completely redundant and can be ignored by programs reading this format.
+* A textual list of all ACL entries.  This list includes both default and access entries.  The default entries have the text "default" prepended (e.g., "defaultuser::rwx").  The entries are comma-separated and there is no additional field for the user/group ID.
