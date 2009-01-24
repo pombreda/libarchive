@@ -1,4 +1,5 @@
 #summary Storing POSIX.1e-style ACLs in tar files
+#labels tar,format
 
 = Introduction =
 
