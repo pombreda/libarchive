@@ -15,8 +15,8 @@ names SCHILY.acl.access and SCHILY.acl.default.  The
 values of these attributes are the textual ACL entries
 for the access and default ACLs, respectively.  The
 textual format follows POSIX.1e draft 17:
-* Individual entries are separated by commas.
-* A fourth colon-separated field is added to user and group entries with the numeric uid or gid.
+ * Individual entries are separated by commas.
+ * A fourth colon-separated field is added to user and group entries with the numeric uid or gid.
 
 In particular, note the necessity for storing both user/group
 names and IDs for each user or group referenced.  The names
