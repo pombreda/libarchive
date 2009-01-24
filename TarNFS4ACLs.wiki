@@ -26,7 +26,7 @@ Apple stores the ACLs as an extended attribute named com.apple.acl.text in the r
 
 I've not yet found documentation for the textual format used here, but it seems to use a large number of colon-separated fields for each entry:
  * type
- * 128-bit GUID (of the user or group?)
+ * 128-bit user/group GUID
  * User/group name
  * User/group ID
  * XXX document these ??? XXXX
