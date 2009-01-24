@@ -32,11 +32,13 @@ for all headers.
 
 Joerg Schilling's star uses a very similar approach.
 It stores each attribute under SCHILY.xattr._name_
-as above.  The value does not seem to be encoded and
-the version of star I have under FreeBSD doesn't seem
-to record extended attributes, so I've not yet been able
-to verify how it handles non-ASCII characters in the
-attribute name.
+as above.  I haven't found any documentation for how
+it handles non-ASCII bytes in the name or value.
+
+The documentation included with star 1.5 (April, 2008)
+includes comments about the non-portability of this approach
+and suggests that this may be dropped in favor of a different
+approach that supports Solaris as well.
 
 As of January 2009, GNU tar seems to be considering star's approach.
 
