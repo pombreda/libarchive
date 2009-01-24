@@ -23,8 +23,8 @@ readily applicable to other systems.
 Apple stores the ACLs as an extended attribute named com.apple.acl.text in the resource file that prepends normal files in Apple-format tar archives.
 
 I've not yet found documentation for the textual format used here, but it seems to use a large number of colon-separated fields for each entry:
-* type
-* 128-bit GUID (of the user or group?)
-* User/group name
-* User/group ID
-* XXX document these ??? XXXX
+ * type
+ * 128-bit GUID (of the user or group?)
+ * User/group name
+ * User/group ID
+ * XXX document these ??? XXXX
