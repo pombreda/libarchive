@@ -21,6 +21,7 @@ readily applicable to other systems.
 = Apple approach =
 
 Apple stores the ACLs as an extended attribute named com.apple.acl.text in the resource file that prepends normal files in Apple-format tar archives.
+(See [TarExtendedAttributes] for my attempt to document this.)
 
 I've not yet found documentation for the textual format used here, but it seems to use a large number of colon-separated fields for each entry:
  * type
