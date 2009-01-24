@@ -1,0 +1,51 @@
+#summary Storing Extended Attributes in Tar Files
+
+= Introduction =
+
+Currently, I know of three different techniques for
+storing POSIX.1e-style extended attributes within
+tar files.  Apple has extended GNU tar with support
+for a "resource file" stored as a separate entry.
+Joerg Schilling's _star_ and my own _libarchive_
+library (used by _bsdtar_) use slightly different
+pax attributes.
+
+= libarchive's approach =
+
+Libarchive stores each POSIX.1e extended attribute
+as a separate pax attribute.  The pax attributes are
+named LIBARCHIVE.xattr._name_, where _name_ is the
+name of the POSIX.1e attribute.  The name includes
+a namespace identifier (so an attribute "foo" in the
+user namespace from a FreeBSD system would get stored
+as LIBARCHIVE.xattr.user.foo).  Non-ASCII bytes
+in the name get encoded as % followed by two uppercase
+hex digits.  The value of the attribute is base-64
+encoded.  In particular, note that the pax attribute
+name and value are both entirely ASCII and hence are
+correct UTF-8.  This was done to promote simple implementation
+for pax readers and writers that use strict UTF-8 parsing
+for all headers.
+
+= star's approach =
+
+Joerg Schilling's star uses a very similar approach.
+It stores each attribute under SCHILY.xattr._name_
+as above.  The value does not seem to be encoded and
+the version of star I have under FreeBSD doesn't seem
+to record extended attributes, so I've not yet been able
+to verify how it handles non-ASCII characters in the
+attribute name.
+
+As of January 2009, GNU tar seems to be considering star's approach.
+
+= Apple's approach =
+
+Apple stores a separate resource file for each file written
+to a tar archive.  This seems to use the "CopyFile()" library
+function.  The resource file is stored just before the regular
+file and has the same name, except it is prepended with "._".
+For example, the file "foo" would have a resource file "._foo".
+
+I've not yet tracked down documentation for the format of this
+resource file.
