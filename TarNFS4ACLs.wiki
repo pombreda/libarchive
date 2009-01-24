@@ -1,0 +1,30 @@
+#summary Storing NFSv4/NTFS ACLs in tar archives.
+
+= Introduction =
+
+_I'm still researching this.  Contributions appreciated!_
+
+The techniques used for storing POSIX.1e ACLs (which I'm
+attempting to document in [TarPosix1eACLs] should
+also be useful in storing NFSv4/NTFS ACLs.
+
+Unfortunately, NFSv4 does not standardize a textual format
+for representing ACLs.  Anyone attempting to create a portable
+way to store NFSv4 ACLs is likely to need to develop a textual
+format and all of the parsing routines, since OS-specific
+library routines are unlikely to be useful.
+
+I know of only one program that currently stores NFSv4 ACLs in tar archives.
+Unfortunately, Apple's extensions to GNU tar do not seeem
+readily applicable to other systems.
+
+= Apple approach =
+
+Apple stores the ACLs as an extended attribute named com.apple.acl.text in the resource file that prepends normal files in Apple-format tar archives.
+
+I've not yet found documentation for the textual format used here, but it seems to use a large number of colon-separated fields for each entry:
+* type
+* 128-bit GUID (of the user or group?)
+* User/group name
+* User/group ID
+* XXX document these ??? XXXX
