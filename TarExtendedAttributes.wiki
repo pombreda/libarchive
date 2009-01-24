@@ -43,10 +43,10 @@ As of January 2009, GNU tar seems to be considering star's approach.
 = Apple's approach =
 
 Apple stores a separate resource file for each file written
-to a tar archive.  This seems to use the "CopyFile()" library
+to a tar archive.  This seems to use the `"CopyFile()"` library
 function.  The resource file is stored just before the regular
-file and has the same name, except it is prepended with "._".
-For example, the file "foo" would have a resource file "._foo".
+file and has the same name, except it is prepended with `"._"`.
+For example, the file "foo" would have a resource file `"._foo"`.
 
 I've not yet tracked down documentation for the format of this
 resource file.
