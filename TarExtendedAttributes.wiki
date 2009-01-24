@@ -1,4 +1,5 @@
 #summary Storing Extended Attributes in Tar Files
+#labels tar,format
 
 = Introduction =
 
