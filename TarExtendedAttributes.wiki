@@ -1,6 +1,8 @@
 #summary Storing Extended Attributes in Tar Files
 #labels tar,format
 
+Also see: [TarNFSv4ACLs] and [TarPosix1eACLs]
+
 = Introduction =
 
 Currently, I know of several different techniques for
