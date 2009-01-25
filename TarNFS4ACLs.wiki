@@ -5,24 +5,25 @@
 
 _I'm still researching this.  Contributions appreciated!_
 
+_Yes, this does imply that I want to support NFSv4/NTFS ACLs
+in libarchive.  But I want to thoroughly understand prior art
+before I dig into this._
+
 The techniques used for storing POSIX.1e ACLs (which I'm
 attempting to document in [TarPosix1eACLs] should
 also be useful in storing NFSv4/NTFS ACLs.
 
-Unfortunately, NFSv4 does not standardize a textual format
+Unfortunately, NFSv4 does not standardize a portable format
 for representing ACLs.  Anyone attempting to create a portable
 way to store NFSv4 ACLs is likely to need to develop a textual
 format and all of the parsing routines, since OS-specific
 library routines are unlikely to be useful.
 
-I know of only one program that currently stores NFSv4 ACLs in tar archives.
-Unfortunately, Apple's extensions to GNU tar do not seeem
-readily applicable to other systems.
+= Apple version of GNU tar =
 
-= Apple approach =
-
-Apple stores the ACLs as an extended attribute named com.apple.acl.text in the resource file that prepends normal files in Apple-format tar archives.
-(See [TarExtendedAttributes] for my attempt to document this.)
+Apple stores the ACLs as an extended attribute named com.apple.acl.text
+in the associated resource file.
+(See [TarExtendedAttributes] for my attempt to document the resource file storage.)
 
 I've not yet found documentation for the textual format used here, but it seems to use a large number of colon-separated fields for each entry:
  * type
@@ -30,3 +31,47 @@ I've not yet found documentation for the textual format used here, but it seems 
  * User/group name
  * User/group ID
  * XXX document these ??? XXXX
+
+= AIX tar =
+
+AIX tar stores an additional 'A' entry after the regular
+file entry.  The pathname of this entry is "AIXC", the body
+is a binary formatted ACL.  Björn Jacke was kind enough
+to send me an example.  This is the contents of the
+'A' entry body:
+
+{{
+00000400  41 49 58 43 00 00 00 00  00 00 00 60 02 00 00 00  |AIXC.......`....|
+00000410  00 00 00 06 00 04 00 04  00 0c 40 06 00 08 00 01  |..........@.....|
+00000420  00 00 00 d0 00 14 80 04  00 08 00 01 00 00 00 d1  |................|
+00000430  00 08 00 02 00 00 00 00  00 1c c0 04 00 08 00 01  |................|
+00000440  00 00 00 cd 00 08 00 02  00 00 00 0b 00 08 00 02  |................|
+00000450  00 00 00 06 00 14 40 06  00 08 00 02 00 00 00 0d  |......@.........|
+00000460  00 08 00 02 00 00 00 14                           |........|
+}}
+
+And here is a textual dump of the ACL from the corresponding
+file on disk:
+
+{{
+*
+* ACL_type   AIXC
+*
+attributes:
+base permissions
+    owner(root):  rw-
+    group(system):  r--
+    others:  r--
+extended permissions
+    enabled
+    permit   rw-     u:build
+    deny     r--     u:obnox,g:system
+    specify  r--     u:vl,g:lp,g:mail
+    permit   rw-     g:snapp,g:perf
+}}
+
+I don't see any reason to bother trying to support this
+format in libarchive.  Besides the structural headache
+(libarchive expects metadata before the file body, not
+after), the binary format lacks textual user/group names
+which are essential.
