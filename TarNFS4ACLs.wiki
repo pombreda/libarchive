@@ -40,7 +40,7 @@ is a binary formatted ACL.  Björn Jacke was kind enough
 to send me an example.  This is the contents of the
 'A' entry body:
 
-{{
+{{{
 00000400  41 49 58 43 00 00 00 00  00 00 00 60 02 00 00 00  |AIXC.......`....|
 00000410  00 00 00 06 00 04 00 04  00 0c 40 06 00 08 00 01  |..........@.....|
 00000420  00 00 00 d0 00 14 80 04  00 08 00 01 00 00 00 d1  |................|
@@ -48,12 +48,12 @@ to send me an example.  This is the contents of the
 00000440  00 00 00 cd 00 08 00 02  00 00 00 0b 00 08 00 02  |................|
 00000450  00 00 00 06 00 14 40 06  00 08 00 02 00 00 00 0d  |......@.........|
 00000460  00 08 00 02 00 00 00 14                           |........|
-}}
+}}}
 
 And here is a textual dump of the ACL from the corresponding
 file on disk:
 
-{{
+{{{
 *
 * ACL_type   AIXC
 *
@@ -68,7 +68,7 @@ extended permissions
     deny     r--     u:obnox,g:system
     specify  r--     u:vl,g:lp,g:mail
     permit   rw-     g:snapp,g:perf
-}}
+}}}
 
 I don't see any reason to bother trying to support this
 format in libarchive.  Besides the structural headache
