@@ -11,8 +11,8 @@ tar files.  Apple has extended GNU tar with support
 for a "resource file" stored as a separate entry.
 Joerg Schilling's _star_ and my own _libarchive_
 library (used by _bsdtar_) use pax extensions for
-this purpose.  A few other vendors have added
-special tar entry types.
+this purpose.  Solaris and AIX added new tar entry
+types for this purpose.
 
 = libarchive =
 
@@ -31,6 +31,11 @@ correct UTF-8.  This was done to promote simple implementation
 for pax readers and writers that use strict UTF-8 parsing
 for all headers.
 
+This approach works reasonably well for small attributes
+but could be cumbersome for very large attributes.
+It also does not support extended metadata (such as
+per-EA ownership and permissions) supported on some systems.
+
 = star =
 
 Joerg Schilling's star uses a very similar approach.
@@ -43,18 +48,20 @@ includes comments about the non-portability of this approach
 and suggests that this may be dropped in favor of a different
 approach that supports Solaris as well.
 
-As of January 2009, GNU tar seems to be considering star's approach.
+As of January 2009, GNU tar seems to be considering this approach,
+based on patches contributed by Red Hat.
 
 = Apple's modified GNU tar =
 
 Apple stores a separate resource file for each file written
-to a tar archive.  This seems to use the "`CopyFile()`" library
-function.  The resource file is stored just before the regular
-file and has the same name, except it is prepended with "`._`".
+to a tar archive.  This is based on a technique supported by
+the "`CopyFile()`" library function.  The resource file is
+stored as a tar file entry just before the regular file in
+the archive and has the same name, except it is prepended with "`._`".
 For example, the file "foo" would have a resource file "`._foo`".
 
 I've not yet tracked down documentation for the format of this
-resource file.
+resource file.  libarchive support may be possible.
 
 = AIX tar =
 
@@ -68,9 +75,7 @@ encoding concerns encoding for these fields.
 The example I've seen seems to include some data beyond
 the end of the EA body but I'm not sure what that is for.
 
-= Commentary =
-
-The AIX approach requires a minimum of 1024 bytes in the
+Unfortunately, the AIX approach requires a minimum of 1024 bytes in the
 archive for each EA.  It also puts the EAs after the main
 entry.  This is fine if you have few EAs and they tend to
 be large, but the applications of EAs that I've seen tend
@@ -78,13 +83,9 @@ to use very small values.  Adapting libarchive to support
 AIX EAs would also be difficult; libarchive assumes that
 all metadata (including EAs) precede the file data.
 
-It may be possible to support the Apple approach in a
-somewhat portable fashion, if I could find documentation
-for the resource file structure.
+= Solaris tar =
 
-The pax approach used by star and libarchive today works
-pretty well for multiple small EAs.  There are some
-portability concerns; POSIX.1e was never standardized
-and many systems attach additional semantics (such as
-per-EA permissions or ownership) that neither star nor
-libarchive currently support.
+I've seen references to an 'E' entry used by Solaris tar
+but haven't yet found any detailed documentation or examples
+of this entry.
+
