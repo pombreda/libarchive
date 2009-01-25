@@ -3,15 +3,16 @@
 
 = Introduction =
 
-Currently, I know of three different techniques for
+Currently, I know of several different techniques for
 storing POSIX.1e-style extended attributes within
 tar files.  Apple has extended GNU tar with support
 for a "resource file" stored as a separate entry.
 Joerg Schilling's _star_ and my own _libarchive_
-library (used by _bsdtar_) use slightly different
-pax attributes.
+library (used by _bsdtar_) use pax extensions for
+this purpose.  A few other vendors have added
+special tar entry types.
 
-= libarchive's approach =
+= libarchive =
 
 Libarchive stores each POSIX.1e extended attribute
 as a separate pax attribute.  The pax attributes are
@@ -28,7 +29,7 @@ correct UTF-8.  This was done to promote simple implementation
 for pax readers and writers that use strict UTF-8 parsing
 for all headers.
 
-= star's approach =
+= star =
 
 Joerg Schilling's star uses a very similar approach.
 It stores each attribute under SCHILY.xattr._name_
@@ -42,7 +43,7 @@ approach that supports Solaris as well.
 
 As of January 2009, GNU tar seems to be considering star's approach.
 
-= Apple's approach =
+= Apple's modified GNU tar =
 
 Apple stores a separate resource file for each file written
 to a tar archive.  This seems to use the "`CopyFile()`" library
@@ -52,3 +53,36 @@ For example, the file "foo" would have a resource file "`._foo`".
 
 I've not yet tracked down documentation for the format of this
 resource file.
+
+= AIX tar =
+
+AIX tar adds an 'E' entry following the regular file
+entry for each extended attribute attached to the file.
+The pathname of this entry is the name of the attribute.
+The body contains the value of the attribute.  By
+using the standard ustar pathname and body, AIX avoids
+encoding concerns encoding for these fields.
+
+The example I've seen seems to include some data beyond
+the end of the EA body but I'm not sure what that is for.
+
+= Commentary =
+
+The AIX approach requires a minimum of 1024 bytes in the
+archive for each EA.  It also puts the EAs after the main
+entry.  This is fine if you have few EAs and they tend to
+be large, but the applications of EAs that I've seen tend
+to use very small values.  Adapting libarchive to support
+AIX EAs would also be difficult; libarchive assumes that
+all metadata (including EAs) precede the file data.
+
+It may be possible to support the Apple approach in a
+somewhat portable fashion, if I could find documentation
+for the resource file structure.
+
+The pax approach used by star and libarchive today works
+pretty well for multiple small EAs.  There are some
+portability concerns; POSIX.1e was never standardized
+and many systems attach additional semantics (such as
+per-EA permissions or ownership) that neither star nor
+libarchive currently support.
