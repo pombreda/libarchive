@@ -3,20 +3,23 @@
 
 = Introduction =
 
-_I'm still researching this.  Contributions appreciated!_
+_I have two goals for this page:  First, I want to
+develop an understanding of prior art for archiving
+NFSv4/NTFS ACLs.  With that in hand, I want to decide
+on an approach to implement in libarchive.  Obviously,
+it is possible for libarchive to read multiple formats,
+though it's unlikely that I'll write more than one format,
+certainly not in the first iteration._
 
-_Yes, this does imply that I want to support NFSv4/NTFS ACLs
-in libarchive.  But I want to thoroughly understand prior art
-before I dig into this._
-
-The techniques used for storing POSIX.1e ACLs (which I'm
-attempting to document in [TarPosix1eACLs] should
-also be useful in storing NFSv4/NTFS ACLs.
-
+NFSv4 ACLs are still pretty new and the existing support
+varies widely.  The open-source communities are only beginning
+to seriously implement them and most Linux and BSD systems still
+lack support (even when the support has been implemented, it is
+usually disabled by default in shipping distributions).
 Unfortunately, NFSv4 does not standardize a portable format
 for representing ACLs.  Anyone attempting to create a portable
-way to store NFSv4 ACLs is likely to need to develop a textual
-format and all of the parsing routines, since OS-specific
+way to store NFSv4 ACLs is going to have to come up with a suitable
+textual format and all of the parsing routines, since OS-specific
 library routines are unlikely to be useful.
 
 = Apple version of GNU tar =
@@ -31,6 +34,8 @@ I've not yet found documentation for the textual format used here, but it seems 
  * User/group name
  * User/group ID
  * XXX document these ??? XXXX
+
+The inclusion of both a POSIX-style numeric ID and a Windows-style GUID for each user and group is very interesting.  I would like to support NFSv4/NTFS ACLs on both Windows and MacOS, at least eventually, so this will likely be required for libarchive as well.
 
 = AIX tar =
 
@@ -75,3 +80,17 @@ format in libarchive.  Besides the structural headache
 (libarchive expects metadata before the file body, not
 after), the binary format lacks textual user/group names
 which are essential.
+
+= Solaris tar? =
+
+Solaris has generally been quick to include
+support for new filesystem features in their version
+of tar.  ZFS has NFSv4 ACLs, so I presume Solaris tar
+can archive them.
+
+= star? =
+
+The star website and manpages have a couple of
+oblique references to NFSv4 ACL support, but I've
+not seen any documentation or announcement of such
+functionality.
