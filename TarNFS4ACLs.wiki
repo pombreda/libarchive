@@ -40,10 +40,69 @@ The inclusion of both a POSIX-style numeric ID and a Windows-style GUID for each
 = AIX tar =
 
 AIX tar stores an additional 'A' entry after the regular
-file entry.  The pathname of this entry is "AIXC", the body
+file entry.  The pathname of this entry is "NFS4", the body
 is a binary formatted ACL.  Björn Jacke was kind enough
 to send me an example.  This is the contents of the
 'A' entry body:
+
+{{{
+00000400  4e 46 53 34 00 00 00 00  00 00 01 d4 00 00 00 01  |NFS4............|
+00000410  00 00 00 0f 00 00 00 20  00 00 00 02 00 00 00 01  |....... ........|
+00000420  00 00 00 01 00 00 00 00  00 00 00 20 4f 57 4e 45  |........... OWNE|
+00000430  52 40 00 00 00 00 00 1c  00 00 00 00 00 00 00 cd  |R@..............|
+00000440  00 00 00 01 00 00 00 00  00 01 00 26 00 00 00 00  |...........&....|
+00000450  00 00 00 1c 00 00 00 00  00 00 00 d1 00 00 00 01  |................|
+00000460  00 00 00 00 00 00 00 81  00 00 00 00 00 00 00 20  |............... |
+00000470  00 00 00 02 00 00 00 01  00 00 00 00 00 00 00 00  |................|
+00000480  00 0f 01 9f 4f 57 4e 45  52 40 00 00 00 00 00 20  |....OWNER@..... |
+00000490  00 00 00 02 00 00 00 02  00 00 00 00 00 00 00 40  |...............@|
+000004a0  00 00 00 81 47 52 4f 55  50 40 00 00 00 00 00 1c  |....GROUP@......|
+000004b0  00 00 00 00 00 00 00 d0  00 00 00 00 00 00 00 00  |................|
+000004c0  00 01 00 87 00 00 00 00  00 00 00 1c 00 00 00 00  |................|
+000004d0  00 00 00 0d 00 00 00 00  00 00 00 40 00 01 00 87  |...........@....|
+000004e0  00 00 00 00 00 00 00 1c  00 00 00 00 00 00 00 14  |................|
+000004f0  00 00 00 00 00 00 00 40  00 01 00 87 00 00 00 00  |.......@........|
+00000500  00 00 00 20 00 00 00 02  00 00 00 01 00 00 00 01  |... ............|
+00000510  00 00 00 00 00 19 00 7f  4f 57 4e 45 52 40 00 00  |........OWNER@..|
+00000520  00 00 00 20 00 00 00 02  00 00 00 02 00 00 00 01  |... ............|
+00000530  00 00 00 40 00 1f 01 ff  47 52 4f 55 50 40 00 00  |...@....GROUP@..|
+00000540  00 00 00 1c 00 00 00 00  00 00 00 d0 00 00 00 01  |................|
+00000550  00 00 00 00 00 1f 01 ff  00 00 00 00 00 00 00 1c  |................|
+00000560  00 00 00 00 00 00 00 0d  00 00 00 01 00 00 00 40  |...............@|
+00000570  00 1f 01 ff 00 00 00 00  00 00 00 1c 00 00 00 00  |................|
+00000580  00 00 00 14 00 00 00 01  00 00 00 40 00 1f 01 ff  |...........@....|
+00000590  00 00 00 00 00 00 00 24  00 00 00 02 00 00 00 03  |.......$........|
+000005a0  00 00 00 00 00 00 00 00  00 02 00 89 45 56 45 52  |............EVER|
+000005b0  59 4f 4e 45 40 00 00 00  00 00 00 24 00 00 00 02  |YONE@......$....|
+000005c0  00 00 00 03 00 00 00 01  00 00 00 00 00 01 00 26  |...............&|
+000005d0  45 56 45 52 59 4f 4e 45  40 00 00 00              |EVERYONE@...|
+}}}
+
+And this is the textual ACL from the file on disk.
+The relevant UIDs in this example are build=208, obnox=209, vl=205.
+The relevant GIDs in this example are system=0, lp=11, snapp=13, mail=6, and perf=20.
+
+{{{
+s:(OWNER@):     d       x
+u:vl:           d       wpxd
+u:obnox:        d       ra
+s:(OWNER@):     a       rwpRWaAdcCo
+s:(GROUP@):     a       ra
+u:build:        a       rwpad
+g:snapp:        a       rwpad
+g:perf:         a       rwpad
+s:(OWNER@):     d       rwpRWxDdos
+s:(GROUP@):     d       rwpRWxDaAdcCos
+u:build:        d       rwpRWxDaAdcCos
+g:snapp:        d       rwpRWxDaAdcCos
+g:perf:         d       rwpRWxDaAdcCos
+s:(EVERYONE@):  a       rRac
+s:(EVERYONE@):  d       wpxd
+}}}
+
+AIX also supports "AIXC" ACLs, which are also stored in
+"A" entries.  These entries seem to always be named "AIXC".
+Here's an example:
 
 {{{
 00000400  41 49 58 43 00 00 00 00  00 00 00 60 02 00 00 00  |AIXC.......`....|
