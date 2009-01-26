@@ -16,11 +16,11 @@ varies widely.  The open-source communities are only beginning
 to seriously implement them and most Linux and BSD systems still
 lack support (even when the support has been implemented, it is
 usually disabled by default in shipping distributions).
-Unfortunately, NFSv4 does not standardize a portable format
+Unfortunately, NFSv4 does not define a portable format
 for representing ACLs.  Anyone attempting to create a portable
-way to store NFSv4 ACLs is going to have to come up with a suitable
-textual format and all of the parsing routines, since OS-specific
-library routines are unlikely to be useful.
+way to store NFSv4 ACLs is likely going to have to implement
+their own portable format, including all parsing routines,
+since OS-specific library routines are unlikely to be useful.
 
 = Apple version of GNU tar =
 
@@ -35,7 +35,7 @@ I've not yet found documentation for the textual format used here, but it seems 
  * User/group ID
  * XXX document these ??? XXXX
 
-The inclusion of both a POSIX-style numeric ID and a Windows-style GUID for each user and group is very interesting.  I would like to support NFSv4/NTFS ACLs on both Windows and MacOS, at least eventually, so this will likely be required for libarchive as well.
+The inclusion of both a POSIX-style numeric ID and a Windows-style GUID for each user and group is very interesting.  I would like for libarchive to support NFSv4/NTFS ACLs on both Windows and MacOS, at least eventually, so this will likely be required for libarchive as well.
 
 = AIX tar =
 
@@ -100,9 +100,22 @@ s:(EVERYONE@):  a       rRac
 s:(EVERYONE@):  d       wpxd
 }}}
 
-AIX also supports "AIXC" ACLs, which are also stored in
-"A" entries.  These entries seem to always be named "AIXC".
-Here's an example:
+It's interesting to note that the textual format is actually significantly more compact than the binary version.
+Stripping spaces from the text version above gives 280 bytes versus 456 for the binary version.
+Unfortunately, the binary format here omits textual user/group names, which are essential for proper archiving, and the text format omits numeric user/group IDs, which are also essential.
+
+I don't see any reason to bother trying to support the
+AIX NFSv4 ACLs in libarchive.  Besides the structural headache
+(libarchive expects metadata before the file body, not
+after), the binary format lacks textual user/group names
+which are essential.
+
+== AIXC ACLs ==
+
+Björn Jacke also sent me an example of the "AIXC" ACLs
+used on AIX, which seem to be archived similarly by AIX tar.
+In this case, the "A" entry is always named "AIXC".
+Here's an sample body of such an "A" entry:
 
 {{{
 00000400  41 49 58 43 00 00 00 00  00 00 00 60 02 00 00 00  |AIXC.......`....|
@@ -134,11 +147,7 @@ extended permissions
     permit   rw-     g:snapp,g:perf
 }}}
 
-I don't see any reason to bother trying to support this
-format in libarchive.  Besides the structural headache
-(libarchive expects metadata before the file body, not
-after), the binary format lacks textual user/group names
-which are essential.
+
 
 = Solaris tar? =
 
