@@ -102,13 +102,9 @@ s:(EVERYONE@):  d       wpxd
 
 It's interesting to note that the textual format is actually significantly more compact than the binary version.
 Stripping spaces from the text version above gives 280 bytes versus 456 for the binary version.
-Unfortunately, the binary format here omits textual user/group names, which are essential for proper archiving, and the text format omits numeric user/group IDs, which are also essential.
+Unfortunately, neither the binary or text formats used by AIX are suitable for archiving, since neither format provides both user/group names and IDs.
 
-I don't see any reason to bother trying to support the
-AIX NFSv4 ACLs in libarchive.  Besides the structural headache
-(libarchive expects metadata before the file body, not
-after), the binary format lacks textual user/group names
-which are essential.
+In addition, AIX tar's "A" record arrangement would be very difficult to support with libarchive, which expects all metadata to precede the file body.
 
 == AIXC ACLs ==
 
@@ -146,7 +142,6 @@ extended permissions
     specify  r--     u:vl,g:lp,g:mail
     permit   rw-     g:snapp,g:perf
 }}}
-
 
 
 = Solaris tar? =
