@@ -12,7 +12,7 @@ POSIX.1e ACLs are simpler and the draft specification
 defines a portable interchange format, so the picture
 here is a little clearer than for NFSv4 ACLs (or other
 system-specific ACL implementations).  I've begun to
-document NFSv4 ACL storage approaches in [TarNFSv4ACLs].
+document NFSv4 ACL storage approaches in [TarNFS4ACLs].
 
 = star's approach =
 
