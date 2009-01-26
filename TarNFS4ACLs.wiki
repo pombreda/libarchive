@@ -109,8 +109,13 @@ In addition, AIX tar's "A" record arrangement would be very difficult to support
 == AIXC ACLs ==
 
 Björn Jacke also sent me an example of the "AIXC" ACLs
-used on AIX, which seem to be archived similarly by AIX tar.
-In this case, the "A" entry is always named "AIXC".
+used on AIX.
+The AIXC ACLs are neither POSIX.1e nor NFSv4 compliant, of
+course, but this example does shed a little light on AIX tar's handling
+of NFSv4 ACLs.
+In particular, AIX tar again uses an "A" entry, but this time the pathname
+is "AIXC"; it appears the pathname of the "A" entry specifies the ACL type,
+duplicating the first four bytes of the entry body.
 Here's an sample body of such an "A" entry:
 
 {{{
@@ -127,9 +132,7 @@ And here is a textual dump of the ACL from the corresponding
 file on disk:
 
 {{{
-*
 * ACL_type   AIXC
-*
 attributes:
 base permissions
     owner(root):  rw-
@@ -142,7 +145,6 @@ extended permissions
     specify  r--     u:vl,g:lp,g:mail
     permit   rw-     g:snapp,g:perf
 }}}
-
 
 = Solaris tar? =
 
