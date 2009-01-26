@@ -8,6 +8,12 @@ in tar archives.  The first was originally developed by
 Joerg Schilling for _star_ and subsequently adopted by libarchive.
 The other was developed by Sun Microsystems for Solaris.
 
+POSIX.1e ACLs are simpler and the draft specification
+defines a portable interchange format, so the picture
+here is a little clearer than for NFSv4 ACLs (or other
+system-specific ACL implementations).  I've begun to
+document NFSv4 ACL storage approaches in [TarNFSv4ACLs].
+
 = star's approach =
 
 Star stores POSIX.1e ACLs in pax attributes with the
