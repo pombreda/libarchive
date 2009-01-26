@@ -102,7 +102,8 @@ s:(EVERYONE@):  d       wpxd
 
 It's interesting to note that the textual format is actually significantly more compact than the binary version.
 Stripping spaces from the text version above gives 280 bytes versus 456 for the binary version.
-Unfortunately, neither the binary or text formats used by AIX are suitable for archiving, since neither format provides both user/group names and IDs.
+This textual format is also considerably more compact than the textual format used by Apple.
+Unfortunately, neither the binary nor text formats used by AIX are suitable for archiving, since neither format provides both user/group names and IDs.
 
 In addition, AIX tar's "A" record arrangement would be very difficult to support with libarchive, which expects all metadata to precede the file body.
 
