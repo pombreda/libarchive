@@ -27,6 +27,8 @@ The following features have been implemented.  It is still possible they will ge
  * Support for building with "cmake" on a wide variety of platforms, thanks to Christian Ehrlicher and Michihiro.
  * Complete extended attribute support for FreeBSD, fixed extended attribute support for Linux
  * Improved support for AIX and Tru64, thanks to Björn Jacke
+ * Flexible options framework by Michihiro NAKAJIMA
+ * Support for reading and writing XZ format, thanks to Per Øyvind Karlsen and Michihiro.
 
 = Libarchive 2.6.1 =
 
