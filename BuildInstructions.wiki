@@ -32,7 +32,8 @@ to the `configure` program:
 = For most everything else =
 
 *Starting with libarchive 2.7*, there is a cmake-based
-build system that supports a variety of IDEs, including
+build system that can generate configuration files for
+a variety of IDEs, including
 Visual Studio on Windows and XCode on Mac OS.
 
 You will first need to obtain and install the appropriate
