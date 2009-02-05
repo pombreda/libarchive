@@ -18,6 +18,7 @@ _Future release: Expected April 2008_
 The following are expected, but not yet implemented.  They may be pushed to a later release.
  * Support for concatenated gzip streams.
  * NFSv4 ACL support
+ * Support for reading Joliet extensions, thanks to Andreas Henriksson
 
 The following features have been implemented.  It is still possible they will get pushed to a later release.
 
@@ -25,6 +26,7 @@ The following features have been implemented.  It is still possible they will ge
  * Much improved Windows support, thanks largely to Michihiro NAKAJIMA.  In particular, libarchive_test now builds and runs on Windows.
  * Support for building with "cmake" on a wide variety of platforms, thanks to Christian Ehrlicher and Michihiro.
  * Complete extended attribute support for FreeBSD, fixed extended attribute support for Linux
+ * Improved support for AIX and Tru64, thanks to Björn Jacke
 
 = Libarchive 2.6.1 =
 
