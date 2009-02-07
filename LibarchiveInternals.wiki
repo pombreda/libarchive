@@ -86,9 +86,31 @@ but libarchive should provide tools for forcing the format handler so that damag
 
 == Write API ==
 
+XXX
+
 == Write-to-Disk API ==
 
+The "write-to-disk" API attempts to treat a directory on disk as if it were
+an archive, allowing you to create objects on disk using the same
+API calls you would use to write objects into an archive.
+
+There are a few differences, however XXXX
+
+XXX Security checks XXX
+
+XXX uid/gid lookups XXX
+
+XXX fixup pass XXX
+
 == Read-from-Disk API ==
+
+The "read-from-disk" API is rather thin right now.
+It might eventually provide functions for reading entire directory trees using the same API as is used to read objects from an archive.
+
+For now, it just provides a hook for populating an entry object from an object on disk.
+This includes a lot of platform-specific knowledge about reading links, extended attributes, ACLs, file flags, and other properties of the file.
+
+XXX uname/gname lookup XXX
 
 == Test Suite ==
 
@@ -115,6 +137,13 @@ The test program accepts several command-line options:
 Libarchive was designed to be highly extensible.
 The following sections outline how to add certain types of
 new functionality.
+
+== How to add a new test ==
+
+Any new functionality should be accompanied by a new test that
+verifies the operation of that functionality.
+
+XXX
 
 == How to add a new read filter ==
 
