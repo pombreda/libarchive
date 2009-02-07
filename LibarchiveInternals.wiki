@@ -1,5 +1,7 @@
 #summary How libarchive works
 
+<wiki:toc max_depth="1" />
+
 = Overview =
 
 Libarchive is broken into several distinct APIs.
