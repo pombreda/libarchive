@@ -1,0 +1,103 @@
+#summary How libarchive works
+
+= Overview =
+
+Libarchive is broken into several distinct APIs.
+As far as possible, these APIs are completely independent and
+each one can be used separately from the others.
+
+Each API revolves around an object-like interface that is implemented
+as an opaque C structure reference.
+Generally, these objects have a similar lifecycle:  there is
+a new() function that creates the object, you can then invoke
+various functions to customize or configure the object, then
+you can do things with the object, and when you are done you
+can invoke a free() or finish() function to destroy the object.
+
+In order to minimize link pollution, the configuration functions
+generally fill in a function pointer in the structure.
+In this way, if you don't request that functionality, the
+function pointer simply remains NULL and the associated code
+will not need to be linked into your executable.
+
+= Entry Objects =
+
+The entry objects satisfy the need for a single structure
+that holds all relevant metadata about a file.
+It includes all of the information included in typical
+`struct stat` as well as the filename, link information,
+file flags, ACLs, and extended attributes.
+
+XXX set/unset tracking XXX
+
+XXX charset conversion handling XXX
+
+XXX relation to platform-native `struct stat` XXX
+
+= Read API =
+
+The key issues with the read API are the I/O structure and
+the bidding process.
+
+In order to minimize copying while still providing a convenient
+internal interface, libarchive provides a peek/consume read
+system internally, which allows data consumers to peek ahead
+at the available data and consume it as a separate action.
+
+Remember that the `archive_read_open()` functions accept a
+read callback that is invoked whenever data is needed.
+The read callback provides blocks of data by returning a
+pointer and a size.
+From the other side, when an internal component requires data,
+it calls one of two "read ahead" functions:
+The read filters call `__archive_read_filter_ahead()`
+to pull data from their upstream filter (the client-provided callback
+is merely the first filter in the chain); the format handlers
+call `__archive_read_ahead()` which pulls from the last filter
+in the chain.
+Within the read-ahead function, there are basically three
+cases:
+ * The request can be satisfied from the upstream provider's buffer.  In this case, a pointer/size can be returned with no copying.
+ * The request would span more than one block.  In this case, the read-ahead handler has to copy the data into an intermediate buffer.
+ * The request can't be filled.  In this case, the read-ahead handler returns a NULL pointer but does return a valid size.
+
+There are a couple of convenient idioms supported by this I/O framework:
+ * "Get some data."  If you ask for a minimum of 1 byte, you'll get a pointer and count of whatever data is most conveniently available.  You can then choose to consume however much or little of that data you wish.  A request for 1 byte will never induce copying, so is always very efficient.
+ * "Get a fixed block of data."  If you request a particular amount of data, you'll either receive a pointer to that much data or NULL if the request couldn't be satisfied.  If necessary, the read-ahead logic will copy the data into a dynamically-sized buffer to ensure that it can provide you with a contiguous block of data.  You will also receive a count of the data actually available (which will always be at least as large as your request).  You can then consume the amount you need.
+ * "Peek ahead."  The bidding functions, in particular, make heavy use of read-ahead without consuming the input.  This allows many handlers to inspect the upcoming bytes.
+
+Bidding support, of course, was one of the key motivators for this I/O design.
+The read core instantiates an initial filter by wrapping the client-provided callback functions.
+It then recursively hands the most recent filter to each available filter bidder in turn.
+Those bidders can peek ahead to examine the initial bytes of the input and determine whether they can correctly handle this data.
+Once all filter bidders pass, the filter stack is complete and one additional round of bidding is done with the format handlers.
+
+A good bid function--sometimes called a "taster"--can do a lot more than just verify a couple of signature bytes.
+The cpio odc bidder, for instance, verifies that all of the initial bytes are octal.
+The tar bidder verifies the checksum included with the first header block.
+By doing careful verification, good bidders greatly reduce the possibilities of false positives.
+This does create some problems correctly handling slightly damaged input.
+For decompression filters, rejecting damaged input is probably wise,
+but libarchive should provide tools for forcing the format handler so that damaged archives can be read even if they fail the initial tasting.
+
+= Write API =
+
+= Write-to-Disk API =
+
+= Read-from-Disk API =
+
+= How to add a new read filter =
+
+XXX
+
+= How to add a new read format =
+
+XXX
+
+= How to add a new write filter =
+
+XXX
+
+= How to add a new write format =
+
+XXX
