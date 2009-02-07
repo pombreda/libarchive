@@ -22,7 +22,9 @@ In this way, if you don't request that functionality, the
 function pointer simply remains NULL and the associated code
 will not need to be linked into your executable.
 
-= Entry Objects =
+= Major Library Areas =
+
+== Entry Objects ==
 
 The entry objects satisfy the need for a single structure
 that holds all relevant metadata about a file.
@@ -36,7 +38,7 @@ XXX charset conversion handling XXX
 
 XXX relation to platform-native `struct stat` XXX
 
-= Read API =
+== Read API ==
 
 The key issues with the read API are the I/O structure and
 the bidding process.
@@ -82,24 +84,50 @@ This does create some problems correctly handling slightly damaged input.
 For decompression filters, rejecting damaged input is probably wise,
 but libarchive should provide tools for forcing the format handler so that damaged archives can be read even if they fail the initial tasting.
 
-= Write API =
+== Write API ==
 
-= Write-to-Disk API =
+== Write-to-Disk API ==
 
-= Read-from-Disk API =
+== Read-from-Disk API ==
 
-= How to add a new read filter =
+== Test Suite ==
+
+The libarchive test suite is contained in the "test" subdirectory of the
+libarchive source.
+The suite compiles into a single C program called `libarchive_test`.
+This program statically includes all of libarchive and all of the test
+code.
+
+The main test supervisor creates a work directory in /tmp (this can be overridden by the TMPDIR environment variable).
+It then creates subdirectories for each separate test.
+The supervisor switches the current directory into a new subdirectory before running the test, so test code can generally assume that it's safe to create files in the current directory.
+
+The test program can be built through the usual Makefile; just `make libarchive_test`.
+The test program accepts several command-line options:
+ * *-d* Dump core after any failure.  This is especially helpful in debugging certain types of failures.  The location of the core file will depend on your system; if your system leaves cores in the current directory, look inside the work directory.
+ * *-k* Keep all temp files.  By default, if a particular test reports no failures, the test supervisor will completely remove the associated directory and all of its contents.  This is usually very convenient; it prevents the test program from filling up your /tmp partition and makes it easier to find the remnants of failed tests.
+ * *-q* Quiet.  This suppresses most of the regular progress messages.
+ * *-v* Verbose.  Normally, the test supervisor condenses duplicate failures (failures in the same line of the same source file).  It provides full details for the first failure but then reports only a count of the total times a failure was reported on that line.  Again, this is normally what you want.  Some tests repeat certain loops tens of thousands of times and it is not helpful to repeat the message every time through the loop.
+ * *-r* _directory_.  Many of the tests need "reference" files.  These are typically archives that will be read.  All of the reference files are stored in uuencoded format; the test supervisor provides convenience functions to decode a reference file into the current directory.
+
+= How to add new functionality =
+
+Libarchive was designed to be highly extensible.
+The following sections outline how to add certain types of
+new functionality.
+
+== How to add a new read filter ==
 
 XXX
 
-= How to add a new read format =
+== How to add a new read format ==
 
 XXX
 
-= How to add a new write filter =
+== How to add a new write filter ==
 
 XXX
 
-= How to add a new write format =
+== How to add a new write format ==
 
 XXX
