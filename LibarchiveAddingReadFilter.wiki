@@ -6,6 +6,9 @@ Libarchive has a flexible read filter system that
 automatically detects various data encodings and
 creates the necessary filter pipeline to decode that
 data.
+This mechanism is key to bsdtar's ability to transparently
+handle a variety of common archive formats compressed with
+any of several popular compressors.
 
 This brief article explains step-by-step how to add
 support for a new format, complete with the appropriate
@@ -13,17 +16,23 @@ automatic detection logic.  This can be used to add
 automatic support for new decompression algorithms,
 encoding methods such as uudecode or MIME/base64 encoding,
 decryption filters, and many other transformations.
+Many of the principles here also apply to adding support for
+new archive formats.
 
 To illustrate, I'll present several different forms
-of a gzip decompression filter, culminating in code
-very close to what is currently in libarchive.
+of a gzip decompression filter.  The first version is
+only six lines but provides good support with full automatic
+format detection.  Later versions improve the bidding,
+provide more portability and better performance, culminating
+in code very close to what is currently in libarchive.
 
 = Step 1: Use an external program =
 
 If there's an external program that supports your
 format already and the format has a distinctive
 initial signature, then you may be able to add basic
-support very simply.
+support by simply wrapping the existing external
+program handler.
 For example, gzip streams have a two-byte initial
 signature and can be decompressed by calling the
 "gunzip" program.
@@ -51,8 +60,8 @@ within the source tree.
 = Step 2: Improve the bidding and format identification =
 
 A two-byte initial signature is really only marginally acceptable.
-It would be better to verify more of the initial
-data to avoid false positives.
+It would be better to verify more of the
+header data to avoid false positives.
 Also, there are many formats where you can't simply
 compare the first bytes to a fixed string.
 This is especially true of text formats such as uudecode
@@ -173,16 +182,16 @@ archive_read_support_compression_gzip(struct archive *_a)
 }
 }}}
 
-The above is actually sufficient to pass the libarchive
+
+= Step 3: Direct decoding =
+
+The code in "Step 2" above is actually sufficient to pass the libarchive
 test suite for gzip support, assuming you have the gunzip
 executable on your system.
-
-= Step 3: Direct library usage =
-
-There are two good reasons to directly
+But there are two good reasons why you might want to directly
 handle the filtering within libarchive rather than call
 out to an external program:
- * It's often faster.  Shuffling data to and from an external program adds significant overhead.  In the testing I've done, gzip is marginal whether it's more efficient to decompress with a library or external program.  For faster decoders, doing it directly is almost always going to be faster than running a separate program.
+ * It's often faster.  Shuffling data to and from an external program adds significant overhead.  Especially for formats that can be decoded very efficiently (such as base64 or lzo), it's likely fastest to do it directly in the library.
  * It's often more portable.  If the filter implementation can be entirely within libarchive, then it will be available even on platforms that lack the external executable.
 
 For example, the current gzip reader in libarchive
@@ -236,7 +245,7 @@ gzip_bidder_init(struct archive_read_filter *self)
 }
 }}}
 
-The read function provides a block of data each time
+A filter's "read" function provides a block of data each time
 it is called.
 In this case, the "init" function allocates a 64k block
 as part of the private state.
@@ -247,11 +256,15 @@ data, the return value is the size of the data
 or a negative value (usually ARCHIVE_FATAL) if there's
 an error.
 
-The general structure is to use the same "read-ahead"
+The general structure is to use the "read-ahead"
 function to look at upcoming data, then "consume"
 as much of that data as you actually used.
 The libarchive core will handle all of the bookkeeping
 necessary to manage blocks from your upstream data providers.
+Note that the "read-ahead" function will tell you about
+all of the data that is immediately available which
+leads to the common idiom of asking for at least 1 byte
+and then processing as much as is available.
 
 {{{
 static ssize_t
@@ -327,8 +340,22 @@ consist of multiple gzip streams concatenated together.
 The production code also tries to actually fill the 64k
 output buffer on each call so that downstream consumers
 will have to do less block reassembly.
+(The "read-ahead" logic will combine multiple blocks by
+allocating temporary buffers and copying data as necessary
+to meet minimum read requests.
+This tends to happen less with larger data blocks.)
 
-= Step 4: Robustly support many platforms =
+= Step 4: Test =
+
+The libarchive test suite exercises many parts of libarchive
+to verify that they work correctly.
+Even if your code is perfect, a well-written test case will
+help ensure that noone else breaks your support with future
+changes.
+Changes to libarchive that include test cases are much more
+likely to get accepted.
+
+= Step 5: Robustly support many platforms =
 
 The full gzip reader in the current libarchive code
 has extensive conditionals to provide as much support
@@ -336,16 +363,17 @@ as possible on each particular platform:
  * If the platform has zlib, it will use code similar to that in "Step 3" above to do full gzip decompression directly.
  * If not, it will use code similar to that in "Step 2" above to try to run an external program.  In particular, this provides gunzip support in cases where gunzip might be installed later.  In any case, without zlib it's hard to do much better than this.
 
-= Step 5: Improve the existing filters =
+= Step 6: Improve the existing filters =
 
 Many of the existing filters could use careful analysis
 and improvements:
  * Careful benchmarking may point out speed improvements in some cases, though I don't know of any obvious low-hanging fruit at this point.
- * Few of the filters fully support "skip" operations.  These can provide big performance boosts when reading just the contents of an archive.
+ * Few of the filters fully support "skip" operations.  These can provide big performance boosts when reading the table of contents of a large archive without actually extracting the bodies.
  * Few of the filters provide full fallback to external programs when their libraries are unavailable.
  * There are a few cases where filters could benefit from the new options handling, though mostly read filters don't need this.
+ * The external program support doesn't compile on Windows.  I suspect it's cleanest to re-implement a Windows-specific version completely from scratch.
 
-= Step 6: Improve the core =
+= Step 7: Improve the core =
 
 Once you understand all of the above, you may be able
 to find ways to improve the libarchive core.
