@@ -64,14 +64,15 @@ XXX details ? XXX
 == MacOS/Xcode ==
 
 You'll first need some standard development tools if you don't already have them:
- * Xcode itself is distributed with most new Macs on DVD.  It's also available from http://dev.apple.com/ for free download.
- * The MacPorts package manager can install a variety of open-source software (XXX URL XXX).  If you just want to use libarchive, you can install it via MacPorts: `sudo port install libarchive`
+ * Xcode itself is distributed with most new Macs on DVD.  The newest version is available from http://developer.apple.com/ after you sign up for a free Apple Developer Connection membership.
+ * The MacPorts package manager can install a variety of open-source software (http://www.macports.org/).  If you just want to use libarchive, you can install it via MacPorts: `sudo port install libarchive`
  * The cmake tool is available through MacPorts: `sudo port install cmake`
+ * The Subversion command-line tool for checking out source from GoogleCode is also available through MacPorts: `sudo port install subversion`
 
 Assuming that the libarchive source code is available in the 'libarchive' directory, you build the Xcode project files using cmake:
  * `cmake -G Xcode libarchive`
 
-You can then open `libarchive.xcodeproj` from within Xcode (or double-click it in Finder) to build, run, and debug the project.
+You can then open `libarchive.xcodeproj` from within Xcode (or double-click it in Finder) to build, run, and debug the software.
 
 To run the tests, you'll need to manually adjust a few settings (if you know how to embed these into CMakeLists.txt so that this doesn't need to be done manually, please let me know!):
  * Executable -> libarchive_test, Ctrl-Click, then "Get-Info".  On the "Arguments" pane, set "-r _<Path to libarchive source>_/libarchive/test" so that the test program can read the files it needs.
