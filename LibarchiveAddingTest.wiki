@@ -22,7 +22,9 @@ To run the test programs, you need to give them two pieces of information:
  * The full path to the directory holding the "reference files"
  * The full path to the executable program being tested (not applicable to libarchive_test since libarchive is compiled into the test program)
 
-The reference files are a collection of known inputs that are used in the test process.  They are all stored in uuencoded format in files with a ".uu" extension.
+The reference files are a collection of known inputs that are used in the test process.  They are all stored in uuencoded format in files with a ".uu" extension.  The test programs look in a few standard locations; if none of those work, you'll need to specify the `-r` option with the full pathname to the appropriate directory.
+
+The bsdtar_test and bsdcpio_test programs run bsdtar or bsdcpio repeatedly; they need the full path to the appropriate executable.  Although bsdtar_test and bsdcpio_test are specifically intended for testing bsdtar and bsdcpio, they should be usable for testing other tar and cpio programs.  In fact, running these test programs against other tar implementations is a good way to verify that the test programs themselves are working correctly.
 
 When run, the test programs output a progress message for each test, an error message for each failed assertion, and a final summary:
 
@@ -97,6 +99,35 @@ of specific tests.  These specific versions (such as `assertEqualInt` and
 `assertEqualString` in the example above) generate detailed log
 messages on failure.  In particular, they print the value of both
 arguments; this greatly simplifies diagnosing failures.
+
+= Life cycle of a test =
+
+Each test resides in a C source file with the same name as the test.
+The test itself is a function that takes no arguments.
+The test is declared using the `DEFINE_TEST()` macro.  This macro serves
+both to ensure that the test is declared correctly and as a label that
+can be used to locate all defined tests.  (On Unix-like platforms, a simple
+`grep` operation is used to construct a file called `list.h` that holds
+the names of all of the tests.  This makes it very easy to add new tests.)
+
+The test harness determines which tests to run.  It goes through the
+following steps whenever it runs a test:
+ * Closes all file descriptors except for stdin, stdout, and stderr.
+ * Creates a temporary directory whose name matches the name of the test and switches into that directory.
+ * Resets the current locale.
+ * Calls the test function.
+ * If there were no assertion failures, it will remove the temporary directory unless `-k` was specified.
+ * If there are any open file descriptors other than stdin, stdout, and stderr, it reports an error.  Tests should never leave open file descriptors.
+
+In particular, tests can safely assume that:
+ * The current directory is empty when the test starts.
+ * Any files created in the current directory will be removed for you.
+ * The current locale is the default "C" locale.
+
+Tests should:
+ * Release all memory.  The test suites are occasionally run under a memory debugger to detect leaks in the libarchive library.
+ * Close all opened files.  This helps to catch file descriptor leaks in libarchive.
+ * Not read or write absolute paths.
 
 = Platform variation =
 
