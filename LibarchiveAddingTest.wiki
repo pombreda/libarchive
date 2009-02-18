@@ -57,7 +57,7 @@ The header lines here record:
  * For bsdtar_test and bsdcpio_test, the full path to the executable being exercised.
  * Basic version information about the target.
 
-In this case, the trailer indicates that one test failed.  As you can see, there was a single assertion in the code that failed 264 times.  That assertion expected an `lstat()` call to return 0 and instead it returned -1.
+In this case, the trailer indicates that one test failed.  As you can see, there was a single assertion in the code that failed 264 times.  The first time it failed, it was because an `lstat()` call returned -1 instead of the zero that was expected.
 
 = Basic test terminology =
 
