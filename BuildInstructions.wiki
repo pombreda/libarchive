@@ -1,6 +1,6 @@
 #summary How to compile and install libarchive, bsdtar, and bsdcpio from source code.
 
-= For most POSIX-like systems =
+= Using _configure_ (for Linux, FreeBSD, Solaris and other Unix-like systems) =
 
 The libarchive distribution includes a standard
 autoconf-generated "configure" script that should
@@ -29,15 +29,38 @@ to the `configure` program:
  * `./configre --disable-bsdtar`  -- Suppresses build and install of bsdtar
  * `./configure --enable-bsdcpio` -- Enables build and install of bsdcpio
 
-= For most everything else =
+= Using _cmake_ (for most everything else) =
 
 *Starting with libarchive 2.7*, there is a cmake-based
 build system that can generate configuration files for
 a variety of IDEs, including
 Visual Studio on Windows and XCode on Mac OS.
 
+== General usage ==
+
+This build system uses the _cmake_ tool to generate
+appropriate solution, project, or Makefiles for your
+system.
+
 You will first need to obtain and install the appropriate
 version of the cmake tool for your platform.
 If your favorite package manager doesn't have a version
 already configured for your platform, you should check
 http://cmake.org/
+
+When you run the cmake tool, you need to provide two
+pieces of information:
+* The "generator" appropriate for the IDE you're using.
+* The directory containing the unpacked libarchive sources.  This is the directory containing the `CMakeLists.txt` file.
+
+== Windows/Visual Studio ==
+
+XXX details, screen shots? XXX
+
+== Windows/MinGW ==
+
+XXX details? XXX
+
+== MacOS/XCode ==
+
+XXX details? XXX
