@@ -50,8 +50,8 @@ http://cmake.org/
 
 When you run the cmake tool, you need to provide two
 pieces of information:
-* The "generator" appropriate for the IDE you're using.
-* The directory containing the unpacked libarchive sources.  This is the directory containing the `CMakeLists.txt` file.
+ * The "generator" appropriate for the IDE you're using.
+ * The directory containing the unpacked libarchive sources.  This is the directory containing the `CMakeLists.txt` file.
 
 == Windows/Visual Studio ==
 
@@ -59,7 +59,7 @@ XXX details, screen shots? XXX
 
 == Windows/MinGW ==
 
-XXX details? XXX
+XXX details ? XXX
 
 == MacOS/Xcode ==
 
