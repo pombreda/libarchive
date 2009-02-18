@@ -1,0 +1,107 @@
+#summary How to extend the libarchive test suites.
+
+= Introduction =
+
+Libarchive is now a fairly complex piece of software that runs on
+a number of different platforms.  A thorough test suite is essential
+both for verifying new ports and for ensuring that future changes don't
+break existing functionality.
+
+Any significant change to libarchive, including most bug fixes, should
+be accompanied by new tests or changes to existing tests.  This article
+explains how the libarchive test suites work and how to extend them.
+
+= Building and Running the Test Programs =
+
+Each major component--libarchive, bsdtar, and bsdcpio--has a test
+program that exercises the functionality of that component.
+These test programs are compiled in the same way that the rest
+of the libarchive suite is compiled.
+
+To run the test programs, you need to give them two pieces of information:
+ * The full path to the directory holding the "reference files"
+ * The full path to the executable program being tested (not applicable to libarchive_test since libarchive is compiled into the test program)
+
+The reference files are a collection of known inputs that are used in the test process.  They are all stored in uuencoded format in files with a ".uu" extension.
+
+When run, the test programs output a progress message for each test, an error message for each failed assertion, and a final summary:
+
+{{{
+ Running tests in: /tmp/bsdtar_test.2009-02-17T21.30.40-000
+ Reference files will be read from:    /home/tim/libarchive/trunk/tar/test
+ Running tests on: /home/tim/libarchive/trunk/bsdtar
+ Exercising: bsdtar 2.6.900a - libarchive 2.6.900a
+
+ 0: test_0
+ 1: test_basic
+ 2: test_copy
+  test_copy.c:171: Assertion failed: Ints not equal
+      0=0
+      lstat(name2 + 3, &st2)=-1
+  test_copy.c:171: Failed 264 times
+ 3: test_getdate
+ 4: test_help
+    ... more output omitted ...
+
+ 1 of 13 tests reported failures
+  Total of 105097 assertions checked.
+  Total of 264 assertions failed.
+  Total of 0 assertions skipped.
+}}}
+
+The header lines here record:
+ * the directory that will be used for scratch files during the test.  If a test fails, the scratch files will be left behind in this directory for further debugging.
+ * The directory from which the reference files will be read.
+ * For bsdtar_test and bsdcpio_test, the full path to the executable being exercised.
+ * Basic version information about the target.
+
+In this case, the trailer indicates that one test failed.  As you can see, there was a single assertion in the code that failed 264 times.  That assertion expected an `lstat()` call to return 0 and instead it returned -1.
+
+= Basic test terminology =
+
+Each test program consists of a number of "tests".
+Each test has a name and is implemented in a C source file with the same name as the test.
+Tests work by performing some series of operations and making "assertions" about the results.  For example, many of the libarchive tests open and read an archive and assert that particular operations succeeded or failed.  (Yes, it is often important to verify that illegal requests generate appropriate errors.)
+
+Here is a somewhat edited excerpt from `test_compat_zip`, which verifies compatibility with various ZIP format archives:
+
+{{{
+  DEFINE_TEST(test_compat_zip)
+  {
+    /* ... setup omitted ... */
+    assert((a = archive_read_new()) != NULL);
+    assertEqualInt(ARCHIVE_OK,
+        archive_read_support_compression_all(a));
+    assertEqualInt(ARCHIVE_OK,
+        archive_read_support_format_all(a));
+    extract_reference_file(name);
+    assertEqualInt(ARCHIVE_OK,
+        archive_read_open_filename(a, name, 10240));
+
+     /* Read first entry. */
+     assertEqualInt(ARCHIVE_OK, archive_read_next_header(a, &ae));
+     assertEqualString("META-INF/MANIFEST.MF", archive_entry_pathname(ae));
+}}}
+
+The `assertXXXX` macros check that their arguments satisfy
+certain conditions.  If the assertion fails--for example, if the name
+of the first entry is not "META-INF/MANIFEST.MF"--the macro
+will report the problem.
+
+There are two important differences between the `assertXXX` macros
+used in these test harnesses and the ISO C standard `assert` macro:
+First, these assert macros don't exit on failure.
+By default, they report the failure and return zero (the C notion of "false").
+Second, these macros include variants that perform a variety
+of specific tests.  These specific versions (such as `assertEqualInt` and
+`assertEqualString` in the example above) generate detailed log
+messages on failure.  In particular, they print the value of both
+arguments; this greatly simplifies diagnosing failures.
+
+= Platform variation =
+
+XXXXX
+
+= Some examples of complex tests =
+
+XXXXX
