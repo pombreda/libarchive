@@ -13,22 +13,23 @@ The changes planned for libarchive 3.0 should improve libarchive's behavior on W
 
 = Libarchive 2.7 =
 
-_Future release: Expected April 2008_
+_Future release: Expected April 2009_
 
 The following are expected, but not yet implemented.  They may be pushed to a later release.
- * Support for concatenated gzip streams.
- * NFSv4 ACL support
- * Support for reading Joliet extensions, thanks to Andreas Henriksson
+
+ * NFSv4 ACL support - I have done some research but it's looking less likely that I'll find time to implement this.
 
 The following features have been implemented.  It is still possible they will get pushed to a later release.
 
+ * Support for concatenated gzip streams.
  * Stackable read filter support.
- * Much improved Windows support, thanks largely to Michihiro NAKAJIMA.  In particular, libarchive_test now builds and runs on Windows.
+ * Much improved Windows support, thanks largely to Michihiro NAKAJIMA.  In particular, libarchive_test and bsdtar_test now build and run on Windows.
  * Support for building with "cmake" on a wide variety of platforms, thanks to Christian Ehrlicher and Michihiro.
  * Complete extended attribute support for FreeBSD, fixed extended attribute support for Linux
  * Improved support for AIX and Tru64, thanks to Björn Jacke
  * Flexible options framework by Michihiro NAKAJIMA
  * Support for reading and writing XZ format, thanks to Per Øyvind Karlsen and Michihiro.
+ * Support for reading Joliet extensions, thanks to Andreas Henriksson
 
 = Libarchive 2.6.1 =
 
