@@ -141,13 +141,11 @@ new functionality.
 == How to add a new test ==
 
 Any new functionality should be accompanied by a new test that
-verifies the operation of that functionality.
-
-XXX
+verifies the operation of that functionality.  LibarchiveAddingTest explains how the test harnesses work and how to add new tests.
 
 == How to add a new read filter ==
 
-XXX
+I've written a separate article describing in intimate detail how to add new read filters: LibarchiveAddingReadFilter.  After reading this article and browsing the source code for the existing filters, you should be able to write your own filters fairly easily.
 
 == How to add a new read format ==
 
