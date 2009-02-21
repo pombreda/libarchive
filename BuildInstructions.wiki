@@ -60,7 +60,7 @@ You'll need the appropriate development tools if you don't already have them:
  * You'll also need the CMake program for Windows:  http://www.cmake.org/cmake/resources/software.html
  * If you want to check out source from SVN, I strongly recommend [http://tortoisesvn.tigris.org TortoiseSVN].
 
-To build the source, you use !CMake to construct a Visual Studio _solution_ file, then open that in Visual Studio:
+To build the source, you use CMake to construct a Visual Studio _solution_ file, then open that in Visual Studio:
  * Click *configure* in the CMake GUI.  (XXX more details? screen shot? XXX)
  * Open `libarchive.sln` in Visual Studio
  * Use *Build Solution* to compile everything.
@@ -77,7 +77,7 @@ You'll first need some standard development tools if you don't already have them
  * Xcode itself is distributed with most new Macs on DVD.  The newest version is available from http://developer.apple.com/ after you sign up for a free Apple Developer Connection membership.
  * The !MacPorts package manager can install a variety of open-source software (http://www.macports.org/).  If you just want to use libarchive, you can install it via !MacPorts: `sudo port install libarchive`
  * The cmake tool is available through !MacPorts: `sudo port install cmake`
- * The Subversion command-line tool for checking out source from GoogleCode is also available through !MacPorts: `sudo port install subversion`
+ * The Subversion command-line tool for checking out source from !GoogleCode is also available through !MacPorts: `sudo port install subversion`
 
 Assuming that the libarchive source code is available in the 'libarchive' directory, you build the Xcode project files using cmake:
  * `cmake -G Xcode libarchive`
