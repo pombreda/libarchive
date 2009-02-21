@@ -55,7 +55,13 @@ pieces of information:
 
 == Windows/Visual Studio ==
 
-XXX details, screen shots? XXX
+* A free version of Visual Studio C++ is available from Microsoft: http://www.microsoft.com/express/download/
+* You'll also need the CMake program for Windows:  http://www.cmake.org/cmake/resources/software.html
+* Click *configure* in the CMake GUI.  (XXX more details? screen shot? XXX)
+* Open `libarchive.sln` in Visual Studio
+* Use *Build Solution* to compile everything.
+
+Note: If you are using the source from SVN and don't have some version of Yacc or Bison installed on your system, the *configure* step above will fail with a message `"Can't find tar/getdate.c"`.  You can get a copy of this file by downloading any recent source package from the "Downloads" area.
 
 == Windows/MinGW ==
 
