@@ -55,8 +55,12 @@ pieces of information:
 
 == Windows/Visual Studio ==
 
+You'll need the appropriate development tools if you don't already have them:
  * A free version of Visual Studio C++ is available from Microsoft: http://www.microsoft.com/express/download/
  * You'll also need the CMake program for Windows:  http://www.cmake.org/cmake/resources/software.html
+ * If you want to check out source from SVN, I strongly recommend [http://tortoisesvn.tigris.org TortoiseSVN].
+
+To build the source, you use !CMake to construct a Visual Studio _solution_ file, then open that in Visual Studio:
  * Click *configure* in the CMake GUI.  (XXX more details? screen shot? XXX)
  * Open `libarchive.sln` in Visual Studio
  * Use *Build Solution* to compile everything.
