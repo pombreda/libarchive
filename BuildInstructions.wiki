@@ -65,6 +65,10 @@ To build the source, you use CMake to construct a Visual Studio _solution_ file,
  * Open `libarchive.sln` in Visual Studio
  * Use *Build Solution* to compile everything.
 
+XXX How to build/run test programs? XXX
+
+XXX How to link against zlib/bzlib/lzmadec? XXX
+
 == Windows/MinGW ==
 
 XXX details ? XXX
