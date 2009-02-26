@@ -25,11 +25,19 @@ The following features have been implemented.  It is still possible they will ge
  * Stackable read filter support.
  * Much improved Windows support, thanks largely to Michihiro NAKAJIMA.  In particular, libarchive_test and bsdtar_test now build and run on Windows.
  * Support for building with "cmake" on a wide variety of platforms, thanks to Christian Ehrlicher and Michihiro.
+ * Eliminated Yacc/Bison requirement for building by rewriting date parser in plain C.
  * Complete extended attribute support for FreeBSD, fixed extended attribute support for Linux
  * Improved support for AIX and Tru64, thanks to Björn Jacke
  * Flexible options framework by Michihiro NAKAJIMA
  * Support for reading and writing XZ format, thanks to Per Øyvind Karlsen and Michihiro.
  * Support for reading Joliet extensions, thanks to Andreas Henriksson
+
+= Libarchive 2.6.2 =
+
+_Released February, 2009_
+ * Fixed minor build issues on Linux and Solaris
+ * Fixed bsdtar adding null bytes to shar archive output
+ * Fixed crash when clients don't register skip callback
 
 = Libarchive 2.6.1 =
 
