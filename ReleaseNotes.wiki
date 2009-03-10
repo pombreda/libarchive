@@ -11,13 +11,19 @@ The changes planned for libarchive 3.0 should improve libarchive's behavior on W
   * Linux support for stat32 and stat64 structures.  The preprocessor headaches here seem unavoidable.
   * Eliminate dev/ino pairs from the public API.  Windows doesn't deal gracefully with this.  I think the few uses of this can be rephrased in terms of open file handles (the core requirement for "skip file" support is the ability to determine whether a file name and an open file descriptor refer to the same file).
 
-= Libarchive 2.7 =
+= Libarchive 2.8 =
 
-_Future release: Expected April 2009_
+_Future release: Expected summer 2009_
 
 The following are expected, but not yet implemented.  They may be pushed to a later release.
 
  * NFSv4 ACL support - I have done some research but it's looking less likely that I'll find time to implement this.
+ * Exploit seekable input - Files support seeking and Zip and ISO both work better when this is available.  But I still want Zip and ISO to be usable when the input can't seek.
+ * Zip writer - Anselm Strauss almost finished a Zip writer for Google Summer of Code 2008.  The code is good, it has a test harness, but needs a little more polish before it can be released.
+
+= Libarchive 2.7 =
+
+_Future release: Expected April 2009_
 
 The following features have been implemented.  It is still possible they will get pushed to a later release.
 
@@ -27,10 +33,11 @@ The following features have been implemented.  It is still possible they will ge
  * Support for building with "cmake" on a wide variety of platforms, thanks to Christian Ehrlicher and Michihiro.
  * Eliminated Yacc/Bison requirement for building by rewriting date parser in plain C.
  * Complete extended attribute support for FreeBSD, fixed extended attribute support for Linux
- * Improved support for AIX and Tru64, thanks to Björn Jacke
+ * Improved support for AIX, Tru64, and GNU Hurd, thanks to Björn Jacke
  * Flexible options framework by Michihiro NAKAJIMA
  * Support for reading and writing XZ format, thanks to Per Øyvind Karlsen and Michihiro.
  * Support for reading Joliet extensions, thanks to Andreas Henriksson
+ * Support for mtree hash and CRC options, thanks to Michihiro NAKAJIMA
 
 = Libarchive 2.6.2 =
 
