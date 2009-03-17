@@ -17,7 +17,7 @@ _Future release: Expected summer 2009_
 
 The following are expected, but not yet implemented.  They may be pushed to a later release.
 
- * NFSv4 ACL support - I have done some research but it's looking less likely that I'll find time to implement this.
+ * NFSv4 ACL support - I have done some research and think I have a good grasp of the requirements for this.
  * Exploit seekable input - Files support seeking and Zip and ISO both work better when this is available.  But I still want Zip and ISO to be usable when the input can't seek.
  * Zip writer - Anselm Strauss almost finished a Zip writer for Google Summer of Code 2008.  The code is good, it has a test harness, but needs a little more polish before it can be released.
 
