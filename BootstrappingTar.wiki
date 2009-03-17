@@ -1,0 +1,27 @@
+#summary How to get a tar if you don't already have one.
+
+The instructions for building libarchive assume you
+already have a tar program with which to extract the
+libarchive distribution.
+
+If you're trying to use libarchive to create a tar program,
+this could be a problem.
+
+= Untar =
+
+I've created "untar" as an extremely minimal C
+program that knows just enough about the tar format
+to extract the libarchive distribution.
+
+You can obtain the source for untar from:
+
+http://libarchive.googlecode.com/svn/trunk/contrib/untar.c
+
+The "untar" program is written using only Standard ISO C89
+(with one exception I'll explain in a moment).  As such,
+it should compile easily on any platform with a C compiler.
+
+That one exception is the `mkdir()` function for creating
+a directory.  If your platform does not have `mkdir()`,
+you may need to edit the `create_dir` function to create
+a directory in some other way.
