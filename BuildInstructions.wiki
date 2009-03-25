@@ -58,8 +58,7 @@ pieces of information:
 You'll need the appropriate development tools if you don't already have them:
  * A free version of Visual Studio C++ is available from Microsoft: http://www.microsoft.com/express/download/
  * You'll also need the CMake program for Windows, version 2.6 or later:  http://www.cmake.org/cmake/resources/software.html
- * If you want to check out source from SVN, I highly recommend [http://tortoisesvn.tigris.org TortoiseSVN].  You can also, of
-course, use the SVN command-line tool.
+ * If you want to check out source from SVN, I highly recommend [http://tortoisesvn.tigris.org TortoiseSVN].  You can also, of course, use the SVN command-line tool.
 
 To build the source, you use CMake to construct a Visual Studio _solution_ file, then open that in Visual Studio:
  * Get the source code.  You can either:
@@ -69,8 +68,7 @@ To build the source, you use CMake to construct a Visual Studio _solution_ file,
  ** Set source code parameter to the directory where you unpacked the source code (the directory containing the "CmakeLists.txt" file)
  ** Set the build output parameter to the same directory. (XXX why? XXX)
  ** Click *configure* in the CMake GUI.  (XXX more details? screen shot? XXX)
- ** "Get a screen with a lot of uninteresting red stuff.
-Stuff that might interest you (enabling zlib and bzip2) are nowhere to see (?)."
+ ** "Get a screen with a lot of uninteresting red stuff.  Stuff that might interest you (enabling zlib and bzip2) are nowhere to see (?)."
  ** Click *configure* again.  (XXX why? XXX)
  ** Click *OK*
  * Use Visual Studio to build the system:
