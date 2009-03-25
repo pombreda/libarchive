@@ -64,7 +64,7 @@ To build the source, you use CMake to construct a Visual Studio _solution_ file,
  * Get the source code.  You can either:
    * Unpack a source distribution from [http://code.google.com/p/libarchive/downloads/list the Downloads page], or
    * Use SVN to checkout the source from the [http://code.google.com/p/libarchive/source/checkout Source Repository].
- * Using CMake:
+ * Use CMake to create the solution files:
    * Set source code parameter to the directory where you unpacked the source code (the directory containing the "CmakeLists.txt" file)
    * Set the build output parameter to the same directory. (XXX why is this necessary? XXX)
    * Click *configure* in the CMake GUI.
