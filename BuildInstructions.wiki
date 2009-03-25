@@ -62,7 +62,7 @@ You'll need the appropriate development tools if you don't already have them:
 
 To build the source, you use CMake to construct a Visual Studio _solution_ file, then open that in Visual Studio:
  * Get the source code.  You can either:
-   * Unpack a source distribution from [http://code.google.com/p/libarchive/downloads/list the Downloads page], or
+   * Unpack a source distribution *version 2.6.990 or later* from [http://code.google.com/p/libarchive/downloads/list the Downloads page], or
    * Use SVN to checkout the source from the [http://code.google.com/p/libarchive/source/checkout Source Repository].
  * Use CMake to create the solution files:
    * Set source code parameter to the directory where you unpacked the source code (the directory containing the "CmakeLists.txt" file)
