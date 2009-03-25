@@ -31,10 +31,11 @@ to the `configure` program:
 
 = Using _cmake_ (for most everything else) =
 
-*Starting with libarchive 2.7*, there is a cmake-based
+*Starting with libarchive 2.6.990*, there is a cmake-based
 build system that can generate configuration files for
 a variety of IDEs, including
 Visual Studio on Windows and XCode on Mac OS.
+*This does not work for any earlier version.*
 
 == General usage ==
 
