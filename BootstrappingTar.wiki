@@ -1,17 +1,40 @@
 #summary How to get a tar if you don't already have one.
 
 The instructions for building libarchive assume you
-already have a tar program with which to extract the
-libarchive distribution.
+can unpack a tar archive that has been compressed with
+gzip.
+If you don't already have a tar program or a gunzip
+program, this could present problems.
 
-If you're downloading the libarchive distribution in order
-to obtain a tar program, this could be a problem.
+You can use very simple tools to unpack the libarchive
+distribution in two steps:
+ # uncompress the distribution file to obtain an uncompressed tar archive
+ # untar the result to obtain the individual files
+
+Once you have the unpacked files, you can then follow
+the [BuildInstructions Build Instructions] to build
+bsdtar.
+
+= Gunzip =
+
+Very simple tar programs can only unpack uncompressed
+tar archives.
+For ease of downloading, the libarchive distribution is compressed.
+To use the "untar" program below, you'll need to first
+uncompress the libarchive distribution to obtain
+an uncompressed tar archive.
+This can be done by the _gunzip_ program, or by the
+_gzip_ program with the `-d` (decompress) option.
+Precompiled versions are available for most platforms;
+you can check http://www.gzip.org/ for details.
 
 = Untar =
 
 I've created "untar" as an extremely minimal C
 program that knows just enough about the tar format
-to extract the libarchive distribution.
+to extract a simple uncompressed tar archive.
+In particular, it's sufficient to unpack the libarchive
+distribution after you decompress it.
 
 You can obtain the source for untar from:
 
