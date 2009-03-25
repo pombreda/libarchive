@@ -62,18 +62,18 @@ You'll need the appropriate development tools if you don't already have them:
 
 To build the source, you use CMake to construct a Visual Studio _solution_ file, then open that in Visual Studio:
  * Get the source code.  You can either:
- ** Unpack a source distribution from [http://code.google.com/p/libarchive/downloads/list the Downloads page], or
- ** Use SVN to checkout the source from the [http://code.google.com/p/libarchive/source/checkout Source Repository].
+   * Unpack a source distribution from [http://code.google.com/p/libarchive/downloads/list the Downloads page], or
+   * Use SVN to checkout the source from the [http://code.google.com/p/libarchive/source/checkout Source Repository].
  * Using CMake:
- ** Set source code parameter to the directory where you unpacked the source code (the directory containing the "CmakeLists.txt" file)
- ** Set the build output parameter to the same directory. (XXX why? XXX)
- ** Click *configure* in the CMake GUI.  (XXX more details? screen shot? XXX)
- ** "Get a screen with a lot of uninteresting red stuff.  Stuff that might interest you (enabling zlib and bzip2) are nowhere to see (?)."
- ** Click *configure* again.  (XXX why? XXX)
- ** Click *OK*
+   * Set source code parameter to the directory where you unpacked the source code (the directory containing the "CmakeLists.txt" file)
+   * Set the build output parameter to the same directory. (XXX why is this necessary? XXX)
+   * Click *configure* in the CMake GUI.
+   * (XXX probably need a screenshot to illustrate here XXX) "Get a screen with a lot of uninteresting red stuff.  Stuff that might interest you (enabling zlib and bzip2) are nowhere to see (?)."
+   * Click *configure* again.  (XXX why is this necessary? XXX)
+   * Click *OK*
  * Use Visual Studio to build the system:
- ** Open the generated `libarchive.sln` in Visual Studio 9
- ** Click *Rebuild Solution* to compile everything.
+   * Open the generated `libarchive.sln` in Visual Studio 9
+   * Click *Rebuild Solution* to compile everything.
 
 XXX How to build/run test programs? XXX
 
