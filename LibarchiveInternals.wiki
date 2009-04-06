@@ -21,8 +21,11 @@ generally fill in a function pointer in the structure.
 In this way, if you don't request that functionality, the
 function pointer simply remains NULL and the associated code
 will not need to be linked into your executable.
+As a result, libarchive should be usable even by very
+space-constrained applications since code you don't explicitly
+invoke will not be linked into your application.
 
-= Major Library Areas =
+-----------------------------------------------------------------------
 
 == Entry Objects ==
 
@@ -37,6 +40,8 @@ XXX set/unset tracking XXX
 XXX charset conversion handling XXX
 
 XXX relation to platform-native `struct stat` XXX
+
+---------------------------------------------------------------
 
 == Read API ==
 
@@ -105,9 +110,13 @@ functions will only get called in certain orders.
  * Skip data.  If the client just calls "read header" repeatedly, the read core will call your "skip data" function to skip bodies.  If you have no "skip data" function, it will call your "read data" function to consume the body.  Most formats can optimize the skip operation.
  * Finish.  Free your work data.
 
+---------------------------------------------------------------------------
+
 == Write API ==
 
 XXX
+
+---------------------------------------------------------------------------
 
 == Write-to-Disk API ==
 
@@ -123,6 +132,8 @@ XXX uid/gid lookups XXX
 
 XXX fixup pass XXX
 
+-----------------------------------------------------------------------------
+
 == Read-from-Disk API ==
 
 The "read-from-disk" API is rather thin right now.
@@ -132,6 +143,8 @@ For now, it just provides a hook for populating an entry object from an object o
 This includes a lot of platform-specific knowledge about reading links, extended attributes, ACLs, file flags, and other properties of the file.
 
 XXX uname/gname lookup XXX
+
+------------------------------------------------------------
 
 == Test Suite ==
 
@@ -152,6 +165,9 @@ The test program accepts several command-line options:
  * *-q* Quiet.  This suppresses most of the regular progress messages.
  * *-v* Verbose.  Normally, the test supervisor condenses duplicate failures (failures in the same line of the same source file).  It provides full details for the first failure but then reports only a count of the total times a failure was reported on that line.  Again, this is normally what you want.  Some tests repeat certain loops tens of thousands of times and it is not helpful to repeat the message every time through the loop.
  * *-r* _directory_.  Many of the tests need "reference" files.  These are typically archives that will be read.  All of the reference files are stored in uuencoded format; the test supervisor provides convenience functions to decode a reference file into the current directory.
+
+---------------------------------------------------------------------
+
 
 = How to add new functionality =
 
