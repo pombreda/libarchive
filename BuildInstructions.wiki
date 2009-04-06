@@ -1,6 +1,6 @@
 #summary How to compile and install libarchive, bsdtar, and bsdcpio from source code.
 
-= Using _configure_ (for Linux, FreeBSD, Solaris, Cygwin, Interix and other Unix-like systems) =
+= Using _configure_ (for building from the command line on Linux, FreeBSD, Solaris, Cygwin, Interix, Mac OS X and other Unix-like systems) =
 
 The libarchive distribution includes a standard
 autoconf-generated "configure" script that should
@@ -29,7 +29,7 @@ to the `configure` program:
  * `./configre --disable-bsdtar`  -- Suppresses build and install of bsdtar
  * `./configure --enable-bsdcpio` -- Enables build and install of bsdcpio
 
-= Using _cmake_ (for most everything else) =
+= Using _cmake_ (for most everything else, including non-POSIX systems and building with graphical IDEs) =
 
 *Starting with libarchive 2.6.990*, there is a cmake-based
 build system that can generate configuration files for
