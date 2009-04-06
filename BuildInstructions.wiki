@@ -1,6 +1,6 @@
 #summary How to compile and install libarchive, bsdtar, and bsdcpio from source code.
 
-= Using _configure_ (for Linux, FreeBSD, Solaris and other Unix-like systems) =
+= Using _configure_ (for Linux, FreeBSD, Solaris, Cygwin, Interix and other Unix-like systems) =
 
 The libarchive distribution includes a standard
 autoconf-generated "configure" script that should
@@ -66,7 +66,7 @@ To build the source, you use CMake to construct a Visual Studio _solution_ file,
    * Unpack a source distribution *version 2.6.990 or later* from [http://code.google.com/p/libarchive/downloads/list the Downloads page], or
    * Use SVN to checkout the source from the [http://code.google.com/p/libarchive/source/checkout Source Repository].
  * Use CMake to create the solution files:
-   * Set cmake's source code parameter to the directory where you unpacked the source code (the directory containing the "CmakeLists.txt" file)
+   * Set cmake's source code parameter to the directory where you unpacked the source code (the directory containing the "!CmakeLists.txt" file)
    * Set the build output parameter to the same directory. (XXX why is this necessary? XXX)
    * Click *configure* in the CMake GUI.
    * (XXX probably need a screenshot to illustrate here XXX) "Get a screen with a lot of uninteresting red stuff.  Stuff that might interest you (enabling zlib and bzip2) are nowhere to see (?)."
@@ -102,7 +102,7 @@ To run the tests, you'll need to manually adjust a few settings (if you know how
  * Executable -> bsdtar_test, Ctrl-Click, then "Get-Info".  On the "Arguments" pane, add "-r _<Path to libarchive root>_/tar/test" and "-p _<Path to compiled bsdtar executable>_"
  * Executable -> bsdcpio_test, Ctrl-Click, then "Get-Info".  On the "Arguments" pane, add "-r _<Path to libarchive root>_/cpio/test" and "-p _<Path to compiled bsdcpio executable>_"
 
-== General Cmake Instructions ==
+== Build Variables for the Cmake-based build system ==
 
 Here is a list of the cmake variables you are most likely to want to change.
 The values listed here are the defaults:
