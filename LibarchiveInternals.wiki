@@ -42,6 +42,11 @@ XXX relation to platform-native `struct stat` XXX
 
 The key issues with the read API are the I/O structure and
 the bidding process.
+Once you understand those and the lifecycle of a format
+provider, you should be able to read the code
+pretty easily.
+
+=== Read API I/O Model ===
 
 In order to minimize copying while still providing a convenient
 internal interface, libarchive provides a peek/consume read
@@ -70,6 +75,8 @@ There are a couple of convenient idioms supported by this I/O framework:
  * "Get a fixed block of data."  If you request a particular amount of data, you'll either receive a pointer to that much data or NULL if the request couldn't be satisfied.  If necessary, the read-ahead logic will copy the data into a dynamically-sized buffer to ensure that it can provide you with a contiguous block of data.  You will also receive a count of the data actually available (which will always be at least as large as your request).  You can then consume the amount you need.
  * "Peek ahead."  The bidding functions, in particular, make heavy use of read-ahead without consuming the input.  This allows many handlers to inspect the upcoming bytes.
 
+=== Read API Bidding ===
+
 Bidding support, of course, was one of the key motivators for this I/O design.
 The read core instantiates an initial filter by wrapping the client-provided callback functions.
 It then recursively hands the most recent filter to each available filter bidder in turn.
@@ -83,6 +90,20 @@ By doing careful verification, good bidders greatly reduce the possibilities of 
 This does create some problems correctly handling slightly damaged input.
 For decompression filters, rejecting damaged input is probably wise,
 but libarchive should provide tools for forcing the format handler so that damaged archives can be read even if they fail the initial tasting.
+
+=== Read format lifecycle ===
+
+A read format handler has a fairly straightforward lifecycle.
+Fortunately, the core of the read API ensures that your
+functions will only get called in certain orders.
+
+ * Setup function.  This is the public entry point, such as `archive_read_support_format_tar()`.  This registers the format with the read core.  The bidder and init function are required.  An options handler and associated configuration data are optional.  Note that few read formats need options handling.
+ * Bidder.  The bidder uses the internal read-ahead API to look at the next bytes in the stream.  It returns a positive bid if this looks like a stream that it can handle.
+ * Init.  The initialization function allocates a work area and registers additional functions.  If your format has a global header, it is reasonable to read it at this time.
+ * Read header.  Libarchive clients expect to alternate headers and data.  For formats such as tar or cpio, this is easy to implement:  your read header function reads the header, your read data function returns the data.
+ * Read data.  Read and return the next block of data.  This is pretty trivial unless the format uses compressed bodies (look at the Zip reader for an example of how to handle this) or can store sparse bodies (look at the tar reader handling for GNU sparse entries).
+ * Skip data.  If the client just calls "read header" repeatedly, the read core will call your "skip data" function to skip bodies.  If you have no "skip data" function, it will call your "read data" function to consume the body.  Most formats can optimize the skip operation.
+ * Finish.  Free your work data.
 
 == Write API ==
 
@@ -153,7 +174,11 @@ XXX
 
 == How to add a new write filter ==
 
-XXX
+The write filter architecture is currently very simple.
+I have plans to rearchitect this to support multiple filters
+in a fashion similar to how the write filter system works.
+
+When this happens, write blocking will probably become a separate filter.
 
 == How to add a new write format ==
 
