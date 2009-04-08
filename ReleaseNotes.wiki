@@ -26,7 +26,9 @@ The following are expected, but not yet implemented.  They may be pushed to a la
 
 _Future release: Expected April 2009_
 
-The following features have been implemented.  It is still possible they will get pushed to a later release.
+The libarchive 2.6.991a preview has all of the following features.
+After I complete some additional testing (and fix any issues I find),
+this will become the 2.7 release.
 
  * Support for concatenated gzip streams.
  * Stackable read filter support.
@@ -39,6 +41,7 @@ The following features have been implemented.  It is still possible they will ge
  * Support for reading and writing XZ format, thanks to Per Øyvind Karlsen and Michihiro.
  * Support for reading Joliet extensions, thanks to Andreas Henriksson
  * Support for mtree hash and CRC options, thanks to Michihiro NAKAJIMA
+ * Improved support for Cygwin, thanks to Charles Wilson
 
 = Libarchive 2.6.2 =
 
