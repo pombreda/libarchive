@@ -5,11 +5,13 @@
 _Future release: Expected late 2009_
 
 Major version number bumps indicate backwards-incompatible API changes.
-There are a handful of small API changes that I'd like to make but I do try hard to break the API as infrequently as possible.
-The changes planned for libarchive 3.0 should improve libarchive's behavior on Windows and Linux:
+There are a handful of API changes that I'd like to make but I do try hard to break the API as infrequently as possible, so I'm deferring these until there's enough here to justify the pain:
   * Replace off_t with int64_t everywhere.  Linux has two different off_t definitions, which gets very confusing.  Windows only has 32-bit off_t, which is pretty limiting.  Switching to int64_t will ensure consistent 64-bit file size handling on all platforms.
   * Linux support for both stat32 and stat64.  The preprocessor headaches here seem unavoidable.
   * Eliminate dev/ino pairs from the public API.  Windows doesn't deal gracefully with this.  I think the few uses of this can be rephrased in terms of open file handles (the core requirement for "skip file" support is the ability to determine whether a file name and an open file descriptor refer to the same file).
+  * Thread-safe archive_write_disk.  This requires that you "open" an archive_write_disk object by giving it a base directory and requires that we find ways to eliminate the chdir() and umask() operations from the current code.
+  * Fix the awkward "options" naming conflict; archive_write_disk_options() is nothing like archive_write_options() and archive_read_options().
+  * Stackable write filters.  The stackable read filters have made the read side a lot more straightforward.  The write side should do this as well.  This may require changing the archive_write_disk API so that blocking is handled by explicitly adding a blocking filter.
 
 = Libarchive 2.8 =
 
