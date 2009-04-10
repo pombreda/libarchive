@@ -26,11 +26,11 @@ The following are expected, but not yet implemented.  They may be pushed to a la
 
 = Libarchive 2.7 =
 
-_Future release: Expected April 2009_
+_Future release: Expected April 17, 2009_
 
-The libarchive 2.6.991a preview has all of the following features.
-After I complete some additional testing (and fix any issues I find),
-this will become the 2.7 release.
+The libarchive 2.6.992a preview has all of the following features.
+I've completed my own testing and fixed all of the outstanding issues that I know about.
+Unless further issues arise, I expect to release this as libarchive 2.7 on April 17.
 
  * Support for concatenated gzip streams.
  * Stackable read filter support.
