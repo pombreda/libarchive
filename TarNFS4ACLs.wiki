@@ -1,15 +1,17 @@
 #summary Storing NFSv4/NTFS ACLs in tar archives.
 #labels tar,format
 
+<wiki:toc max_depth="1" />
+
 = Introduction =
 
-_I have two goals for this page:  First, I want to
+I have two goals for this page:  First, I want to
 develop an understanding of prior art for archiving
 NFSv4/NTFS ACLs.  With that in hand, I want to decide
 on an approach to implement in libarchive.  Obviously,
 it is possible for libarchive to read multiple formats,
 though it's unlikely that I'll write more than one format,
-certainly not in the first iteration._
+certainly not in the first iteration.
 
 NFSv4 ACLs are still pretty new and the existing support
 varies widely.  The open-source communities are only beginning
@@ -19,10 +21,14 @@ usually disabled by default in shipping distributions).
 Unfortunately, NFSv4 does not define a portable format
 for representing ACLs.  Anyone attempting to create a portable
 way to store NFSv4 ACLs is likely going to have to implement
-their own portable format, including all parsing routines,
+their own format, including all parsing routines,
 since OS-specific library routines are unlikely to be useful.
 
-= Apple version of GNU tar =
+--------------------------------------------------------------------------
+
+= Prior Art =
+
+== Apple version of GNU tar ==
 
 Apple stores the ACLs as an extended attribute named com.apple.acl.text
 in the associated resource file.
@@ -37,7 +43,7 @@ I've not yet found documentation for the textual format used here, but it seems 
 
 The inclusion of both a POSIX-style numeric ID and a Windows-style GUID for each user and group is very interesting.  I would like for libarchive to support NFSv4/NTFS ACLs on both Windows and MacOS, at least eventually, so this will likely be required for libarchive as well.
 
-= AIX tar =
+== AIX tar ==
 
 AIX tar stores an additional 'A' entry after the regular
 file entry.  The pathname of this entry is "NFS4", the body
@@ -147,16 +153,35 @@ extended permissions
     permit   rw-     g:snapp,g:perf
 }}}
 
-= Solaris tar? =
+== Solaris tar? ==
 
 Solaris has generally been quick to include
 support for new filesystem features in their version
 of tar.  ZFS has NFSv4 ACLs, so I presume Solaris tar
 can archive them.
 
-= star? =
+== star? ==
 
 The star website and manpages have a couple of
 oblique references to NFSv4 ACL support, but I've
 not seen any documentation or announcement of such
 functionality.
+
+------------------------------------------------------------------
+
+= Libarchive's implementation =
+
+_The following is purely hypothetical at the moment.
+The final implementation is likely to be significantly different._
+
+== Core requirements ==
+
+* The NFSv4 ACL representation should be a textual representation so that it's easy for other people to understand.  The AIX example above supports this, I think.
+* It should be easy to store such ACLs as pax extended attributes, which heavily favors a UTF-8 representation.
+* It must have both numeric IDs and names for each user or group.
+* For cross-platform support, it should permit a GUID representation such as that used on Windows and MacOS.
+* The representation should be compact.
+
+== Proposed implementation ==
+
+XXX start from Solaris compact ACL format, extend? XXX
