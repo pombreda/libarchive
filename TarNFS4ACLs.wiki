@@ -176,12 +176,15 @@ The final implementation is likely to be significantly different._
 
 == Core requirements ==
 
-* The NFSv4 ACL representation should be a textual representation so that it's easy for other people to understand.  The AIX example above supports this, I think.
-* It should be easy to store such ACLs as pax extended attributes, which heavily favors a UTF-8 representation.
-* It must have both numeric IDs and names for each user or group.
-* For cross-platform support, it should permit a GUID representation such as that used on Windows and MacOS.
-* The representation should be compact.
+ * The ACL should be stored in a compact format.  This argues for a textual format similar to the AIX format above.  Several OSes support some variant of this approach in their standard tools.
+ * The ACL representation should be easy to reverse-engineer so that other tools can support the libarchive format.  This also argues for a textual representation.
+ * It should be easy to store such ACLs as pax extended attributes, which heavily favors a UTF-8 representation.
+ * Although pax has no such limitation, other formats may prefer a single-line format.
+ * It must have both numeric IDs and names for each user or group.
+ * For cross-platform support, it should permit a GUID representation such as that used on Windows and MacOS.  I believe for Mac OS, it needs to allow GUID, POSIX-style numeric ID, and name on each entry.
 
 == Proposed implementation ==
 
-XXX start from Solaris compact ACL format, extend? XXX
+FreeBSD tools have used Solaris and Mac OS as references, so it makes sense to base our format on one of those.
+
+XXX start from Solaris compact ACL format, extend with extra fields to allow GUID, ID, and name? XXX
