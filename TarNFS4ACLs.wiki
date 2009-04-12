@@ -196,7 +196,7 @@ The final implementation is likely to be significantly different._
  * It must have both numeric IDs and names for each user or group.
  * For cross-platform support, it should permit a GUID representation such as that used on Windows and MacOS.  I believe for Mac OS, it needs to allow GUID, POSIX-style numeric ID, and name on each entry.
 
-== Proposed implementation ==
+== Proposed design ==
 
 I propose using the following format for storing NFSv4 ACLs in pax archives written by libarchive:
  * Textual format essentially the same as the Solaris format above
@@ -207,3 +207,38 @@ I propose using the following format for storing NFSv4 ACLs in pax archives writ
 
 As a bonus, this should make it easy to read the Solaris format, since the
 same parser can be used for both.
+
+== Implementation checklist ==
+
+Implementing this requires changes to several different areas.
+Fortunately, most of these are pretty minor:
+
+ * Machine-independent
+  * archive_entry needs to be able to store and produce ACLs.
+   * Accept a UTF-8 encoded text format.
+   * Produce such a string.
+   * Add an entry to the existing ACL (provided as a set of broken-down fields)
+   * Iterate over ACL entries providing broken-down fields.
+  * Pax writer
+   * Write a LIBARCHIVE.acl.nfs4 attribute when it exists in the entry
+  * Pax reader
+   * Read LIBARCHIVE.acl.nfs4 attribute
+   * Read Solaris tar 'A' record (?)
+ * Machine-dependent
+  * archive_read_entry_from_disk()
+   * FreeBSD 8
+   * Linux (?)
+   * Windows (?)
+   * Mac OS X (?)
+  * archive_write_disk()
+   * FreeBSD 8
+   * Linux (?)
+   * Windows (?)
+   * Mac OS X (?)
+
+Note that with the above, bsdtar and bsdcpio will both pick up this capability for free.
+
+== More research is needed ==
+
+It would be nice to support NFS4 ACLs in a cpio extension.
+It would be nice to be able to read NFS4-style ACLs written by Mac OS 'tar'.
