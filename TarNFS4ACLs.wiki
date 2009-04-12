@@ -153,12 +153,25 @@ extended permissions
     permit   rw-     g:snapp,g:perf
 }}}
 
-== Solaris tar? ==
+== Solaris tar ==
 
-Solaris has generally been quick to include
-support for new filesystem features in their version
-of tar.  ZFS has NFSv4 ACLs, so I presume Solaris tar
-can archive them.
+Edward Thomas Napierala sent me an example of an archive from SunOS (version?) with an NFSv4 ACL.  This seems to follow the same outline used by SunOS for POSIX.1e ACLs.  The ACL is held by an 'A' entry in the tar archive that precedes the main entry for the file.
+
+The name of the 'A' entry matches the name of the file and the body of the 'A' entry contains an octal number, a null byte, and a textual representation of the ACL.
+The octal number is 03000000 plus the number of entries in the ACL.
+In Edward's example, there are 7 entries, represented as follows (the line breaks here are added only for readability, they're not in the original).
+
+{{{
+    user:bin:----------c---:------:deny:2,
+    owner@:--x-----------:------:deny,
+    owner@:rw-p---A-W-Co-:------:allow,
+    group@:rwxp----------:------:deny,
+    group@:--------------:------:allow,
+    everyone@:rwxp---A-W-Co-:------:deny,
+    everyone@:------a-R-c--s:------:allow
+}}}
+
+This is pretty readable, and includes the UID, but is significantly bulkier than it needs to be (the '-' characters could easily have been omitted) and doesn't have any obvious provision for user or group GUIDs.
 
 == star? ==
 
@@ -176,7 +189,7 @@ The final implementation is likely to be significantly different._
 
 == Core requirements ==
 
- * The ACL should be stored in a compact format.  This argues for a textual format similar to the AIX format above.  Several OSes support some variant of this approach in their standard tools.
+ * The ACL should be stored in a compact format.  This argues for a textual format similar to the AIX or Solaris format above.  Several OSes support some variant of this approach in their standard tools.
  * The ACL representation should be easy to reverse-engineer so that other tools can support the libarchive format.  This also argues for a textual representation.
  * It should be easy to store such ACLs as pax extended attributes, which heavily favors a UTF-8 representation.
  * Although pax has no such limitation, other formats may prefer a single-line format.
@@ -185,6 +198,12 @@ The final implementation is likely to be significantly different._
 
 == Proposed implementation ==
 
-FreeBSD tools have used Solaris and Mac OS as references, so it makes sense to base our format on one of those.
+I propose using the following format for storing NFSv4 ACLs in pax archives written by libarchive:
+ * Textual format essentially the same as the Solaris format above
+   * Omit '-' characters for size.  (Make them optional when reading the ACL.)
+   * Use single-character 'd'/'a' instead of 'deny' and 'allow'  (Parser should read either format.)
+   * Permit an additional colon-separated field after the UID/GID to hold a GUID.
+ * Store the ACL in a pax attribute named LIBARCHIVE.acl.nfs4
 
-XXX start from Solaris compact ACL format, extend with extra fields to allow GUID, ID, and name? XXX
+As a bonus, this should make it easy to read the Solaris format, since the
+same parser can be used for both.
