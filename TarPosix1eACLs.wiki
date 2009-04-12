@@ -5,7 +5,8 @@
 
 I currently know of two approaches for storing POSIX.1e ACLs
 in tar archives.  The first was originally developed by
-Joerg Schilling for _star_ and subsequently adopted by libarchive.
+Joerg Schilling for _star_ and subsequently adopted by libarchive
+and by GNU tar.
 The other was developed by Sun Microsystems for Solaris.
 
 POSIX.1e ACLs are simpler and the draft specification
@@ -39,5 +40,5 @@ Sun introduced a separate entry in tar files to hold the
 ACL information.  This entry has type "A" and immediately
 precedes the file to which it applies.  The body of this
 entry consists of the following:
- * A null-terminated octal number.  This is the number of following entries with an extra high bit set.  As far as I can tell, it is completely redundant and can be ignored by programs reading this format.
- * A textual list of all ACL entries.  This list includes both default and access entries.  The default entries have the text "default" prepended (e.g., "defaultuser::rwx").  The entries are comma-separated.  Unlike the _star_ format, there is no additional field for the user/group ID. 
+ * An ASCII number in octal followed by a single NULL byte.  The value is 01000000 plus the number of entries in the ACL.   The 01000000 value flags this as a POSIX.1e ACL; the count of entries is redundant and can generally be ignored.
+ * A textual list of all ACL entries.  This list includes both default and access entries.  The default entries have the text "default" prepended (e.g., "defaultuser::rwx").  The entries are comma-separated.  Unlike the _star_ format, there is no additional field for the user/group ID.
