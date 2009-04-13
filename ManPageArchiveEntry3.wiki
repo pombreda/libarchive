@@ -425,6 +425,7 @@ using the current locale.
 Similarly, if you store a wide string and then store a
 narrow string for the same data, the previously-set wide string will
 be discarded in favor of the new data.
+
 There are a few set/get functions that merit additional description:
 <dl>
 <dt>*archive_entry_set_link*()</dt><dd>
@@ -442,6 +443,7 @@ If you need to canonicalize a textual flags string, you should first set the
 text form, then request the bitmap form, then use that to set the bitmap form.
 Setting the bitmap format will clear the internal text representation
 and force it to be reconstructed when you next request the text form.
+
 The bitmap format consists of two integers, one containing bits
 that should be set, the other specifying bits that should be
 cleared.
@@ -456,6 +458,7 @@ which only includes names for set bits.)
 Converting a bitmap to a textual string is a platform-specific
 operation; bits that are not meaningful on the current platform
 will be ignored.
+
 The canonical text format is a comma-separated list of flag names.
 The
 *archive_entry_copy_fflags_text*()
@@ -475,6 +478,7 @@ which stops parsing at the first unrecognized name.)
 === ACL Handling===
 XXX This needs serious help.
 XXX
+
 An
 "Access Control List"
 (ACL) is a list of permissions that grant access to particular users or
@@ -484,6 +488,7 @@ specification.
 In particular, POSIX.1e draft 17 specifies several different formats, but
 none of those formats include both textual user/group names and numeric
 UIDs/GIDs.
+
 XXX explain ACL stuff XXX
 == SEE ALSO ==
 *archive*(3)

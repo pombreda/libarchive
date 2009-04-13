@@ -13,6 +13,7 @@ An
 file consists of a series of lines, each providing information
 about a single filesystem object.
 Leading whitespace is always ignored.
+
 When encoding file or pathnames, any backslash character or
 character outside of the 95 printable ASCII characters must be
 encoded as a a backslash followed by three
@@ -20,6 +21,7 @@ octal digits.
 When reading mtree files, any appearance of a backslash
 followed by three octal digits should be converted into the
 corresponding character.
+
 Each line is interpreted independently as one of the following types:
 <dl>
 <dt>Signature</dt><dd>
@@ -61,6 +63,7 @@ the first character, it is the pathname of a file relative to the
 starting directory.
 There can be multiple full entries describing the same file.
 </dd></dl>
+
 Some tools that process
 *mtree*
 files may require that multiple lines describing the same file
@@ -91,6 +94,7 @@ list immediately followed by an '=' sign
 and a value.
 Software programs reading mtree files should warn about
 unrecognized keywords.
+
 Currently supported keywords are as follows:
 <dl>
 <dt>*cksum*</dt><dd>
@@ -162,6 +166,7 @@ The size, in bytes, of the file.
 The last modification time of the file.
 </dd><dt>*type*</dt><dd>
 The type of the file; may be set to any one of the following:
+
 <dl>
 <dt>*block*</dt><dd>
 block special device
@@ -183,6 +188,7 @@ The file owner as a numeric value.
 </dd><dt>*uname*</dt><dd>
 The file owner as a symbolic name.
 </dd></dl>
+
 == SEE ALSO ==
 *cksum*(1),
 *find*(1),

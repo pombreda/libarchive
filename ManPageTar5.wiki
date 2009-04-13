@@ -20,6 +20,7 @@ Each file system object requires a header record which stores basic metadata
 file data.
 The end of the archive is indicated by two records consisting
 entirely of zero bytes.
+
 For compatibility with tape drives that use fixed block sizes,
 programs that read or write tar files always read or write a fixed
 number of records with each I/O operation.
@@ -43,6 +44,7 @@ This section describes the variant implemented by the tar command
 included in
 At v7,
 which is one of the earliest widely-used versions of the tar program.
+
 The header record for an old-style
 *tar*
 archive consists of the following:
@@ -112,6 +114,7 @@ field holds the first name under which this file appears.
 _linkflag_
 field.)
 </dd></dl>
+
 Early tar implementations varied in how they terminated these fields.
 The tar command in
 At v7
@@ -252,8 +255,10 @@ the prefix value and a
 _/_
 character to the regular name field to obtain the full pathname.
 </dd></dl>
+
 Note that all unused bytes must be set to
 NUL.
+
 Field termination is specified slightly differently by POSIX
 than by previous implementations.
 The
@@ -279,6 +284,7 @@ POSIX requires numeric fields to be zero-padded in the front, and allows
 them to be terminated with either space or
 NUL
 characters.
+
 Currently, most tar implementations comply with the ustar
 format, occasionally extending it by adding new fields to the
 blank area at the end of the header record.
@@ -300,6 +306,7 @@ typeflag.
 In particular, older implementations that do not fully support these
 extensions will extract the metadata into regular files, where the
 metadata can be examined as necessary.
+
 An entry in a pax interchange format archive consists of one or
 two standard ustar entries, each with its own header and data.
 The first optional entry stores the extended attributes
@@ -383,6 +390,7 @@ XXX Detail the base-64 format here XXX
 </dd><dt>*VENDOR.`*`*</dt><dd>
 XXX document other vendor-specific extensions XXX
 </dd></dl>
+
 Any values stored in an extended attribute override the corresponding
 values in the regular tar header.
 Note that compliant readers should ignore the regular fields when they
@@ -395,6 +403,7 @@ All text fields are encoded in UTF8.
 Compliant writers should store only portable 7-bit ASCII characters in
 the standard ustar header and use extended
 attributes whenever a text value contains non-ASCII characters.
+
 In addition to the
 *x*
 entry described above, the pax interchange format
@@ -408,6 +417,7 @@ defaults for all subsequent archive entries.
 The
 *g*
 entry is not widely used.
+
 Besides the new
 *x*
 and
@@ -490,6 +500,7 @@ The purpose of this
 entry is to support incremental backups; a program restoring from
 such an archive may wish to delete files on disk that did not exist
 in the directory when the archive was made.
+
 Note that the "D" typeflag specifically violates POSIX, which requires
 that unrecognized typeflags be restored as normal files.
 In this case, restoring the "D" entry as a file could interfere
@@ -609,6 +620,7 @@ field will indicate the total size of the file.
 </dd></dl>
 === Solaris Tar===
 XXX More Details Needed XXX
+
 Solaris tar (beginning with SunOS XXX 5.7 ?? XXX) supports an
 "extended"
 format that is fundamentally similar to pax interchange format,
@@ -647,6 +659,7 @@ Joerg Schilling's star program supports this extension for
 all numeric fields.
 Note that this extension is largely obsoleted by the extended attribute
 record provided by the pax interchange format.
+
 Another early GNU extension allowed base-64 values rather
 than octal.
 This extension was short-lived and such archives are almost never seen.

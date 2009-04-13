@@ -23,11 +23,13 @@ and write them to disk.
 (There are plans to add a facility to read
 *archive_entry*(1)
 objects from disk as well.)
+
 The read and write APIs each have four layers: a public API
 layer, a format layer that understands the archive file format,
 a compression layer, and an I/O layer.
 The I/O layer is completely exposed to clients who can replace
 it entirely with their own functions.
+
 In order to provide as much consistency as possible for clients,
 some public functions are virtualized.
 Eventually, it should be possible for clients to open
@@ -73,17 +75,20 @@ entry, but this design hindered error recovery.)
 The read API goes to some lengths to be nice to clients.
 As a result, there are few restrictions on the behavior of
 the client callbacks.
+
 The client read callback is expected to provide a block
 of data on each call.
 A zero-length return does indicate end of file, but otherwise
 blocks may be as small as one byte or as large as the entire file.
 In particular, blocks may be of different sizes.
+
 The client skip callback returns the number of bytes actually
 skipped, which may be much smaller than the skip requested.
 The only requirement is that the skip not be larger.
 In particular, clients are allowed to return zero for any
 skip that they don't want to handle.
 The skip callback must never be invoked with a negative value.
+
 Keep in mind that not all clients are reading from disk:
 clients reading from networks may provide different-sized
 blocks on every request and cannot skip at all;
@@ -104,6 +109,7 @@ that much data.
 If more data is immediately available, it should return more:
 the format layer handles bulk data reads by asking for a minimum
 of one byte and then copying as much data as is available.
+
 A subsequent call to the
 *consume*()
 function advances the read pointer.
@@ -115,10 +121,12 @@ the next call to
 Intervening calls to
 *consume*()
 should not cause the data to move.
+
 Skip requests must always be handled exactly.
 Decompression handlers that cannot seek forward should
 not register a skip handler;
 the API layer fills in a generic skip handler that reads and discards data.
+
 A decompression handler has a specific lifecycle:
 <dl>
 <dt>Registration/Configuration</dt><dd>
@@ -143,6 +151,7 @@ element of the
 object.
 The bid function is otherwise stateless.
 In particular, it must not perform any I/O operations.
+
 The value returned by the bid function indicates its suitability
 for handling this data stream.
 A bid of zero will ensure that this decompressor is never invoked.
@@ -288,6 +297,7 @@ are reading from a file; they seek forwards and backwards as necessary
 to locate various pieces of information.
 In contrast, libarchive never seeks backwards in its input, which
 sometimes requires very different approaches.
+
 For example, libarchive's ISO9660 support operates very differently
 from most ISO9660 readers.
 The libarchive support utilizes a work-queue design that
@@ -299,6 +309,7 @@ items are added to the list.
 This design relies heavily on the ISO9660 image being optimized so that
 directories always occur earlier on the disk than the files they
 describe.
+
 Depending on the specific format, such approaches may not be possible.
 The ZIP format specification, for example, allows archivers to store
 key information only at the end of the file.

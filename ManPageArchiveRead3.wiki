@@ -255,6 +255,7 @@ if any module accepts the option, or
 if no module accepted the option, or
 *ARCHIVE_FATAL*
 if there was a fatal error while attempting to process the option.
+
 The currently supported options are:
 <dl>
 <dt>Format iso9660</dt><dd>
@@ -417,6 +418,7 @@ which made it impossible to detect certain errors when
 was invoked implicitly from this function.
 The declaration is corrected beginning with libarchive 2.0.
 </dd></dl>
+
 Note that the library determines most of the relevant information about
 the archive by inspection.
 In particular, it automatically detects
@@ -425,6 +427,7 @@ or
 *bzip2*(1)
 compression and transparently performs the appropriate decompression.
 It also automatically detects the archive format.
+
 A complete description of the
 *struct archive*
 and
@@ -447,6 +450,7 @@ The callback functions must match the following prototypes:
 *typedef int*
 *archive_close_callback*(_struct archive `*`_, _void `*`client_data_)
 </li></ul>
+
 The open callback is invoked by
 *archive_open*().
 It should return
@@ -457,6 +461,7 @@ If the open fails, it should call
 *archive_set_error*()
 to register an error code and message and return
 *ARCHIVE_FATAL*.
+
 The read callback is invoked whenever the library
 requires raw bytes from the archive.
 The read callback should read data into a buffer,
@@ -476,6 +481,7 @@ On error, the read callback should invoke
 *archive_set_error*()
 to register an error code and message and
 return -1.
+
 The skip callback is invoked when the
 library wants to ignore a block of data.
 The return value is the number of bytes actually
@@ -491,6 +497,7 @@ A skip callback can provide significant
 performance gains when reading uncompressed
 archives from slow disk drives or other media
 that can skip quickly.
+
 The close callback is invoked by archive_close when
 the archive processing is complete.
 The callback should return
@@ -572,6 +579,7 @@ Detailed error codes and textual descriptions are available from the
 and
 *archive_error_string*()
 functions.
+
 *archive_read_new*()
 returns a pointer to a freshly allocated
 *struct archive*
@@ -579,6 +587,7 @@ object.
 It returns
 NULL
 on error.
+
 *archive_read_data*()
 returns a count of bytes actually read or zero at the end of the entry.
 On error, a value of
@@ -591,6 +600,7 @@ is returned and an error code and textual description can be retrieved from the
 and
 *archive_error_string*()
 functions.
+
 The library expects the client callbacks to behave similarly.
 If there is an error, you can use
 *archive_set_error*()

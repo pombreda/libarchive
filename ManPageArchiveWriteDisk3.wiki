@@ -253,10 +253,12 @@ and
 *archive_error_string*()
 functions can be used to retrieve an appropriate error code and a
 textual error message.
+
 *archive_write_disk_new*()
 returns a pointer to a newly-allocated
 *struct archive*
 object.
+
 *archive_write_data*()
 returns a count of the number of bytes actually written.
 On error, -1 is returned and the
@@ -305,12 +307,14 @@ or before calling
 you may confuse the permission-setting logic with
 the result that directory permissions are restored
 incorrectly.
+
 The library attempts to create objects with filenames longer than
 *PATH_MAX*
 by creating prefixes of the full path and changing the current directory.
 Currently, this logic is limited in scope; the fixup pass does
 not work correctly for such objects and the symlink security check
 option disables the support for very long pathnames.
+
 Restoring the path
 _aa/../bb_
 does create each intermediate directory.
@@ -323,10 +327,12 @@ with a single request.
 Of course, this does not work if the
 *ARCHIVE_EXTRACT_NODOTDOT*
 option is specified.
+
 Implicit directories are always created obeying the current umask.
 Explicit objects are created obeying the current umask unless
 *ARCHIVE_EXTRACT_PERM*
 is specified, in which case they current umask is ignored.
+
 SGID and SUID bits are restored only if the correct user and
 group could be set.
 If
@@ -335,6 +341,7 @@ is not specified, then no attempt is made to set the ownership.
 In this case, SGID and SUID bits are restored only if the
 user and group of the final object happen to match those specified
 in the entry.
+
 The
 "standard"
 user-id and group-id lookup functions are not the defaults because
@@ -344,6 +351,7 @@ and
 are sometimes too large for particular applications.
 The current design allows the application author to use a more
 compact implementation when appropriate.
+
 There should be a corresponding
 *archive_read_disk*
 interface that walks a directory heirarchy and returns archive

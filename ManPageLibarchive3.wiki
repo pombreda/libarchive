@@ -13,6 +13,7 @@ The library is inherently stream-oriented; readers serially iterate through
 the archive, writers serially add things to the archive.
 In particular, note that there is no built-in support for
 random access nor for in-place modification.
+
 When reading an archive, the library automatically detects the
 format and the compression.
 The library currently has read support for:
@@ -42,6 +43,7 @@ The library automatically detects archives compressed with
 or
 *compress*(1)
 and decompresses them transparently.
+
 When writing an archive, you can specify the compression
 to be used and the format to use.
 The library can write
@@ -69,12 +71,14 @@ implementations on many systems as well as several newer implementations of
 Note that the default write format will suppress the pax extended
 attributes for most entries; explicitly requesting pax format will
 enable those attributes for all entries.
+
 The read and write APIs are accessed through the
 *archive_read_XXX*()
 functions and the
 *archive_write_XXX*()
 functions, respectively, and either can be used independently
 of the other.
+
 The rest of this manual page provides an overview of the library
 operation.
 More detailed information can be found in the individual manual
@@ -104,6 +108,7 @@ and
 *archive_read_support_format_all*()
 to enable auto-detect for all formats and compression types
 currently supported by the library.
+
 Once you have prepared the
 *struct archive*
 object, you call
@@ -120,6 +125,7 @@ Note that the core library makes no assumptions about the
 size of the blocks read;
 callback functions are free to read whatever block size is
 most appropriate for the medium.
+
 Each archive entry consists of a header followed by a certain
 amount of data.
 You can obtain the next header with
@@ -153,12 +159,14 @@ structure that you provide it, which may differ from the
 entry just read from the archive.
 In particular, many applications will want to override the
 pathname, file permissions, or ownership.
+
 Once you have finished reading data from the archive, you
 should call
 *archive_read_close*()
 to close the archive, then call
 *archive_read_finish*()
 to release all resources, including all memory allocated by the library.
+
 The
 *archive_read*(3)
 manual page provides more detailed calling information for this API.
@@ -172,6 +180,7 @@ the various
 functions are used to set parameters for writing the archive, and
 *archive_write_open*()
 completes the setup and opens the archive for writing.
+
 Individual archive entries are written in a three-step
 process:
 You first initialize a
@@ -191,24 +200,29 @@ function actually writes the header data to the archive.
 You can then use
 *archive_write_data*()
 to write the actual data.
+
 After all entries have been written, use the
 *archive_write_finish*()
 function to release all resources.
+
 The
 *archive_write*(3)
 manual page provides more detailed calling information for this API.
 == DESCRIPTION ==
 Detailed descriptions of each function are provided by the
 corresponding manual pages.
+
 All of the functions utilize an opaque
 *struct archive*
 datatype that provides access to the archive contents.
+
 The
 *struct archive_entry*
 structure contains a complete description of a single archive
 entry.
 It uses an opaque interface that is fully documented in
 *archive_entry*(3).
+
 Users familiar with historic formats should be aware that the newer
 variants have eliminated most restrictions on the length of textual fields.
 Clients should not assume that filenames, link names, user names, or
@@ -233,12 +247,14 @@ function can be used to retrieve a numeric error code (see
 The
 *archive_error_string*()
 returns a textual error message suitable for display.
+
 *archive_read_new*()
 and
 *archive_write_new*()
 return pointers to an allocated and initialized
 *struct archive*
 object.
+
 *archive_read_data*()
 and
 *archive_write_data*()
@@ -277,6 +293,7 @@ Such information cannot be fully archived or restored using this library.
 This includes, for example, comments, character sets,
 or the arbitrary key/value pairs that can appear in
 pax interchange format archives.
+
 Conversely, of course, not all of the information that can be
 stored in an
 *struct archive_entry*

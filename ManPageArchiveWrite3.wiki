@@ -263,6 +263,7 @@ if any module accepts the option, or
 if no module accepted the option, or
 *ARCHIVE_FATAL*
 if there was a fatal error while attempting to process the option.
+
 The currently supported options are:
 <dl>
 <dt>Compressor gzip</dt><dd>
@@ -409,6 +410,7 @@ These functions are registered by calling
 *typedef int*
 *archive_open_callback*(_struct archive `*`_, _void `*`client_data_)
 </li></ul>
+
 The open callback is invoked by
 *archive_write_open*().
 It should return
@@ -424,6 +426,7 @@ to register an error code and message and return
 *typedef ssize_t*
 *archive_write_callback*(_struct archive `*`_, _void `*`client_data_, _const void `*`buffer_, _size_t length_)
 </li></ul>
+
 The write callback is invoked whenever the library
 needs to write raw bytes to the archive.
 For correct blocking, each call to the write callback function
@@ -441,6 +444,7 @@ to register an error code and message and return -1.
 *typedef int*
 *archive_close_callback*(_struct archive `*`_, _void `*`client_data_)
 </li></ul>
+
 The close callback is invoked by archive_close when
 the archive processing is complete.
 The callback should return
@@ -554,10 +558,12 @@ and
 *archive_error_string*()
 functions can be used to retrieve an appropriate error code and a
 textual error message.
+
 *archive_write_new*()
 returns a pointer to a newly-allocated
 *struct archive*
 object.
+
 *archive_write_data*()
 returns a count of the number of bytes actually written.
 On error, -1 is returned and the
@@ -601,6 +607,7 @@ For example, several historic implementations calculated header checksums
 incorrectly and will thus reject valid archives; GNU tar does not fully support
 pax interchange format; some old tar implementations required specific
 field terminations.
+
 The default pax interchange format eliminates most of the historic
 tar limitations and provides a generic key/value attribute facility
 for vendor-defined extensions.
