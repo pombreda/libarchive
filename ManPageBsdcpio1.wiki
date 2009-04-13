@@ -250,7 +250,7 @@ _src_
 to
 _dest_:
 {{{
-*find* _src_ | *cpio* *-pmud* _dest_
+find src | cpio -pmud dest
 }}}
 
 By carefully selecting options to the
@@ -263,7 +263,7 @@ to
 _dest_
 that are more than 2 days old and whose names match a particular pattern:
 {{{
-*find* _src_ *-mtime* _+2_ | *grep* foo[bar] | *cpio* *-pdmu* _dest_
+find src -mtime _+2_ | grep foo[bar] | cpio -pdmu dest
 }}}
 
 This example copies files from
@@ -273,7 +273,7 @@ _dest_
 that are more than 2 days old and which contain the word
 "foobar":
 {{{
-*find* _src_ *-mtime* _+2_ | *xargs* *grep* -l foobar | *cpio* *-pdmu* _dest_
+find src -mtime _+2_ | xargs grep -l foobar | cpio -pdmu dest
 }}}
 == COMPATIBILITY ==
 The mode options i, o, and p and the options

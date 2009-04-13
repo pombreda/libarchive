@@ -52,7 +52,7 @@ Any relative entry that describes a directory changes the
 current directory.
 </dd><dt>dot-dot</dt><dd>
 As a special case, a relative entry with the filename
-_\& .._
+_.._
 changes the current directory to the parent directory.
 Options on dot-dot entries are always ignored.
 </dd><dt>Full</dt><dd>
