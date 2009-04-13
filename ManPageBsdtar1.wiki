@@ -701,6 +701,7 @@ Although
 *tar*
 has mechanisms to protect against each one,
 savvy users should be aware of the implications:
+<ul>
 <li>
 Archive entries can have absolute pathnames.
 By default,
@@ -737,7 +738,7 @@ nor
 is specified,
 *tar*
 will refuse to extract the entry.
-</li>
+</li></ul>
 To protect yourself, you should be wary of any archives that
 come from untrusted sources.
 You should examine the contents of an archive with

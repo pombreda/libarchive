@@ -84,6 +84,7 @@ directories.
 </dd><dt>*ustar*</dt><dd>
 The libarchive library can both read and write this format.
 This format has the following limitations:
+<ul>
 <li>
 Device major and minor numbers are limited to 21 bits.
 Nodes with larger numbers will not be added to the archive.
@@ -99,7 +100,7 @@ Extended attributes, file flags, and other extended
 security information cannot be stored.
 </li><li>
 Archive entries are limited to 2 gigabytes in size.
-</li>
+</li></ul>
 Note that the pax interchange format has none of these restrictions.
 </dd></dl>
 The libarchive library can also read a variety of commonly-used extensions to

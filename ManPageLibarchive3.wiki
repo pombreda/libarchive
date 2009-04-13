@@ -16,6 +16,7 @@ random access nor for in-place modification.
 When reading an archive, the library automatically detects the
 format and the compression.
 The library currently has read support for:
+<ul>
 <li>
 old-style tar archives,
 </li><li>
@@ -34,7 +35,7 @@ most common cpio archive formats,
 ISO9660 CD images (with or without RockRidge extensions),
 </li><li>
 Zip archives.
-</li>
+</li></ul>
 The library automatically detects archives compressed with
 *gzip*(1),
 *bzip2*(1),
@@ -44,6 +45,7 @@ and decompresses them transparently.
 When writing an archive, you can specify the compression
 to be used and the format to use.
 The library can write
+<ul>
 <li>
 POSIX-standard
 "ustar"
@@ -56,7 +58,7 @@ archives,
 POSIX octet-oriented cpio archives,
 </li><li>
 two different variants of shar archives.
-</li>
+</li></ul>
 Pax interchange format is an extension of the tar archive format that
 eliminates essentially all of the limitations of historic tar formats
 in a standard fashion that is supported
