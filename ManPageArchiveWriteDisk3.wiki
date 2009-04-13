@@ -281,7 +281,6 @@ interface was added to
 and first appeared in
 FreeBSD 6.3.
 == AUTHORS ==
--nosplit
 The
 *libarchive*
 library was written by

@@ -246,7 +246,6 @@ interface was added to
 and first appeared in
 FreeBSD 8.0.
 == AUTHORS ==
--nosplit
 The
 *libarchive*
 library was written by

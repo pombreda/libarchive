@@ -493,7 +493,6 @@ The
 library first appeared in
 FreeBSD 5.3.
 == AUTHORS ==
--nosplit
 The
 *libarchive*
 library was written by
