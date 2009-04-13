@@ -7,7 +7,7 @@ The
 *mtree*
 format is a textual format that describes a collection of filesystem objects.
 Such files are typically used to create or verify directory hierarchies.
-=== General Format
+=== General Format===
 An
 *mtree*
 file consists of a series of lines, each providing information
@@ -67,7 +67,7 @@ files may require that multiple lines describing the same file
 occur consecutively.
 It is not permitted for the same file to be mentioned using
 both a relative and a full file specification.
-=== Special commands
+=== Special commands===
 Two special commands are currently defined:
 <dl>
 <dt>*/set*</dt><dd>
@@ -83,7 +83,7 @@ command.
 It is followed on the same line by one or more keywords
 separated by whitespace.
 </dd></dl>
-=== Keywords
+=== Keywords===
 After the filename, a full or relative entry consists of zero
 or more whitespace-separated keyword definitions.
 Each such definition consists of a key from the following
@@ -202,7 +202,7 @@ signature line is new and not yet widely implemented.
 The
 *mtree*
 utility appeared in
-Bx 4.3 Reno.
+BSD 4.3 Reno.
 The
 *MD5*
 digest capability was added in

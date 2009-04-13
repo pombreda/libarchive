@@ -69,7 +69,7 @@ Similarly, the format handlers are polled to see which handler
 is the best for each archive.
 (Prior to 2.4.0, the format bidders were invoked for each
 entry, but this design hindered error recovery.)
-=== I/O Layer and Client Callbacks
+=== I/O Layer and Client Callbacks===
 The read API goes to some lengths to be nice to clients.
 As a result, there are few restrictions on the behavior of
 the client callbacks.
@@ -93,7 +93,7 @@ to read the entire file into memory at once and return the
 entire file to libarchive as a single block;
 other clients may begin asynchronous I/O operations for the
 next block on each request.
-=== Decompresssion Layer
+=== Decompresssion Layer===
 The decompression layer not only handles decompression,
 it also buffers data so that the format handlers see a
 much nicer I/O model.
@@ -191,7 +191,7 @@ _decompressor_
 object.
 It should not invoke the client close callback.
 </dd></dl>
-=== Format Layer
+=== Format Layer===
 The read formats have a similar lifecycle to the decompression handlers:
 <dl>
 <dt>Registration</dt><dd>
@@ -242,20 +242,20 @@ function.
 </dd><dt>Cleanup</dt><dd>
 On cleanup, the format should release all of its allocated memory.
 </dd></dl>
-=== API Layer
+=== API Layer===
 XXX to do XXX
 == WRITE ARCHITECTURE ==
 The write API has a similar set of four layers:
 an API layer, a format layer, a compression layer, and an I/O layer.
 The registration here is much simpler because only
 one format and one compression can be registered at a time.
-=== I/O Layer and Client Callbacks
+=== I/O Layer and Client Callbacks===
 XXX To be written XXX
-=== Compression Layer
+=== Compression Layer===
 XXX To be written XXX
-=== Format Layer
+=== Format Layer===
 XXX To be written XXX
-=== API Layer
+=== API Layer===
 XXX To be written XXX
 == WRITE_DISK ARCHITECTURE ==
 The write_disk API is intended to look just like the write API

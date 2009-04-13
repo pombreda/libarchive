@@ -11,7 +11,7 @@ stream of bytes.
 The format was originally designed to be used with
 tape drives that operate with fixed-size blocks, but is widely used as
 a general packaging mechanism.
-=== General Format
+=== General Format===
 A
 *tar*
 archive consists of a series of 512-byte records.
@@ -35,7 +35,7 @@ and
 here are not entirely standard; this document follows the
 convention established by John Gilmore in documenting
 *pdtar*.)
-=== Old-Style Archive Format
+=== Old-Style Archive Format===
 The original tar archive format has been extended many times to
 include additional information that various implementors found
 necessary.
@@ -126,7 +126,7 @@ IEEE Std 1003.1-1988 (``POSIX.1'')
 standard was released.
 For best portability, modern implementations should fill the numeric
 fields with leading zeros.
-=== Pre-POSIX Archives
+=== Pre-POSIX Archives===
 An early draft of
 IEEE Std 1003.1-1988 (``POSIX.1'')
 served as the basis for John Gilmore's
@@ -147,7 +147,7 @@ The numeric fields are generally filled with leading spaces
 The prefix field is often not used, limiting pathnames to
 the 100 characters of old-style archives.
 </li>
-=== POSIX ustar Archives
+=== POSIX ustar Archives===
 IEEE Std 1003.1-1988 (``POSIX.1'')
 defined a standard tar file format to be read and written
 by compliant implementations of
@@ -281,7 +281,7 @@ characters.
 Currently, most tar implementations comply with the ustar
 format, occasionally extending it by adding new fields to the
 blank area at the end of the header record.
-=== Pax Interchange Format
+=== Pax Interchange Format===
 There are many attributes that cannot be portably stored in a
 POSIX ustar archive.
 IEEE Std 1003.1-2001 (``POSIX.1'')
@@ -419,7 +419,7 @@ This allows readers to restore any hardlink to a file without
 having to rewind the archive to find an earlier entry.
 However, it creates complications for robust readers, as it is no longer
 clear whether or not they should ignore the size field for hardlink entries.
-=== GNU Tar Archives
+=== GNU Tar Archives===
 The GNU tar program started with a pre-POSIX format similar to that
 described earlier and has extended it using several different mechanisms:
 It added new fields to the empty space in the header (some of which was later
@@ -606,7 +606,7 @@ entry; the
 _realsize_
 field will indicate the total size of the file.
 </dd></dl>
-=== Solaris Tar
+=== Solaris Tar===
 XXX More Details Needed XXX
 Solaris tar (beginning with SunOS XXX 5.7 ?? XXX) supports an
 "extended"
@@ -631,7 +631,7 @@ The body of this entry contains a seven-digit octal number
 followed by a zero byte, followed by the
 textual ACL description.
 </li>
-=== Other Extensions
+=== Other Extensions===
 One common extension, utilized by GNU tar, star, and other newer
 *tar*
 implementations, permits binary numbers in the standard numeric

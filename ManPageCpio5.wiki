@@ -8,7 +8,7 @@ The
 archive format collects any number of files, directories, and other
 file system objects (symbolic links, device nodes, etc.) into a single
 stream of bytes.
-=== General Format
+=== General Format===
 Each file system object in a
 *cpio*
 archive comprises a header record with basic numeric metadata
@@ -27,9 +27,9 @@ and any file data.
 The end of the archive is indicated by a special record with
 the pathname
 "TRAILER!!!".
-=== PWB format
+=== PWB format===
 XXX Any documentation of the original PWB/UNIX 1.0 format? XXX
-=== Old Binary Format
+=== Old Binary Format===
 The old binary
 *cpio*
 format stores numbers as 2-byte and 4-byte binary values.
@@ -138,7 +138,7 @@ bytes to an even length.
 Hardlinked files are not given special treatment;
 the full file contents are included with each copy of the
 file.
-=== Portable ASCII Format
+=== Portable ASCII Format===
 Version 2 of the Single UNIX Specification (``SUSv2'')
 standardized an ASCII variant that is portable across all
 platforms.
@@ -171,7 +171,7 @@ after the pathname or file contents.
 If the files being archived are themselves entirely ASCII, then
 the resulting archive will be entirely ASCII, except for the
 NUL byte that terminates the name field.
-=== New ASCII Format
+=== New ASCII Format===
 The "new" ASCII format uses 8-byte hexadecimal fields for
 all numbers and separates device numbers into separate fields
 for major and minor numbers.
@@ -211,7 +211,7 @@ older ASCII format, which supports 8 gigabyte files).
 In this format, hardlinked files are handled by setting the
 filesize to zero for each entry except the last one that
 appears in the archive.
-=== New CRC Format
+=== New CRC Format===
 The CRC format is identical to the new ASCII format described
 in the previous section except that the magic field is set
 to
@@ -222,12 +222,12 @@ field is set to the sum of all bytes in the file data.
 This sum is computed treating all bytes as unsigned values
 and using unsigned arithmetic.
 Only the least-significant 32 bits of the sum are stored.
-=== HP variants
+=== HP variants===
 The
 *cpio*
 implementation distributed with HPUX used XXXX but stored
 device numbers differently XXX.
-=== Other Extensions and Variants
+=== Other Extensions and Variants===
 Sun Solaris uses additional file types to store extended file
 data, including ACLs and extended attributes, as special
 entries in cpio archives.

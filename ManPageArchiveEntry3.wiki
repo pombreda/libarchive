@@ -375,7 +375,7 @@ These objects are used by
 *libarchive*(3)
 to represent the metadata associated with a particular
 entry in an archive.
-=== Create and Destroy
+=== Create and Destroy===
 There are functions to allocate, destroy, clear, and copy
 _archive_entry_
 objects:
@@ -396,7 +396,7 @@ Allocate and return a blank
 *struct archive_entry*
 object.
 </dd></dl>
-=== Set and Get Functions
+=== Set and Get Functions===
 Most of the functions here set or read entries in an object.
 Such functions have one of the following forms:
 <dl>
@@ -431,7 +431,7 @@ There are a few set/get functions that merit additional description:
 This function sets the symlink field if it is already set.
 Otherwise, it sets the hardlink field.
 </dd></dl>
-=== File Flags
+=== File Flags===
 File flags are transparently converted between a bitmap
 representation and a textual format.
 For example, if you set the bitmap and ask for text, the library
@@ -472,7 +472,7 @@ recognized.
 (In particular, this differs from
 *strtofflags*(3),
 which stops parsing at the first unrecognized name.)
-=== ACL Handling
+=== ACL Handling===
 XXX This needs serious help.
 XXX
 An
