@@ -162,7 +162,7 @@ Pass-through mode.
 See above for description.
 </dd><dt>*--quiet*</dt><dd>
 Suppress unnecessary messages.
-</dd><dt>*-R* `[`user`]` `[`:`]` `[`group`]`</dt><dd>
+</dd><dt>*-R* `[`user`]``[`:`]``[`group`]`</dt><dd>
 Set the owner and/or group on files in the output.
 If group is specified with no user
 (for example,

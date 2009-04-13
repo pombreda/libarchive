@@ -89,13 +89,13 @@ documented in
 Unless specifically stated otherwise, options are applicable in
 all operating modes.
 <dl>
-<dt>*@* _archive_</dt><dd>
+<dt>*@*_archive_</dt><dd>
 (c and r mode only)
 The specified archive is opened and the entries
 in it will be appended to the current archive.
 As a simple example,
 {{{
-tar -c -f - newfile @ original.tar
+tar -c -f - newfile @original.tar
 }}}
 writes a new archive to standard output containing a file
 _newfile_
@@ -108,7 +108,7 @@ tar -c -f - newfile original.tar
 creates a new archive with only two entries.
 Similarly,
 {{{
-tar -czf - --format pax @ -
+tar -czf - --format pax @-
 }}}
 reads an archive from standard input (whose format will be determined
 automatically) and converts it into a gzip-compressed
@@ -187,7 +187,7 @@ The
 option is especially useful when filtering archives.
 For example, the command
 {{{
-tar -c -f new.tar --include='*foo*' @ old.tgz
+tar -c -f new.tar --include='*foo*' @old.tgz
 }}}
 creates a new archive
 _new.tar_
@@ -303,7 +303,7 @@ Modules that do not support this key will ignore it.
 </dd><dt>_key_</dt><dd>
 The key will be enabled in every module that supports it.
 This is equivalent to
-_key_ *=1*.
+_key_*=1*.
 </dd><dt>_!key_</dt><dd>
 The key will be disabled in every module that supports it.
 </dd><dt>_module:key=value_, _module:key_, _module:!key_</dt><dd>
@@ -324,7 +324,7 @@ to disable.
 A decimal integer from 0 to 9 specifying the gzip compression level.
 </dd><dt>*xz:compression-level*</dt><dd>
 A decimal integer from 0 to 9 specifying the xz compression level.
-</dd><dt>*mtree:* _keyword_</dt><dd>
+</dd><dt>*mtree:*_keyword_</dt><dd>
 The mtree writer module allows you to specify which mtree keywords
 will be included in the output.
 Supported keywords include:
@@ -568,12 +568,12 @@ cd srcdir ; tar -cf -\. | (cd destdir ; tar -xpf -)
 
 In create mode, the list of files and directories to be archived
 can also include directory change instructions of the form
-*-C* _foo/baz_
+*-C*_foo/baz_
 and archive inclusions of the form
-*@* _archive-file_.
+*@*_archive-file_.
 For example, the command line
 {{{
-tar -c -f new.tar foo1 @ old.tgz-C /tmpfoo2
+tar -c -f new.tar foo1 @old.tgz -C/tmp foo2
 }}}
 will create a new archive
 _new.tar_.
@@ -909,7 +909,7 @@ There is not yet any support for multi-volume archives or for archiving
 sparse files.
 
 Converting between dissimilar archive formats (such as tar and cpio) using the
-*@* _-_
+*@*_-_
 convention can cause hard link information to be lost.
 (This is a consequence of the incompatible ways that different archive
 formats store hardlink information.)

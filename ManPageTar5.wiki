@@ -371,7 +371,7 @@ Schilling's
 *SCHILY.`*`*
 extensions can store all of the data from
 _struct_ stat.
-</dd><dt>*LIBARCHIVE.xattr.* _namespace_._key_</dt><dd>
+</dd><dt>*LIBARCHIVE.xattr.*_namespace_._key_</dt><dd>
 Libarchive stores POSIX.1e-style extended attributes using
 keys of this form.
 The
