@@ -336,13 +336,13 @@ Note that this is encoded in UTF8 and can thus include non-ASCII characters.
 </dd><dt>*path*</dt><dd>
 The full pathname of the entry.
 Note that this is encoded in UTF8 and can thus include non-ASCII characters.
-</dd><dt>*realtime.**, *security.**</dt><dd>
+</dd><dt>*realtime.`*`*, *security.`*`*</dt><dd>
 These keys are reserved and may be used for future standardization.
 </dd><dt>*size*</dt><dd>
 The size of the file.
 Note that there is no length limit on this field, allowing conforming
 archives to store files much larger than the historic 8GB limit.
-</dd><dt>*SCHILY.**</dt><dd>
+</dd><dt>*SCHILY.`*`*</dt><dd>
 Vendor-specific attributes used by Joerg Schilling's
 *star*
 implementation.
@@ -360,7 +360,7 @@ The full minor and major numbers for device nodes.
 The device number, inode number, and link count for the entry.
 In particular, note that a pax interchange format archive using Joerg
 Schilling's
-*SCHILY.**
+*SCHILY.`*`*
 extensions can store all of the data from
 _struct_ stat.
 </dd><dt>*LIBARCHIVE.xattr.* _namespace_._key_</dt><dd>
@@ -379,7 +379,7 @@ followed by two uppercase hexadecimal digits.
 The value of this key is the extended attribute value
 encoded in base 64.
 XXX Detail the base-64 format here XXX
-</dd><dt>*VENDOR.**</dt><dd>
+</dd><dt>*VENDOR.`*`*</dt><dd>
 XXX document other vendor-specific extensions XXX
 </dd></dl>
 Any values stored in an extended attribute override the corresponding
