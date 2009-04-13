@@ -247,7 +247,7 @@ The option will be provided to every module with a NULL value.
 As above, but the corresponding option and value will be provided
 only to modules whose name matches
 _module_.
-</dl>
+</dd></dl>
 The return value will be
 *ARCHIVE_OK*
 if any module accepts the option, or
@@ -264,8 +264,8 @@ Support Joliet extensions.
 Defaults to enabled, use
 *!joliet*
 to disable.
-</dl>
-</dl>
+</dd></dl>
+</dd></dl>
 </dd> <dt>*archive_read_open*()</dt><dd>
 The same as
 *archive_read_open2*(),
@@ -416,7 +416,7 @@ which made it impossible to detect certain errors when
 *archive_read_close*()
 was invoked implicitly from this function.
 The declaration is corrected beginning with libarchive 2.0.
-</dl>
+</dd></dl>
 Note that the library determines most of the relevant information about
 the archive by inspection.
 In particular, it automatically detects
@@ -446,7 +446,7 @@ The callback functions must match the following prototypes:
 </li> <li>
 *typedef int*
 *archive_close_callback*(_struct archive `*`_, _void `*`client_data_)
-</ul>
+</li></ul>
 The open callback is invoked by
 *archive_open*().
 It should return
