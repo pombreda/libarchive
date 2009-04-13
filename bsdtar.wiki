@@ -1,4 +1,5 @@
 #summary archive_read 3 manual page
+= This is an experimental translation of the mdoc format man page to Wiki syntax =
 == NAME ==
 *archive_read_new*,
 *archive_read_set_filter_options*,
