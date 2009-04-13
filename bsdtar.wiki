@@ -1,5 +1,4 @@
 #summary archive_read 3 manual page
-= This is an experimental translation of the mdoc format man page to Wiki syntax =
 == NAME ==
 *archive_read_new*,
 *archive_read_set_filter_options*,
@@ -41,27 +40,27 @@
 <br>
 *struct archive `*`*
 <br>
-*archive_read_new*(*void*);
+*archive_read_new*(_void_);
 <br>
 *int*
 <br>
-*archive_read_support_compression_all*(*struct archive `*`*);
+*archive_read_support_compression_all*(_struct archive `*`_);
 <br>
 *int*
 <br>
-*archive_read_support_compression_bzip2*(*struct archive `*`*);
+*archive_read_support_compression_bzip2*(_struct archive `*`_);
 <br>
 *int*
 <br>
-*archive_read_support_compression_compress*(*struct archive `*`*);
+*archive_read_support_compression_compress*(_struct archive `*`_);
 <br>
 *int*
 <br>
-*archive_read_support_compression_gzip*(*struct archive `*`*);
+*archive_read_support_compression_gzip*(_struct archive `*`_);
 <br>
 *int*
 <br>
-*archive_read_support_compression_none*(*struct archive `*`*);
+*archive_read_support_compression_none*(_struct archive `*`_);
 <br>
 *int*
 <br>
@@ -69,39 +68,39 @@
 <br>
 *int*
 <br>
-*archive_read_support_format_all*(*struct archive `*`*);
+*archive_read_support_format_all*(_struct archive `*`_);
 <br>
 *int*
 <br>
-*archive_read_support_format_cpio*(*struct archive `*`*);
+*archive_read_support_format_cpio*(_struct archive `*`_);
 <br>
 *int*
 <br>
-*archive_read_support_format_empty*(*struct archive `*`*);
+*archive_read_support_format_empty*(_struct archive `*`_);
 <br>
 *int*
 <br>
-*archive_read_support_format_iso9660*(*struct archive `*`*);
+*archive_read_support_format_iso9660*(_struct archive `*`_);
 <br>
 *int*
 <br>
-*archive_read_support_format_tar*(*struct archive `*`*);
+*archive_read_support_format_tar*(_struct archive `*`_);
 <br>
 *int*
 <br>
-*archive_read_support_format_zip*(*struct archive `*`*);
+*archive_read_support_format_zip*(_struct archive `*`_);
 <br>
 *int*
 <br>
-*archive_read_set_filter_options*(*struct archive `*`*, *const char `*`*);
+*archive_read_set_filter_options*(_struct archive `*`_, _const char `*`_);
 <br>
 *int*
 <br>
-*archive_read_set_format_options*(*struct archive `*`*, *const char `*`*);
+*archive_read_set_format_options*(_struct archive `*`_, _const char `*`_);
 <br>
 *int*
 <br>
-*archive_read_set_options*(*struct archive `*`*, *const char `*`*);
+*archive_read_set_options*(_struct archive `*`_, _const char `*`_);
 <br>
 *int*
 <br>
@@ -113,11 +112,11 @@
 <br>
 *int*
 <br>
-*archive_read_open_FILE*(*struct archive `*`*, *FILE `*`file*);
+*archive_read_open_FILE*(_struct archive `*`_, _FILE `*`file_);
 <br>
 *int*
 <br>
-*archive_read_open_fd*(*struct archive `*`*, *int fd*, *size_t block_size*);
+*archive_read_open_fd*(_struct archive `*`_, _int fd_, _size_t block_size_);
 <br>
 *int*
 <br>
@@ -125,19 +124,19 @@
 <br>
 *int*
 <br>
-*archive_read_open_memory*(*struct archive `*`*, *void `*`buff*, *size_t size*);
+*archive_read_open_memory*(_struct archive `*`_, _void `*`buff_, _size_t size_);
 <br>
 *int*
 <br>
-*archive_read_next_header*(*struct archive `*`*, *struct archive_entry `*``*`*);
+*archive_read_next_header*(_struct archive `*`_, _struct archive_entry `*``*`_);
 <br>
 *int*
 <br>
-*archive_read_next_header2*(*struct archive `*`*, *struct archive_entry `*`*);
+*archive_read_next_header2*(_struct archive `*`_, _struct archive_entry `*`_);
 <br>
 *ssize_t*
 <br>
-*archive_read_data*(*struct archive `*`*, *void `*`buff*, *size_t len*);
+*archive_read_data*(_struct archive `*`_, _void `*`buff_, _size_t len_);
 <br>
 *int*
 <br>
@@ -145,15 +144,15 @@
 <br>
 *int*
 <br>
-*archive_read_data_skip*(*struct archive `*`*);
+*archive_read_data_skip*(_struct archive `*`_);
 <br>
 *int*
 <br>
-*archive_read_data_into_buffer*(*struct archive `*`*, *void `*`*, *ssize_t len*);
+*archive_read_data_into_buffer*(_struct archive `*`_, _void `*`_, _ssize_t len_);
 <br>
 *int*
 <br>
-*archive_read_data_into_fd*(*struct archive `*`*, *int fd*);
+*archive_read_data_into_fd*(_struct archive `*`_, _int fd_);
 <br>
 *int*
 <br>
@@ -169,11 +168,11 @@
 <br>
 *int*
 <br>
-*archive_read_close*(*struct archive `*`*);
+*archive_read_close*(_struct archive `*`_);
 <br>
 *int*
 <br>
-*archive_read_finish*(*struct archive `*`*);
+*archive_read_finish*(_struct archive `*`_);
 == DESCRIPTION ==
 These functions provide a complete API for reading streaming archives.
 The general process is to first create the
@@ -184,17 +183,17 @@ resources.
 The following summary describes the functions in approximately the
 order they would be used:
 <dl>
-<dt>*archive_read_new*()<dd>
+ <dt>*archive_read_new*()</dt><dd>
 Allocates and initializes a
 *struct archive*
 object suitable for reading from an archive.
-<dt>
+</dd> <dt>
 *archive_read_support_compression_all*(),
 *archive_read_support_compression_bzip2*(),
 *archive_read_support_compression_compress*(),
 *archive_read_support_compression_gzip*(),
 *archive_read_support_compression_none*()
-<dd>
+</dt> <dd>
 Enables auto-detection code and decompression support for the
 specified compression.
 Note that
@@ -203,19 +202,19 @@ is always enabled by default.
 For convenience,
 *archive_read_support_compression_all*()
 enables all available decompression code.
-<dt>*archive_read_support_compression_program*()<dd>
+</dd> <dt>*archive_read_support_compression_program*()</dt><dd>
 Data is fed through the specified external program before being dearchived.
 Note that this disables automatic detection of the compression format,
 so it makes no sense to specify this in conjunction with any other
 decompression option.
-<dt>
+</dd> <dt>
 *archive_read_support_format_all*(),
 *archive_read_support_format_cpio*(),
 *archive_read_support_format_empty*(),
 *archive_read_support_format_iso9660*(),
 *archive_read_support_format_tar*(),
 *archive_read_support_format_zip*()
-<dd>
+</dt> <dd>
 Enables support---including auto-detection code---for the
 specified archive format.
 For example,
@@ -226,28 +225,28 @@ For convenience,
 *archive_read_support_format_all*()
 enables support for all available formats.
 Only empty archives are supported by default.
-<dt>
+</dd> <dt>
 *archive_read_set_filter_options*(),
 *archive_read_set_format_options*(),
 *archive_read_set_options*()
-<dd>
+</dt> <dd>
 Specifies options that will be passed to currently-registered
 filters (including decompression filters) and/or format readers.
 The argument is a comma-separated list of individual options.
 Individual options have one of the following forms:
 <dl>
-<dt>_option=value_</dt><dd>
+ <dt>_option=value_</dt><dd>
 The option/value pair will be provided to every module.
-Modules that do not accept an option with this name will ignore it.</dd>
-<dt>_option_</dt><dd>
+Modules that do not accept an option with this name will ignore it.
+</dd> <dt>_option_</dt><dd>
 The option will be provided to every module with a value of
-"1".</dd>
-<dt>_!option_</dt><dd>
-The option will be provided to every module with a NULL value.</dd>
-<dt>_module:option=value_, _module:option_, _module:!option_</dt><dd>
+"1".
+</dd> <dt>_!option_</dt><dd>
+The option will be provided to every module with a NULL value.
+</dd> <dt>_module:option=value_, _module:option_, _module:!option_</dt><dd>
 As above, but the corresponding option and value will be provided
 only to modules whose name matches
-_module_.</dd>
+_module_.
 </dl>
 The return value will be
 *ARCHIVE_OK*
@@ -258,21 +257,21 @@ if no module accepted the option, or
 if there was a fatal error while attempting to process the option.
 The currently supported options are:
 <dl>
-<dt>Format iso9660<dd>
+ <dt>Format iso9660</dt><dd>
 <dl>
-<dt>*joliet*<dd>
+ <dt>*joliet*</dt><dd>
 Support Joliet extensions.
 Defaults to enabled, use
 *!joliet*
 to disable.
 </dl>
 </dl>
-<dt>*archive_read_open*()<dd>
+</dd> <dt>*archive_read_open*()</dt><dd>
 The same as
 *archive_read_open2*(),
 except that the skip callback is assumed to be
 NULL.
-<dt>*archive_read_open2*()<dd>
+</dd> <dt>*archive_read_open2*()</dt><dd>
 Freeze the settings, open the archive, and prepare for reading entries.
 This is the most generic version of this call, which accepts
 four callback functions.
@@ -285,7 +284,7 @@ or
 instead.
 The library invokes the client-provided functions to obtain
 raw bytes from the archive.
-<dt>*archive_read_open_FILE*()<dd>
+</dd> <dt>*archive_read_open_FILE*()</dt><dd>
 Like
 *archive_read_open*(),
 except that it accepts a
@@ -293,7 +292,7 @@ except that it accepts a
 pointer.
 This function should not be used with tape drives or other devices
 that require strict I/O blocking.
-<dt>*archive_read_open_fd*()<dd>
+</dd> <dt>*archive_read_open_fd*()</dt><dd>
 Like
 *archive_read_open*(),
 except that it accepts a file descriptor and block size rather than
@@ -301,21 +300,21 @@ a set of function pointers.
 Note that the file descriptor will not be automatically closed at
 end-of-archive.
 This function is safe for use with tape drives or other blocked devices.
-<dt>*archive_read_open_file*()<dd>
+</dd> <dt>*archive_read_open_file*()</dt><dd>
 This is a deprecated synonym for
 *archive_read_open_filename*().
-<dt>*archive_read_open_filename*()<dd>
+</dd> <dt>*archive_read_open_filename*()</dt><dd>
 Like
 *archive_read_open*(),
 except that it accepts a simple filename and a block size.
 A NULL filename represents standard input.
 This function is safe for use with tape drives or other blocked devices.
-<dt>*archive_read_open_memory*()<dd>
+</dd> <dt>*archive_read_open_memory*()</dt><dd>
 Like
 *archive_read_open*(),
 except that it accepts a pointer and size of a block of
 memory containing the archive data.
-<dt>*archive_read_next_header*()<dd>
+</dd> <dt>*archive_read_next_header*()</dt><dd>
 Read the header for the next entry and return a pointer to
 a
 *struct archive_entry .*
@@ -324,16 +323,16 @@ This is a convenience wrapper around
 that uses an internal
 *struct archive_entry*
 object.
-<dt>*archive_read_next_header2*()<dd>
+</dd> <dt>*archive_read_next_header2*()</dt><dd>
 Read the header for the next entry and populate the provided
 *struct archive_entry .*
-<dt>*archive_read_data*()<dd>
+</dd> <dt>*archive_read_data*()</dt><dd>
 Read data associated with the header just read.
 Internally, this is a convenience function that calls
 *archive_read_data_block*()
 and fills any gaps with nulls so that callers see a single
 continuous stream of data.
-<dt>*archive_read_data_block*()<dd>
+</dd> <dt>*archive_read_data_block*()</dt><dd>
 Return the next available block of data for this entry.
 Unlike
 *archive_read_data*(),
@@ -346,20 +345,20 @@ will not overlap.
 Note that the blocks returned from this function can be much larger
 than the block size read from disk, due to compression
 and internal buffer optimizations.
-<dt>*archive_read_data_skip*()<dd>
+</dd> <dt>*archive_read_data_skip*()</dt><dd>
 A convenience function that repeatedly calls
 *archive_read_data_block*()
 to skip all of the data for this archive entry.
-<dt>*archive_read_data_into_buffer*()<dd>
+</dd> <dt>*archive_read_data_into_buffer*()</dt><dd>
 This function is deprecated and will be removed.
 Use
 *archive_read_data*()
 instead.
-<dt>*archive_read_data_into_fd*()<dd>
+</dd> <dt>*archive_read_data_into_fd*()</dt><dd>
 A convenience function that repeatedly calls
 *archive_read_data_block*()
 to copy the entire entry to the provided file descriptor.
-<dt>*archive_read_extract*(), *archive_read_extract_set_skip_file*()<dd>
+</dd> <dt>*archive_read_extract*(), *archive_read_extract_set_skip_file*()</dt><dd>
 A convenience function that wraps the corresponding
 *archive_write_disk*(3)
 interfaces.
@@ -380,7 +379,7 @@ The
 _flags_
 argument is passed unmodified to
 *archive_write_disk_set_options*(3).
-<dt>*archive_read_extract2*()<dd>
+</dd> <dt>*archive_read_extract2*()</dt><dd>
 This is another version of
 *archive_read_extract*()
 that allows you to provide your own restore object.
@@ -396,7 +395,7 @@ _flags_
 argument; you should use
 *archive_write_disk_set_options*()
 to set the restore options yourself.
-<dt>*archive_read_extract_set_progress_callback*()<dd>
+</dd> <dt>*archive_read_extract_set_progress_callback*()</dt><dd>
 Sets a pointer to a user-defined callback that can be used
 for updating progress displays during extraction.
 The progress function will be invoked during the extraction of large
@@ -405,9 +404,9 @@ The progress function will be invoked with the pointer provided to this call.
 Generally, the data pointed to should include a reference to the archive
 object and the archive_entry object so that various statistics
 can be retrieved for the progress display.
-<dt>*archive_read_close*()<dd>
+</dd> <dt>*archive_read_close*()</dt><dd>
 Complete the archive and invoke the close callback.
-<dt>*archive_read_finish*()<dd>
+</dd> <dt>*archive_read_finish*()</dt><dd>
 Invokes
 *archive_read_close*()
 if it was not invoked manually, then release all resources.
@@ -435,19 +434,19 @@ objects can be found in the overview manual page for
 == CLIENT CALLBACKS ==
 The callback functions must match the following prototypes:
 <ul>
-<li>
+ <li>
 *typedef ssize_t*
 *archive_read_callback*(_struct archive `*`_, _void `*`client_data_, _const void `*``*`buffer_)
-<li>
+</li> <li>
 *typedef int*
 *archive_skip_callback*(_struct archive `*`_, _void `*`client_data_, _size_t request_)
-<li>
+</li> <li>
 *typedef int*
-*archive_open_callback*(*struct archive `*`*, *void `*`client_data*)
-<li>
+*archive_open_callback*(_struct archive `*`_, _void `*`client_data_)
+</li> <li>
 *typedef int*
-*archive_close_callback*(*struct archive `*`*, *void `*`client_data*)
-</dl>
+*archive_close_callback*(_struct archive `*`_, _void `*`client_data_)
+</ul>
 The open callback is invoked by
 *archive_open*().
 It should return
