@@ -104,7 +104,7 @@ By default, these always return a NULL string.
 These allow you to override the functions used for
 user and group name lookups.
 You may also provide a
-*void **
+*void `*`*
 pointer to a private data structure and a cleanup function for
 that data.
 The cleanup function will be invoked when the
@@ -223,7 +223,7 @@ object or NULL if the allocation failed for any reason.
 and
 *archive_read_disk_uname*()
 return
-*const char **
+*const char `*`*
 pointers to the textual name or NULL if the lookup failed for any reason.
 The returned pointer points to internal storage that
 may be reused on the next call to either of these functions;

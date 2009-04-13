@@ -173,7 +173,7 @@ this can be overridden by registering user and group lookup functions.
 To register, you must provide a lookup function which
 accepts both a name and id and returns a suitable id.
 You may also provide a
-*void **
+*void `*`*
 pointer to a private data structure and a cleanup function for
 that data.
 The cleanup function will be invoked when the
