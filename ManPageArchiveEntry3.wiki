@@ -417,7 +417,7 @@ or normal
 _char_
 strings.
 The functions that use wide character strings are suffixed with
-*_w*.
+*`_`w*.
 Note that these are different representations of the same data:
 For example, if you store a narrow string and read the corresponding
 wide string, the object will transparently convert formats
