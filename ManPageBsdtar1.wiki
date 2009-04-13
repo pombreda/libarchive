@@ -563,7 +563,7 @@ tar -cf - -C srcdir\. | tar -xpf - -C destdir
 }}}
 or more traditionally
 {{{
-cd srcdir \&; tar -cf -\. | (cd destdir \&; tar -xpf -)
+cd srcdir ; tar -cf -\. | (cd destdir ; tar -xpf -)
 }}}
 
 In create mode, the list of files and directories to be archived
