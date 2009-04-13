@@ -235,18 +235,18 @@ filters (including decompression filters) and/or format readers.
 The argument is a comma-separated list of individual options.
 Individual options have one of the following forms:
 <dl>
-<dt>_option=value_<dd>
+<dt>_option=value_</dt><dd>
 The option/value pair will be provided to every module.
-Modules that do not accept an option with this name will ignore it.
-<dt>_option_<dd>
+Modules that do not accept an option with this name will ignore it.</dd>
+<dt>_option_</dt><dd>
 The option will be provided to every module with a value of
-"1".
-<dt>_!option_<dd>
-The option will be provided to every module with a NULL value.
-<dt>_module:option=value_, _module:option_, _module:!option_<dd>
+"1".</dd>
+<dt>_!option_</dt><dd>
+The option will be provided to every module with a NULL value.</dd>
+<dt>_module:option=value_, _module:option_, _module:!option_</dt><dd>
 As above, but the corresponding option and value will be provided
 only to modules whose name matches
-_module_.
+_module_.</dd>
 </dl>
 The return value will be
 *ARCHIVE_OK*
