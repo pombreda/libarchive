@@ -1,6 +1,3 @@
-<p valign="top">BSDTAR(1) FreeBSD General Commands Manual
-BSDTAR(1)</p>
-
 <p style="margin-top: 1em" valign="top"><b>NAME</b></p>
 
 <p style="margin-left:8%;"><b>tar</b> &mdash; manipulate
@@ -12,16 +9,16 @@ tape archives</p>
 <p style="margin-left:14%;"><b>tar</b>
 [<i>bundled-flags&nbsp;</i>&lang;</p>
 
-<p valign="top">args &rang;] [&lang; <i><br>
-file</i> &rang;&nbsp;|&nbsp;&lang; <i><br>
+<p valign="top">args &rang;] [&lang; <i>
+file</i> &rang;&nbsp;|&nbsp;&lang; <i>
 pattern</i> &rang;&nbsp;...]</p>
 
 <p style="margin-left:14%;"><b>tar</b> {<b>&minus;c</b>}
 [<i>options</i>]
-[<i>files&nbsp;</i>|&nbsp;<i>directories</i>] <b><br>
+[<i>files&nbsp;</i>|&nbsp;<i>directories</i>] <b>
 tar</b> {<b>&minus;r&nbsp;</b>|&nbsp;<b>&minus;u</b>}
 <b>&minus;f</b> <i>archive-file</i> [<i>options</i>]
-[<i>files&nbsp;</i>|&nbsp;<i>directories</i>] <b><br>
+[<i>files&nbsp;</i>|&nbsp;<i>directories</i>] <b>
 tar</b> {<b>&minus;t&nbsp;</b>|&nbsp;<b>&minus;x</b>}
 [<i>options</i>] [<i>patterns</i>]</p>
 
@@ -640,7 +637,7 @@ tape device. The <b>&minus;f</b> option overrides this.</p>
 use when displaying dates. See environ(7) for more
 information.</p>
 
-<p style="margin-top: 1em" valign="top"><b>FILES</b> <br>
+<p style="margin-top: 1em" valign="top"><b>FILES</b> 
 /dev/sa0</p>
 
 <p style="margin-left:25%; margin-top: 1em">The default
@@ -719,10 +716,10 @@ arbitrary ownership, permissions, or names that differ from
 existing data on disk:</p>
 
 <p style="margin-left:17%; margin-top: 1em">$ cat
-input.mtree <br>
-#mtree <br>
-usr/bin uid=0 gid=0 mode=0755 type=dir <br>
-usr/bin/ls uid=0 gid=0 mode=0755 type=file content=myls <br>
+input.mtree 
+#mtree 
+usr/bin uid=0 gid=0 mode=0755 type=dir 
+usr/bin/ls uid=0 gid=0 mode=0755 type=file content=myls 
 $ tar -cvf output.tar @input.mtree</p>
 
 <p style="margin-left:8%; margin-top: 1em">The
