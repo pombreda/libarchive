@@ -1,10 +1,10 @@
-#summary Directory of man pages
+#summary Directory of documentation included with the libarchive distribution.
 
 The libarchive distribution includes full documentation
 in the form of Unix-style "man pages."
-These pages are automatically converted to HTML, PDF,
-and plain text formats and are also available on
-the Googlecode Wiki.
+These documents are included in the libarchive distribution in the following formats:
+BSD mdoc, Unix man, PDF, plain text, and HTML.
+In addition, they are available here for online browsing:
 
  * [ManPageBsdtar1 bsdtar.1] - The bsdtar command-line program
  * [ManPageBsdcpio1 bsdcpio.1] - The bsdcpio command-line program
