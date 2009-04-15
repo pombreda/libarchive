@@ -22,3 +22,11 @@ In addition, they are available here for online browsing:
  * [ManPageLibarchiveInternals3 libarchive_internals.3] - A brief survey of how libarchive works internally. (Also see the LibarchiveInternals article.)
 
 About the numbers:  The original Unix manuals were distributed as several numbered volumes and those numbers are still used to identify categories of documentation.  The category numbers used here are:  1 is the "User Reference Manual" with documentation about command-line programs intended for use by users of the system; 3 is the "Programmer's Reference Manual" with information about programming interfaces; and 5 is the "File Formats Reference Manual" with information about the internal format of files on the system.
+
+Maintainers:  To update the Wiki manpages (assuming you have a checkout of the full source tree):
+{{{
+ $ cd trunk/docs
+ $ /bin/sh update.sh
+ $ cp wiki/*.wiki ../../wiki
+ $ svn commit ../../wiki
+}}}
