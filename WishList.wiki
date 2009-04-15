@@ -76,17 +76,18 @@ stacked read filters plus state in the format handler itself.
 = MMap and async I/O performance experiments =
 
 It should be possible to read archives using mmap()
-or async I/O.
+or async I/O and it might be significantly faster than
+the current approach.
 However, this requires some careful performance testing
 before we can be confident that it really is an improvement.
-(If it doesn't prove to help performance, we shouldn't do it.)
+(If it doesn't help performance, we shouldn't do it.)
 
-Similar improvements when writing archives are going to be harder to implement,
-though the stackable write filter work above should
-make this easier (the current blocking code makes it
-very difficult to have multiple blocks in-flight at
-once; after that refactoring work, there will be
-fewer places that such issues have to be handled).
+Similar improvements when writing archives are feasible,
+though there are a few issues in the current write blocking that
+make this harder than it sounds.
+(The stackable write filter project above would
+help; that would at least consolidate blocking into
+fewer places.)
 
 = ISO writer =
 
@@ -116,6 +117,7 @@ Writing will require tricks similar to the ISO writer.
 = BSD-style long filename support for GNU ld =
 
 The GNU/SysV ar format is ugly to write because you need to collect a filename table in advance.
+This complicates programs that write ar format.
 The BSD ar format avoids this problem but GNU ld doesn't support it.
 If GNU ld could read the BSD ar format, then it would be easier
 to create library-management tools on top of libarchive.
