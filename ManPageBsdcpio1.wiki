@@ -225,12 +225,12 @@ gzip compression is recognized automatically on input.
 The following environment variables affect the execution of
 *cpio*:
 <dl>
-<dt>.B LANG
+<dt>*LANG*
 The locale to use.
 See
 *environ*(7)
 for more information.
-</dt><dt>.B TZ
+</dt><dt>*TZ*
 The timezone to use when displaying dates.
 See
 *environ*(7)

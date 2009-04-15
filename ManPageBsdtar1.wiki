@@ -396,10 +396,20 @@ but before security checks.
 </dd><dt>*-s* _pattern_</dt><dd>
 Modify file or archive member names according to
 _pattern_.
-The pattern has the format /old/new/[gps].
-old is a basic regular expression.
-If it doesn't apply, the pattern is skipped.
-new is the replacement string of the matched part.
+The pattern has the format
+_/old/new/_ `[`gps`]`
+where
+_old_
+is a basic regular expression,
+_new_
+is the replacement string of the matched part,
+and the optional trailing letters modify
+how the replacement is handled.
+If
+_old_
+is not matched, the pattern is skipped.
+Within
+_new_,
 ~ is substituted with the match, \1 to \9 with the content of
 the corresponding captured group.
 The optional trailing g specifies that matching should continue
@@ -499,17 +509,17 @@ automatically when reading archives.
 The following environment variables affect the execution of
 *tar*:
 <dl>
-<dt>.B LANG
+<dt>*LANG*
 The locale to use.
 See
 *environ*(7)
 for more information.
-</dt><dt>.B TAPE
+</dt><dt>*TAPE*
 The default tape device.
 The
 *-f*
 option overrides this.
-</dt><dt>.B TZ
+</dt><dt>*TZ*
 The timezone to use when displaying dates.
 See
 *environ*(7)
@@ -517,7 +527,7 @@ for more information.
 </dt></dl>
 == FILES ==
 <dl>
-<dt>.B /dev/sa0
+<dt>*/dev/sa0*
 The default tape device, if not overridden by the
 .IR TAPE
 environment variable or the

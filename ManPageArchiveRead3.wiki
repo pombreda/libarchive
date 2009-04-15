@@ -8,12 +8,18 @@
 *archive_read_support_compression_bzip2*,
 *archive_read_support_compression_compress*,
 *archive_read_support_compression_gzip*,
+*archive_read_support_compression_lzma*,
 *archive_read_support_compression_none*,
+*archive_read_support_compression_xz*,
 *archive_read_support_compression_program*,
+*archive_read_support_compression_program_signature*,
 *archive_read_support_format_all*,
+*archive_read_support_format_ar*,
 *archive_read_support_format_cpio*,
 *archive_read_support_format_empty*,
 *archive_read_support_format_iso9660*,
+*archive_read_support_format_mtree,*
+*archive_read_support_format_raw,*
 *archive_read_support_format_tar*,
 *archive_read_support_format_zip*,
 *archive_read_open*,
@@ -60,7 +66,15 @@
 <br>
 *int*
 <br>
+*archive_read_support_compression_lzma*(_struct archive `*`_);
+<br>
+*int*
+<br>
 *archive_read_support_compression_none*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_read_support_compression_xz*(_struct archive `*`_);
 <br>
 *int*
 <br>
@@ -68,7 +82,15 @@
 <br>
 *int*
 <br>
+*archive_read_support_compression_program_signature*(_struct archive `*`_, _const char `*`cmd_, _const void `*`signature_, _size_t signature_length_);
+<br>
+*int*
+<br>
 *archive_read_support_format_all*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_read_support_format_ar*(_struct archive `*`_);
 <br>
 *int*
 <br>
@@ -81,6 +103,14 @@
 *int*
 <br>
 *archive_read_support_format_iso9660*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_read_support_format_mtree*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_read_support_format_raw*(_struct archive `*`_);
 <br>
 *int*
 <br>
@@ -188,30 +218,43 @@ Allocates and initializes a
 *struct archive*
 object suitable for reading from an archive.
 </dd><dt>
-*archive_read_support_compression_all*(),
 *archive_read_support_compression_bzip2*(),
 *archive_read_support_compression_compress*(),
 *archive_read_support_compression_gzip*(),
-*archive_read_support_compression_none*()
+*archive_read_support_compression_lzma*(),
+*archive_read_support_compression_none*(),
+*archive_read_support_compression_xz*()
 </dt> <dd>
 Enables auto-detection code and decompression support for the
 specified compression.
+Returns
+*ARCHIVE_OK*
+if the compression is fully supported, or
+*ARCHIVE_WARN*
+if the compression is supported only through an external program.
+Note that decompression using an external program is usually slower than
+decompression through built-in libraries.
 Note that
 "none"
 is always enabled by default.
-For convenience,
-*archive_read_support_compression_all*()
-enables all available decompression code.
+</dd><dt>*archive_read_support_compression_all*()</dt><dd>
+Enables all available decompression filters.
 </dd><dt>*archive_read_support_compression_program*()</dt><dd>
 Data is fed through the specified external program before being dearchived.
 Note that this disables automatic detection of the compression format,
 so it makes no sense to specify this in conjunction with any other
 decompression option.
+</dd><dt>*archive_read_support_compression_program_signature*()</dt><dd>
+This feeds data through the specified external program
+but only if the initial bytes of the data match the specified
+signature value.
 </dd><dt>
 *archive_read_support_format_all*(),
+*archive_read_support_format_ar*(),
 *archive_read_support_format_cpio*(),
 *archive_read_support_format_empty*(),
 *archive_read_support_format_iso9660*(),
+*archive_read_support_format_mtree*(),
 *archive_read_support_format_tar*(),
 *archive_read_support_format_zip*()
 </dt> <dd>
@@ -225,6 +268,17 @@ For convenience,
 *archive_read_support_format_all*()
 enables support for all available formats.
 Only empty archives are supported by default.
+</dd><dt>*archive_read_support_format_raw*()</dt><dd>
+The
+"raw"
+format handler allows libarchive to be used to read arbitrary data.
+It treats any data stream as an archive with a single entry.
+The pathname of this entry is
+"data ;"
+all other entry fields are unset.
+This is not enabled by
+*archive_read_support_format_all*()
+in order to avoid erroneous handling of damaged archives.
 </dd><dt>
 *archive_read_set_filter_options*(),
 *archive_read_set_format_options*(),
@@ -321,9 +375,9 @@ a
 *struct archive_entry .*
 This is a convenience wrapper around
 *archive_read_next_header2*()
-that uses an internal
+that reuses an internal
 *struct archive_entry*
-object.
+object for each request.
 </dd><dt>*archive_read_next_header2*()</dt><dd>
 Read the header for the next entry and populate the provided
 *struct archive_entry .*
