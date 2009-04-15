@@ -19,4 +19,6 @@ the Googlecode Wiki.
  * [ManPageTar5 tar.5] - The tar file format
  * [ManPageMtree5 mtree.5] - The mtree file format
  * [ManPageCpio5 cpio.5] - The cpio file format
- * [ManPageLibarchiveInternals3 libarchive_internals.3] - A brief survey of how libarchive works internally.
+ * [ManPageLibarchiveInternals3 libarchive_internals.3] - A brief survey of how libarchive works internally. (Also see the LibarchiveInternals article.)
+
+About the numbers:  The original Unix manuals were distributed as several numbered volumes and those numbers are still used to identify categories of documentation.  The category numbers used here are:  1 is the "User Reference Manual" with documentation about command-line programs intended for use by users of the system; 3 is the "Programmer's Reference Manual" with information about programming interfaces; and 5 is the "File Formats Reference Manual" with information about the internal format of files on the system.
