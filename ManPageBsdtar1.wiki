@@ -397,7 +397,7 @@ but before security checks.
 Modify file or archive member names according to
 _pattern_.
 The pattern has the format
-_/old/new/_ `[`gps`]`
+_/old/new/_`[`gps`]`
 where
 _old_
 is a basic regular expression,
