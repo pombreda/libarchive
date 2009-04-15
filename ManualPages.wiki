@@ -1,0 +1,22 @@
+#summary Directory of man pages
+
+The libarchive distribution includes full documentation
+in the form of Unix-style "man pages."
+These pages are automatically converted to HTML, PDF,
+and plain text formats and are also available on
+the Googlecode Wiki.
+
+ * [ManPageBsdtar1|bsdtar.1] - The bsdtar command-line program
+ * [ManPageBsdcpio1|bsdcpio.1] - The bsdcpio command-line program
+ * [ManPageLibarchive3|libarchive.3] - An overview of libarchive
+ * [ManPageLibarchiveFormats5|libarchive_formats.5] - An overview of the formats supported by libarchive
+ * [ManPageArchiveEntry3|archive_entry.3] - The archive_entry API used to represent entries in archives
+ * [ManPageArchiveRead3|archive_read.3] - The archive_read API used for reading from streaming archives
+ * [ManPageArchiveReadDisk3|archive_read_disk.3] - The archive_read_disk API used for getting information about files (and other objects) from disk
+ * [ManPageArchiveUtil3|archive_util.3] - Miscellaneous libarchive utility functions
+ * [ManPageArchiveWrite3|archive_write.3] - The archive_write API used to create streaming archives
+ * [ManPageArchiveWriteDisk3|archive_write_disk.3] - The archive_write_disk API used to create files (and other objects) on disk
+ * [ManPageTar5|tar.5] - The tar file format
+ * [ManPageMtree5|mtree.5] - The mtree file format
+ * [ManPageCpio5|cpio.5] - The cpio file format
+ * [ManPageLibarchiveInternals3|libarchive_internals.3] - A brief survey of how libarchive works internally.
