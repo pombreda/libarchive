@@ -1,0 +1,112 @@
+#summary Ideas that would be nice to implement someday.
+
+<wiki:toc>
+
+= ZIsoFS support =
+
+See Issue 2 for details.
+
+= Pax front-end =
+
+It should be feasible to build a POSIX-compliant pax on top
+of libarchive.
+
+= Sparse archiving =
+
+FreeBSD now has `seek(HOLE)` support that should make it possible
+to efficiently archive sparse files.
+This will require adding a new archive_entry field to store the
+list of segments and modifications to archive_read_disk and
+the pax writer.
+
+= Stackable write filters =
+
+The write filters should be restructured so that you
+can have multiple write filters.
+We can then separate out the blocking into a separate
+filter and eliminate blocking issues from all of the
+compression filters.
+This would also enable some new write capabilities that
+I'm very interested in.
+
+= UUencode/decode filters =
+
+On the write side, this requires stackable write filters first.
+On the read side, this should be quite routine.
+
+= Encrypted backup support =
+
+This requires stackable write filters first.
+I have a rough design of how to implement this; ask for details.
+
+= Exploiting seekable input =
+
+This requires a little care, but ISO and Zip readers could really
+benefit from seeking when the input supports it.
+I insist that we maintain the ability to read most ISO and Zip
+files even when seek is unavailable.
+
+= Seek in archives =
+
+A few people have asked for the ability to efficiently
+"re-read" particular archive entries.
+This is a tricky subject.
+For many formats, the performance gains from this would
+be very modest.
+For example, after the item above is implemented, re-reading
+a Zip archive from the beginning will be very fast since
+it would only involve re-parsing the central directory.
+The cases where there would be real gains (e.g., tar.gz)
+are going to be very difficult to handle.
+The most likely implementation would be some form of checkpointing
+so that clients can explicitly ask for a checkpoint object and then
+restore back to that checkpoint.
+The checkpoint object could be complex if you have a series of
+stacked read filters plus state in the format handler itself.
+
+= MMap and async I/O performance experiments =
+
+It should be possible to read archives using mmap()
+or async I/O.
+However, this requires some careful performance testing
+before we can be confident that it really is an improvement.
+(If it doesn't prove to help performance, we shouldn't do it.)
+
+Similar improvements when writing archives are going to be harder to implement,
+though the stackable write filter work above should
+make this easier (the current blocking code makes it
+very difficult to have multiple blocks in-flight at
+once; after that refactoring work, there will be
+fewer places that such issues have to be handled).
+
+= ISO writer =
+
+ISO writing is tricky because all metadata precedes all file data.
+I've figured out a couple of easy workarounds, though, so I think this
+is manageable.
+The hardest part will be implementing this in a way that avoids the
+need to have a lot of options.  The `mkisofs` utility already does
+a good job of providing lots of options for people who need specific
+control over how their ISO images are created; I'd like for libarchive
+to provide a solid, easy-to-use answer for the 99% of the time
+that people just need an ISO image that works.
+(I envision that libarchive's ISO writer would generate Joliet
+and Rockridge extensions and would provide a very few
+options for creating bootable CDs.)
+
+= Mac "CopyFile()" support =
+
+It would be nice for bsdtar to be compatible with Apple's
+modified GNU tar implementation.
+
+= xar reader and writer =
+
+Xar should be relatively straightforward to read.
+Writing will require tricks similar to the ISO writer.
+
+= BSD-style long filename support for GNU ld =
+
+The GNU/SysV ar format is ugly to write because you need to collect a filename table in advance.
+The BSD ar format avoids this problem but GNU ld doesn't support it.
+If GNU ld could read the BSD ar format, then it would be easier
+to create library-management tools on top of libarchive.
