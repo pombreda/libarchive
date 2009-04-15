@@ -94,7 +94,7 @@ that people just need an ISO image that works.
 and Rockridge extensions and would provide a very few
 options for creating bootable CDs.)
 
-= Mac "CopyFile()" support =
+= Mac "!CopyFile()" support =
 
 It would be nice for bsdtar to be compatible with Apple's
 modified GNU tar implementation.
