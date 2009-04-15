@@ -6,10 +6,19 @@
 
 See Issue 2 for details.
 
+= Extended Attribute interoperability =
+
+libarchive's handling of POSIX.1e-style extended attributes
+in pax files should be interoperable across systems,
+but there has not been a lot of testing of this.
+There also needs to be some work to implement the system-dependent
+portions for more operating systems.  (Currently, only Linux and
+FreeBSD are fully supported; it should be easy to add Mac OS and
+Solaris and possibly others.)
+
 = Pax front-end =
 
-It should be feasible to build a POSIX-compliant pax on top
-of libarchive.
+It should be feasible to build a POSIX-compliant pax on top of libarchive.
 
 = Sparse archiving =
 
