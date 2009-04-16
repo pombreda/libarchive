@@ -18,6 +18,7 @@
  * File browsers
   * [http://projects.gnome.org/nautilus/ Nautilus] file browser uses libarchive
   * The [http://www.cybernoia.de/software/archivemount/ archivemount] filesystem (part of [http://fuse.sourceforge.net/ FUSE]) uses libarchive
+  * Christian Ehrlicher has [http://websvn.kde.org/trunk/kdesupport/emerge/portage/win32libs-sources/libarchive-src/libarchive-src-2.6.991.py?view=markup patches] to use libarchive in KDE's "ark" file browser.
 
  * Ports of libarchive, bsdtar, etc.
   * [http://gnuwin32.sourceforge.net/ GnuWin32] and [http://cygwin.org/ Cygwin] for Windows.
