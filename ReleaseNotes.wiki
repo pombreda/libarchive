@@ -6,7 +6,7 @@ _Future release: Expected late 2009_
 
 Major version number bumps indicate backwards-incompatible API changes.
 There are a handful of API changes that I'd like to make but I do try hard to break the API as infrequently as possible, so I'm deferring these until there's enough here to justify the pain:
-  * Replace off_t with int64_t everywhere.  Linux has two different off_t definitions, which gets very confusing.  Windows only has 32-bit off_t, which is pretty limiting.  Switching to int64_t will ensure consistent 64-bit file size handling on all platforms.
+  * Replace off_t with int64_t in the public headers.  Linux has two different off_t definitions, which gets very confusing.  Windows only has 32-bit off_t, which is pretty limiting.  Switching to int64_t will ensure consistent 64-bit file size handling on all platforms.
   * Linux support for both stat32 and stat64.  The preprocessor headaches here seem unavoidable.
   * Eliminate dev/ino pairs from the public API.  Windows doesn't deal gracefully with this.  I think the few uses of this can be rephrased in terms of open file handles (the core requirement for "skip file" support is the ability to determine whether a file name and an open file descriptor refer to the same file).
   * Thread-safe archive_write_disk.  This requires that you "open" an archive_write_disk object by giving it a base directory and requires that we find ways to eliminate the chdir() and umask() operations from the current code.
@@ -18,24 +18,19 @@ There are a handful of API changes that I'd like to make but I do try hard to br
 _Future release: Expected summer 2009_
 
 The following are expected, but not yet implemented.  They may be pushed to a later release.
-
  * zisofs support - This should be straightforward; the zip reader already illustrates how to decompress gzipped bodies.
  * NFSv4 ACL support - I have done some research and think I have a good grasp of the requirements for this.
  * Exploit seekable input - Files support seeking and Zip and ISO both work better when this is available.  But I still want Zip and ISO to be usable when the input can't seek.
  * Zip writer - Anselm Strauss almost finished a Zip writer for Google Summer of Code 2008.  The code is good, it has a test harness, but needs a little more polish before it can be released.
 
-= Libarchive 2.7 =
+= Libarchive 2.7.0 =
 
-_Future release: Expected April 17, 2009_
+_Released April 17, 2009_
 
-The libarchive 2.6.992a preview has all of the following features.
-I've completed my own testing and fixed all of the outstanding issues that I know about.
-Unless further issues arise, I expect to release this as libarchive 2.7 on April 17.
-
- * Support for concatenated gzip streams.
- * Stackable read filter support.
  * Much improved Windows support, thanks largely to Michihiro NAKAJIMA.  In particular, the test suites now build and run on Windows.
  * Support for building with "cmake" on a wide variety of platforms, thanks to Christian Ehrlicher and Michihiro.
+ * Support for concatenated gzip streams.
+ * Stackable read filter support.
  * Eliminated Yacc/Bison requirement for building by rewriting date parser in plain C.
  * Complete extended attribute support for FreeBSD, fixed extended attribute support for Linux
  * Improved support for AIX, Tru64, and GNU Hurd, thanks to Björn Jacke
