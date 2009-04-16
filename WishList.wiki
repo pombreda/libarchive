@@ -2,6 +2,17 @@
 
 <wiki:toc>
 
+= Command-line parsing for compress_program =
+
+The `archive_read_support_compress_program()` and `archive_write_set_compress_program()`
+use external programs to compress or decompress data.
+Right now, those take their string argument as the name of a program to run,
+which provides no way to run programs with arguments.
+This is why libarchive currently uses "gunzip", for example, as the fallback
+for decompressing gzip streams instead of the more portable "gzip -d".
+The parsing requirements are not difficult, so this should be a relatively
+easy project for someone.
+
 = ZIsoFS support =
 
 See Issue 2 for details.
