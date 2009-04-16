@@ -1,6 +1,6 @@
 #summary How to compile and install libarchive, bsdtar, and bsdcpio from source code.
 
-= Using _configure_ (for building from the command line on Linux, FreeBSD, Solaris, Cygwin, Interix, Mac OS X and other Unix-like systems) =
+= Using _configure_ (for building from the command line on Linux, FreeBSD, Solaris, Cygwin, AIX, Interix, Mac OS X and other Unix-like systems) =
 
 The libarchive distribution includes a standard
 autoconf-generated "configure" script that should
