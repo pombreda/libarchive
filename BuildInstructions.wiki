@@ -29,6 +29,8 @@ to the `configure` program:
  * `./configre --disable-bsdtar`  -- Suppresses build and install of bsdtar
  * `./configure --enable-bsdcpio` -- Enables build and install of bsdcpio
 
+---------------------------------
+
 = Using _cmake_ (for most everything else, including non-POSIX systems and building with graphical IDEs) =
 
 The cmake-based build system can generate configuration files for
