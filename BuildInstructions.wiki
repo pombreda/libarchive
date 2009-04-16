@@ -8,8 +8,8 @@ build and install libarchive, bsdtar, and bsdcpio
 on almost any POSIX-like system.
 
 Typical installation:
- # `tar xzf libarchive-2.6.1.tar.gz` ([BootstrappingTar if you don't have a tar program])
- # `cd libarchive-2.6.1`
+ # `tar xzf libarchive-2.7.1.tar.gz` ([BootstrappingTar if you don't have a tar program])
+ # `cd libarchive-2.7.0`
  # `./configure`
  # `make`
  # `make check`
@@ -31,11 +31,9 @@ to the `configure` program:
 
 = Using _cmake_ (for most everything else, including non-POSIX systems and building with graphical IDEs) =
 
-*Starting with libarchive 2.6.990*, there is a cmake-based
-build system that can generate configuration files for
-a variety of IDEs, including
-Visual Studio on Windows and XCode on Mac OS.
-*This does not work for any earlier version.*
+The cmake-based build system can generate configuration files for
+a variety of IDEs, including Visual Studio on Windows and XCode on Mac OS.
+*This requires libarchive 2.6.990a or later.*
 
 == General usage ==
 
@@ -63,7 +61,7 @@ You'll need the appropriate development tools if you don't already have them:
 
 To build the source, you use CMake to construct a Visual Studio _solution_ file, then open that in Visual Studio:
  * Get the source code.  You can either:
-   * Unpack a source distribution *version 2.6.990 or later* from [http://code.google.com/p/libarchive/downloads/list the Downloads page], or
+   * Unpack a source distribution from [http://code.google.com/p/libarchive/downloads/list the Downloads page], or
    * Use SVN to checkout the source from the [http://code.google.com/p/libarchive/source/checkout Source Repository].
  * Use CMake to create the solution files:
    * Set cmake's source code parameter to the directory where you unpacked the source code (the directory containing the "!CmakeLists.txt" file)
