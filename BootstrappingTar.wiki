@@ -1,8 +1,10 @@
 #summary How to get a tar if you don't already have one.
 
-The instructions for building libarchive assume you
-can unpack a tar archive that has been compressed with
-gzip.
+The libarchive distribution builds *bsdtar*, which
+is a full-featured command-line tar program.
+Of course, the source code distribution assumes you
+already have the ability to unpack a tar archive that
+has been compressed with gzip.
 If you don't already have a tar program or a gunzip
 program, this could present problems.
 
@@ -17,8 +19,6 @@ bsdtar.
 
 = Gunzip =
 
-Very simple tar programs can only unpack uncompressed
-tar archives.
 For ease of downloading, the libarchive distribution is compressed.
 To use the "untar" program below, you'll need to first
 uncompress the libarchive distribution to obtain
