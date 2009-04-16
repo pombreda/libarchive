@@ -26,7 +26,7 @@ locate all other libraries and tools required.
 You can modify this by providing additional options
 to the `configure` program:
  * `./configure --help`  -- Lists all available options
- * `./configre --disable-bsdtar`  -- Suppresses build and install of bsdtar
+ * `./configure --disable-bsdtar`  -- Suppresses build and install of bsdtar
  * `./configure --disable-bsdcpio` -- Suppresses build and install of bsdcpio
 
 ---------------------------------
