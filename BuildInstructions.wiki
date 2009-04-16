@@ -8,7 +8,7 @@ build and install libarchive, bsdtar, and bsdcpio
 on almost any POSIX-like system.
 
 Typical installation:
- # `tar xzf libarchive-2.7.1.tar.gz` ([BootstrappingTar if you don't have a tar program])
+ # `tar xzf libarchive-2.7.0.tar.gz` ([BootstrappingTar if you don't have a tar program])
  # `cd libarchive-2.7.0`
  # `./configure`
  # `make`
