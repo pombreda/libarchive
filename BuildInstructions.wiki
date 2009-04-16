@@ -18,7 +18,7 @@ Typical installation:
 == Configure options ==
 
 By default, the configure-based build will build
-the libarchive library and bsdtar command-line tool.
+the libarchive library and bsdtar and bsdcpio command-line tools.
 It will install these into standard default locations.
 The configure program will attempt to automatically
 locate all other libraries and tools required.
@@ -27,7 +27,7 @@ You can modify this by providing additional options
 to the `configure` program:
  * `./configure --help`  -- Lists all available options
  * `./configre --disable-bsdtar`  -- Suppresses build and install of bsdtar
- * `./configure --enable-bsdcpio` -- Enables build and install of bsdcpio
+ * `./configure --disable-bsdcpio` -- Suppresses build and install of bsdcpio
 
 ---------------------------------
 
