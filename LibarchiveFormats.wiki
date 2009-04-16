@@ -9,7 +9,7 @@ Of course, the bsdtar and bsdcpio programs included in the libarchive formats do
 
 For developers:  Note that libarchive is modularized in such a way that you pay nothing for formats you don't use.
 If you choose to omit a particular format, no code for that format will be linked into your program.
-In particular, you only need zlib, bzlib, or lzmadec libraries if you specifically enable the corresponding formats.
+In particular, you only need zlib, bzlib, or lzma libraries if you specifically enable the corresponding formats.
 
 = Filter Support =
 
@@ -34,3 +34,5 @@ This is not of much practical use yet (it is rarely helpful to bzip2 a file that
  * mtree (read and write)
  * shar (write only)
  * ar (read and write, including BSD and GNU/SysV variants)
+ * empty (read only; in particular, note that no other format will accept an empty file)
+ * raw (read only, starting in libarchive 2.8)
