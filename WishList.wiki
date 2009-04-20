@@ -57,10 +57,10 @@ the existing mtree reader), it should be possible to dramatically
 simplify the cpio implementation.
 Some tweaks to libarchive APIs might be necessary to make
 this really clean, of course.
-The end result should be a cpio that does everything the
+The end result should be a very simple cpio implementation that does everything the
 standard requires with a few nice new features:
  * *cpio -o* can do arbitrary archive translation; if it can read a list of filenames, there's no reason it can't read a tar archive as well.
- * `find | cpio` can use mtree tricks.  In particular, using mtree format between find and cpio allows the use of sed, grep, and awk to modify metadata (e.g., create a ustar archive where every file is owned by root).
+ * `find | cpio` can use mtree format.  In particular, using mtree format between find and cpio allows the use of sed, grep, and awk to modify metadata (e.g., create a ustar archive where every file is owned by root).
  * A more modular libarchive interface will be more useful to other applications; this exercise will help in identifying some of the remaining rough edges.  (In particular, implementing *cpio -pl* efficiently will require some careful thought about how `sourcepath` should be handled.)
 
 = Virtualizing archive_entry =
@@ -70,6 +70,7 @@ These lookups are expensive to do and difficult to avoid.
 The assumption that they can be pushed into `archive_write_disk()` and `archive_read_disk()` works well enough for tar and cpio because they
 operate in a particular fashion.
 Other uses won't necessarily operate in the same way.
+
 One way to solve this is to allow archive readers to push lookup
 functions into the entry instead of direct values.
 This would allow the username/group name/gid/uid lookup
@@ -99,8 +100,11 @@ The archive_entry virtualization above would help here but
 is not a prerequisite.
 
 Longer term, there's a hard problem here around file filtering.
-Tools such as tar want to filter the files they look at; doing
+Tools such as tar want to filter the files they see; doing
 this efficiently requires doing it as early as possible.
+(In particular, filesystem traversals would like to avoid
+descending into directory trees if nothing in that tree
+will ever be visited.)
 One way to implement this would be to add a set of
 "archive_filter" objects that could be attached to an
 archive_read_disk object or any other archive reader.
@@ -111,7 +115,7 @@ configured output archive.
 This would dramatically simplify bsdtar and should
 also make it easier for people to use libarchive
 in complex ways elsewhere (e.g., people building
-backup tools will want to avoid backup files
+backup tools will likely want to avoid backup files
 or files marked "nodump" and would benefit from
 having easy ways to just turn on such capabilities).
 
@@ -119,7 +123,7 @@ having easy ways to just turn on such capabilities).
 
 Today, read filters are configured and then read pipelines
 are assembled automatically.
-There are cases where clients would like to create the
+There are a few cases where clients would like to create the
 read pipeline explicitly.
 This would allow them to handle partially-damaged input,
 for example, by skipping the bidding process.
@@ -142,12 +146,14 @@ We can then separate out the blocking into a separate
 filter and eliminate blocking issues from all of the
 compression filters.
 This would also enable some new write capabilities that
-I'm very interested in.
+I'm very interested in, including uuencode/uudecode support,
+mime/base-64 support, and encrypted backup handling.
 
 = UUencode/decode filters =
 
 On the write side, this requires stackable write filters first.
-On the read side, this should be quite routine.
+On the read side, the framework already exists; it just
+needs a new filter to be written and added.
 
 = Encrypted backup support =
 
@@ -187,6 +193,17 @@ the current approach.
 However, this requires some careful performance testing
 before we can be confident that it really is an improvement.
 (If it doesn't help performance, we shouldn't do it.)
+
+Async I/O in particular has promise for improving performance
+with streaming tape drives.
+Joerg Schilling has had good results with _star_ using two processes
+and a shared-memory buffer to smooth out data flow when talking to tape drives.
+I think async I/O could provide comparable performance
+without forking. (Clients can easily get confused when
+callbacks get invoked in different processes, so I'm reluctant
+to fork within libarchive.  The first iteration of this
+kind of buffering could certainly be done in bsdtar but
+I'd like to eventually see it pushed down into the library.)
 
 Similar improvements when writing archives are feasible,
 though there are a few issues in the current write blocking that
