@@ -23,6 +23,14 @@ The following are expected, but not yet implemented.  They may be pushed to a la
  * Exploit seekable input - Files support seeking and Zip and ISO both work better when this is available.  But I still want Zip and ISO to be usable when the input can't seek.
  * Zip writer - Anselm Strauss almost finished a Zip writer for Google Summer of Code 2008.  The code is good, it has a test harness, but needs a little more polish before it can be released.
 
+= Libarchive 2.7.1 =
+
+_Future release_
+
+ * Issue 24: Fix hang reading truncated ISO archives.
+ * Issue 25: Fix reading body of first regular file in mtree archive.
+ * Issue 21: Work around timezone-related test failure (better fix will be in 2.8)
+
 = Libarchive 2.7.0 =
 
 _Released April 17, 2009_
