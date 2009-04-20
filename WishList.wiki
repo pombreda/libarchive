@@ -157,7 +157,11 @@ needs a new filter to be written and added.
 
 = Encrypted backup support =
 
-This requires stackable write filters first.
+This requires stackable write filters first but
+should otherwise be a straightforward use of OpenSSL.
+I do want to have a standalone pair of encrypt/decrypt
+command-line tools in addition to the read/write filters
+built into libarchive.
 I have a rough design of how to implement this; ask for details.
 
 = Exploiting seekable input =
