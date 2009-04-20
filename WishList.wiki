@@ -1,5 +1,8 @@
 #summary Ideas that would be nice to implement someday.
 
+If any of these ideas are interesting to you, let us know.
+If you'd like to take a stab at implementing any of these, definitely let us know.
+
 <wiki:toc>
 
 = Command-line parsing for compress_program =
@@ -163,6 +166,52 @@ I do want to have a standalone pair of encrypt/decrypt
 command-line tools in addition to the read/write filters
 built into libarchive.
 I have a rough design of how to implement this; ask for details.
+
+= Multivolume Writing =
+
+This doesn't explicitly require stackable write filters,
+but implementing it first will complicate the stackable
+write filter implementation, so I'd rather see that done first.
+The basic idea is for the final write filter to provide
+a "bytes remaining" capability that can be called by the
+format writer.
+Adding this capability to the final write filter should
+be pretty trivial.
+(It could even be pushed all the way out to the client,
+though I would certainly not want such a callback to
+be required anywhere.  This is definitely a feature
+that most people won't want to even know about.)
+
+With this in place, we can easily add a "volume change"
+call to write filters which simply flushes the pipeline
+and then relays the request downstream, ultimately
+all the way to the client.
+There's a chunk of work to make sure that all
+write filters correctly reinitialize after
+the volume change.
+
+The interesting part will be working through the format
+writers to actually support this.
+For tar and cpio, it might be as simple as invoking
+a volume change before any entry that is larger than
+the remaining bytes (plus some overhead).
+It is likely possible to implement multi-volume
+support for other formats as well (multi-volume
+support would be especially interesting with the
+ISO writer).
+
+= RMT support =
+
+RMT hasn't been a priority simply because noone has ever asked for it.
+However, it is one of the few features that is both
+reasonably standard across other tar implementations and
+already has a hook for adding it to libarchive (just
+add a new `archive_read_open_rmt()` module).
+NetBSD has a BSD-licensed rmt library that we might be able to
+crib from, though the rmt protocol is simple
+enough that you might just implement it from scratch.
+This will require careful compatibility testing with a
+couple of different rmt servers.
 
 = Exploiting seekable input =
 
