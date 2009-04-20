@@ -39,6 +39,101 @@ This will require adding a new archive_entry field to store the
 list of segments and modifications to archive_read_disk and
 the pax writer.
 
+= cpio as archive translation =
+
+Essentially all of cpio's operation can be viewed as
+archive translation (where "archive" means "description
+of a series of filesystem objects"):
+ * *cpio -o* reads a list of filenames and writes a cpio or tar archive
+ * *cpio -p* reads a list of filenames and writes filesystem objects to disk
+ * *cpio -i* reads an archive and writes filesystem objects to disk
+libarchive's mtree reader demonstrates that a list of filenames
+can be viewed as an archive, and `archive_write_disk()`
+shows that a series of filesystem objects can be written to
+a disk directory using the same interface that is used to
+write them to a tar or cpio archive.
+By implementing a "list of filenames" reader (similar to
+the existing mtree reader), it should be possible to dramatically
+simplify the cpio implementation.
+Some tweaks to libarchive APIs might be necessary to make
+this really clean, of course.
+The end result should be a cpio that does everything the
+standard requires with a few nice new features:
+ * *cpio -o* can do arbitrary archive translation; if it can read a list of filenames, there's no reason it can't read a tar archive as well.
+ * `find | cpio` can use mtree tricks.  In particular, using mtree format between find and cpio allows the use of sed, grep, and awk to modify metadata (e.g., create a ustar archive where every file is owned by root).
+ * A more modular libarchive interface will be more useful to other applications; this exercise will help in identifying some of the remaining rough edges.  (In particular, implementing *cpio -pl* efficiently will require some careful thought about how `sourcepath` should be handled.)
+
+= Virtualizing archive_entry =
+
+The username and uid lookups are awkward.
+These lookups are expensive to do and difficult to avoid.
+The assumption that they can be pushed into `archive_write_disk()` and `archive_read_disk()` works well enough for tar and cpio because they
+operate in a particular fashion.
+Other uses won't necessarily operate in the same way.
+One way to solve this is to allow archive readers to push lookup
+functions into the entry instead of direct values.
+This would allow the username/group name/gid/uid lookup
+to occur only when the value was requested.
+This will likely require some rethinking of libarchive APIs.
+In particular, the capability to set lookup functions may need
+to be pushed into the generic "struct archive" so that it can
+be available to every reader or writer.
+
+Similar concerns apply to ACLs and extended attributes;
+it would be most efficient to entirely skip such lookups
+if the entry is ultimately being written to an archive format
+that can't utilize such information.
+
+= Directory traversals in archive_read_disk =
+
+Libarchive is a toolkit for handling long lists of filesystem
+objects.
+The most obvious glaring hole is that you cannot ask libarchive
+to enumerate the filesystem objects in a directory tree.
+The `archive_read_disk` API is the obvious place to put this
+capability.
+Getting an initial implementation working should be straightforward;
+just copy the "tree.c" code from bsdtar and extend it to
+return a series of archive_entry objects instead of just filenames.
+The archive_entry virtualization above would help here but
+is not a prerequisite.
+
+Longer term, there's a hard problem here around file filtering.
+Tools such as tar want to filter the files they look at; doing
+this efficiently requires doing it as early as possible.
+One way to implement this would be to add a set of
+"archive_filter" objects that could be attached to an
+archive_read_disk object or any other archive reader.
+Then the bsdtar program could simply instantiate these
+filters, attach them to an archive_read_disk, then
+feed entries from archive_read_disk to a suitably
+configured output archive.
+This would dramatically simplify bsdtar and should
+also make it easier for people to use libarchive
+in complex ways elsewhere (e.g., people building
+backup tools will want to avoid backup files
+or files marked "nodump" and would benefit from
+having easy ways to just turn on such capabilities).
+
+= Explicit read pipelines =
+
+Today, read filters are configured and then read pipelines
+are assembled automatically.
+There are cases where clients would like to create the
+read pipeline explicitly.
+This would allow them to handle partially-damaged input,
+for example, by skipping the bidding process.
+This probably requires rephrasing the existing read
+filters so that there is an `archive_read_add_filter_XXXX()`
+as well as an `archive_read_support_filter_XXXX()`.
+In this form, the _support_ form would register the
+bidder and the _add_ function.
+The bid process would automatically invoke the _add_
+function for the winning bidder.
+Clients who wanted explicit configuration would just
+call the _add_ version directly to add that filter
+directly to the pipeline.
+
 = Stackable write filters =
 
 The write filters should be restructured so that you
