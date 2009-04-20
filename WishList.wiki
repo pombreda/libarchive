@@ -63,39 +63,41 @@ this really clean, of course.
 The end result should be a very simple cpio implementation that does everything the
 standard requires with a few nice new features:
  * *cpio -o* can do arbitrary archive translation; if it can read a list of filenames, there's no reason it can't read a tar archive as well.
- * `find | cpio` can use mtree format.  In particular, using mtree format between find and cpio allows the use of sed, grep, and awk to modify metadata (e.g., create a ustar archive where every file is owned by root).
+ * The common `find|cpio` idiom can use mtree format.  In particular, using mtree format between find and cpio allows the use of sed, grep, and awk to modify metadata (e.g., create a ustar archive where every file is owned by root).
  * A more modular libarchive interface will be more useful to other applications; this exercise will help in identifying some of the remaining rough edges.  (In particular, implementing *cpio -pl* efficiently will require some careful thought about how `sourcepath` should be handled.)
 
 = Virtualizing archive_entry =
 
-The username and uid lookups are awkward.
-These lookups are expensive to do and difficult to avoid.
-The assumption that they can be pushed into `archive_write_disk()` and `archive_read_disk()` works well enough for tar and cpio because they
-operate in a particular fashion.
+The username, group name, uid, and gid lookups are awkward.
+These lookups are expensive to do so we'd like to avoid them when we can.
+Pushing them into `archive_write_disk()` and `archive_read_disk()` works
+well enough for tar and cpio because they operate in a particular fashion.
 Other uses won't necessarily operate in the same way.
 
 One way to solve this is to allow archive readers to push lookup
 functions into the entry instead of direct values.
 This would allow the username/group name/gid/uid lookup
 to occur only when the value was requested.
+If it was never requested, the lookup would never happen.
 This will likely require some rethinking of libarchive APIs.
-In particular, the capability to set lookup functions may need
-to be pushed into the generic "struct archive" so that it can
-be available to every reader or writer.
+In particular, the existing "set_lookup" capabilities may need
+to be reworked as a generic facility that can be configured
+for any archive object, not just read_disk/write_disk objects.
 
 Similar concerns apply to ACLs and extended attributes;
 it would be most efficient to entirely skip such lookups
 if the entry is ultimately being written to an archive format
 that can't utilize such information.
+(For example, using archive_read_disk() to get entries to
+feed to a cpio writer currently pulls ACLs, extended attributes,
+and user/group names that are never actually used.)
 
 = Directory traversals in archive_read_disk =
 
-Libarchive is a toolkit for handling long lists of filesystem
-objects.
+Libarchive is a toolkit for handling long lists of filesystem objects.
 The most obvious glaring hole is that you cannot ask libarchive
 to enumerate the filesystem objects in a directory tree.
-The `archive_read_disk` API is the obvious place to put this
-capability.
+The `archive_read_disk` API is the obvious place to put this capability.
 Getting an initial implementation working should be straightforward;
 just copy the "tree.c" code from bsdtar and extend it to
 return a series of archive_entry objects instead of just filenames.
@@ -127,7 +129,7 @@ having easy ways to just turn on such capabilities).
 Today, read filters are configured and then read pipelines
 are assembled automatically.
 There are a few cases where clients would like to create the
-read pipeline explicitly.
+read pipeline manually.
 This would allow them to handle partially-damaged input,
 for example, by skipping the bidding process.
 This probably requires rephrasing the existing read
@@ -140,6 +142,12 @@ function for the winning bidder.
 Clients who wanted explicit configuration would just
 call the _add_ version directly to add that filter
 directly to the pipeline.
+
+Of course, all of the capability here already exists;
+the work here is to cleanly expose things, develop tests,
+and make sure that the final API is clean and easy to
+understand (and backwards compatible with existing clients
+if that's possible).
 
 = Stackable write filters =
 
@@ -170,35 +178,28 @@ I have a rough design of how to implement this; ask for details.
 = Multivolume Writing =
 
 This doesn't explicitly require stackable write filters,
-but implementing it first will complicate the stackable
-write filter implementation, so I'd rather see that done first.
-The basic idea is for the final write filter to provide
-a "bytes remaining" capability that can be called by the
-format writer.
-Adding this capability to the final write filter should
-be pretty trivial.
-(It could even be pushed all the way out to the client,
-though I would certainly not want such a callback to
-be required anywhere.  This is definitely a feature
-that most people won't want to even know about.)
+but implementing it first would complicate the stackable
+write filter implementation, so I'd rather see the stackable
+writer filters finished first.
+This requires two changes to the internal write filter API:
+ * A "bytes remaining" call that the format writer can make against the write filters.  Most write filters will just pass it downstream and possibly reduce the return value to account for data they have currently buffered (and any end-of-file overhead).  Compression filters shouldn't try to adjust for compression ratio; underestimates are okay here but overestimates can be fatal.
+ * A "volume change" call that the format writer can make to prompt each write filter to flush, invoke it's downstream, then reinitialize.
 
-With this in place, we can easily add a "volume change"
-call to write filters which simply flushes the pipeline
-and then relays the request downstream, ultimately
-all the way to the client.
-There's a chunk of work to make sure that all
-write filters correctly reinitialize after
-the volume change.
-
-The interesting part will be working through the format
-writers to actually support this.
+The interesting part will be working through the format writers to actually support this.
 For tar and cpio, it might be as simple as invoking
 a volume change before any entry that is larger than
 the remaining bytes (plus some overhead).
-It is likely possible to implement multi-volume
-support for other formats as well (multi-volume
-support would be especially interesting with the
-ISO writer).
+(GNU tar-like entry splitting is not necessary in the first version.)
+It is likely possible to implement multi-volume support for other
+formats as well.
+Here is an interesting use case:  Two libarchive instances, the
+first writing a compressed tar stream, the second creating ISO images,
+with volumes split so that each ISO image has a single compressed
+tar file that fills the ISO.
+The volume change from the tar writer closes the ISO writer, invokes
+an ISO burner program to burn a disk, then reopens the ISO writer.
+(Bonus points, of course, if the burner program runs while the next ISO is being
+created.)
 
 = RMT support =
 
@@ -209,9 +210,12 @@ already has a hook for adding it to libarchive (just
 add a new `archive_read_open_rmt()` module).
 NetBSD has a BSD-licensed rmt library that we might be able to
 crib from, though the rmt protocol is simple
-enough that you might just implement it from scratch.
+enough that you could also just implement it from scratch.
 This will require careful compatibility testing with a
 couple of different rmt servers.
+
+This would be a good project for someone who is trying
+to learn network programming.
 
 = Exploiting seekable input =
 
@@ -268,17 +272,24 @@ fewer places.)
 = ISO writer =
 
 ISO writing is tricky because all metadata precedes all file data.
-I've figured out a couple of easy workarounds, though, so I think this
-is manageable.
+I've figured out an easy workaround, though, so I think this
+is manageable:  Just write a single temporary file that
+holds the bodies (each body padded out to a 2k sector
+boundary), while accumulating metadata in
+memory (including the offset in the temporary file of the
+body data, of course).
+At end-of-archive, construct the directory tree and
+write that out, then copy the temp file after it.
+
 The hardest part will be implementing this in a way that avoids the
-need to have a lot of options.  The `mkisofs` utility already does
-a good job of providing lots of options for people who need specific
+need to have a lot of options.  The `mkisofs` and `mkhybrid` utilities
+already do a good job of providing lots of options for people who need specific
 control over how their ISO images are created; I'd like for libarchive
 to provide a solid, easy-to-use answer for the 99% of the time
 that people just need an ISO image that works.
-(I envision that libarchive's ISO writer would generate Joliet
+(I envision that libarchive's ISO writer would always generate Joliet
 and Rockridge extensions and would provide a very few
-options for creating bootable CDs.)
+options for setting a label and making the image bootable.)
 
 = Mac "!CopyFile()" support =
 
