@@ -49,10 +49,10 @@ If your favorite package manager doesn't have a version
 already configured for your platform, you should check
 http://cmake.org/
 
-When you run the cmake tool, you need to provide two
-pieces of information:
- * The "generator" appropriate for the IDE you're using.
+When you run the cmake tool, you need to provide three pieces of information:
  * The directory containing the unpacked libarchive sources.  This is the directory containing the `CMakeLists.txt` file.
+ * A directory where output files will go.  This can be the same directory.
+ * The "generator" appropriate for the development environment you're using.
 
 == Windows/Visual Studio ==
 
@@ -85,7 +85,7 @@ XXX How to link against zlib/bzlib/lzmadec? XXX
  # Get the source code.  (Same as above.)
  # Use CMake to create MinGW Makefiles (same process as for Visual Studio above)
  # Use MinGW to build the system:
-    * Open a command prompt (check that C:\MinGW32\bin is in PATH)
+    * Open a command prompt (check that C:\MinGW\bin is in PATH)
     * Type `mingw32-make`
 
 XXX details ? XXX
