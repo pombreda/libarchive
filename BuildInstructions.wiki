@@ -54,24 +54,33 @@ When you run the cmake tool, you need to provide three pieces of information:
  * A directory where output files will go.  This can be the same directory.
  * The "generator" appropriate for the development environment you're using.
 
-== Windows/Visual Studio ==
+== Building on Windows ==
 
-You'll need the appropriate development tools if you don't already have them:
- * A free version of Visual Studio C++ is available from Microsoft: http://www.microsoft.com/express/download/
- * You'll also need the CMake program for Windows, version 2.6 or later:  http://www.cmake.org/cmake/resources/software.html
+CMake supports several popular Windows development environments.
+You'll need:
+ * CMake for Windows, version 2.6 or later:  http://www.cmake.org/cmake/resources/software.html
  * If you want to check out source from SVN, I highly recommend [http://tortoisesvn.tigris.org TortoiseSVN].  You can also, of course, use the SVN command-line tool.
 
-To build the source, you use CMake to construct a Visual Studio _solution_ file, then open that in Visual Studio:
+Building is a three-step process:
  # Get the source code.  You can either:
    * Unpack a source distribution from [http://code.google.com/p/libarchive/downloads/list the Downloads page], or
    * Use SVN to checkout the source from the [http://code.google.com/p/libarchive/source/checkout Source Repository].
- # Use CMake to create the solution files:
+ # Use the CMake GUI to create the solution files:
    * Set cmake's source code parameter to the directory where you unpacked the source code (the directory containing the "!CmakeLists.txt" file)
    * Set the build output parameter to a directory where you will be building; this can be the same as the source directory.
    * Click *Configure* in the CMake GUI and select the appropriate Generator for your IDE.  CMake will verify the build environment and parse the libarchive configuration files.
    * If this is the first time you've run CMake in this particular output directory, you will be given a chance to review the build variables.  When you're ready, select *Configure* again (it will take only a few seconds this time).
    * Click *Generate* in the CMake GUI to create the build files for your IDE.
    * Click *OK*
+ # Use your development environment of choice (more details below).
+
+== Windows/Visual Studio ==
+
+A free version of Visual Studio C++ is available from Microsoft: http://www.microsoft.com/express/download/
+
+Building is then a straightforward process:
+ # Get the source code, as described above.
+ # Run the CMake GUI as above, choosing the "Visual Studio" generator.
  # Use Visual Studio to build the system:
    * Open the generated `libarchive.sln` in Visual Studio 9
    * Click *Rebuild Solution* to compile everything.
@@ -82,8 +91,11 @@ XXX How to link against zlib/bzlib/lzmadec? XXX
 
 == Windows/MinGW ==
 
- # Get the source code.  (Same as above.)
- # Use CMake to create MinGW Makefiles (same process as for Visual Studio above)
+MinGW is a free command-line development environment for Windows based
+on the popular GNU C compiler.
+
+ # Get the source code, as described above.
+ # Run the CMake GUI as above, choosing the "MinGW Makefiles" generator.
  # Use MinGW to build the system:
     * Open a command prompt (check that C:\MinGW\bin is in PATH)
     * Type `mingw32-make`
