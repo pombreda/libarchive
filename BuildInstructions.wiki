@@ -71,7 +71,6 @@ Building is a three-step process:
    * Click *Configure* in the CMake GUI and select the appropriate Generator for your IDE.  CMake will parse the libarchive configuration files and verify the build environment.  This can take a few minutes the first time.
    * If this is the first time you've run CMake in this particular output directory, you will be given a chance to review the build variables.  When you're ready, select *Configure* again (it will take only a few seconds this time).
    * Click *Generate* in the CMake GUI to create the build files for your IDE.
-   * Click *OK*
  # Use your development environment of choice to build, test, and debug.
 
 == Windows/Visual Studio ==
