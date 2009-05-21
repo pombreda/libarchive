@@ -112,12 +112,12 @@ the names of all of the tests.  This makes it very easy to add new tests.)
 
 The test harness determines which tests to run.  It goes through the
 following steps whenever it runs a test:
- * Closes all file descriptors except for stdin, stdout, and stderr.
+ * ~~Closes all file descriptors except for stdin, stdout, and stderr.~~ (This screws up libc on some platforms so has been removed.)
  * Creates a temporary directory whose name matches the name of the test and switches into that directory.
  * Resets the current locale.
  * Calls the test function.
  * If there were no assertion failures, it will remove the temporary directory unless `-k` was specified.
- * If there are any open file descriptors other than stdin, stdout, and stderr, it reports an error.  Tests should never leave open file descriptors.
+ * ~~If there are any open file descriptors other than stdin, stdout, and stderr, it reports an error.~~  Tests should never leave open file descriptors.
 
 In particular, tests can safely assume that:
  * The current directory is empty when the test starts.
