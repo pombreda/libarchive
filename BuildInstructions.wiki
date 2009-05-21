@@ -90,6 +90,8 @@ XXX How to link against zlib/bzlib/lzmadec? XXX
 
 XXX details ? XXX
 
+Note: Windows/MinGW builds are broken in libarchive 2.7.0 release; they should be fixed in 2.7.1.
+
 == MacOS/Xcode ==
 
 You'll first need some standard development tools if you don't already have them:
