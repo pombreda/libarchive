@@ -68,11 +68,11 @@ Building is a three-step process:
  # Use the CMake GUI to create the solution files:
    * Set cmake's source code parameter to the directory where you unpacked the source code (the directory containing the "!CmakeLists.txt" file)
    * Set the build output parameter to a directory where you will be building; this can be the same as the source directory.
-   * Click *Configure* in the CMake GUI and select the appropriate Generator for your IDE.  CMake will verify the build environment and parse the libarchive configuration files.
+   * Click *Configure* in the CMake GUI and select the appropriate Generator for your IDE.  CMake will parse the libarchive configuration files and verify the build environment.  This can take a few minutes the first time.
    * If this is the first time you've run CMake in this particular output directory, you will be given a chance to review the build variables.  When you're ready, select *Configure* again (it will take only a few seconds this time).
    * Click *Generate* in the CMake GUI to create the build files for your IDE.
    * Click *OK*
- # Use your development environment of choice (more details below).
+ # Use your development environment of choice to build, test, and debug.
 
 == Windows/Visual Studio ==
 
@@ -82,7 +82,7 @@ Building is then a straightforward process:
  # Get the source code, as described above.
  # Run the CMake GUI as above, choosing the "Visual Studio" generator.
  # Use Visual Studio to build the system:
-   * Open the generated `libarchive.sln` in Visual Studio 9
+   * Open the generated `libarchive.sln` in Visual Studio
    * Click *Rebuild Solution* to compile everything.
 
 XXX How to build/run test programs? XXX
@@ -102,7 +102,7 @@ on the popular GNU C compiler.
 
 XXX details ? XXX
 
-Note: Windows/MinGW builds are broken in libarchive 2.7.0 release; they should be fixed in 2.7.1.
+Note: The libarchive 2.7.0 release does not build properly in Windows/MinGW; this should be fixed in 2.7.1.
 
 == MacOS/Xcode ==
 
