@@ -1,5 +1,12 @@
 #summary Release notes for past and future libarchive versions.
 
+Also see [WishList] for new feature ideas that would be nice to see
+someday but aren't in the following schedule.
+Since libarchive depends entirely on volunteer labor, the scheduling
+here is pure guesswork.
+The reality will depend on who is interested enough to actually do
+the work.
+
 = Libarchive 3.0 =
 
 _Future release: Expected late 2009_
