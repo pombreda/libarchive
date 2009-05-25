@@ -1,7 +1,10 @@
 #summary Ideas that would be nice to implement someday.
 
-If any of these ideas are interesting to you, let us know.
+If you would like to see any of these implemented, let us know.
 If you'd like to take a stab at implementing any of these, definitely let us know.
+Also see [ReleaseNotes].
+Please remember that libarchive is entirely developed by volunteers;
+new features get implemented whenever someone steps up to do the work.
 
 <wiki:toc>
 
