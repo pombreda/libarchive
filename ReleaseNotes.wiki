@@ -30,6 +30,7 @@ _Future release_
  * Issue 24: Fix hang reading truncated ISO archives.
  * Issue 25: Fix reading body of first regular file in mtree archive.
  * Issue 21: Work around timezone-related test failure (better fix will be in 2.8)
+ * Fix failure to read gzip files signed with gzsig (and other gzip files with "extra data")
 
 = Libarchive 2.7.0 =
 
