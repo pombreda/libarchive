@@ -9,7 +9,7 @@ the work.
 
 = Libarchive 3.0 =
 
-_Future release: Expected late 2009_
+_Future release: Expected early 2010_
 
 Major version number bumps indicate backwards-incompatible API changes.
 There are a handful of API changes that I'd like to make but I do try hard to break the API as infrequently as possible, so I'm deferring these until there's enough here to justify the pain:
@@ -22,7 +22,7 @@ There are a handful of API changes that I'd like to make but I do try hard to br
 
 = Libarchive 2.8 =
 
-_Future release: Expected summer 2009_
+_Future release: Expected fall 2009_
 
 The following are expected, but not yet implemented.  They may be pushed to a later release.
  * zisofs support - This should be straightforward; the zip reader already illustrates how to decompress gzipped bodies.
