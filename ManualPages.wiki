@@ -16,7 +16,7 @@ In addition, they are available here for online browsing:
  * [ManPageArchiveUtil3 archive_util.3] - Miscellaneous libarchive utility functions
  * [ManPageArchiveWrite3 archive_write.3] - The archive_write API used to create streaming archives
  * [ManPageArchiveWriteDisk3 archive_write_disk.3] - The archive_write_disk API used to create files (and other objects) on disk
- * [ManPageTar5 tar.5] - The tar file format
+ * [ManPageTar5 tar.5] - The tar file format ("... best man page I have read in years." -- Russ Cox)
  * [ManPageMtree5 mtree.5] - The mtree file format
  * [ManPageCpio5 cpio.5] - The cpio file format
  * [ManPageLibarchiveInternals3 libarchive_internals.3] - A brief survey of how libarchive works internally. (Also see the LibarchiveInternals article.)
