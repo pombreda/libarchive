@@ -31,7 +31,7 @@ you can check http://www.gzip.org/ for details.
 Of course, you can also download the libarchive distribution
 onto a system that has gzip, decompress it there,
 then copy the uncompressed libarchive-XX.YY.ZZ.tar
-onto the target system and uncompress it.
+onto the target system and untar it.
 
 = Untar =
 
