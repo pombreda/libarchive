@@ -45,6 +45,7 @@
 //#include "bsdtar_platform.h"
 //__FBSDID("$FreeBSD: src/usr.bin/tar/tree.c,v 1.9 2008/11/27 05:49:52 kientzle Exp $");
 
+#if defined(_WIN32)
 #define HAVE_SYS_STAT_H 1
 #define HAVE_DIRECT_H 1
 //#define HAVE_DIRENT_H 1
@@ -54,6 +55,19 @@
 #define HAVE_STRING_H 1
 //#define HAVE_UNISTD_H 1
 #define HAVE_WINDOWS_H 1
+
+#elif defined(__FreeBSD__)
+#define HAVE_SYS_STAT_H 1
+//#define HAVE_DIRECT_H 1
+#define HAVE_DIRENT_H 1
+#define HAVE_ERRNO_H 1
+#define	HAVE_FCHDIR 1
+#define HAVE_FCNTL_H 1
+#define HAVE_STDLIB_H 1
+#define HAVE_STRING_H 1
+#define HAVE_UNISTD_H 1
+//#define HAVE_WINDOWS_H 1
+#endif
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -202,7 +216,7 @@ tree_push(struct tree *t, const char *path)
 #elif defined(_WIN32) && !defined(__CYGWIN__)
 	te->fullpath = NULL;
 #endif
-	te->name = _strdup(path);
+	te->name = strdup(path);
 	te->flags = needsPreVisit | needsPostVisit;
 	te->dirname_length = t->dirname_length;
 }
@@ -290,7 +304,7 @@ tree_ascend(struct tree *t)
 #endif
 		t->openCount--;
 	} else {
-		if (_chdir("..") != 0) {
+		if (chdir("..") != 0) {
 			t->tree_errno = errno;
 			r = TREE_ERROR_FATAL;
 		}
@@ -344,20 +358,16 @@ tree_next(struct tree *t)
 	}
 
 	while (t->stack != NULL) {
-		t->findData = NULL;
-
 		/* If there's an open dir, get the next entry from there. */
-		if (t->d != /* NULL */ INVALID_HANDLE_VALUE) {
+#if defined(_WIN32)
+		t->findData = NULL;
+		if (t->d != INVALID_HANDLE_VALUE) {
+#else
+		if (t->d != NULL) {
+#endif
 			const char *name;
 			size_t namelen;
-#if 0
-			t->de = readdir(t->d);
-			if (t->de == NULL) {
-				closedir(t->d);
-				t->d = NULL;
-			name = t->de->d_name;
-			namelen = D_NAMELEN(t->de);
-#else
+#if defined(_WIN32)
 			if (t->nextFindData != NULL) {
 				t->findData = t->nextFindData;
 				t->nextFindData = NULL;
@@ -370,6 +380,15 @@ tree_next(struct tree *t)
 			}
 			name = t->findData->cFileName;
 			namelen = strlen(name);
+#else
+			t->de = readdir(t->d);
+			if (t->de == NULL) {
+				closedir(t->d);
+				t->d = NULL;
+				continue;
+			}
+			name = t->de->d_name;
+			namelen = D_NAMELEN(t->de);
 #endif
 			if (name[0] == '.' && name[1] == '\0') {
 				/* Skip '.' */
@@ -414,13 +433,13 @@ tree_next(struct tree *t)
 				return (t->visit_type = TREE_ERROR_DIR);
 			}
 			t->depth++;
-#if 0
-			if ((t->d = opendir(".")) == NULL) {
-#else
+#if defined(_WIN32)
 			t->d = FindFirstFile("*", &t->_findData);
 			if (t->d != INVALID_HANDLE_VALUE) {
 				t->nextFindData = &t->_findData;
 			} else {
+#else
+			if ((t->d = opendir(".")) == NULL) {
 #endif
 				r = tree_ascend(t); /* Undo "chdir" */
 				tree_pop(t);
@@ -495,8 +514,9 @@ tree_current_stat(struct tree *t)
 const struct stat *
 tree_current_lstat(struct tree *t)
 {
+#if defined(_WIN32)
 	return (tree_current_stat(t));
-#if 0
+#else
 	if (!(t->flags & hasLstat)) {
 		if (lstat(t->basename, &t->lst) != 0)
 			return NULL;
@@ -512,10 +532,11 @@ tree_current_lstat(struct tree *t)
 int
 tree_current_is_dir(struct tree *t)
 {
+#if defined(_WIN32)
 	if (t->findData != NULL)
 		return (t->findData->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
 	return (tree_current_stat(t)->st_mode & S_IFDIR);
-#if 0
+#else
 	const struct stat *st;
 
 	/*
@@ -553,10 +574,11 @@ tree_current_is_dir(struct tree *t)
 int
 tree_current_is_physical_dir(struct tree *t)
 {
+#if defined(_WIN32)
 	if (tree_current_is_physical_link(t))
 		return (0);
 	return (tree_current_is_dir(t));
-#if 0
+#else
 	const struct stat *st;
 
 	/*
@@ -589,12 +611,7 @@ tree_current_is_physical_dir(struct tree *t)
 int
 tree_current_is_physical_link(struct tree *t)
 {
-#if 0
-	const struct stat *st = tree_current_lstat(t);
-	if (st == NULL)
-		return 0;
-	return (S_ISLNK(st->st_mode));
-#else
+#if defined(_WIN32)
 	if (t->findData == NULL)
 		return (0);
 	if (t->d != INVALID_HANDLE_VALUE) {
@@ -607,6 +624,11 @@ tree_current_is_physical_link(struct tree *t)
 		}
 	}
 	return (0); /* Windows doedsn't have links. */
+#else
+	const struct stat *st = tree_current_lstat(t);
+	if (st == NULL)
+		return 0;
+	return (S_ISLNK(st->st_mode));
 #endif
 }
 
