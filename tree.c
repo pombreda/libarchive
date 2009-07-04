@@ -121,9 +121,13 @@ struct tree {
 	struct tree_entry	*stack;
 	struct tree_entry	*current;
 #ifdef HAVE_WINDOWS_H
-	WIN32_FIND_DATA findData;
+	HANDLE d;
+	WIN32_FIND_DATA _findData;
+	WIN32_FIND_DATA *findData;
+	WIN32_FIND_DATA *nextFindData;
 #else
 	DIR	*d;
+	struct dirent *de;
 #endif
 #ifdef HAVE_FCHDIR
 	int	 initialDirFd;
@@ -227,7 +231,7 @@ tree_append(struct tree *t, const char *name, size_t name_length)
 	p = t->buff + t->dirname_length;
 	t->path_length = t->dirname_length + name_length;
 	/* Add a separating '/' if it's needed. */
-	if (t->dirname_length > 0 && p[-1] != '/') {
+	if (t->dirname_length > 0 && p[-1] != '/' && p[-1] != '\\') {
 		*p++ = '/';
 		t->path_length ++;
 	}
@@ -250,14 +254,10 @@ tree_open(const char *path)
 #ifdef HAVE_FCHDIR
 	t->initialDirFd = open(".", O_RDONLY);
 #elif defined(_WIN32) && !defined(__CYGWIN__)
+	t->d = INVALID_HANDLE_VALUE;
 	t->initialDir = _getcwd(NULL, 0);
 #endif
-	/*
-	 * During most of the traversal, items are set up and then
-	 * returned immediately from tree_next().  That doesn't work
-	 * for the very first entry, so we set a flag for this special
-	 * case.
-	 */
+	/* This entry will be the first one returned. */
 	t->flags = needsReturn;
 	return (t);
 }
@@ -326,7 +326,6 @@ tree_pop(struct tree *t)
 int
 tree_next(struct tree *t)
 {
-	struct dirent *de = NULL;
 	int r;
 
 	/* If we're called again after a fatal error, that's an API
@@ -345,29 +344,50 @@ tree_next(struct tree *t)
 	}
 
 	while (t->stack != NULL) {
+		t->findData = NULL;
+
 		/* If there's an open dir, get the next entry from there. */
-		while (t->d != NULL) {
-			de = readdir(t->d);
-			if (de == NULL) {
+		if (t->d != /* NULL */ INVALID_HANDLE_VALUE) {
+			const char *name;
+			size_t namelen;
+#if 0
+			t->de = readdir(t->d);
+			if (t->de == NULL) {
 				closedir(t->d);
 				t->d = NULL;
-			} else if (de->d_name[0] == '.'
-			    && de->d_name[1] == '\0') {
-				/* Skip '.' */
-			} else if (de->d_name[0] == '.'
-			    && de->d_name[1] == '.'
-			    && de->d_name[2] == '\0') {
-				/* Skip '..' */
+			name = t->de->d_name;
+			namelen = D_NAMELEN(t->de);
+#else
+			if (t->nextFindData != NULL) {
+				t->findData = t->nextFindData;
+				t->nextFindData = NULL;
+			} else if (FindNextFile(t->d, &t->_findData)) {
+				t->findData = &t->_findData;
 			} else {
-				/*
-				 * Append the path to the current path
-				 * and return it.
-				 */
-				tree_append(t, de->d_name, D_NAMELEN(de));
-				t->flags &= ~hasLstat;
-				t->flags &= ~hasStat;
-				return (t->visit_type = TREE_REGULAR);
+				FindClose(t->d);
+				t->d = INVALID_HANDLE_VALUE;
+				continue;
 			}
+			name = t->findData->cFileName;
+			namelen = strlen(name);
+#endif
+			if (name[0] == '.' && name[1] == '\0') {
+				/* Skip '.' */
+				continue;
+			}
+			if (name[0] == '.' && name[1] == '.' && name[2] == '\0') {
+				/* Skip '..' */
+				continue;
+			}
+
+			/*
+			 * Append the path to the current path
+			 * and return it.
+			 */
+			tree_append(t, name, namelen);
+			t->flags &= ~hasLstat;
+			t->flags &= ~hasStat;
+			return (t->visit_type = TREE_REGULAR);
 		}
 
 		/* If the current dir needs to be visited, set it up. */
@@ -394,8 +414,14 @@ tree_next(struct tree *t)
 				return (t->visit_type = TREE_ERROR_DIR);
 			}
 			t->depth++;
-			t->d = opendir(".");
-			if (t->d == NULL) {
+#if 0
+			if ((t->d = opendir(".")) == NULL) {
+#else
+			t->d = FindFirstFile("*", &t->_findData);
+			if (t->d != INVALID_HANDLE_VALUE) {
+				t->nextFindData = &t->_findData;
+			} else {
+#endif
 				r = tree_ascend(t); /* Undo "chdir" */
 				tree_pop(t);
 				t->tree_errno = errno;
@@ -469,12 +495,15 @@ tree_current_stat(struct tree *t)
 const struct stat *
 tree_current_lstat(struct tree *t)
 {
+	return (tree_current_stat(t));
+#if 0
 	if (!(t->flags & hasLstat)) {
 		if (lstat(t->basename, &t->lst) != 0)
 			return NULL;
 		t->flags |= hasLstat;
 	}
 	return (&t->lst);
+#endif
 }
 
 /*
@@ -483,6 +512,10 @@ tree_current_lstat(struct tree *t)
 int
 tree_current_is_dir(struct tree *t)
 {
+	if (t->findData != NULL)
+		return (t->findData->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
+	return (tree_current_stat(t)->st_mode & S_IFDIR);
+#if 0
 	const struct stat *st;
 
 	/*
@@ -509,6 +542,7 @@ tree_current_is_dir(struct tree *t)
 		return 0;
 	/* Use the definitive test.  Hopefully this is cached. */
 	return (S_ISDIR(st->st_mode));
+#endif
 }
 
 /*
@@ -519,6 +553,10 @@ tree_current_is_dir(struct tree *t)
 int
 tree_current_is_physical_dir(struct tree *t)
 {
+	if (tree_current_is_physical_link(t))
+		return (0);
+	return (tree_current_is_dir(t));
+#if 0
 	const struct stat *st;
 
 	/*
@@ -542,6 +580,7 @@ tree_current_is_physical_dir(struct tree *t)
 		return 0;
 	/* Use the definitive test.  Hopefully this is cached. */
 	return (S_ISDIR(st->st_mode));
+#endif
 }
 
 /*
@@ -550,10 +589,25 @@ tree_current_is_physical_dir(struct tree *t)
 int
 tree_current_is_physical_link(struct tree *t)
 {
+#if 0
 	const struct stat *st = tree_current_lstat(t);
 	if (st == NULL)
 		return 0;
 	return (S_ISLNK(st->st_mode));
+#else
+	if (t->findData == NULL)
+		return (0);
+	if (t->d != INVALID_HANDLE_VALUE) {
+		if ((t->findData->dwFileAttributes
+				& FILE_ATTRIBUTE_REPARSE_POINT)
+			&& (t->findData->dwReserved0
+				== IO_REPARSE_TAG_SYMLINK))
+		{
+				return (1);
+		}
+	}
+	return (0); /* Windows doedsn't have links. */
+#endif
 }
 
 /*
