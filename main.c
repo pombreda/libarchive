@@ -28,9 +28,15 @@ main(int argc, char **argv)
 				level++;
 				spaces[level] = '\0';
 				break;
-			case TREE_ERROR_DIR: type = "error-dir"; break;
-			case TREE_ERROR_FATAL: type = "error-fatal"; break;
-			case TREE_REGULAR: type = ""; break;
+			case TREE_ERROR_DIR:
+				type = "error-dir";
+				break;
+			case TREE_ERROR_FATAL:
+				type = "error-fatal";
+				break;
+			case TREE_REGULAR:
+				type = "";
+				break;
 			default: type="??"; break;
 			}
 			if (tree_current_pathlen(t) > max_path_len)

@@ -125,8 +125,8 @@ struct tree_entry {
 /* Definitions for tree_entry.flags bitmap. */
 #define	isDir 1 /* This entry is a regular directory. */
 #define	isDirLink 2 /* This entry is a symbolic link to a directory. */
-#define	needsPreVisit 4 /* This entry needs to be previsited. */
-#define	needsPostVisit 8 /* This entry needs to be postvisited. */
+#define	needsDescent 4 /* This entry needs to be previsited. */
+#define	needsAscent 8 /* This entry needs to be postvisited. */
 
 /*
  * Local data for this package.
@@ -193,7 +193,7 @@ tree_dump(struct tree *t, FILE *out)
 	fprintf(out, "\tstack:\n");
 	for (te = t->stack; te != NULL; te = te->next) {
 		fprintf(out, "\t\tte->name: %s%s%s\n", te->name,
-		    te->flags & needsPreVisit ? "" : " *",
+		    te->flags & needsDescent ? "" : " *",
 		    t->current == te ? " (current)" : "");
 	}
 }
@@ -217,7 +217,7 @@ tree_push(struct tree *t, const char *path)
 	te->fullpath = NULL;
 #endif
 	te->name = strdup(path);
-	te->flags = needsPreVisit | needsPostVisit;
+	te->flags = needsDescent | needsAscent;
 	te->dirname_length = t->dirname_length;
 }
 
@@ -241,6 +241,8 @@ tree_append(struct tree *t, const char *name, size_t name_length)
 		if (t->buff_length < 1024)
 			t->buff_length = 1024;
 		t->buff = realloc(t->buff, t->buff_length);
+		if (t->buff == NULL)
+			abort();
 	}
 	p = t->buff + t->dirname_length;
 	t->path_length = t->dirname_length + name_length;
@@ -327,8 +329,7 @@ tree_pop(struct tree *t)
 	t->stack = te->next;
 	t->dirname_length = te->dirname_length;
 	t->basename = t->buff + t->dirname_length;
-	/* Special case: starting dir doesn't skip leading '/'. */
-	if (t->dirname_length > 0)
+	while (t->basename[0] == '/' || t->basename[0] == '\\')
 		t->basename++;
 	free(te->name);
 	free(te);
@@ -347,8 +348,7 @@ tree_next(struct tree *t)
 	if (t->visit_type == TREE_ERROR_FATAL) {
 		fprintf(stderr, "Unable to continue traversing"
 		    " directory heirarchy after a fatal error.");
-		*(int *)0 = 1; /* Deliberate SEGV; NULL pointer dereference. */
-		exit(1); /* In case the SEGV didn't work. */
+		abort();
 	}
 
 	/* Handle the startup case by returning the initial entry. */
@@ -410,10 +410,10 @@ tree_next(struct tree *t)
 		}
 
 		/* If the current dir needs to be visited, set it up. */
-		if (t->stack->flags & needsPreVisit) {
+		if (t->stack->flags & needsDescent) {
 			t->current = t->stack;
 			tree_append(t, t->stack->name, strlen(t->stack->name));
-			t->stack->flags &= ~needsPreVisit;
+			t->stack->flags &= ~needsDescent;
 			/* If it is a link, set up fd for the ascent. */
 			if (t->stack->flags & isDirLink) {
 #ifdef HAVE_FCHDIR
@@ -454,7 +454,7 @@ tree_next(struct tree *t)
 		}
 
 		/* We've done everything necessary for the top stack entry. */
-		if (t->stack->flags & needsPostVisit) {
+		if (t->stack->flags & needsAscent) {
 			r = tree_ascend(t);
 			tree_pop(t);
 			t->flags &= ~hasLstat;
@@ -501,7 +501,7 @@ const struct stat *
 tree_current_stat(struct tree *t)
 {
 	if (!(t->flags & hasStat)) {
-		if (stat(t->basename, &t->st) != 0)
+		if (stat(tree_current_access_path(t), &t->st) != 0)
 			return NULL;
 		t->flags |= hasStat;
 	}
@@ -518,7 +518,7 @@ tree_current_lstat(struct tree *t)
 	return (tree_current_stat(t));
 #else
 	if (!(t->flags & hasLstat)) {
-		if (lstat(t->basename, &t->lst) != 0)
+		if (lstat(tree_current_access_path(t), &t->lst) != 0)
 			return NULL;
 		t->flags |= hasLstat;
 	}
@@ -532,13 +532,15 @@ tree_current_lstat(struct tree *t)
 int
 tree_current_is_dir(struct tree *t)
 {
+	const struct stat *st;
 #if defined(_WIN32)
 	if (t->findData != NULL)
 		return (t->findData->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
-	return (tree_current_stat(t)->st_mode & S_IFDIR);
+	st = tree_current_stat(t);
+	if (st == NULL)
+		return (0);
+	return (st->st_mode & S_IFDIR);
 #else
-	const struct stat *st;
-
 	/*
 	 * If we already have lstat() info, then try some
 	 * cheap tests to determine if this is a dir.
