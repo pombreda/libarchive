@@ -95,6 +95,9 @@
 #endif
 #ifdef HAVE_WINDOWS_H
 #include <windows.h>
+#define DIRSEP '\\'
+#else
+#define DIRSEP '/'
 #endif
 
 #include "tree.h"
@@ -213,10 +216,11 @@ tree_push(struct tree *t, const char *path)
 	t->stack = te;
 #ifdef HAVE_FCHDIR
 	te->fd = -1;
+	te->name = strdup(path);
 #elif defined(_WIN32) && !defined(__CYGWIN__)
 	te->fullpath = NULL;
+	te->name = _strdup(path);
 #endif
-	te->name = strdup(path);
 	te->flags = needsDescent | needsAscent;
 	te->dirname_length = t->dirname_length;
 }
@@ -232,7 +236,8 @@ tree_append(struct tree *t, const char *name, size_t name_length)
 	if (t->buff != NULL)
 		t->buff[t->dirname_length] = '\0';
 	/* Strip trailing '/' from name, unless entire name is "/". */
-	while (name_length > 1 && name[name_length - 1] == '/')
+	while (name_length > 1 && 
+		(name[name_length - 1] == '/' || name[name_length - 1] == '/'))
 		name_length--;
 
 	/* Resize pathname buffer as needed. */
@@ -248,10 +253,14 @@ tree_append(struct tree *t, const char *name, size_t name_length)
 	t->path_length = t->dirname_length + name_length;
 	/* Add a separating '/' if it's needed. */
 	if (t->dirname_length > 0 && p[-1] != '/' && p[-1] != '\\') {
-		*p++ = '/';
+		*p++ = DIRSEP;
 		t->path_length ++;
 	}
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	strncpy_s(p, t->buff_length - (p - t->buff), name, name_length);
+#else
 	strncpy(p, name, name_length);
+#endif
 	p[name_length] = '\0';
 	t->basename = p;
 }
@@ -297,7 +306,7 @@ tree_ascend(struct tree *t)
 		}
 		close(te->fd);
 #elif defined(_WIN32) && !defined(__CYGWIN__)
-		if (_chdir(te->fullpath) != 0) {
+		if (SetCurrentDirectory(te->fullpath) == 0) {
 			t->tree_errno = errno;
 			r = TREE_ERROR_FATAL;
 		}
@@ -306,7 +315,7 @@ tree_ascend(struct tree *t)
 #endif
 		t->openCount--;
 	} else {
-		if (chdir("..") != 0) {
+		if (SetCurrentDirectory("..") == 0) {
 			t->tree_errno = errno;
 			r = TREE_ERROR_FATAL;
 		}
@@ -419,14 +428,14 @@ tree_next(struct tree *t)
 #ifdef HAVE_FCHDIR
 				t->stack->fd = open(".", O_RDONLY);
 #elif defined(_WIN32) && !defined(__CYGWIN__)
-				t->stack->fullpath = getcwd(NULL, 0);
+				t->stack->fullpath = _getcwd(NULL, 0);
 #endif
 				t->openCount++;
 				if (t->openCount > t->maxOpenCount)
 					t->maxOpenCount = t->openCount;
 			}
 			t->dirname_length = t->path_length;
-			if (chdir(t->stack->name) != 0) {
+			if (t->path_length == 259 || !SetCurrentDirectory(t->stack->name) != 0) {
 				/* chdir() failed; return error */
 				tree_pop(t);
 				t->tree_errno = errno;
@@ -617,15 +626,11 @@ tree_current_is_physical_link(struct tree *t)
 	if (t->findData == NULL)
 		return (0);
 	if (t->d != INVALID_HANDLE_VALUE) {
-		if ((t->findData->dwFileAttributes
-				& FILE_ATTRIBUTE_REPARSE_POINT)
-			&& (t->findData->dwReserved0
-				== IO_REPARSE_TAG_SYMLINK))
-		{
+		if ((t->findData->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+			&& (t->findData->dwReserved0 == IO_REPARSE_TAG_SYMLINK))
 				return (1);
-		}
 	}
-	return (0); /* Windows doedsn't have links. */
+	return (0);
 #else
 	const struct stat *st = tree_current_lstat(t);
 	if (st == NULL)
@@ -691,7 +696,7 @@ tree_close(struct tree *t)
 	}
 #elif defined(_WIN32) && !defined(__CYGWIN__)
 	if (t->initialDir != NULL) {
-		chdir(t->initialDir);
+		_chdir(t->initialDir);
 		free(t->initialDir);
 		t->initialDir = NULL;
 	}
