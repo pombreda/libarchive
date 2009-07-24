@@ -101,7 +101,7 @@ on the popular GNU C compiler.
 
 XXX details ? XXX
 
-Note: The libarchive 2.7.0 release does not build properly in Windows/MinGW; this should be fixed in 2.7.1.
+Note: The libarchive 2.7.0 release does not build properly in Windows/MinGW; this should be fixed in 2.8.
 
 == MacOS/Xcode ==
 
