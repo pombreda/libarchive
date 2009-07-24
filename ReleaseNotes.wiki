@@ -9,7 +9,7 @@ the work.
 
 = Libarchive 3.0 =
 
-_Future release: Expected early 2010_
+_Future release: Expected mid 2010_
 
 Major version number bumps indicate backwards-incompatible API changes.
 There are a handful of API changes that I'd like to make but I do try hard to break the API as infrequently as possible, so I'm deferring these until there's enough here to justify the pain:
@@ -20,22 +20,29 @@ There are a handful of API changes that I'd like to make but I do try hard to br
   * Fix the awkward "options" naming conflict; archive_write_disk_options() is nothing like archive_write_options() and archive_read_options().
   * Stackable write filters.  The stackable read filters have made the read side a lot more straightforward.  The write side should do this as well.  This may require changing the archive_write_disk API so that blocking is handled by explicitly adding a blocking filter.
 
+= Libarchive 2.9 =
+
+_Future Release_
+
+ * NFSv4 ACL support - I have done some research and think I have a good grasp of the requirements for this.
+ * Exploit seekable input - Files support seeking and Zip and ISO both work better when this is available.  But I still want Zip and ISO to be usable when the input can't seek.
+
+
 = Libarchive 2.8 =
 
 _Future release: Expected late 2009_
 
 The following are expected, but not yet implemented.  They may be pushed to a later release.
  * zisofs support - This should be straightforward; the zip reader already illustrates how to decompress gzipped bodies.
- * NFSv4 ACL support - I have done some research and think I have a good grasp of the requirements for this.
- * Exploit seekable input - Files support seeking and Zip and ISO both work better when this is available.  But I still want Zip and ISO to be usable when the input can't seek.
  * MinGW fixes - libarchive 2.7 works well with Visual Studio and Cygwin but still has problems under MinGW.
 
 The following are implemented and will likely be included in this release:
  * Zip writer - Anselm Strauss implemented most of this for Google Summer of Code 2008.  Joerg Sonnenberger worked out the remaining issues.
+ * Many improvements to Windows support in general.  A lot of code has been edited to use portable ANSI/ISO C instead of Posix system calls; a lot of code is being taught to use Win32 API calls when built on Windows; a lot of tar and cpio code is being updated to use higher-level libarchive services that lessen the need for tar and cpio to be aware of system-specific details.
 
 = Libarchive 2.7.1 =
 
-_Future release_
+_Future release_: Expected August, 2009
 
  * Issue 30: Fix reading xz-compressed archives that require large decompression buffers
  * Issue 24: Fix hang reading truncated ISO archives.
@@ -59,6 +66,11 @@ _Released April 17, 2009_
  * Support for reading Joliet extensions, thanks to Andreas Henriksson
  * Support for mtree hash and CRC options, thanks to Michihiro NAKAJIMA
  * Improved support for Cygwin, thanks to Charles Wilson
+
+_Known Issues_
+
+ * Building under MinGW is badly broken.  We plan to fix this for 2.8.
+ * A couple of libarchive tests fail when built with Visual Studio because of error-handling differences between Windows and Posix system libraries.
 
 = Libarchive 2.6.2 =
 
