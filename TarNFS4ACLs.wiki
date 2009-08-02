@@ -23,6 +23,8 @@ for representing ACLs.  Anyone attempting to create a portable
 way to store NFSv4 ACLs is likely going to have to implement
 their own format, including all parsing routines,
 since OS-specific library routines are unlikely to be useful.
+(Even when such routines do exist, they vary too much
+across platforms to support interchange.)
 
 --------------------------------------------------------------------------
 
