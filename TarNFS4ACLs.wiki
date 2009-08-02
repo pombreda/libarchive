@@ -28,6 +28,11 @@ since OS-specific library routines are unlikely to be useful.
 
 = Prior Art =
 
+Of course, the existing work on supporting POSIX.1e-style
+ACLs is quite relevant.
+I've tried to document this at [TarPosix1eACLs].
+
+
 == Apple version of GNU tar ==
 
 Apple stores the ACLs as an extended attribute named com.apple.acl.text
