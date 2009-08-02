@@ -46,7 +46,7 @@ I've not yet found documentation for the textual format used here, but it seems 
  * User/group ID
  * XXX document these ??? XXXX
 
-The inclusion of both a POSIX-style numeric ID and a Windows-style GUID for each user and group is very interesting.  I would like for libarchive to support NFSv4/NTFS ACLs on both Windows and MacOS, at least eventually, so this will likely be required for libarchive as well.
+The inclusion of both a POSIX-style numeric ID and a GUID for each user and group is very interesting.  I would like for libarchive to support NFSv4/NTFS ACLs on both Windows and MacOS, at least eventually, so there will need to be some provision for extended IDs of this sort.  (Although there are complications; Windows SIDs may prove to be too machine-specific for practical interchange.)
 
 == AIX tar ==
 
@@ -199,7 +199,7 @@ The final implementation is likely to be significantly different._
  * It should be easy to store such ACLs as pax extended attributes, which heavily favors a UTF-8 representation.
  * Although pax has no such limitation, other formats may prefer a single-line format.
  * It must have both numeric IDs and names for each user or group.
- * For cross-platform support, it should permit a GUID representation such as that used on Windows and MacOS.  I believe for Mac OS, it needs to allow GUID, POSIX-style numeric ID, and name on each entry.
+ * It should support an extended GUID (MacOS) or SID (Windows) identifier on each entry, probably in addition to a basic numeric ID and name.
 
 == Proposed design ==
 
