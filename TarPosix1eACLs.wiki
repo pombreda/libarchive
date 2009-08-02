@@ -42,3 +42,13 @@ precedes the file to which it applies.  The body of this
 entry consists of the following:
  * An ASCII number in octal followed by a single NULL byte.  The value is 01000000 plus the number of entries in the ACL.   The 01000000 value flags this as a POSIX.1e ACL; the count of entries is redundant and can generally be ignored.
  * A textual list of all ACL entries.  This list includes both default and access entries.  The default entries have the text "default" prepended (e.g., "defaultuser::rwx").  The entries are comma-separated.  Unlike the _star_ format, there is no additional field for the user/group ID.
+
+= AIX approach =
+
+AIX implemented a system similar to Solaris but with
+a number of problems.
+Most obviously, the ACL is stored after the entry and not before.
+This constrains the possible implementations (libarchive, for
+example, wants to see all metadata before reading the body).
+The format used is also pretty non-portable.
+The [TarNFS4ACLs] has some additional details about this format.
