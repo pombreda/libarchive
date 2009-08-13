@@ -116,7 +116,7 @@ following steps whenever it runs a test:
  * Creates a temporary directory whose name matches the name of the test and switches into that directory.
  * Resets the current locale.
  * Calls the test function.
- * If there were no assertion failures, it will remove the temporary directory unless `-k` was specified.
+ * If there were no assertion failures, it will remove the temporary directory.  (If `-k` is specified, temporary directory are left even if the test succeeds.)
  * ~~If there are any open file descriptors other than stdin, stdout, and stderr, it reports an error.~~  Tests should never leave open file descriptors.
 
 In particular, tests can safely assume that:
@@ -131,8 +131,66 @@ Tests should:
 
 = Platform variation =
 
-XXXXX
+Some tests are specific to a particular platform.
+Such tests should use appropriate platform-specific macros as follows:
+{{{
+#if __PLATFORM
+... various helper functions ...
+#endif
+
+DEFINE_TEST(foo_platform)
+{
+#if __PLATFORM
+   ... tests as usual ....
+#else
+   skipping("platform-specific tests");
+#endif
+}
+}}}
+
+In particular, note that all tests are compiled and run on all platforms.
+
+Most tests are not platform-specific and will thus end up running
+on many different platforms.
+In order to simplify writing such tests, try to use platform-independent coding:
+ * Use stdio `fopen()`, `fwrite()`, `fread()`, and `fclose()` to access files whenever feasible.
+ * Look through the `test.h` header to see if there are assertXxx() functions that you can use.  There's a list of the more popular ones below, but new ones are often added.
+
+= Assert macros =
+
+The following is a necessarily incomplete list of assert functions available to tests:
+ * Basic equality: `assertEqualInt`, `assertEqualString`, `assertEqualMem`
+ * File creation: `assertMakeFile`, `assertMakeSymlink`, `assertMakeHardlink`, `assertMakeDir`
+ * File tests: `assertIsReg`, `assertIsDir`, `assertIsSymlink`, `assertFileSize`, `assertFileNlinks`, `assertFileMtime`
+ * File contents: `assertFileEmpty`, `assertFileNonEmpty`, `assertFileContents`, `assertTextFileContents`
 
 = Some examples of complex tests =
 
-XXXXX
+== Fuzz tester ==
+
+The fuzz tester is one of the few tests that does not aggressively use assertions.
+Its purpose is to try and crash libarchive by feeding it input that is slightly damaged.
+(Remember that libarchive does have some failsafe code that deliberately aborts the entire program if certain invariants are violated.)
+
+Since a fuzz failure causes a crash, it's impossible to report the error to the console, so the fuzz tester instead generates a randomly-damaged file, saves that file to disk, then runs the file through libarchive to try to provoke a crash.
+If libarchive crashes the entire tester, the input that caused the crash will be available on disk for further analysis.
+
+Although it is unusual for a test program to use random input, the fuzz tester has proven quite useful at uncovering poor error handling.
+Unfortunately, the need to write the data to disk before each test is a significant performance issue.
+
+== Large tar tester ==
+
+The large tar tester attempts to exercise boundary cases with very large entries, up to 1 terabyte.
+Of course, writing a 1 terabyte entry to an uncompressed archive on disk or memory is unacceptable, both for performance and space reasons.
+Even gzip or bzip2 compression won't help; although smaller, the output is still large and the time needed to compress such a large amount of data is prohibitive.
+So the large tar tester uses a trick.
+
+Remember that an uncompressed tar archive consists of alternating headers and bodies.
+If the bodies consist entirely of zero bytes, then all that's needed to reconstruct the archive is to record the relatively small headers and store a count of each contiguous block of zeros.
+This simple "run-length encoding" is very effective, compressing a sample archive with a dozen entries down to just a few kilobytes, even if those entries range up to 1TB.
+
+By writing a custom I/O layer that implements such compression, we can write very large entries through libarchive then read them back and verify that libarchive correctly handles all of the boundary cases.
+
+Of course, even scanning output to determine zero blocks can take quite a while, so the large tar tester makes one more optimization:  Libarchive is "mostly" zero-copy.  When you give it a large block to write to an entry body, it will pass pointers straight through to the output routine, except in those cases where it must copy data to correctly build blocks.  The large tar tester takes advantage of this to quickly detect when a block being written out by the archive writer is the same as some of the data that was given by the test as the entry body, and similarly when reading the archive back.
+
+Taken together, these tricks allow the large tar writer to test for issues such as proper storage of very large file sizes (tar files support several different ways to store file sizes which trade off portability versus range; libarchive tries to use the most portable one it can for each entry) and integer overflow (Windows 32-bit `off_t` broke the large tar test and led libarchive to make heavier use of `int64_t` internally.)
