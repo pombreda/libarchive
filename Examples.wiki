@@ -22,6 +22,8 @@ The basic lifecycle of an archive object is very simple:
  * Iterate over the contents:  ask alternately for "header" (which returns an entry object describing the next entry in the archive) and "data"
  * When you're done, you can "close", query metadata, then "finish" to free the archive object.
 
+Writing an archive is very similar, except that you provide header and data to libarchive instead of asking for them from libarchive.
+
 Here's a very basic usage that simply opens a file and lists the contents of the archive:
 
 {{{
