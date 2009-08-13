@@ -8,6 +8,11 @@ new features get implemented whenever someone steps up to do the work.
 
 <wiki:toc>
 
+= Better Build Documentation =
+
+The existing build documentation is a little hard to navigate.
+It would be nice to break it out into separate pages by platform and provide more in the way of screenshots for the graphical tools and command examples for the command-line tools.
+
 = Command-line parsing for compress_program =
 
 The `archive_read_support_compress_program()` and `archive_write_set_compress_program()`
