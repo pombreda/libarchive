@@ -13,6 +13,20 @@ new features get implemented whenever someone steps up to do the work.
 The existing build documentation is a little hard to navigate.
 It would be nice to break it out into separate pages by platform and provide more in the way of screenshots for the graphical tools and command examples for the command-line tools.
 
+= Man Page Updates =
+
+The man pages are a little out-of-date now; some of the newer changes need to be added.
+
+= Man Page Refactoring =
+
+The big monolithic man pages are a little hard to navigate.
+Breaking them down some would probably help, as long as there were enough cross-references to help navigate.
+The existing `archive_read.3`, etc, man pages should probably be retained as a holder for overall API information and examples.
+
+= Better documentation conversions =
+
+The existing conversion scripts don't do a bad job but could probably stand improvement.
+
 = Command-line parsing for compress_program =
 
 The `archive_read_support_compress_program()` and `archive_write_set_compress_program()`
