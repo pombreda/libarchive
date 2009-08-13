@@ -19,9 +19,9 @@ This is not of much practical use yet (it is rarely helpful to bzip2 a file that
  * gzip (read and write, uses zlib)
  * bzip2 (read and write, uses bzlib)
  * compress (read and write, uses an internal implementation)
- * separate command-line compressors (no auto-detect for these)
+ * separate command-line compressors with fixed-signature auto-detection
  * xz and lzma (read and write using liblzma)
- * lzma (if you lack liblzma, you can get read-only lzma support through the lzmadec library)
+ * lzma (if you lack liblzma, you can get read-only lzma support through the lzmadec library; this will likely be dropped as soon as liblzma is stable and widely-available)
  * Starting with libarchive 2.7, most of the above will fall back to using command-line tools if the libraries were unavailable at build time.  Note that the command-line tools are usually slower than using the libraries directly.
 
 = Archive Formats Supported =
@@ -30,7 +30,7 @@ This is not of much practical use yet (it is rarely helpful to bzip2 a file that
  * pax (read and write, including GNU and star extensions)
  * cpio (read and write, including odc and newc variants)
  * ISO9660 (read only, with some limitations)
- * Zip (read only, with some limitations, uses zlib)
+ * Zip (read only, with some limitations, uses zlib; write support starting with libarchive 2.8)
  * mtree (read and write)
  * shar (write only)
  * ar (read and write, including BSD and GNU/SysV variants)
