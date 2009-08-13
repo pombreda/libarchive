@@ -13,11 +13,11 @@ If there is an example you'd like to see added to this page, please ask.
 = List contents of Archive stored in File =
 
 Libarchive is based around two types of "objects":  archive objects (pointers to `struct archive`) and entry objects (pointers to `struct archive_entry`).
-These are opaque references; libarchive creates, manipulates, and destroys these objects for you.
+These are opaque references: you cannot directly access of the structure fields, you can only invoke libarchive functions that create, manipulate, and destroy these objects for you.
 
 The basic lifecycle of an archive object is very simple:
  * Create one using archive_XXX_new()
- * Configure it using "support" or "set" calls.
+ * Configure it using "support" or "set" calls.  ("Support" calls allow libarchive to decide when to use a feature, "set" calls enable the feature unconditionally.)
  * "Open" a particular data source.
  * Iterate over the contents:  ask alternately for "header" (which returns an entry object describing the next entry in the archive) and "data"
  * When you're done, you can "close", query metadata, then "finish" to free the archive object.
