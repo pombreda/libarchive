@@ -1,0 +1,142 @@
+#summary Short code examples illustrating usage of the library.
+
+This page collects several short examples illustrating usage of libarchive.
+The intent here is to provide basic templates that can be copied and used to bootstrap your own development.
+
+All of the code on this page is in the public domain.
+You may use it for any purpose whatsoever.
+(Please note that libarchive itself is not in the public domain; please read the license information in the source distribution for details.)
+If there is an example you'd like to see added to this page, please ask.
+
+<wiki:toc max_depth="1" />
+
+= List contents of Archive stored in File =
+
+Libarchive is based around two types of "objects":  archive objects (pointers to `struct archive`) and entry objects (pointers to `struct archive_entry`).
+These are opaque references; libarchive creates, manipulates, and destroys these objects for you.
+
+The basic lifecycle of an archive object is very simple:
+ * Create one using archive_XXX_new()
+ * Configure it using "support" or "set" calls.
+ * "Open" a particular data source.
+ * Iterate over the contents:  ask alternately for "header" (which returns an entry object describing the next entry in the archive) and "data"
+ * When you're done, you can "close", query metadata, then "finish" to free the archive object.
+
+Here's a very basic usage that simply opens a file and lists the contents of the archive:
+
+{{{
+  struct archive *a;
+  struct archive_entry *entry;
+  int r;
+
+  a = archive_read_new();
+  archive_read_support_compression_all(a);
+  archive_read_support_format_all(a);
+  r = archive_read_open_filename(a, "archive.tar", 10240);
+  if (r != ARCHIVE_OK)
+    exit(1);
+  while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+    printf("%s\\n",archive_entry_pathname(entry));
+    archive_read_data_skip(a);
+  }
+  r = archive_read_finish(a);
+  if (r != ARCHIVE_OK)
+    exit(1);
+}}}
+
+= List contents of Archive stored in Memory =
+
+There are several variants of the "open" functions.
+The "filename" variant used above is intended to be simple to use in the common case, but you may find the "memory" variant more useful sometimes:
+
+{{{
+  struct archive *a = archive_read_new();
+  archive_read_support_compression_gzip(a);
+  archive_read_support_format_tar(a);
+  r = archive_read_open_memory(a, buff, sizeof(buff));
+}}}
+
+Note that the "filename" variant accepts a block size indicating how large each read from disk will be.
+In the memory case, all that's needed is the total size of the archive stored in memory.
+
+There are also variants to read from an already-opened file descriptor (which is useful if you need to skip the first part of a file before using libarchive to extract the rest) or `FILE *` pointer.
+
+= List contents of Archive with custom read functions =
+
+Sometimes, none of the packaged "open" functions will work for you.
+In that case, you can use the lower-level `archive_read_open` function.
+This accepts three callbacks and a pointer to your data:
+ * An open callback.  This is legacy and is never necessary and should not be used.
+ * A read callback.
+ * A close callback.
+
+For example, you could implement a custom read callback function that called into an HTTP library in order to extract data as it was downloaded from a web site.
+
+All of the callbacks use certain common libarchive conventions:
+ * The open and close functions return ARCHIVE_OK (zero) on success or a negative value on failure.  The most common values here are ARCHIVE_WARN for something that was less than perfect or ARCHIVE_FATAL for a failure that cannot be retried or recovered.
+ * The read callback returns the number of bytes read, zero for end-of-file, or a negative failure code as above.  It also returns a pointer to the block of data read.
+ * Libarchive does not care how big the blocks are.  It will fully consume any block before asking for the next, so your callbacks do not need to handle partially read blocks.  The only requirement is that each block must be at least one byte because a zero-byte return indicates end-of-file.
+
+Here's a simple outline of using your own custom callbacks.
+For brevity, I've omitted a lot of error-handling here.
+In particular, note how the custom "mydata" pointer is passed back into your callbacks so you can manage your private data as you wish.
+
+{{{
+void
+list_archive(const char *name)
+{
+  struct mydata *mydata;
+  struct archive *a;
+  struct archive_entry *entry;
+  mydata = malloc(sizeof(struct mydata));
+  a = archive_read_new();
+  mydata->name = name;
+  mydata->fd = open(mydata->name, O_RDONLY);
+  archive_read_support_compression_all(a);
+  archive_read_support_format_all(a);
+  archive_read_open(a, mydata, NULL, myread, myclose);
+  while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+    printf("%s\\n",archive_entry_pathname(entry));
+  }
+  archive_read_finish(a);
+  free(mydata);
+}
+ssize_t
+myread(struct archive *a, void *client_data, const void **buff)
+{
+  struct mydata *mydata = client_data;
+  *buff = mydata->buff;
+  return (read(mydata->fd, mydata->buff, 10240));
+}
+int
+myclose(struct archive *a, void *client_data)
+{
+  struct mydata *mydata = client_data;
+  if (mydata->fd > 0)
+    close(mydata->fd);
+  free(mydata);
+  return (ARCHIVE_OK);
+}
+}}}
+
+== A note about the skip callback ==
+
+The `archive_read_open2` function is like `archive_read_open` but it accepts an additional "skip" callback function.
+The skip callback is never required.
+However, if it is available, libarchive can optimize certain reads.
+In particular, none of the examples above read the body of an archive entry.
+For some archive formats, libarchive can invoke the "skip" callback to quickly seek over the entire body entry.
+
+The skip callback must satisfy the following:
+ * It must return the number of bytes actually skipped, or a negative failure code if skipping cannot be done.
+ * It can skip fewer bytes than requested but must never skip more.
+ * Only positive/forward skips will ever be requested.
+ * If skipping is not provided or fails, libarchive will call the read() function and simply ignore any data that it does not need.
+
+== A note about seeking ==
+
+Certain archive formats can be read much more quickly if they can seek to arbitrary positions in the archive.
+In some cases, such as ISO9660 or ZIP, there are legal archives that cannot be read without seeking.
+Libarchive does not currently support seeking, but there are plans to add it.
+It requires reworking some of libarchive's deeper plumbing so may not happen very soon.
+If you'd like to work on this, please look at the [Wishlist] and ask on the discussion mailing list.
