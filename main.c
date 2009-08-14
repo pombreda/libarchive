@@ -14,6 +14,7 @@ main(int argc, char **argv)
 	(void)argc; /* UNUSED */
 	while(*++argv) {
 		t = tree_open(*argv);
+		tree_dump(t, stdout);
 		spaces[0] = '\0';
 		while ((visit = tree_next(t))) {
 			switch (visit) {
