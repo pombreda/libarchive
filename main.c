@@ -48,6 +48,7 @@ main(int argc, char **argv)
 			printf("%s%s\n", spaces, tree_current_path(t));
 			if (tree_current_is_physical_dir(t))
 				tree_descend(t);
+			tree_dump(t, stdout);
 		}
 		tree_close(t);
 		printf("Max path length: %d\n", max_path_len);
