@@ -109,7 +109,7 @@
  */
 
 struct tree_entry {
-	int i;
+	int depth;
 	struct tree_entry *next;
 	struct tree_entry *parent;
 	char *name;
@@ -191,14 +191,15 @@ tree_dump(struct tree *t, FILE *out)
 	fprintf(out, "\taccess: %s\n", t->basename);
 	fprintf(out, "\tstack:\n");
 	for (te = t->stack; te != NULL; te = te->next) {
-		fprintf(out, "\t\t%d:\"%s\" %s%s%s %d %s\n",
-		    te->i,
+		fprintf(out, "\t\t%s%d:\"%s\" %s%s%s%s\n",
+		    t->current == te ? "*" : " ",
+		    te->depth,
 		    te->name,
-		    te->flags & needsDescent ? "D" : "",
 		    te->flags & needsVisit ? "V" : "",
+		    te->flags & needsDescent ? "D" : "",
 		    te->flags & needsAscent ? "A" : "",
-		    te->parent ? te->parent->i : -1,
-		    t->current == te ? " (current)" : "");
+		    (t->current == te && t->d) ? "+" : ""
+		);
 	}
 }
 
@@ -213,9 +214,9 @@ tree_push(struct tree *t, const char *path)
 	te = malloc(sizeof(*te));
 	memset(te, 0, sizeof(*te));
 	te->next = t->stack;
-	if (te->next)
-		te->i = te->next->i + 1;
 	te->parent = t->current;
+	if (te->parent)
+		te->depth = te->parent->depth + 1;
 	t->stack = te;
 #ifdef HAVE_FCHDIR
 	te->symlink_parent_fd = -1;
