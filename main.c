@@ -46,7 +46,7 @@ main(int argc, char **argv)
 				printf("*******");
 			if (tree_current_depth(t) > max_depth)
 				max_depth = tree_current_depth(t);
-			printf("%s%s\n", spaces, tree_current_path(t));
+			printf("%s%s (%s)\n", spaces, tree_current_path(t), type);
 			if (tree_current_is_physical_dir(t))
 				tree_descend(t);
 			tree_dump(t, stdout);

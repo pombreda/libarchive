@@ -18,6 +18,7 @@
  * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
  * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
  * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
@@ -130,9 +131,17 @@ struct tree_entry {
 /* Definitions for tree_entry.flags bitmap. */
 #define	isDir 1 /* This entry is a regular directory. */
 #define	isDirLink 2 /* This entry is a symbolic link to a directory. */
-#define	needsDescent 4 /* This entry needs to be previsited. */
-#define needsVisit 8 /* This entry needs a regular visit. */
-#define	needsAscent 16 /* This entry needs to be postvisited. */
+#define needsFirstVisit 4 /* This is an initial entry. */
+#define	needsDescent 8 /* This entry needs to be previsited. */
+#define needsOpen 16 /* This is a directory that needs to be opened. */
+#define	needsAscent 32 /* This entry needs to be postvisited. */
+
+/*
+ * On Windows, "first visit" is handled as a pattern to be handed to
+ * _findfirst().  This is consistent with Windows conventions that
+ * file patterns are handled within the application.  On Posix,
+ * "first visit" is just returned to the client.
+ */
 
 /*
  * Local data for this package.
@@ -142,11 +151,11 @@ struct tree {
 	struct tree_entry	*current;
 #ifdef HAVE_WINDOWS_H
 	HANDLE d;
-	WIN32_FIND_DATA _findData;
-	WIN32_FIND_DATA *findData;
-	WIN32_FIND_DATA *nextFindData;
+#define INVALID_DIR_HANDLE INVALID_HANDLE_VALUE
+	WIN32_FIND_DATA findData;
 #else
 	DIR	*d;
+#define INVALID_DIR_HANDLE NULL
 	struct dirent *de;
 #endif
 	int	 flags;
@@ -191,12 +200,13 @@ tree_dump(struct tree *t, FILE *out)
 	fprintf(out, "\taccess: %s\n", t->basename);
 	fprintf(out, "\tstack:\n");
 	for (te = t->stack; te != NULL; te = te->next) {
-		fprintf(out, "\t\t%s%d:\"%s\" %s%s%s%s\n",
+		fprintf(out, "\t\t%s%d:\"%s\" %s%s%s%s%s\n",
 		    t->current == te ? "*" : " ",
 		    te->depth,
 		    te->name,
-		    te->flags & needsVisit ? "V" : "",
+		    te->flags & needsFirstVisit ? "V" : "",
 		    te->flags & needsDescent ? "D" : "",
+		    te->flags & needsOpen ? "O" : "",
 		    te->flags & needsAscent ? "A" : "",
 		    (t->current == te && t->d) ? "+" : ""
 		);
@@ -225,7 +235,7 @@ tree_push(struct tree *t, const char *path)
 	te->symlink_parent_path = NULL;
 	te->name = _strdup(path);
 #endif
-	te->flags = needsDescent | needsAscent;
+	te->flags = needsDescent | needsOpen | needsAscent;
 	te->dirname_length = t->dirname_length;
 }
 
@@ -282,14 +292,14 @@ tree_open(const char *path)
 	tree_append(t, path, strlen(path));
 	/* First item is set up a lot like a symlink traversal. */
 	tree_push(t, t->basename);
-	t->stack->flags = needsVisit | isDirLink;
+	t->stack->flags = needsFirstVisit | isDirLink;
 #ifdef HAVE_FCHDIR
 	t->stack->symlink_parent_fd = open(".", O_RDONLY);
 	t->openCount++;
 #elif defined(_WIN32) && !defined(__CYGWIN__)
 	t->stack->symlink_parent_path = _getcwd(NULL, 0);
-	t->d = INVALID_HANDLE_VALUE;
 #endif
+	t->d = INVALID_DIR_HANDLE;
 	return (t);
 }
 
@@ -360,6 +370,8 @@ tree_pop(struct tree *t)
 int
 tree_next(struct tree *t)
 {
+	const char *name;
+	size_t namelen;
 	int r;
 
 	/* If we're called again after a fatal error, that's an API
@@ -372,32 +384,20 @@ tree_next(struct tree *t)
 
 	while (t->stack != NULL) {
 		/* If there's an open dir, get the next entry from there. */
+		if (t->d != INVALID_DIR_HANDLE) {
 #if defined(_WIN32)
-		t->findData = NULL;
-		if (t->d != INVALID_HANDLE_VALUE) {
-#else
-		if (t->d != NULL) {
-#endif
-			const char *name;
-			size_t namelen;
-#if defined(_WIN32)
-			if (t->nextFindData != NULL) {
-				t->findData = t->nextFindData;
-				t->nextFindData = NULL;
-			} else if (FindNextFile(t->d, &t->_findData)) {
-				t->findData = &t->_findData;
-			} else {
+			if (!FindNextFile(t->d, &t->findData)) {
 				FindClose(t->d);
-				t->d = INVALID_HANDLE_VALUE;
+				t->d = INVALID_DIR_HANDLE;
 				continue;
 			}
-			name = t->findData->cFileName;
+			name = t->findData.cFileName;
 			namelen = strlen(name);
 #else
 			t->de = readdir(t->d);
 			if (t->de == NULL) {
 				closedir(t->d);
-				t->d = NULL;
+				t->d = INVALID_DIR_HANDLE;
 				continue;
 			}
 			name = t->de->d_name;
@@ -422,11 +422,11 @@ tree_next(struct tree *t)
 			return (t->visit_type = TREE_REGULAR);
 		}
 
-		if (t->stack->flags & needsVisit) {
+		if (t->stack->flags & needsFirstVisit) {
 			/* Top stack item needs a regular visit. */
 			t->current = t->stack;
 			tree_append(t, t->stack->name, strlen(t->stack->name));
-			t->stack->flags &= ~needsVisit;
+			t->stack->flags &= ~needsFirstVisit;
 			return (t->visit_type = TREE_REGULAR);
 		} else if (t->stack->flags & needsDescent) {
 			/* Top stack item is dir to descend into. */
@@ -456,14 +456,28 @@ tree_next(struct tree *t)
 				return (t->visit_type = TREE_ERROR_DIR);
 			}
 			t->depth++;
+			return (t->visit_type = TREE_POSTDESCENT);
+		} else if (t->stack->flags & needsOpen) {
+			t->stack->flags &= ~needsOpen;
 #if defined(_WIN32)
-			t->d = FindFirstFile("*", &t->_findData);
-			if (t->d != INVALID_HANDLE_VALUE) {
-				t->nextFindData = &t->_findData;
-			} else {
+			t->d = FindFirstFile("*", &t->findData);
+			if (t->d != INVALID_DIR_HANDLE) {
+				name = t->findData.cFileName;
+				namelen = strlen(name);
+			} else
 #else
-			if ((t->d = opendir(".")) == NULL) {
+			if ((t->d = opendir(".")) != NULL) {
+				t->de = readdir(t->d);
+				if (t->de == NULL) {
+					closedir(t->d);
+					t->d = INVALID_DIR_HANDLE;
+					continue;
+				}
+				name = t->de->d_name;
+				namelen = D_NAMELEN(t->de);
+			} else
 #endif
+			{
 				r = tree_ascend(t); /* Undo "chdir" */
 				tree_pop(t);
 				t->tree_errno = errno;
@@ -473,7 +487,22 @@ tree_next(struct tree *t)
 			t->flags &= ~hasLstat;
 			t->flags &= ~hasStat;
 			t->basename = ".";
-			return (t->visit_type = TREE_POSTDESCENT);
+			if (name[0] == '.' && name[1] == '\0') {
+				/* Skip '.' */
+				continue;
+			}
+			if (name[0] == '.' && name[1] == '.' && name[2] == '\0') {
+				/* Skip '..' */
+				continue;
+			}
+			/*
+			 * Append the path to the current path
+			 * and return it.
+			 */
+			tree_append(t, name, namelen);
+			t->flags &= ~hasLstat;
+			t->flags &= ~hasStat;
+			return (t->visit_type = TREE_REGULAR);
 		} else if (t->stack->flags & needsAscent) {
 		        /* Top stack item is dir and we're done with it. */
 			r = tree_ascend(t);
@@ -640,7 +669,7 @@ tree_current_is_physical_link(struct tree *t)
 #if defined(_WIN32)
 	if (t->findData == NULL)
 		return (0);
-	if (t->d != INVALID_HANDLE_VALUE) {
+	if (t->d != INVALID_DIR_HANDLE) {
 		if ((t->findData->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
 			&& (t->findData->dwReserved0 == IO_REPARSE_TAG_SYMLINK))
 				return (1);
