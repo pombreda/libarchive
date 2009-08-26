@@ -192,11 +192,12 @@ struct tree {
 void
 tree_dump(struct tree *t, FILE *out)
 {
+	char buff[300];
 	struct tree_entry *te;
 
 	fprintf(out, "\tdepth: %d\n", t->depth);
 	fprintf(out, "\tbuff: %s\n", t->buff);
-	fprintf(out, "\tpwd: "); fflush(stdout); system("pwd");
+	fprintf(out, "\tpwd: %s\n", getcwd(buff, sizeof(buff)));
 	fprintf(out, "\taccess: %s\n", t->basename);
 	fprintf(out, "\tstack:\n");
 	for (te = t->stack; te != NULL; te = te->next) {
@@ -423,11 +424,40 @@ tree_next(struct tree *t)
 		}
 
 		if (t->stack->flags & needsFirstVisit) {
+#if defined(_WIN32) && !defined(__CYGWIN__)
+			t->d = FindFirstFile(t->stack->name, &t->findData);
+			if (t->d == INVALID_DIR_HANDLE) {
+				// TODO: Handle "C:\" as a request
+				abort();
+			}
+			name = t->findData.cFileName;
+			namelen = strlen(name);
+			// TODO: need to chdir and setup starting dir
+			t->stack->flags &= ~needsFirstVisit;
+			if (name[0] == '.' && name[1] == '\0') {
+				/* Skip '.' */
+				continue;
+			}
+			if (name[0] == '.' && name[1] == '.' && name[2] == '\0') {
+				/* Skip '..' */
+				continue;
+			}
+
+			/*
+			 * Append the path to the current path
+			 * and return it.
+			 */
+			tree_append(t, name, namelen);
+			t->flags &= ~hasLstat;
+			t->flags &= ~hasStat;
+			return (t->visit_type = TREE_REGULAR);
+#else
 			/* Top stack item needs a regular visit. */
 			t->current = t->stack;
 			tree_append(t, t->stack->name, strlen(t->stack->name));
 			t->stack->flags &= ~needsFirstVisit;
 			return (t->visit_type = TREE_REGULAR);
+#endif
 		} else if (t->stack->flags & needsDescent) {
 			/* Top stack item is dir to descend into. */
 			t->current = t->stack;
@@ -459,7 +489,7 @@ tree_next(struct tree *t)
 			return (t->visit_type = TREE_POSTDESCENT);
 		} else if (t->stack->flags & needsOpen) {
 			t->stack->flags &= ~needsOpen;
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__CYGWIN__)
 			t->d = FindFirstFile("*", &t->findData);
 			if (t->d != INVALID_DIR_HANDLE) {
 				name = t->findData.cFileName;
@@ -585,15 +615,10 @@ tree_current_lstat(struct tree *t)
 int
 tree_current_is_dir(struct tree *t)
 {
-	const struct stat *st;
 #if defined(_WIN32)
-	if (t->findData != NULL)
-		return (t->findData->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
-	st = tree_current_stat(t);
-	if (st == NULL)
-		return (0);
-	return (st->st_mode & S_IFDIR);
+	return (t->findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
 #else
+	const struct stat *st;
 	/*
 	 * If we already have lstat() info, then try some
 	 * cheap tests to determine if this is a dir.
@@ -667,14 +692,8 @@ int
 tree_current_is_physical_link(struct tree *t)
 {
 #if defined(_WIN32)
-	if (t->findData == NULL)
-		return (0);
-	if (t->d != INVALID_DIR_HANDLE) {
-		if ((t->findData->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
-			&& (t->findData->dwReserved0 == IO_REPARSE_TAG_SYMLINK))
-				return (1);
-	}
-	return (0);
+	return ((t->findData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+			&& (t->findData.dwReserved0 == IO_REPARSE_TAG_SYMLINK));
 #else
 	const struct stat *st = tree_current_lstat(t);
 	if (st == NULL)
