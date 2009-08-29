@@ -162,11 +162,13 @@ struct tree {
 	int	 visit_type;
 	int	 tree_errno; /* Error code from last failed operation. */
 
+	/* Dynamically-sized buffer for holding path */
 	char	*buff;
-	const char	*basename;
 	size_t	 buff_length;
-	size_t	 path_length;
-	size_t	 dirname_length;
+
+	const char *basename; /* Last path element */
+	size_t	 dirname_length; /* Leading dir length */
+	size_t	 path_length; /* Total path length */
 
 	int	 depth;
 	int	 openCount;
@@ -180,6 +182,8 @@ struct tree {
 #define hasStat 16  /* The st entry is set. */
 #define hasLstat 32 /* The lst entry is set. */
 
+static int
+tree_dir_next_windows(struct tree *t, const char *pattern);
 
 #ifdef HAVE_DIRENT_D_NAMLEN
 /* BSD extension; avoids need for a strlen() call. */
@@ -241,7 +245,7 @@ tree_push(struct tree *t, const char *path)
 }
 
 /*
- * Append a name to the current path.
+ * Append a name to the current dir path.
  */
 static void
 tree_append(struct tree *t, const char *name, size_t name_length)
@@ -290,9 +294,9 @@ tree_open(const char *path)
 
 	t = malloc(sizeof(*t));
 	memset(t, 0, sizeof(*t));
-	tree_append(t, path, strlen(path));
+//	tree_append(t, path, strlen(path));
 	/* First item is set up a lot like a symlink traversal. */
-	tree_push(t, t->basename);
+	tree_push(t, path);
 	t->stack->flags = needsFirstVisit | isDirLink;
 #ifdef HAVE_FCHDIR
 	t->stack->symlink_parent_fd = open(".", O_RDONLY);
@@ -352,15 +356,18 @@ tree_pop(struct tree *t)
 {
 	struct tree_entry *te;
 
-	t->buff[t->dirname_length] = '\0';
+	if (t->buff)
+		t->buff[t->dirname_length] = '\0';
 	if (t->stack == t->current && t->current != NULL)
 		t->current = t->current->parent;
 	te = t->stack;
 	t->stack = te->next;
 	t->dirname_length = te->dirname_length;
-	t->basename = t->buff + t->dirname_length;
-	while (t->basename[0] == '/' || t->basename[0] == '\\')
-		t->basename++;
+	if (t->buff) {
+		t->basename = t->buff + t->dirname_length;
+		while (t->basename[0] == '/' || t->basename[0] == '\\')
+			t->basename++;
+	}
 	free(te->name);
 	free(te);
 }
@@ -371,8 +378,6 @@ tree_pop(struct tree *t)
 int
 tree_next(struct tree *t)
 {
-	const char *name;
-	size_t namelen;
 	int r;
 
 	/* If we're called again after a fatal error, that's an API
@@ -386,71 +391,34 @@ tree_next(struct tree *t)
 	while (t->stack != NULL) {
 		/* If there's an open dir, get the next entry from there. */
 		if (t->d != INVALID_DIR_HANDLE) {
-#if defined(_WIN32)
-			if (!FindNextFile(t->d, &t->findData)) {
-				FindClose(t->d);
-				t->d = INVALID_DIR_HANDLE;
-				continue;
-			}
-			name = t->findData.cFileName;
-			namelen = strlen(name);
+#if defined(_WIN32) && !defined(__CYGWIN__)
+			r = tree_dir_next_windows(t, NULL);
 #else
-			t->de = readdir(t->d);
-			if (t->de == NULL) {
-				closedir(t->d);
-				t->d = INVALID_DIR_HANDLE;
-				continue;
-			}
-			name = t->de->d_name;
-			namelen = D_NAMELEN(t->de);
+			r = tree_dir_next_posix(t);
 #endif
-			if (name[0] == '.' && name[1] == '\0') {
-				/* Skip '.' */
+			if (r == 0)
 				continue;
-			}
-			if (name[0] == '.' && name[1] == '.' && name[2] == '\0') {
-				/* Skip '..' */
-				continue;
-			}
-
-			/*
-			 * Append the path to the current path
-			 * and return it.
-			 */
-			tree_append(t, name, namelen);
-			t->flags &= ~hasLstat;
-			t->flags &= ~hasStat;
-			return (t->visit_type = TREE_REGULAR);
+			return (r);
 		}
 
 		if (t->stack->flags & needsFirstVisit) {
 #if defined(_WIN32) && !defined(__CYGWIN__)
-			t->d = FindFirstFile(t->stack->name, &t->findData);
-			if (t->d == INVALID_DIR_HANDLE) {
-				// TODO: Handle "C:\" as a request
+			char *d = strdup(t->stack->name);
+			char *p, *pattern;
+			tree_pop(t);
+			if ((p = strrchr(d, '\\')) != NULL) {
+				pattern = strdup(p + 1);
+				p[1] = '\0';
+				chdir(d);
+				tree_append(t, d, strlen(d));
+			} else {
 				abort();
 			}
-			name = t->findData.cFileName;
-			namelen = strlen(name);
-			// TODO: need to chdir and setup starting dir
-			t->stack->flags &= ~needsFirstVisit;
-			if (name[0] == '.' && name[1] == '\0') {
-				/* Skip '.' */
+			r = tree_dir_next_windows(t, pattern);
+			free(pattern);
+			if (r == 0)
 				continue;
-			}
-			if (name[0] == '.' && name[1] == '.' && name[2] == '\0') {
-				/* Skip '..' */
-				continue;
-			}
-
-			/*
-			 * Append the path to the current path
-			 * and return it.
-			 */
-			tree_append(t, name, namelen);
-			t->flags &= ~hasLstat;
-			t->flags &= ~hasStat;
-			return (t->visit_type = TREE_REGULAR);
+			return (r);
 #else
 			/* Top stack item needs a regular visit. */
 			t->current = t->stack;
@@ -476,10 +444,11 @@ tree_next(struct tree *t)
 			}
 			t->dirname_length = t->path_length;
 #if defined(_WIN32) && !defined(__CYGWIN__)
-			if (t->path_length == 259 || !SetCurrentDirectory(t->stack->name) != 0) {
+			if (t->path_length == 259 || !SetCurrentDirectory(t->stack->name) != 0)
 #else
-			if (chdir(t->stack->name) != 0) {
+			if (chdir(t->stack->name) != 0)
 #endif
+			{
 				/* chdir() failed; return error */
 				tree_pop(t);
 				t->tree_errno = errno;
@@ -490,49 +459,13 @@ tree_next(struct tree *t)
 		} else if (t->stack->flags & needsOpen) {
 			t->stack->flags &= ~needsOpen;
 #if defined(_WIN32) && !defined(__CYGWIN__)
-			t->d = FindFirstFile("*", &t->findData);
-			if (t->d != INVALID_DIR_HANDLE) {
-				name = t->findData.cFileName;
-				namelen = strlen(name);
-			} else
+			r = tree_dir_next_windows(t, "*");
 #else
-			if ((t->d = opendir(".")) != NULL) {
-				t->de = readdir(t->d);
-				if (t->de == NULL) {
-					closedir(t->d);
-					t->d = INVALID_DIR_HANDLE;
-					continue;
-				}
-				name = t->de->d_name;
-				namelen = D_NAMELEN(t->de);
-			} else
+			r = tree_dir_next_posix(t);
 #endif
-			{
-				r = tree_ascend(t); /* Undo "chdir" */
-				tree_pop(t);
-				t->tree_errno = errno;
-				t->visit_type = r != 0 ? r : TREE_ERROR_DIR;
-				return (t->visit_type);
-			}
-			t->flags &= ~hasLstat;
-			t->flags &= ~hasStat;
-			t->basename = ".";
-			if (name[0] == '.' && name[1] == '\0') {
-				/* Skip '.' */
+			if (r == 0)
 				continue;
-			}
-			if (name[0] == '.' && name[1] == '.' && name[2] == '\0') {
-				/* Skip '..' */
-				continue;
-			}
-			/*
-			 * Append the path to the current path
-			 * and return it.
-			 */
-			tree_append(t, name, namelen);
-			t->flags &= ~hasLstat;
-			t->flags &= ~hasStat;
-			return (t->visit_type = TREE_REGULAR);
+			return (r);
 		} else if (t->stack->flags & needsAscent) {
 		        /* Top stack item is dir and we're done with it. */
 			r = tree_ascend(t);
@@ -548,6 +481,76 @@ tree_next(struct tree *t)
 	}
 	return (t->visit_type = 0);
 }
+
+#if defined(_WIN32) && !defined(__CYGWIN__)
+static int
+tree_dir_next_windows(struct tree *t, const char *pattern)
+{
+	const char *name;
+	size_t namelen;
+	int r;
+
+	for (;;) {
+		if (pattern != NULL) {
+			t->d = FindFirstFile(pattern, &t->findData);
+			if (t->d == INVALID_DIR_HANDLE) {
+				r = tree_ascend(t); /* Undo "chdir" */
+				tree_pop(t);
+				t->tree_errno = errno;
+				t->visit_type = r != 0 ? r : TREE_ERROR_DIR;
+				return (t->visit_type);
+			}
+			pattern = NULL;
+		} else if (!FindNextFile(t->d, &t->findData)) {
+			FindClose(t->d);
+			t->d = INVALID_DIR_HANDLE;
+			return (0);
+		}
+		name = t->findData.cFileName;
+		namelen = strlen(name);
+		t->flags &= ~hasLstat;
+		t->flags &= ~hasStat;
+		if (name[0] == '.' && name[1] == '\0')
+			continue;
+		if (name[0] == '.' && name[1] == '.' && name[2] == '\0')
+			continue;
+		tree_append(t, name, namelen);
+		return (t->visit_type = TREE_REGULAR);
+	}
+}
+#else
+static int
+tree_dir_next_posix(struct tree *t)
+{
+	if (t->d == NULL) {
+		if ((t->d = opendir(".")) == NULL) {
+			r = tree_ascend(t); /* Undo "chdir" */
+			tree_pop(t);
+			t->tree_errno = errno;
+			t->visit_type = r != 0 ? r : TREE_ERROR_DIR;
+			return (t->visit_type);
+		}
+	}
+	while (true) {
+		t->de = readdir(t->d);
+		if (t->de == NULL) {
+			closedir(t->d);
+			t->d = INVALID_DIR_HANDLE;
+			return (0);
+		}
+		name = t->de->d_name;
+		namelen = D_NAMELEN(t->de);
+		t->flags &= ~hasLstat;
+		t->flags &= ~hasStat;
+		if (name[0] == '.' && name[1] == '\0')
+			continue;
+		if (name[0] == '.' && name[1] == '.' && name[2] == '\0')
+			continue;
+		tree_append(t, name, namelen);
+		return (t->visit_type = TREE_REGULAR);
+	}
+}
+#endif
 
 /*
  * Return error code.
