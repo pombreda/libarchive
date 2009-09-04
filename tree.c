@@ -182,8 +182,13 @@ struct tree {
 #define hasStat 16  /* The st entry is set. */
 #define hasLstat 32 /* The lst entry is set. */
 
+#if defined(_WIN32) && !defined(__CYGWIN__)
 static int
 tree_dir_next_windows(struct tree *t, const char *pattern);
+#else
+static int
+tree_dir_next_posix(struct tree *t);
+#endif
 
 #ifdef HAVE_DIRENT_D_NAMLEN
 /* BSD extension; avoids need for a strlen() call. */
@@ -202,7 +207,7 @@ tree_dump(struct tree *t, FILE *out)
 	fprintf(out, "\tdepth: %d\n", t->depth);
 	fprintf(out, "\tbuff: %s\n", t->buff);
 	fprintf(out, "\tpwd: %s\n", getcwd(buff, sizeof(buff)));
-	fprintf(out, "\taccess: %s\n", t->basename);
+	fprintf(out, "\tbasename: %s\n", t->basename);
 	fprintf(out, "\tstack:\n");
 	for (te = t->stack; te != NULL; te = te->next) {
 		fprintf(out, "\t\t%s%d:\"%s\" %s%s%s%s%s\n",
@@ -423,7 +428,8 @@ tree_next(struct tree *t)
 			/* Top stack item needs a regular visit. */
 			t->current = t->stack;
 			tree_append(t, t->stack->name, strlen(t->stack->name));
-			t->stack->flags &= ~needsFirstVisit;
+			t->dirname_length = t->path_length;
+			tree_pop(t);
 			return (t->visit_type = TREE_REGULAR);
 #endif
 		} else if (t->stack->flags & needsDescent) {
@@ -469,7 +475,7 @@ tree_next(struct tree *t)
 		} else if (t->stack->flags & needsAscent) {
 		        /* Top stack item is dir and we're done with it. */
 			r = tree_ascend(t);
-			t->stack->flags &= ~needsAscent;
+			tree_pop(t);
 			t->visit_type = r != 0 ? r : TREE_POSTASCENT;
 			return (t->visit_type);
 		} else {
@@ -522,6 +528,10 @@ tree_dir_next_windows(struct tree *t, const char *pattern)
 static int
 tree_dir_next_posix(struct tree *t)
 {
+	int r;
+	const char *name;
+	size_t namelen;
+
 	if (t->d == NULL) {
 		if ((t->d = opendir(".")) == NULL) {
 			r = tree_ascend(t); /* Undo "chdir" */
@@ -531,7 +541,7 @@ tree_dir_next_posix(struct tree *t)
 			return (t->visit_type);
 		}
 	}
-	while (true) {
+	for (;;) {
 		t->de = readdir(t->d);
 		if (t->de == NULL) {
 			closedir(t->d);
