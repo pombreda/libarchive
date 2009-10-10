@@ -141,4 +141,4 @@ Certain archive formats can be read much more quickly if they can seek to arbitr
 In some cases, such as ISO9660 or ZIP, there are legal archives that cannot be read without seeking.
 Libarchive does not currently support seeking, but there are plans to add it.
 It requires reworking some of libarchive's deeper plumbing so may not happen very soon.
-If you'd like to work on this, please look at the [Wishlist] and ask on the discussion mailing list.
+If you'd like to work on this, please look at the [WishList] and ask on the discussion mailing list.
