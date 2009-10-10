@@ -164,7 +164,42 @@ The following is a necessarily incomplete list of assert functions available to 
  * File tests: `assertIsReg`, `assertIsDir`, `assertIsSymlink`, `assertFileSize`, `assertFileNlinks`, `assertFileMtime`
  * File contents: `assertFileEmpty`, `assertFileNonEmpty`, `assertFileContents`, `assertTextFileContents`
 
-= Some examples of complex tests =
+= Some examples of tests =
+
+== Libarchive read tests ==
+
+There are quite a few read tests that simply read a pre-built input file and
+verify the results.
+These use `extractReferenceFile()` to decode a uuencoded input file, then open that
+file with libarchive and verify the results.
+Most of these are pretty straightforward.
+
+== Libarchive read/write tests ==
+
+Most of the write tests really just verify that libarchive can read what it writes.
+These generally use the memory interfaces.
+They feed archive entries into the writer to create an archive in memory and
+then open the memory again to read the data back and verify that it is the same.
+
+== Libarchive write validators ==
+
+A few write tests write an archive into memory and then inspect the actual
+bytes to verify that the archive was created correctly.
+These tests are nice to have but are tedious to build.
+
+There are also a couple of such validators for bsdtar and bsdcpio.
+These are very tricky since the exact data contains values that
+the test cannot completely control (such as the current time).
+
+== Disk tests ==
+
+Libarchive's disk I/O APIs, as well as bsdtar and bsdcpio, need to
+operate by verifying files on disk.
+To make this easier, the test framework now has a large number of assertions
+to verify timestamps, permissions, and other basic file data.
+These assertions use appropriate system calls for each platform;
+new tests should try to avoid using `stat()`, which is not uniformly
+available.
 
 == Fuzz tester ==
 
