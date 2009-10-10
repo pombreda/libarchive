@@ -371,7 +371,6 @@ and improvements:
  * Few of the filters fully support "skip" operations.  These can provide big performance boosts when reading the table of contents of a large archive without actually extracting the bodies.
  * Few of the filters provide full fallback to external programs when their libraries are unavailable.
  * There are a few cases where filters could benefit from the new options handling, though mostly read filters don't need this.
- * The external program support doesn't compile on Windows.  I suspect it's cleanest to re-implement a Windows-specific version completely from scratch.
 
 = Step 7: Improve the core =
 
