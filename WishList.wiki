@@ -5,6 +5,10 @@ If you'd like to take a stab at implementing any of these, definitely let us kno
 Also see [ReleaseNotes].
 Please remember that libarchive is entirely developed by volunteers;
 new features get implemented whenever someone steps up to do the work.
+If you would like to try your hand at this, read [LibarchiveInternals] for
+a guided tour of how libarchive works and ask on the
+libarchive-discuss@googlegroups.com mailing list
+if you have any questions.
 
 <wiki:toc>
 
