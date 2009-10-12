@@ -55,7 +55,10 @@ specified directory.
 Unless specifically stated otherwise, options are applicable in
 all operating modes.
 <dl>
-<dt>*-A*</dt><dd>
+<dt>*-0*</dt><dd>
+Read filenames separated by NUL characters instead of newlines.
+This is necessary if any of the filenames being read might contain newlines.
+</dd><dt>*-A*</dt><dd>
 (o mode only)
 Append to the specified archive.
 (Not yet implemented.)
@@ -117,6 +120,11 @@ for more complete information about the
 formats currently supported by the underlying
 *libarchive*(3)
 library.
+</dd><dt>*-H* _format_</dt><dd>
+Synonym for
+*--format*.
+</dd><dt>*-h*, *--help*</dt><dd>
+Print usage information.
 </dd><dt>*-I* _file_</dt><dd>
 Read archive from
 _file_.
@@ -129,6 +137,14 @@ Disable security checks during extraction or copying.
 This allows extraction via symbolic links and path names containing
 Sq ..
 in the name.
+</dd><dt>*-J*</dt><dd>
+(o mode only)
+Compress the file with xz-compatible compression before writing it.
+In input mode, this option is ignored; xz compression is recognized
+automatically on input.
+</dd><dt>*-j*</dt><dd>
+Synonym for
+*-y*.
 </dd><dt>*-L*</dt><dd>
 (o and p modes)
 All symbolic links will be followed.
@@ -138,6 +154,11 @@ With this option, the target of the link will be archived or copied instead.
 (p mode only)
 Create links from the target directory to the original files,
 instead of copying.
+</dd><dt>*-lzma*</dt><dd>
+(o mode only)
+Compress the file with lzma-compatible compression before writing it.
+In input mode, this option is ignored; lzma compression is recognized
+automatically on input.
 </dd><dt>*-m*</dt><dd>
 (i and p modes)
 Set file modification time on created files to match
@@ -151,6 +172,10 @@ By default,
 displays the user and group names when they are provided in the
 archive, or looks up the user and group names in the system
 password database.
+</dd><dt>*-no-preserve-owner*</dt><dd>
+(i mode only)
+Do not attempt to restore file ownership.
+This is the default when run by non-root users.
 </dd><dt>*-O* _file_</dt><dd>
 Write archive to
 _file_.
@@ -160,6 +185,10 @@ See above for description.
 </dd><dt>*-p*</dt><dd>
 Pass-through mode.
 See above for description.
+</dd><dt>*-preserve-owner*</dt><dd>
+(i mode only)
+Restore file ownership.
+This is the default when run by the root user.
 </dd><dt>*--quiet*</dt><dd>
 Suppress unnecessary messages.
 </dd><dt>*-R* `[`user`]``[`:`]``[`group`]`</dt><dd>

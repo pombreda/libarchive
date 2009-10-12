@@ -343,7 +343,13 @@ Enable generation of
 */set*
 lines in the output.
 </dd><dt>*mtree:indent*</dt><dd>
-XXX need explanation XXX
+Produce human-readable output by indenting options and splitting lines
+to fit into 80 columns.
+</dd><dt>*zip:compression*=_type_</dt><dd>
+Use
+_type_
+as compression method.
+Supported values are store (uncompressed) and deflate (gzip algorithm).
 </dd></dl>
 If a provided option is not supported by any module, that
 is a fatal error.

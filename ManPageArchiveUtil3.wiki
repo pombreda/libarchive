@@ -6,6 +6,7 @@
 *archive_copy_error*,
 *archive_errno*,
 *archive_error_string*,
+*archive_file_count*,
 *archive_format*,
 *archive_format_name*,
 *archive_set_error*
@@ -36,6 +37,10 @@
 *const char `*`*
 <br>
 *archive_error_string*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_file_count*(_struct archive `*`_);
 <br>
 *int*
 <br>
@@ -77,6 +82,12 @@ obtained from passing the result of
 *archive_errno*()
 to
 *strerror*(3).
+</dd><dt>*archive_file_count*()</dt><dd>
+Returns a count of the number of files processed by this archive object.
+The count is incremented by calls to
+*archive_write_header*()
+or
+*archive_read_next_header*(.)
 </dd><dt>*archive_format*()</dt><dd>
 Returns a numeric code indicating the format of the current
 archive entry.
