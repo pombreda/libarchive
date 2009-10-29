@@ -42,10 +42,6 @@ for decompressing gzip streams instead of the more portable "gzip -d".
 The parsing requirements are not difficult, so this should be a relatively
 easy project for someone.
 
-= ZIsoFS support =
-
-See Issue 2 for details.
-
 = Extended Attribute interoperability =
 
 libarchive's handling of POSIX.1e-style extended attributes
