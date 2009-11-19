@@ -59,7 +59,8 @@ It should be feasible to build a POSIX-compliant pax on top of libarchive.
 = Sparse archiving =
 
 FreeBSD now has `seek(HOLE)` support that should make it possible
-to efficiently archive sparse files.
+to efficiently archive sparse files. Solaris supported this first, see [http://blogs.sun.com/bonwick/entry/seek_hole_and_seek_data seek_hole_and_seek_data] for moreinformation. Linux Kernel starting from 2.6.28 has an FIEMAP IOCTL which does this job there - but the interface is quite different from the Solaris/FreeBSD implementation (this [http://lwn.net/Articles/260795/ LWN article] may be interesting for you).
+
 This will require adding a new archive_entry field to store the
 list of segments and modifications to archive_read_disk and
 the pax writer.
