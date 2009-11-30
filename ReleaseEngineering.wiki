@@ -1,0 +1,66 @@
+#summary How each libarchive release gets built.
+
+Libarchive development began in 2003 as a part of the FreeBSD operating system.
+During the early years, libarchive's release engineering was handled by the FreeBSD project.
+Since becoming an independent project, however, things have changed a bit.
+
+The following is a rough summary of the current libarchive release process which will be used for the "libarchive 2.8" release.
+I expect this document to be updated over time as the release process continues to evolve.
+
+== Test Release ==
+
+Once the current trunk is stable and the current developers agree that a release is appropriate, the first step is to cut and release a test distribution.
+
+By convention, the first test release for libarchive 2.8 will be numbered "2.7.900a" (that is, release "900" of the previous minor version).  The "a" here marks it as an unstable "alpha" release.  The actual tarball is built using the same sequence described below for final production releases.
+
+The tarball is posted on the website and an announcement goes out to the libarchive mailing lists requesting help in testing the release.
+(I usually post the first announcement to libarchive-discuss, wait a week for any initial problems to surface, then announce to libarchive-announce.)
+
+Starting with the libarchive 2.8 cycle, I plan to create a 2.7.900a Wiki page and ask people to add comments to that page mentioning platforms they've tested with.
+Bugs, of course, can get reported in the issue tracker.
+I think this might work better than relying on email feedback; we'll see.
+
+== Bug fixing, testing, and documentation ==
+
+After cutting a test release, the next 4-6 weeks will focus on fixing any reported bugs, extending the test suites, and cleaning up documentation.
+
+It seems to be a bad idea to let this stretch out for much more than a month.
+If you do, then you will lose people's attention (which means the final release won't have had as much recent testing).
+More importantly, some distributions will be tempted to publish the "alpha" release to their users, especially those distributions that pride themselves on keeping current with new software.
+(A lot of projects preserve "alpha" or "beta" designations for years, which has led a lot of distributions to largely ignore such markers.)
+
+While reviewing the documentation during this interval, be sure to update the Wiki manpages from the manpages in the distrubution.
+Since the release script generates new Wiki-formatted text from the mdoc master files, its a simple manual operation to copy them to the GoogleCode wiki using SVN.
+
+Depending on what problems surface, there may be 2.7.901a, 2.7.902a, etc. interim releases.
+In working with testers, I've found that many testers strongly prefer to work only with "official tarballs", so it is sometimes necessary to upload new test releases frequently in order to get proper verification of fixes.
+
+== Cutting the final release ==
+
+Cutting a final release is pretty mechanical:
+
+  * `svn copy trunk releases/2.8`  --  Note that libarchive keeps a separate SVN branch for each minor version.
+
+  * Update the `RELEASE` notes with high points of the current release, update the `version` file to 2007999 and submit these changes to SVN.
+
+  * From a clean checkout, run the commands below.  Note that the `distcheck` target also performs a cmake build and ctest test run, so a clean result here means that both build systems run and pass all tests on the local platform.  The final `svn commit` here checks in various files that have copies of the version number; these files get updated by the release.sh script.
+{{{
+    /bin/sh release.sh
+    ./configure
+    make distcheck
+    svn commit
+}}}
+
+  * Upload the resulting tarball to googlecode.  Note that the description needs to specify the exact version and the branch and revision from which it was generated.  The suggested format is:
+{{{
+   libarchive 2.8.0 (SVN releases/2.8 r2345)
+}}}
+
+== Things that need special attention ==
+
+In order for the above to go smoothly, it is necessary to get good feedback from the test builds.
+That usually means following up one-on-one with people who have sent feedback in the past and specifically asking them to at least download and run the test suite for this release.
+
+This in turn requires that the documentation on how to build and run the release be up-to-date and clear.
+Build documentation is really hard to get right, especially for a project like libarchive that has two different build systems that support such a wide range of environments.
+Needless to say, I'm looking for volunteers to improve the current build documentation.
