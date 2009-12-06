@@ -1,0 +1,84 @@
+#summary Hardlink handling in libarchive.
+
+Proper hardlink handling is surprisingly difficult
+and libarchive's mechanisms in this area are continuing
+to evolve.
+
+This article is an attempt to explain the problem and
+outline how libarchive currently deals with it.
+
+= What is a hardlink? =
+
+Most POSIX filesystems allow a single file to have
+more than one name; these multiple names are generally
+referred to as "hardlinks."
+
+You can create a new name for a file with the
+`ln` command (without the `-s` option) or
+programmatically via the `link()` function.
+Creating a new name increases the "link count" which reflects
+the total number of names for this file.
+When you delete a file with the `rm` command, you
+are really just deleting one name of the file.
+Internally, the filesystem subtracts one from
+the link count and will then delete the file contents
+only if that count has dropped to zero.
+
+Programs that attempt to list every file on a
+system are really obtaining a list of names.
+In order to determine which names refer to the
+same underlying files, you can use the POSIX `stat()`
+function or the Windows `GetFileInformationByHandle()`
+function to obtain three numbers about the file referred
+to by these names:
+ * "link count" - This counts the number of filenames for this file.
+ * "device number" - This is a number assigned by the operating system to each separate filesystem.  In many cases, the number is actually generated when the filesystem is mounted, and can change on every reboot or even more often in the case of network filesystems that may be dropped and remounted on demand.
+ * "index number" or "ino" - This is a number assigned by the filesystem to each individual file.  Different filesystems use different mechanisms for assigning these numbers.
+
+If two filenames have the same device and index numbers,
+then they refer to the same underlying file and are
+considered "hardlinks".
+
+= The life cycle of a hardlink =
+
+Consider two filenames "foo" and "bar" that refer
+to the same file and an archive "foobar.archive"
+that contains information about these files.
+
+When you go to restore this archive, you need to
+recreate those two filenames.
+Recreating the first name is straightforward:
+The restore program opens the file "foo" for
+writing, writes the content and sets the metadata.
+The second name gets restored completely differently;
+the restore program calls the `link()` system
+call with the old filename and the new filename.
+
+Because these are handled differently, there must
+be a transformation at some point which identifies
+the first file stored in the archive as the "real file"
+and the second as the "hardlink" to the first file.
+
+There are two fundamentally different approaches
+for this (and many minor variations) which I'll
+refer to as the "tar method" and the "cpio method":
+
+ * The tar method identifies hardlinks when the archive is written.  The first filename is stored into the archive as a "regular file" and the second and subsequent names for the same file are stored as special "hardlink entries" that contain the first filename as an argument.  This allows the restore process to be very simple:  the special "hardlink entries" simply result in calls to the `link()` system call.
+
+ * The cpio method simply writes files to the archive with device and index numbers.  When the archive is restored, the restore program must track device and index numbers to determine whether a particular filename should be restored directly or as a hardlink.
+
+The traditional cpio method has one serious drawback.
+It stores a full copy of the file data each time, which can result in bloated archives.
+Later cpio methods avoid this by doing some hardlink detection when the archive is written but that has the drawback of requiring hardlink detection both when the archive is written and when it's restored.
+
+In contrast, the tar approach only requires hardlink detection when the archive is written and avoids the overhead of storing multiple copies.
+It is difficult, however, to update a tar archive with new information since proper storage of new names for files that are already archived requires analyzing every file already stored in the archive.
+(This is further complicated because no standard tar variation stores index numbers in the archive.
+However, libarchive and star support optional `SCHILY.*` extensions for doing exactly this.)
+
+= Why this is difficult for libarchive =
+
+Libarchive attempts to provide a transparent interface for programs to handle large groups of files.
+It does so by allowing clients to iterate over "archive entries" that describe files, whether those files are stored on disk or in an archive.
+
+XXX finish this XXXX
