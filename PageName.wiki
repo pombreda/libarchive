@@ -18,7 +18,8 @@ You can create a new name for a file with the
 programmatically via the `link()` function.
 Creating a new name increases the "link count" which reflects
 the total number of names for this file.
-When you delete a file with the `rm` command, you
+When you delete a file with the `rm` command or
+the `unlink()` function, you
 are really just deleting one name of the file.
 Internally, the filesystem subtracts one from
 the link count and will then delete the file contents
@@ -46,18 +47,27 @@ to the same file and an archive "foobar.archive"
 that contains information about these files.
 
 When you go to restore this archive, you need to
-recreate those two filenames.
-Recreating the first name is straightforward:
-The restore program opens the file "foo" for
-writing, writes the content and sets the metadata.
-The second name gets restored completely differently;
-the restore program calls the `link()` system
-call with the old filename and the new filename.
+create one file with two names.
+This requires that you handle the two archive
+entries differently:
+The first entry is restored by actually creating
+the file.
+The second entry gets restored by invoking the
+`link()` system call with the old filename and
+the new filename.
+(The file metadata and even contents can actually
+be restored either with the first filename or the
+second.)
 
 Because these are handled differently, there must
 be a transformation at some point which identifies
 the first file stored in the archive as the "real file"
 and the second as the "hardlink" to the first file.
+This transformation requires keeping a lookup
+table of device and index numbers and the associated
+filenames so that a subsequent appearance of the
+same device and index number can be mapped to the
+proper original filename.
 
 There are two fundamentally different approaches
 for this (and many minor variations) which I'll
@@ -67,9 +77,10 @@ refer to as the "tar method" and the "cpio method":
 
  * The cpio method simply writes files to the archive with device and index numbers.  When the archive is restored, the restore program must track device and index numbers to determine whether a particular filename should be restored directly or as a hardlink.
 
-The traditional cpio method has one serious drawback.
-It stores a full copy of the file data each time, which can result in bloated archives.
-Later cpio methods avoid this by doing some hardlink detection when the archive is written but that has the drawback of requiring hardlink detection both when the archive is written and when it's restored.
+Early cpio implementations had one serious drawback:
+They stored a full copy of the file data with each name, which can result in bloated archives.
+Later cpio variations avoid this by doing some hardlink detection when the archive is written in order to suppress the duplicate bodies.
+Unfortunately, that strategy requires hardlink detection both when the archive is written and when it's restored.
 
 In contrast, the tar approach only requires hardlink detection when the archive is written and avoids the overhead of storing multiple copies.
 It is difficult, however, to update a tar archive with new information since proper storage of new names for files that are already archived requires analyzing every file already stored in the archive.
