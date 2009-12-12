@@ -37,10 +37,11 @@ _Future release: Expected end of 2009_
 As of the beginning of December, 2009, this release is in a final bug-fixing phase.
 
 The following are implemented and will likely be included in this release:
- * MinGW fixes - libarchive 2.7 works well with Visual Studio and Cygwin but still has problems under MinGW.  Charles Wilson and Brad King have helped immensely in working through the remaining issues here and libarchive 2.8 is expected to have much better support for various Windows development tools.
- * zisofs support - This should be straightforward; the zip reader already illustrates how to decompress gzipped bodies.
+ * xar reader - Michihiro NAKAJIMA has recently committed support for reading xar files.
+ * Fixes for MinGW and other Windows environments - libarchive 2.7 works well with Visual Studio and Cygwin but still has problems under MinGW.  Charles Wilson and Brad King have helped immensely in working through the remaining issues here and libarchive 2.8 is expected to have much better support for various Windows development tools.
+ * Other portability improvements.  Brad King and others at Kitware have helped to set up a CDash test dashboard which should help us maintain a very high degree of portability moving forward.  They've also helped iron out a number of problems with the CMake build support in the libarchive distribution.
+ * zisofs support - Michihiro NAKAJIMA finished this often-requested feature.
  * Zip writer - Anselm Strauss implemented most of this for Google Summer of Code 2008.  Joerg Sonnenberger worked out the remaining issues.
- * Many improvements to Windows support in general.  A lot of code has been edited to use portable ANSI/ISO C instead of Posix system calls; a lot of code is being taught to use Win32 API calls when built on Windows; a lot of tar and cpio code is being updated to use higher-level libarchive services that lessen the need for tar and cpio to be aware of system-specific details.
 
 = Libarchive 2.7.1 =
 
