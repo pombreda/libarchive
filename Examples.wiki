@@ -142,3 +142,40 @@ In some cases, such as ISO9660 or ZIP, there are legal archives that cannot be r
 Libarchive does not currently support seeking, but there are plans to add it.
 It requires reworking some of libarchive's deeper plumbing so may not happen very soon.
 If you'd like to work on this, please look at the [WishList] and ask on the discussion mailing list.
+
+= A Universal Decompressor =
+
+Starting with libarchive 2.8, there is a "raw" format handler that treats arbitrary binary input as a single-element archive.
+This is basically a cheat to allow you to get the output of a libarchive filter chain,
+including files with multiple encodings such as `gz.uu` files:
+
+{{{
+  int r;
+  size_t size;
+
+  struct archive *a = archive_read_new();
+  archive_read_support_compression_all(a);
+  archive_read_support_format_raw(a);
+  r = archive_read_open_filename(a, filename, 16384);
+  if (r != ARCHIVE_OK) {
+    /* ERROR */
+  }
+  r = archive_read_next_header(a, &ae);
+  if (r != ARCHIVE_OK) {
+    /* ERROR */
+  }
+
+  for (;;) {
+    size = archive_read_data(a, buff, buffsize);
+    if (size < 0) {
+      /* ERROR */
+    }
+    if (size == 0)
+      break;
+    write(1, buff, size);
+  }
+
+  archive_read_finish(a));
+}}}
+
+Note that the "raw" format is not enabled by `archive_read_support_format_all()`.
