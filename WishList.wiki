@@ -127,25 +127,22 @@ return a series of archive_entry objects instead of just filenames.
 The archive_entry virtualization above would help here but
 is not a prerequisite.
 
-Longer term, there's a hard problem here around file filtering.
-Tools such as tar want to filter the files they see; doing
+Once the basic tree iteration is supported, there's a hard
+problem around file filtering that will need to be solved before
+the directory traversal from libarchive can actually be used
+in bsdtar, for instance.
+In particular, tar wants to filter the files; doing
 this efficiently requires doing it as early as possible.
 (In particular, filesystem traversals would like to avoid
 descending into directory trees if nothing in that tree
 will ever be visited.)
-One way to implement this would be to add a set of
-"archive_filter" objects that could be attached to an
-archive_read_disk object or any other archive reader.
-Then the bsdtar program could simply instantiate these
-filters, attach them to an archive_read_disk, then
-feed entries from archive_read_disk to a suitably
-configured output archive.
-This would dramatically simplify bsdtar and should
-also make it easier for people to use libarchive
-in complex ways elsewhere (e.g., people building
-backup tools will likely want to avoid backup files
-or files marked "nodump" and would benefit from
-having easy ways to just turn on such capabilities).
+
+The simplest approach is to support a conditional descent
+similar to what tree.c already supports.
+This has the drawback of not being fully parallel with
+the archive_read API, so I'm considering more complex
+approaches that would register filter callbacks of
+some sort.
 
 = Explicit read pipelines =
 
@@ -186,8 +183,7 @@ mime/base-64 support, and encrypted backup handling.
 = UUencode/decode filters =
 
 On the write side, this requires stackable write filters first.
-On the read side, the framework already exists; it just
-needs a new filter to be written and added.
+On the read side, this was implemented for libarchive 2.8.
 
 = Encrypted backup support =
 
@@ -321,7 +317,7 @@ modified GNU tar implementation.
 
 = xar reader and writer =
 
-Xar should be relatively straightforward to read.
+Xar reading was implemented for libarchive 2.8.
 Writing will require tricks similar to the ISO writer.
 
 = BSD-style long filename support for GNU ld =
