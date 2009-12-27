@@ -27,8 +27,11 @@ number of records with each I/O operation.
 These
 "blocks"
 are always a multiple of the record size.
-The most common block size\(emand the maximum supported by historic
-implementations\(emis 10240 bytes or 20 records.
+The maximum block size supported by early
+implementations was 10240 bytes or 20 records.
+This is still the default for most implementations
+although block sizes of 1MiB (2048 records) or larger are
+commonly used with modern high-speed tape drives.
 (Note: the terms
 "block"
 and
@@ -244,16 +247,19 @@ when they are set and the corresponding names exist on
 the system.
 </dd><dt>_devmajor_, _devminor_</dt><dd>
 Major and minor numbers for character device or block device entry.
-</dd><dt>_prefix_</dt><dd>
-First part of pathname.
+</dd><dt>_name_, _prefix_</dt><dd>
 If the pathname is too long to fit in the 100 bytes provided by the standard
 format, it can be split at any
 _/_
-character with the first portion going here.
+character with the first portion going into the prefix field.
 If the prefix field is not empty, the reader will prepend
 the prefix value and a
 _/_
 character to the regular name field to obtain the full pathname.
+The standard does not require a trailing
+_/_
+character on directory names, though most implementations still
+include this for compatibility reasons.
 </dd></dl>
 
 Note that all unused bytes must be set to
@@ -280,7 +286,7 @@ unless they fill the entire field.
 happens to have a
 _/_
 as the 156th character.)
-POSIX requires numeric fields to be zero-padded in the front, and allows
+POSIX requires numeric fields to be zero-padded in the front, and requires
 them to be terminated with either space or
 NUL
 characters.
@@ -783,9 +789,17 @@ John Gilmore's
 *pdtar*
 public-domain implementation (circa 1987) was highly influential
 and formed the basis of
-*GNU* tar.
+*GNU* tar
+(circa 1988).
 Joerg Shilling's
 *star*
 archiver is another open-source (GPL) archiver (originally developed
 circa 1985) which features complete support for pax interchange
 format.
+
+This documentation was written as part of the
+*libarchive*
+and
+*bsdtar*
+project by
+Tim Kientzle  <kientzle@FreeBSD.org.>

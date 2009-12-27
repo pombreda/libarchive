@@ -320,6 +320,13 @@ This is enabled by default, use
 or
 *iso9660:!joliet*
 to disable.
+</dd><dt>*iso9660:rockridge*</dt><dd>
+Support Rock Ridge extensions.
+This is enabled by default, use
+*!rockridge*
+or
+*iso9660:!rockridge*
+to disable.
 </dd><dt>*gzip:compression-level*</dt><dd>
 A decimal integer from 0 to 9 specifying the gzip compression level.
 </dd><dt>*xz:compression-level*</dt><dd>
