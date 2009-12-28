@@ -32,7 +32,7 @@ This release may not happen; the features below may get rolled into 3.0.
 
 = Libarchive 2.8 =
 
-_Future release: Expected end of 2009_
+_Future release: Expected January 2010_
 
 As of the beginning of December, 2009, this release is in a final bug-fixing phase.
 
@@ -42,6 +42,12 @@ The following are implemented and will likely be included in this release:
  * Other portability improvements.  Brad King and others at Kitware have helped to set up a CDash test dashboard which should help us maintain a very high degree of portability moving forward.  They've also helped iron out a number of problems with the CMake build support in the libarchive distribution.
  * zisofs support - Michihiro NAKAJIMA finished this often-requested feature.
  * Zip writer - Anselm Strauss implemented most of this for Google Summer of Code 2008.  Joerg Sonnenberger worked out the remaining issues.
+
+Known issues (as of 2.7.901a test release):
+ * tar/test_windows has 4 assertion failures on MinGW and Visual Studio
+ * Build failures on FreeBSD 6 (OpenSSL issue), Windows/Borland C
+ * Miscellaneous test failures on MacOS
+ * Long filename support on Windows is broken (this will likely not be fixed before 2.8)
 
 = Libarchive 2.7.1 =
 
