@@ -98,10 +98,12 @@ on the popular GNU C compiler.
  # Use MinGW to build the system:
     * Open a command prompt (check that C:\MinGW\bin is in PATH)
     * Type `mingw32-make`
+ # Run the tests:
+    * Open a command prompt as above
+    * Type `mingw32-make test`
+    * If there are any failures, please file a report in the Issue Tracker.  Note that the `Testing\Temporary\LastTest.log` file will have additional information, including the full path to the test temporary directory where there should be full details about the failed tests.
 
-XXX details ? XXX
-
-Note: The libarchive 2.7.0 release does not build properly in Windows/MinGW; this should be fixed in 2.8.
+Note: The libarchive 2.7.0 release does not build properly in Windows/MinGW; this will be fixed in 2.8.
 
 == MacOS/Xcode ==
 
