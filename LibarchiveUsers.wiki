@@ -5,12 +5,13 @@
  * FreeBSD
   * libarchive was originally developed for [http://freebsd.org/ FreeBSD]
   * bsdtar is the default system tar starting with FreeBSD 6
-  * bsdcpio will be the default system cpio starting with FreeBSD 8
-  * Kai Wang has implemented an "ar" on libarchive which will be standard with FreeBSD 8
+  * bsdcpio is the default system cpio starting with FreeBSD 8
+  * Kai Wang's "ar" is standard with FreeBSD 8
 
  * Package Managers
   * [http://www.archlinux.org/pacman/ Pacman] package manager on [http://www.archlinux.org/ Arch Linux] uses libarchive
   * [http://www.netbsd.org/ NetBSD]'s pkg_install package manager uses libarchive.
+  * [http://cmake.org/ CMake] uses libarchive
 
  * Archiving tools
   * The [http://www.tarsnap.com/ tarsnap] service uses libarchive in its client software.
