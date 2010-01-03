@@ -32,22 +32,21 @@ This release may not happen; the features below may get rolled into 3.0.
 
 = Libarchive 2.8 =
 
-_Future release: Expected January 2010_
+_Future release: Expected January 15, 2010_
 
-As of the beginning of December, 2009, this release is in a final bug-fixing phase.
-
-The following are implemented and will likely be included in this release:
+The following are implemented and will be included in this release:
  * xar reader - Michihiro NAKAJIMA has recently committed support for reading xar files.
- * Fixes for MinGW and other Windows environments - libarchive 2.7 works well with Visual Studio and Cygwin but still has problems under MinGW.  Charles Wilson and Brad King have helped immensely in working through the remaining issues here and libarchive 2.8 is expected to have much better support for various Windows development tools.
+ * Fixes for MinGW and other Windows environments - libarchive now builds and runs cleanly with MinGW, Visual Studio, Cygwin, and other Windows development environments.
  * Other portability improvements.  Brad King and others at Kitware have helped to set up a CDash test dashboard which should help us maintain a very high degree of portability moving forward.  They've also helped iron out a number of problems with the CMake build support in the libarchive distribution.
  * zisofs support - Michihiro NAKAJIMA finished this often-requested feature.
  * Zip writer - Anselm Strauss implemented most of this for Google Summer of Code 2008.  Joerg Sonnenberger worked out the remaining issues.
 
-Known issues (as of 2.7.901a test release):
- * tar/test_windows has 4 assertion failures on MinGW and Visual Studio
+Known issues (as of 2.7.902a test release):
  * Build failures on FreeBSD 6 (OpenSSL issue), Windows/Borland C
  * Miscellaneous test failures on MacOS
- * Long filename support on Windows is broken (this will likely not be fixed before 2.8)
+ * Long filenames (over 260 characters) not supported by bsdtar
+ * Small memory leak in the ISO reading code
+ * Extended Attribute support triggers a bug in some versions of FreeBSD running ZFS
 
 = Libarchive 2.7.1 =
 
