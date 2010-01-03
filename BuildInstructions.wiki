@@ -73,6 +73,14 @@ Building is a three-step process:
    * Click *Generate* in the CMake GUI to create the build files for your IDE.
  # Use your development environment of choice to build, test, and debug.
 
+
+Certain libarchive features require you to link against additional libraries.  The [http://gnuwin32.sourceforge.net/ GnuWin32] project distributes precompiled versions of most of the necessary libraries on their [http://gnuwin32.sourceforge.net/packages.html Packages Page].  If these libraries are correctly installed, you should be able to simply repeat the CMake GUI configuration and generation steps.  The libraries should be detected and used automatically.
+  * Gzip compression, zip compression, and zisofs support: Install the [http://gnuwin32.sourceforge.net/packages/gzip.htm GnuWin32 gzip package] into `C:\Program Files\gnuwin32`.  (Note: You may need to edit `C:\Program Files\gnuwin32\include\zconf.h` and change the `#if` on line 287 to 0 instead of 1 unless you have unistd.h) XXX Shouldn't this be the zlib package? XXX
+  * Bzip2 compression: Install the [http://gnuwin32.sourceforge.net/packages/bzip2.htm GnuWin32 bzip2 development package] into `C:\Program Files\gnuwin32`.
+  * Lzma/Xz compression: There does not yet seem to be a pre-compiled version of the liblzma library.  alan.whiskers has some notes in the comments below you may find useful if you wish to build this yourself.
+  * Xar support: Install the libxml2 libraries.  XXX This is untested? XXX
+  * Mtree and Xar support for cryptographic hashes:  Install the OpenSSL libraries.  XXX This is untested? XXX
+
 == Windows/Visual Studio ==
 
 A free version of Visual Studio C++ is available from Microsoft: http://www.microsoft.com/express/download/
@@ -83,10 +91,10 @@ Building is then a straightforward process:
  # Use Visual Studio to build the system:
    * Open the generated `libarchive.sln` in Visual Studio
    * Click *Rebuild Solution* to compile everything.
-
-XXX How to build/run test programs? XXX
-
-XXX How to link against zlib/bzlib/lzmadec? XXX
+ # Test from within Visual Studio:
+   * Right-click `RUN_TESTS`
+   * Select *Build*
+   * If there are any failures reported, please report it in our Issue Tracker
 
 == Windows/MinGW ==
 
@@ -122,6 +130,8 @@ To run the tests, you'll need to manually adjust a few settings (if you know how
  * Executable -> libarchive_test, Ctrl-Click, then "Get-Info".  On the "Arguments" pane, set "-r _<Path to libarchive source>_/libarchive/test" so that the test program can read the files it needs.
  * Executable -> bsdtar_test, Ctrl-Click, then "Get-Info".  On the "Arguments" pane, add "-r _<Path to libarchive root>_/tar/test" and "-p _<Path to compiled bsdtar executable>_"
  * Executable -> bsdcpio_test, Ctrl-Click, then "Get-Info".  On the "Arguments" pane, add "-r _<Path to libarchive root>_/cpio/test" and "-p _<Path to compiled bsdcpio executable>_"
+
+XXX Need to verify which additional libraries are pre-installed on Mac OS and which need to be obtained from MacPorts. XXX
 
 == Build Variables for the Cmake-based build system ==
 
