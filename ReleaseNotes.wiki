@@ -19,6 +19,7 @@ There are a handful of API changes that I'd like to make but I do try hard to br
   * Thread-safe archive_write_disk.  This requires that you "open" an archive_write_disk object by giving it a base directory and requires that we find ways to eliminate the chdir() and umask() operations from the current code.
   * Fix the awkward "options" naming conflict; archive_write_disk_options() is nothing like archive_write_options() and archive_read_options().
   * Stackable write filters.  The stackable read filters have made the read side a lot more straightforward.  The write side should do this as well.  This may require changing the archive_write_disk API so that blocking is handled by explicitly adding a blocking filter.
+  * Source code reorganization.  I plan to circulate a proposal to libarchive-discuss@ mailing list with details.
 
 = Libarchive 2.9 =
 
