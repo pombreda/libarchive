@@ -1,6 +1,6 @@
 #summary Ideas that would be nice to implement someday.
 
-If you would like to see any of these implemented, let us know.
+If you would like to see any of these implemented, let us know by either posting a comment to this page or sending a note to the libarchive-discuss mailing list.
 If you'd like to take a stab at implementing any of these, definitely let us know.
 Also see [ReleaseNotes].
 Please remember that libarchive is entirely developed by volunteers;
@@ -59,7 +59,7 @@ It should be feasible to build a POSIX-compliant pax on top of libarchive.
 = Sparse archiving =
 
 FreeBSD now has `seek(HOLE)` support that should make it possible
-to efficiently archive sparse files. Solaris supported this first, see [http://blogs.sun.com/bonwick/entry/seek_hole_and_seek_data seek_hole_and_seek_data] for moreinformation. Linux Kernel starting from 2.6.28 has an FIEMAP IOCTL which does this job there - but the interface is quite different from the Solaris/FreeBSD implementation (this [http://lwn.net/Articles/260795/ LWN article] may be interesting for you).
+to efficiently archive sparse files. Solaris supported this first, see [http://blogs.sun.com/bonwick/entry/seek_hole_and_seek_data seek_hole_and_seek_data] for more information. Linux Kernel starting from 2.6.28 has an FIEMAP IOCTL which does this job there - but the interface is quite different from the Solaris/FreeBSD implementation (this [http://lwn.net/Articles/260795/ LWN article] may be interesting for you).
 
 This will require adding a new archive_entry field to store the
 list of segments and modifications to archive_read_disk and
@@ -312,15 +312,17 @@ options for setting a label and making the image bootable.)
 
 = Mac "!CopyFile()" support =
 
-It would be nice for bsdtar to be compatible with Apple's
-modified GNU tar implementation.
+Apple is distributing a patched bsdtar now with special support
+(via their !CopyFile() API) for Mac OS extended attributes.
+I hope that Apple will contribute their patches back to the
+main distribution.
 
 = xar reader and writer =
 
 Xar reading was implemented for libarchive 2.8.
 Writing will require tricks similar to the ISO writer.
 
-= BSD-style long filename support for GNU ld =
+= BSD-style long filename support for GNU ld and other ld implementations =
 
 The GNU/SysV ar format is ugly to write because you need to collect a filename table in advance.
 This complicates programs that write ar format.
