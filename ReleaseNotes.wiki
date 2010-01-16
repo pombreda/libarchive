@@ -46,7 +46,6 @@ Known issues (as of 2.7.902a test release):
  * Build failures on FreeBSD 6 (OpenSSL issue), Windows/Borland C
  * Miscellaneous test failures on MacOS
  * Long filenames (over 260 characters) not supported by bsdtar
- * Small memory leak in the ISO reading code
  * Extended Attribute support triggers a bug in some versions of FreeBSD running ZFS
 
 = Libarchive 2.7.1 =
