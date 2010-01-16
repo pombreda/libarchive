@@ -4,8 +4,10 @@ Proper hardlink handling is surprisingly difficult
 and libarchive's mechanisms in this area are continuing
 to evolve.
 
-This article is an attempt to explain the problem and
-outline how libarchive currently deals with it.
+This article is an attempt to explain the problems and outline how libarchive currently deals with them.
+Along the way, you'll see that there are still corner cases that libarchive does
+not handle as well as I would like.
+If you have ideas for improving these mechanisms, please let me know.
 
 = What is a hardlink? =
 
@@ -32,7 +34,7 @@ same underlying files, you can use the POSIX `stat()`
 function or the Windows `GetFileInformationByHandle()`
 function to obtain three numbers about the file referred
 to by these names:
- * "link count" - This counts the number of filenames for this file.
+ * "link count" - This counts the number of filenames for this file.  (Note that I'm not going to discuss link counts for directories except to point out that libarchive ignores link counts on directories and such counts are not handled consistently across different operating systems.)
  * "device number" - This is a number assigned by the operating system to each separate filesystem.  In many cases, the number is actually generated when the filesystem is mounted, and can change on every reboot or even more often in the case of network filesystems that may be dropped and remounted on demand.
  * "index number" or "ino" - This is a number assigned by the filesystem to each individual file.  Different filesystems use different mechanisms for assigning these numbers.
 
@@ -43,18 +45,18 @@ considered "hardlinks".
 = The life cycle of a hardlink =
 
 Consider two filenames "foo" and "bar" that refer
-to the same file and an archive "foobar.archive"
-that contains information about these files.
+to the same file.
+On disk, these are different names but are otherwise indistinguishable.
+They each have a link count of 2.
+When inspecting the files on disk, we can tell these are names for the same file because they have the same ino and dev value.
+They will also of course have the same file contents, permissions, ownership, and timestamps.
 
-When you go to restore this archive, you need to
-create one file with two names.
-This requires that you handle the two archive
-entries differently:
-The first entry is restored by actually creating
-the file.
-The second entry gets restored by invoking the
-`link()` system call with the old filename and
-the new filename.
+Somehow, information about these two filenames will be store in an archive "foobar.archive".
+Whatever information gets stored in the archive needs to be sufficient to recreate these two names with the correct file contents and other information.
+
+This requires that the two archive entries be treated differently:
+The first entry will actually create a new file.
+The second entry will be restored by invoking the `link()` system call with the old filename and the new filename.
 (The file metadata and even contents can actually
 be restored either with the first filename or the
 second.)
@@ -69,9 +71,8 @@ filenames so that a subsequent appearance of the
 same device and index number can be mapped to the
 proper original filename.
 
-There are two fundamentally different approaches
-for this (and many minor variations) which I'll
-refer to as the "tar method" and the "cpio method":
+You'll notice that I have not said whether that transformation happens before the entries get written to the archive or after they are read from the archive.
+In fact, either approach can be used, which leads to two fundamentally different approaches for storing the entries in the archive:
 
  * The tar method identifies hardlinks when the archive is written.  The first filename is stored into the archive as a "regular file" and the second and subsequent names for the same file are stored as special "hardlink entries" that contain the first filename as an argument.  This allows the restore process to be very simple:  the special "hardlink entries" simply result in calls to the `link()` system call.
 
@@ -87,9 +88,88 @@ It is difficult, however, to update a tar archive with new information since pro
 (This is further complicated because no standard tar variation stores index numbers in the archive.
 However, libarchive and star support optional `SCHILY.*` extensions for doing exactly this.)
 
-= Why this is difficult for libarchive =
+= What libarchive does =
 
 Libarchive attempts to provide a transparent interface for programs to handle large groups of files.
 It does so by allowing clients to iterate over "archive entries" that describe files, whether those files are stored on disk or in an archive.
+Ideally, clients do not need to do anything differently regardless of the source or destination of these entries.
 
-XXX finish this XXXX
+Fortunately, you can get tar-style entries from any data source:
+ * tar archives give this directly,
+ * cpio archives require a simple hash table mapping dev/ino pairs to filenames when reading,
+ * a directory walker can likewise use a simple hash table.
+Such a sequence of entries can be written directly to a tar archive
+or to disk very easily.
+
+== Problem 1: tar to cpio ==
+
+One hard case involves reading from a tar archive and writing to a cpio archive.
+In order to correctly recreate hardlinks when it is extracted, the cpio
+archive requires ino values which aren't provided by standard tar formats.
+Synthesizing such values is difficult:
+The only workable solution seems to be to store a full list of every filename and the synthetic ino value generated so that any later hardlink entry can look up the generated ino value and properly reuse it.
+Unfortunately, this requires space proportional to the number of files being archived, which is troublesome because libarchive has an explicit goal of handling very large archives.
+
+Even worse, cpio formats store file bodies with later entries; tar formats only provide file bodies with the first entry.
+This seems insurmountable.
+
+== Problem 2: cpio ino truncation and updating ==
+
+The only POSIX standard cpio format is the "octet oriented format" also known as "odc."
+This format only supports 18 bits for ino values.
+Newer cpio variants have extended this to 32 bits, but that is still insufficient for modern systems that have ino values of up to 64 bits.
+The traditional solution here is to truncate the ino value when the archive is written.
+Unfortunately, this has been observed to routinely lead to collisions in which different files are falsely identified as hardlinks to the same file.
+
+In order to avoid false hardlinks from ino truncation, libarchive currently assigns new ino values to each entry, starting from 1.
+It maintains a table from the original ino values to new ino values so that hardlinks are correctly maintained.
+
+Of course, this only helps with cpio archives that are written by libarchive.
+Libarchive can also be used to read cpio archives written by other implementations that do not perform such adjustments.
+To help reduce the chances of false hardlinks, libarchive currently does not do hardlink matching for any cpio entry whose link count is less than two.
+
+Unfortunately, this approach is not perfect.
+Many tar and cpio implementations allow you to "update" an archive by adding new files or updated versions of old files.
+This almost always involves simply adding the new entries to the end of the archive.
+On extraction, these additional entries typically overwrite previously-extracted entries so that the final result on disk is correct.
+
+The problem comes when such new entries include hardlinks to entries that were previously archived.
+Without ino rewriting, these hardlinks can be identified correctly because they will have identical ino values.
+
+In particular, the current libarchive strategy of rewriting ino values when writing cpio files does not correctly handle the following scenario:
+ * File "f1" is created with hardlink "f2"
+ * Both are archived to "foo.archive".  In particular, these entries will both be stored with a link count of 2.
+ * A new hardlink "f3" is created and the file contents are modified.
+ * The file "f3" is added to "foo.archive".  Note that it will be stored with a link count of 3.
+Ideally, we would expect that extracting "foo.archive" would result in three names for the same file with the new content from the final entry.
+
+== Problem 3: Updating tar archives ==
+
+Similar problems occur when adding new entries to tar archives.
+Since hardlink entries must refer to the filename of an entry that occurs earlier in the archive, adding a new hardlink to an archive would seem to require matching every new entry (at least, every new entry with a link count greater than one) with every existing entry.
+
+== Problem 4: File bodies ==
+
+There are at least three common approaches to storing the file bodies when dealing with hardlinked files:
+ * tar formats store the file body only with the first appearance of a file
+ * old cpio variants store the file body with every appearance
+ * new cpio variants store the file body only with the last appearance of a file
+This is troublesome because libarchive wants users of libarchive to not have to know about such details when writing data to archives.
+
+Currently, libarchive handles this by providing a "link matcher" tool and using a simple convention to inform libarchive clients whether or not to provide a body.
+The link matcher tool is initialized with the format code (available from any archive write handle by using the archive_format() function).
+The link matcher uses this format code to select an appropriate strategy for converting entries that have dev/ino information into entries that include any additional information needed to properly be written to that archive format.
+
+You provide the link matcher each entry one at a time.
+It returns zero, one, or two entries that are ready to write to the archive.
+If the entry you provided does not appear to be a hardlink of any sort, it will be returned unmodified.
+Otherwise, the link matcher may save the entry for later or may provide that entry or a different entry that has been suitably modified for the appropriate format:
+ * The "hardlink" field will be set if appropriate to the name of an earlier entry.
+ * The "size" field in the entry will be set to zero if the file body should _not_ be written.
+Because the entries returned from the link matcher may be in a different order, you will probably need to delay opening files until after the link matcher.
+You can use the "sourcepath" field in the archive entry to store a pathname for this purpose.
+(The "sourcepath" field is unused within libarchive.)
+
+The link matcher was developed originally for use in bsdcpio and it seems to work well for its intended purpose.
+It would be nice to find a simpler mechanism, though.
+In particular, it is awkward that the link matcher reorders entries and sometimes needs to return two entries.
