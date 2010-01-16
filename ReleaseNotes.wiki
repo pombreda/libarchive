@@ -133,3 +133,14 @@ _Released April, 2007_
 _Released March, 2007_
 
 Libarchive 2.0 fixed a couple of early API gaffes but mostly it introduced a regression suite that has helped immensely to improve stability.
+It also introduced some [http://lists.freebsd.org/pipermail/freebsd-current/2007-March/069860.html significant performance improvements].
+
+= Libarchive 1.x =
+
+A "portable" release of libarchive and associated tools was first released in early 2006.
+
+= Early Libarchive =
+
+Development of libarchive first began in 2003.
+The FreeBSD project was generous enough to incubate the project; the library was first officially released as part of FreeBSD 5.3 in November 2004 and bsdtar was added as an option shortly thereafter.
+Bsdtar became the default system tar in FreeBSD 6.0, released in November 2005.
