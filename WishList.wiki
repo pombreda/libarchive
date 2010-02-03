@@ -317,10 +317,10 @@ that people just need an ISO image that works.
 and Rockridge extensions and would provide a very few
 options for setting a label and making the image bootable.)
 
-= Mac "!CopyFile()" support =
+= Mac "copyfile()" support =
 
-Apple is distributing a patched bsdtar now with special support
-(via their !CopyFile() API) for Mac OS extended attributes.
+Apple is distributing a patched bsdtar with Mac OS X 10.6 Snow Leopard
+that uses their copyfile() API to handle Mac OS ACLs and extended attributes.
 They recently (Jan 2010) released their patches and I've
 begun incorporating them into bsdtar.
 It looks like this facility could be pushed down into
@@ -339,6 +339,8 @@ This complicates programs that write ar format.
 The BSD ar format avoids this problem but GNU ld doesn't support it.
 If GNU ld could read the BSD ar format, then it would be easier
 to create library-management tools on top of libarchive.
+
+= Single-pass ar writer =
 
 Another option is for libarchive's ar writer to simply
 store the entire archive in memory (.a files are rarely
