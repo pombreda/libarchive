@@ -339,3 +339,10 @@ This complicates programs that write ar format.
 The BSD ar format avoids this problem but GNU ld doesn't support it.
 If GNU ld could read the BSD ar format, then it would be easier
 to create library-management tools on top of libarchive.
+
+Another option is for libarchive's ar writer to simply
+store the entire archive in memory (.a files are rarely
+more than a few megabytes, so this is entirely feasible)
+while collecting information for the filename table.
+That would simplify use of libarchive's ar writer
+considerably.
