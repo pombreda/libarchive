@@ -321,8 +321,11 @@ options for setting a label and making the image bootable.)
 
 Apple is distributing a patched bsdtar now with special support
 (via their !CopyFile() API) for Mac OS extended attributes.
-I hope that Apple will contribute their patches back to the
-main distribution.
+They recently (Jan 2010) released their patches and I've
+begun incorporating them into bsdtar.
+It looks like this facility could be pushed down into
+libarchive in order to make such support transparent to
+all libarchive clients, not just bsdtar.
 
 = xar reader and writer =
 
