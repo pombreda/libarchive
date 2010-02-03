@@ -276,23 +276,24 @@ However, this requires some careful performance testing
 before we can be confident that it really is an improvement.
 (If it doesn't help performance, we shouldn't do it.)
 
-Async I/O in particular has promise for improving performance
+Async I/O would seem to improve performance
 with streaming tape drives.
 Joerg Schilling has had good results with _star_ using two processes
 and a shared-memory buffer to smooth out data flow when talking to tape drives.
 I think async I/O could provide comparable performance
 without forking. (Clients can easily get confused when
 callbacks get invoked in different processes, so I'm reluctant
-to fork within libarchive.  The first iteration of this
-kind of buffering could certainly be done in bsdtar but
-I'd like to eventually see it pushed down into the library.)
+to fork within libarchive.)
 
-Similar improvements when writing archives are feasible,
-though there are a few issues in the current write blocking that
-make this harder than it sounds.
-(The stackable write filter project above would
-help; that would at least consolidate blocking into
-fewer places.)
+Note:  In Jan 2010, I did some experiments using async I/O
+to begin reading the next block of the archive while the
+just-read block was being processed.  I found no performance
+benefit from this.  My experiments included reading from
+tape, reading from the same disk as the files were being
+extracted to, and reading from a separate disk.
+
+I've not yet experimented to see if I can find any
+benefits from async I/O when writing archives to tape.
 
 = ISO writer =
 
