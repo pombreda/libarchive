@@ -220,6 +220,12 @@ an ISO burner program to burn a disk, then reopens the ISO writer.
 (Bonus points, of course, if the burner program runs while the next ISO is being
 created.)
 
+= Multivolume Reading =
+
+The biggest problem, of course, is figuring out a clean way to
+provide a series of volumes to the read stack so that format layers
+can cleanly handle split entries.
+
 = RMT support =
 
 RMT hasn't been a priority simply because noone has ever asked for it.
