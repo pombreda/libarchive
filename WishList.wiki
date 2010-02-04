@@ -222,9 +222,20 @@ created.)
 
 = Multivolume Reading =
 
-The biggest problem, of course, is figuring out a clean way to
-provide a series of volumes to the read stack so that format layers
-can cleanly handle split entries.
+Proper multivolume reading requires that each layer appropriately
+detect end-of-input and invoke close()/open() on the next layer up.
+The first step is to add multivolume support to archive_read_open_filename();
+with no other changes, you should be able to read archives
+that have been broken into pieces with the `split` program.
+The next step is to change the way the tar reader handles
+end-of-archive:  It should invoke close(), then open() and
+return end-of-archive only if the open() returns end-of-archive.
+Similar changes can be made to the gzip decompressor, for instance.
+If properly done, libarchive will be able to transparently handle
+all of the following scenarios:
+ * A tar.gz archive that has been processed by `split`.  In this case, the I/O functions will reassemble the file without any intervention by the decompression or format handler.
+ * A tar archive that has been `split` and then each piece separately gzip compressed.  In this case, the gzip decompressor will invoke close()/open() on the I/O functions to advance to the next file but the tar reader will see nothing.
+ * A GNU-style multivolume tar archive with each volume separately compressed.  In this case, the tar format handler will see the end-of-archive markers and invoke close() that will ripple through the gzip decompressor and the I/O handler.  Of course, some additional work will be required for the tar reader to handle entries that have been split across volumes.
 
 = RMT support =
 
@@ -347,4 +358,4 @@ store the entire archive in memory (.a files are rarely
 more than a few megabytes, so this is entirely feasible)
 while collecting information for the filename table.
 That would simplify use of libarchive's ar writer
-considerably.
+module considerably.
