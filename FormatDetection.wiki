@@ -1,0 +1,131 @@
+#summary How libarchive automatically determines the format of data.
+
+= Introduction =
+
+Libarchive uses an internal "bidding" process in which
+multiple modules inspect the incoming data.
+The technical [LibarchiveInternals] page describes
+the process; this page walks through a simple example.
+
+= Modules and Bidding =
+
+Libarchive is broken into separate modules for every
+format that it supports, including separate modules
+for compression formats.
+Each such module includes a "bid" function that knows
+how to inspect the incoming data and provide a number
+that indicates how certain that module is that it
+can recognize that data.
+
+= Simplest example: A tar archive =
+
+When you use libarchive, you create the libarchive object
+and then invoke functions that register different modules.
+Suppose you use the following:
+
+{{{
+   struct archive *a = archive_read_new();
+   archive_read_support_format_tar(a);
+   archive_read_support_format_cpio(a);
+}}}
+
+This registers two bidders with libarchive's read core:
+one bidder understands tar archives and the other understands
+cpio archives.
+
+You can then open a file and prepare to read the archive contents:
+
+{{{
+   archive_read_open_filename(a, "input.tar", 10240);
+}}}
+
+This is a shorthand for calling `archive_read_open2()` with
+an input function that reads blocks from a file.
+Inside `archive_read_open2()`, libarchive asks the input
+function for the first block and shows that block to
+each registered module.
+In this case, the cpio module will probably bid zero and
+the tar module will bid a higher value.
+So libarchive's read core will initialize the tar reader.
+
+Now you can ask for data from the archive and those requests
+will be handled internally by the tar reader module:
+
+{{{
+   while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+      ... process next entry ...
+   }
+}}}
+
+= A more complex example: input.tar.gz.uu =
+
+Of course, tar archives are often compressed and sometimes processed even further.
+Consider a tar archive that has been compressed with `gzip` and then encoded
+with the `uuencode` utility.
+In order to read this, libarchive must first decode the
+uuencode wrapping, then uncompress the resulting data
+before it can evaluate the tar structure.
+
+Besides format modules that understand archive formats,
+libarchive also has filter modules that
+understand particular compression or encoding formats.
+(Originally, the filter machinery was used only for
+decompression.
+It now supports many encoding formats and wrapper formats
+as well, but the term "compression" is still used by
+much of the code here.)
+
+So let's start over and create a new archive reader:
+
+{{{
+   struct archive *a = archive_read_new();
+   archive_read_support_format_all();
+   archive_read_support_compression_all();
+}}}
+
+This time, I used two convenience functions that register
+all formats and all filters that are supported by libarchive.
+
+Now, when you open the archive using the same code as above,
+libarchive will first present the input to every registered filter
+module.
+For our example, the `uudecode` filter will recognize this input
+and bid the highest.
+Libarchive will then initialize the `uudecode` filter and ask
+for data from that filter.
+When libarchive asks for data from the uudecode filter, that
+filter will in turn ask the file input function for data from the
+file.
+
+So now libarchive can take the output of the uudecode filter and
+present that data to each registered filter module.
+In our example here, the gzip decompression module will win the
+next round of bidding.
+After initializing the gzip decompression module, libarchive
+will take the output of that module and again ask all filters to bid.
+This time, none of the filters will recognize the output, so
+all of the filters will bid zero.
+When libarchive cannot add any more filters to the processing
+list, it will ask format modules to bid.
+
+When all of the bidding is complete, libarchive will end up with
+an internal list that looks like this:
+ # File input function
+ # UUdecode filter module
+ # Gzip decompression module
+ # Tar format module
+
+When you ask for the next header, libarchive will pass that
+to the tar module, which will request data from the filter
+modules as necessary.
+
+In this way, almost any combination of compression or encoding
+can be removed before the inner archive is evaluated.
+This allows libarchive to transparently process files such as
+compressed ISO images or RPM files (RPM files are really a simple
+encoding wrapper around a compressed cpio or xar archive).
+
+By having the modules register with libarchive's read core,
+statically linked programs can select only the minimum set of
+functionality they need and not pay any overhead for formats
+or compression support that they don't require.
