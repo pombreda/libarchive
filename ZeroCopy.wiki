@@ -1,0 +1,72 @@
+#summary Overview of libarchive's zero-copy architecture.
+
+= Introduction =
+
+Libarchive is designed to minimize the copying of data internally
+while still providing simple interfaces.
+This provides both a great deal of flexibility in how input
+data is presented while offering very high performance.
+
+= Block-oriented input =
+
+Libarchive reads from an archive by invoking a block input
+function.
+You can provide your own such function or use any of several
+that are included with the library.
+
+Each time your function is called, it provides libarchive with
+a pointer to the block data and the size of the block.
+Note that libarchive's core is completely agnostic about the size of
+these blocks; you are free to return any amount of data from
+a single byte to the full archive.
+This flexibility allows libarchive to gracefully handle
+situations where block sizes might vary (such as when reading
+from bursty network connections) or where the complete archive
+is already available in memory.
+
+= Lazy reblocking =
+
+Libarchive will always fully consume the block you provide before
+asking for another block.
+This removes any need for your input function to keep track
+of multiple blocks.
+
+Of course, libarchive does sometimes need to access a piece of
+data---such as a filename or header---that might cross a block
+boundary.
+In these cases, libarchive will internally allocate buffer
+space and copy data from multiple blocks as necessary.
+Fortunately, this is very rarely necessary unless you are
+providing very small blocks.
+
+= Decompression and other input filters =
+
+If the data is compressed or encoded, libarchive will feed the
+data through a series of decoding filters.
+These decoding filters typically work by copying the data
+into a new buffer.
+For decompression filters, the output buffer used by the
+filter is often much larger than the input blocks, which
+helps to make the subsequent processing even more efficient.
+
+= File data =
+
+The primary function for obtaining data from an entry body
+is `archive_read_data_block()` which provides
+a pointer and size to a contiguous region of file data.
+If you are reading from an archive with uncompressed entries,
+then this function will provide pointers directly into
+the block data that was provided by the input function.
+
+As you can see, this means that the data read into memory
+by your input function can then be written back out from
+the exact same buffers.
+
+In order to best exploit this design, it is important that
+your input function provide sufficiently large blocks, since
+the rest of the processing will be limited by the size of
+the initial block.
+If your block size is somehow limited, it can make sense
+to perform multiple reads each time your input function
+is called and provide the total result to libarchive as a
+single block.
