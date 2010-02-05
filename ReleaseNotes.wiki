@@ -29,28 +29,27 @@ This release may not happen; the features below may get rolled into 3.0.
 
  * NFSv4 ACL support - I have done some research and think I have a good grasp of the requirements for this.
  * Exploit seekable input - Files support seeking and Zip and ISO both work better when this is available.  But I still want Zip and ISO to be usable when the input can't seek.
-
+ * Integrate Mac OS patches - Apple has released their patches; I intend to incorporate them so that people can use the newest libarchive/bsdtar on Mac OS X.
 
 = Libarchive 2.8 =
 
-_Future release: Expected January 15, 2010_
+_Released February 5, 2010_
 
-The following are implemented and will be included in this release:
- * xar reader - Michihiro NAKAJIMA has recently committed support for reading xar files.
+ * xar reader, uudecode support, and rpm support by Michihiro NAKAJIMA
  * Fixes for MinGW and other Windows environments - libarchive now builds and runs cleanly with MinGW, Visual Studio, Cygwin, and other Windows development environments.
  * Other portability improvements.  Brad King and others at Kitware have helped to set up a CDash test dashboard which should help us maintain a very high degree of portability moving forward.  They've also helped iron out a number of problems with the CMake build support in the libarchive distribution.
- * zisofs support - Michihiro NAKAJIMA finished this often-requested feature.
+ * zisofs reading and other ISO9660 improvements by Michihiro NAKAJIMA
  * Zip writer - Anselm Strauss implemented most of this for Google Summer of Code 2008.  Joerg Sonnenberger worked out the remaining issues.
 
-Known issues (as of 2.7.902a test release):
+Known issues:
  * Build failures on FreeBSD 6 (OpenSSL issue), Windows/Borland C
  * Miscellaneous test failures on MacOS
- * Long filenames (over 260 characters) not supported by bsdtar
+ * Long filenames (over 260 characters) not supported by bsdtar on Windows
  * Extended Attribute support triggers a bug in some versions of FreeBSD running ZFS
 
 = Libarchive 2.7.1 =
 
-_Future release_: Expected August, 2009
+_Released August 4, 2009
 
  * Issue 30: Fix reading xz-compressed archives that require large decompression buffers
  * Issue 24: Fix hang reading truncated ISO archives.
