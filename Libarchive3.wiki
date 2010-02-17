@@ -2,12 +2,9 @@
 
 = Introduction =
 
-For most users, the transition from libarchive 2.8 to libarchive 3.0 should be nearly invisible.
-Although we are introducing a number of changes to the libarchive API, we're striving to preserve source compatibility with earlier releases.
-In particular, it should require only minor changes to ensure that your code can compile against either the libarchive 2.8 API or the libarchive 3.0 API.
-
-As always, we will be adding a number of new functions.
-Since these should not impact any existing users, these functions are not discussed here.
+Libarchive 3.0 should be available sometime in mid-2010.
+For most users, the transition from libarchive 2.x should be nearly invisible.
+In particular, it should require few if any changes to ensure that your code can compile against either libarchive 2.8 or libarchive 3.0.
 
 = Functions that are being removed in libarchive 3.0 =
 
