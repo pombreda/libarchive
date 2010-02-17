@@ -1,0 +1,49 @@
+#summary Transitioning to libarchive 3.0.
+
+= Introduction =
+
+For most users, the transition from libarchive 2.8 to libarchive 3.0 should be nearly invisible.
+Although we are introducing a number of changes to the libarchive API, we're striving to preserve source compatibility with earlier releases.
+In particular, it should require only minor changes to ensure that your code can compile against either the libarchive 2.8 API or the libarchive 3.0 API.
+
+As always, we will be adding a number of new functions.
+Since these should not impact any existing users, these functions are not discussed here.
+
+= Functions that are being removed in libarchive 3.0 =
+
+In all cases, the new function has been available for some time.
+If you are still using any of the old functions listed here, you should have already switched to the newer version.
+
+|| *Old function*            || *Function to use instead* ||
+|| archive_version()         || archive_version_string()  ||
+|| archive_version_stamp()   || archive_version_number()  ||
+|| archive_api_version()     || archive_version_number()  ||
+|| archive_feature_version() || archive_version_number()  ||
+
+= Functions with argument changes =
+
+These changes will break binary compatibility; the libarchive 3.0 distribution will have a new shared library version to reflect these changes.
+These changes should not affect source compatibility unless you are building with a compiler that warns about integer narrowing.
+Most of these changes involve the use of portable wide types such as `int64_t` instead of less-portable types such as `off_t`, `gid_t`, `uid_t`, and `ino_t`.
+
+|| *Function name*                             ||
+|| archive_entry_ino()                         ||
+|| archive_entry_set_ino()                     ||
+
+= Functions that are being renamed =
+
+The old function name will continue to be supported until libarchive 4.0
+is released, at which point the old name will be removed.
+This should provide libarchive users with a transition window of at least two full years.
+
+The new functions often have slightly different functionality.
+In particular, the `write_add_filter` functions extend the write pipeline with a new filter, whereas the old `write_set_compression` functions replaced any existing filter.
+
+|| *Old function*                           || *New name*                          ||
+|| archive_read_finish()                    || archive_read_free()                 ||
+|| archive_write_finish()                   || archive_write_free()                ||
+|| archive_write_set_compression_bzip2()    || archive_write_add_filter_bzip2()    ||
+|| archive_write_set_compression_compress() || archive_write_add_filter_compress() ||
+|| archive_write_set_compression_gzip()     || archive_write_add_filter_gzip()     ||
+|| archive_write_set_compression_lzma()     || archive_write_add_filter_lzma()     ||
+|| archive_write_set_compression_xz()       || archive_write_add_filter_xz()       ||
