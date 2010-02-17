@@ -4,7 +4,10 @@
 
 Libarchive 3.0 should be available sometime in mid-2010.
 For most users, the transition from libarchive 2.x should be nearly invisible.
-In particular, it should require few if any changes to ensure that your code can compile against either libarchive 2.8 or libarchive 3.0.
+It should require few if any changes to ensure that your code can compile against either libarchive 2.8 or libarchive 3.0.
+
+The libarchive 3.0 release will also be deprecating some older functionality.
+This functionality will not be completely removed until libarchive 4.0, which should provide a transition window of at least two full years.
 
 = Functions that are being removed in libarchive 3.0 =
 
