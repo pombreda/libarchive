@@ -25,6 +25,8 @@ If you are still using any of the old functions listed here, you should have alr
 These changes will break binary compatibility; the libarchive 3.0 distribution will have a new shared library version to reflect these changes.
 These changes should not affect source compatibility unless you are building with a compiler that warns about integer narrowing.
 Most of these changes involve the use of portable wide types such as `int64_t` instead of less-portable types such as `off_t`, `gid_t`, `uid_t`, and `ino_t`.
+nlinks should be made int64_t as well.
+Truncation when converting between int64_t and the native type should be considered though. E.g. if a 4555 binary for uid 2**3 turns into a 4555 binary owned by uid 0, it would be very bad...
 
 || *Function name*                             ||
 || archive_entry_ino()                         ||
