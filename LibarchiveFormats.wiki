@@ -14,7 +14,8 @@ In particular, you only need zlib, bzlib, or lzma libraries if you specifically 
 
 = Filter Support =
 
-Starting with libarchive 2.6, there is now support for multiple filters when reading archives.
+Libarchive 2.6 and later supports multiple filters when reading archives.
+Libarchive 3.0 and later supports multiple filters when writing archives.
  * gzip (read and write, uses zlib)
  * bzip2 (read and write, uses bzlib)
  * compress (read and write, uses an internal implementation)
