@@ -379,4 +379,3 @@ to find ways to improve the libarchive core.
  * The "read-ahead" and "consume" logic has been pretty thoroughly overhauled several times, but there may well be ways to improve it.  If you do work on this, please test carefully; some of the logic here is very subtle.
  * The read filter system does not currently provide full seek capabilities.  Zip and ISO9660 support, in particular, might benefit from being able to seek forward and backwards in files.
  * libarchive should support "set filter" operations in addition to the current "support filter."  A "set filter" would unconditionally initialize the specified filter without going through the bidding phase and be more lenient about format errors.  This would be useful in cases where the user knew the format and wanted to force a certain decoding.
- * The write filter handling is a generation behind the read filter handling.  In particular, the write filters don't support multi-filter pipelines.
