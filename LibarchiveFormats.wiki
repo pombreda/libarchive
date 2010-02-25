@@ -30,7 +30,7 @@ Libarchive 3.0 and later supports multiple filters when writing archives.
  * tar (read and write, including GNU extensions)
  * pax (read and write, including GNU and star extensions)
  * cpio (read and write, including odc and newc variants)
- * ISO9660 (read only, with some limitations)
+ * ISO9660 (read only, including Joliet and Rockridge extensions, with some limitations; write support starting with libarchive 2.9)
  * Zip (read only, with some limitations, uses zlib; write support starting with libarchive 2.8)
  * mtree (read and write, uses OpenSSL libraries for creating and verifying cryptographic hashes)
  * shar (write only)
