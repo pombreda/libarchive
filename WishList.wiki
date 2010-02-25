@@ -169,40 +169,24 @@ and make sure that the final API is clean and easy to
 understand (and backwards compatible with existing clients
 if that's possible).
 
-= Stackable write filters =
-
-The write filters should be restructured so that you
-can have multiple write filters.
-We can then separate out the blocking into a separate
-filter and eliminate blocking issues from all of the
-compression filters.
-This would also enable some new write capabilities that
-I'm very interested in, including uuencode/uudecode support,
-mime/base-64 support, and encrypted backup handling.
-
 = UUencode/decode filters =
 
-On the write side, this requires stackable write filters first.
-On the read side, this was implemented for libarchive 2.8.
+UUdecode support was added to libarchive 2.8.
+Now that libarchive/trunk supports multiple write filters, it should be easy to add a corresponding write filter.
 
 = Encrypted backup support =
 
-This requires stackable write filters first but
-should otherwise be a straightforward use of OpenSSL.
-I do want to have a standalone pair of encrypt/decrypt
-command-line tools in addition to the read/write filters
-built into libarchive.
+This should be a straightforward use of OpenSSL wrapped
+up in matching read and write filters.
+There should also be a standalone pair of encrypt/decrypt
+command-line tools.
 I have a rough design of how to implement this; ask for details.
 
 = Multivolume Writing =
 
-This doesn't explicitly require stackable write filters,
-but implementing it first would complicate the stackable
-write filter implementation, so I'd rather see the stackable
-writer filters finished first.
 This requires two changes to the internal write filter API:
  * A "bytes remaining" call that the format writer can make against the write filters.  Most write filters will just pass it downstream and possibly reduce the return value to account for data they have currently buffered (and any end-of-file overhead).  Compression filters shouldn't try to adjust for compression ratio; underestimates are okay here but overestimates can be fatal.
- * A "volume change" call that the format writer can make to prompt each write filter to flush, invoke it's downstream, then reinitialize.
+ * A "volume change" call that the format writer can make to prompt each write filter to flush, invoke it's downstream, then reinitialize.  (Maybe just call close() and then open() callbacks?)
 
 The interesting part will be working through the format writers to actually support this.
 For tar and cpio, it might be as simple as invoking
@@ -265,8 +249,7 @@ files even when seek is unavailable.
 A few people have asked for the ability to efficiently
 "re-read" particular archive entries.
 This is a tricky subject.
-For many formats, the performance gains from this would
-be very modest.
+For many formats, the performance gains from this would be very modest.
 For example, after the item above is implemented, re-reading
 a Zip archive from the beginning will be very fast since
 it would only involve re-parsing the central directory.
