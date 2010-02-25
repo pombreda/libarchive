@@ -43,7 +43,7 @@ There are a few cases where these changes will affect your source code:
 #if ARCHIVE_VERSION_NUMBER < 3000000
 off_t my_skip_function(struct archive *a, void *v, off_t o)
 #else
-int64_t my_skip_function(struct archive *a, void *v, off_t o)
+int64_t my_skip_function(struct archive *a, void *v, int64_t o)
 #endif
 {
     ... implementation ...
