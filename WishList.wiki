@@ -56,6 +56,15 @@ Solaris and possibly others.)
 
 It should be feasible to build a POSIX-compliant pax on top of libarchive.
 
+= lzip support =
+
+Libarchive already integrates the liblzma library from xz-utils to
+support bare lzma streams and xz format.
+It should be relatively straightforward to utilize this library
+to support lzip format as well.
+Note that I am strongly opposed to bringing in a second LZMA library
+and even more opposed to copying the LZMA SDK code into libarchive.
+
 = Sparse archiving =
 
 FreeBSD now has `seek(HOLE)` support that should make it possible
@@ -291,25 +300,8 @@ benefits from async I/O when writing archives to tape.
 
 = ISO writer =
 
-ISO writing is tricky because all metadata precedes all file data.
-I've figured out an easy workaround, though, so I think this
-is manageable:  Just write a single temporary file that
-holds the bodies (each body padded out to a 2k sector
-boundary), while accumulating metadata in
-memory (including the offset in the temporary file of the
-body data, of course).
-At end-of-archive, construct the directory tree and
-write that out, then copy the temp file after it.
-
-The hardest part will be implementing this in a way that avoids the
-need to have a lot of options.  The `mkisofs` and `mkhybrid` utilities
-already do a good job of providing lots of options for people who need specific
-control over how their ISO images are created; I'd like for libarchive
-to provide a solid, easy-to-use answer for the 99% of the time
-that people just need an ISO image that works.
-(I envision that libarchive's ISO writer would always generate Joliet
-and Rockridge extensions and would provide a very few
-options for setting a label and making the image bootable.)
+The ISO writer has been written; it will be available
+in libarchive 2.9.
 
 = Mac "copyfile()" support =
 
