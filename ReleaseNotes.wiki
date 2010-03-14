@@ -31,7 +31,26 @@ This release may not happen; the features below may get rolled into 3.0.
  * Exploit seekable input - Files support seeking and Zip and ISO both work better when this is available.  But I still want Zip and ISO to be usable when the input can't seek.
  * Integrate Mac OS patches - Apple has released their patches; I intend to incorporate them so that people can use the newest libarchive/bsdtar on Mac OS X.
 
-= Libarchive 2.8 =
+= Libarchive 2.8.2 =
+
+_Released March, 14, 2010_
+
+ * Fix NULL deference for short self-extracting zip archives.
+ * Don't dereference symlinks on Linux when reading ACLs.
+ * Better detction of SHA2 support for old OpenSSL versions.
+ * Fix parsing of input files for bsdtar -T.
+ * Do not leak setup_xattr into the global namespace.
+
+= Libarchive 2.8.1 =
+
+_Released March, 6, 2010_
+
+ * Fix build when an older libarchive is already installed
+ * Use O_BINARY opening files in bsdtar
+ * Include missing archive_crc32.h
+ * Correctly include iconv.h required by libxml2.
+
+= Libarchive 2.8.0 =
 
 _Released February 5, 2010_
 
