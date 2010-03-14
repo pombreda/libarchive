@@ -39,7 +39,7 @@ In working with testers, I've found that many testers strongly prefer to work on
 
 Cutting a final release is pretty mechanical:
 
-  * `svn copy trunk releases/2.8`  --  Note that libarchive keeps a separate SVN branch for each minor version.
+  * `svn copy trunk releases/2.8`  --  Note that libarchive keeps a separate SVN branch for each minor version.  This step can be skipped for tiny versions.
 
   * Update the `RELEASE` notes with high points of the current release, update the `version` file to 2007999 and submit these changes to SVN.
 
@@ -48,10 +48,13 @@ Cutting a final release is pretty mechanical:
     /bin/sh release.sh
     ./configure
     make distcheck
+    make dist-zip
     svn commit
 }}}
 
-  * Upload the resulting tarball to googlecode.  Note that the description needs to specify the exact version and the branch and revision from which it was generated.  The suggested format is:
+  * The distcheck target runs the regression test suite. Depending on the file system used for /tmp, it might be necessary to export TMPDIR.
+
+  * Upload the resulting tarball and zip file to googlecode.  Note that the description needs to specify the exact version and the branch and revision from which it was generated.  The suggested format is:
 {{{
    libarchive 2.8.0 (SVN releases/2.8 r2345)
 }}}
