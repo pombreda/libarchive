@@ -218,6 +218,20 @@ PyArchive_Entry_get_uname(PyArchiveEntry *self, void *closure)
     return PyString_FromString(archive_entry_uname(self->archive_entry));
 }
 
+static PyObject *
+PyArchive_Entry_get_size_is_set(PyArchiveEntry *self, void *closure)
+{
+    if(archive_entry_size_is_set(self->archive_entry)) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
+PyArchive_Entry_get_size(PyArchiveEntry *self, void *closure)
+{
+    return PyLong_FromLongLong(archive_entry_size(self->archive_entry));
+}
 
 static PyGetSetDef PyArchiveEntry_getsetters[] = {
     GETSET_HELPER(PyArchiveEntry, "name", name),
@@ -252,6 +266,10 @@ static PyGetSetDef PyArchiveEntry_getsetters[] = {
     {"uname", (getter)PyArchive_Entry_get_uname,
         (setter)PyArchive_Entry_generic_immutable, NULL},
     {"gname", (getter)PyArchive_Entry_get_gname,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"size_is_set", (getter)PyArchive_Entry_get_size_is_set,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"size", (getter)PyArchive_Entry_get_size,
         (setter)PyArchive_Entry_generic_immutable, NULL},
     {NULL}
 };
