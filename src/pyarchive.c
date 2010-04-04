@@ -173,15 +173,13 @@ wide char support was skipped; revisit
 static PyObject *
 PyArchive_Entry_get_gid(PyArchiveEntry *self, void *closure)
 {
-    long l = archive_entry_gid(self->archive_entry);
-    return PyLong_FromLong(l);
+    return PyLong_FromLong((long)archive_entry_gid(self->archive_entry));
 }
 
 static PyObject *
 PyArchive_Entry_get_uid(PyArchiveEntry *self, void *closure)
 {
-    long l = archive_entry_uid(self->archive_entry);
-    return PyLong_FromLong(l);
+    return PyLong_FromLong((long)archive_entry_uid(self->archive_entry));
 }
 
 static PyObject *
