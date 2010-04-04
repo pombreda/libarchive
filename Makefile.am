@@ -8,19 +8,17 @@ ACLOCAL_AMFLAGS = -I build/autoconf
 #
 lib_LTLIBRARIES=	libarchive.la libstransform.la
 noinst_LTLIBRARIES=	libarchive_fe.la
-bin_PROGRAMS=	$(bsdtar_programs) $(bsdcpio_programs)
-man_MANS= $(libarchive_man_MANS) $(bsdtar_man_MANS) $(bsdcpio_man_MANS)
-BUILT_SOURCES= libarchive/test/list.h tar/test/list.h cpio/test/list.h
+man_MANS= $(libarchive_man_MANS)
+BUILT_SOURCES= libarchive/test/list.h
 
 #
 # What to test: We always test libarchive, test bsdtar and bsdcpio only
 # if we built them.
 #
-check_PROGRAMS= libarchive_test $(bsdtar_test_programs) $(bsdcpio_test_programs)
-TESTS= libarchive_test $(bsdtar_test_programs) $(bsdcpio_test_programs)
-TESTS_ENVIRONMENT= $(libarchive_TESTS_ENVIRONMENT) $(bsdtar_TESTS_ENVIRONMENT) $(bsdcpio_TESTS_ENVIRONMENT)
+check_PROGRAMS= libarchive_test
+TESTS= libarchive_test
+TESTS_ENVIRONMENT= $(libarchive_TESTS_ENVIRONMENT)
 # Always build and test both bsdtar and bsdcpio as part of 'distcheck'
-DISTCHECK_CONFIGURE_FLAGS = --enable-bsdtar --enable-bsdcpio
 # The next line is commented out by default in shipping libarchive releases.
 # It is uncommented by default in trunk.
 AM_CFLAGS=-Wall -Werror
@@ -42,11 +40,7 @@ EXTRA_DIST= \
 	doc				\
 	examples			\
 	$(libarchive_EXTRA_DIST)	\
-	$(libarchive_test_EXTRA_DIST)	\
-	$(bsdtar_EXTRA_DIST)		\
-	$(bsdtar_test_EXTRA_DIST)	\
-	$(bsdcpio_EXTRA_DIST)		\
-	$(bsdcpio_test_EXTRA_DIST)
+	$(libarchive_test_EXTRA_DIST)
 
 # a) Clean out some unneeded files and directories
 # b) Collect all documentation and format it for distribution.
@@ -69,9 +63,7 @@ distcheck-hook:
 # Extra rules for cleanup
 #
 DISTCLEANFILES=					\
-	libarchive/test/list.h			\
-	tar/test/list.h				\
-	cpio/test/list.h
+	libarchive/test/list.h
 
 distclean-local:
 	-rm -rf .ref
@@ -79,10 +71,6 @@ distclean-local:
 	-rm -f *~
 	-[ -f libarchive/Makefile ] && cd libarchive && make clean
 	-[ -f libarchive/test/Makefile ] && cd libarchive/test && make clean
-	-[ -f tar/Makefile ] && cd tar && make clean
-	-[ -f tar/test/Makefile ] && cd tar/test && make clean
-	-[ -f cpio/Makefile ] && cd cpio && make clean
-	-[ -f cpio/test/Makefile ] && cd cpio/test && make clean
 
 #
 # Libarchive headers, source, etc.
@@ -417,230 +405,3 @@ libarchive_fe_la_SOURCES=			\
 	libarchive_fe/matching.h		\
 	libarchive_fe/pathmatch.c		\
 	libarchive_fe/pathmatch.h
-
-#
-#
-# bsdtar source, docs, etc.
-#
-#
-
-bsdtar_SOURCES=				\
-		tar/bsdtar.c		\
-		tar/bsdtar.h		\
-		tar/bsdtar_platform.h	\
-		tar/cmdline.c		\
-		tar/getdate.c		\
-		tar/read.c		\
-		tar/subst.c		\
-		tar/tree.c		\
-		tar/tree.h		\
-		tar/util.c		\
-		tar/write.c
-
-if INC_WINDOWS_FILES
-bsdtar_SOURCES+=			\
-		tar/bsdtar_windows.h	\
-		tar/bsdtar_windows.c
-endif
-
-bsdtar_DEPENDENCIES= libarchive.la libarchive_fe.la
-
-if STATIC_BSDTAR
-bsdtar_ldstatic= -static
-bsdtar_ccstatic= -DLIBARCHIVE_STATIC
-else
-bsdtar_ldstatic=
-bsdtar_ccstatic=
-endif
-
-bsdtar_LDADD= libarchive.la libarchive_fe.la
-bsdtar_CPPFLAGS= -I$(top_srcdir)/libarchive -I$(top_srcdir)/libarchive_fe $(bsdtar_ccstatic) $(PLATFORMCPPFLAGS)
-bsdtar_LDFLAGS= $(bsdtar_ldstatic)
-
-bsdtar_EXTRA_DIST=		\
-	tar/bsdtar.1		\
-	tar/bsdtar_windows.h	\
-	tar/bsdtar_windows.c	\
-	tar/CMakeLists.txt	\
-	tar/config_freebsd.h	\
-	tar/test/list.h
-
-
-if BUILD_BSDTAR
-bsdtar_man_MANS= tar/bsdtar.1
-bsdtar_programs= bsdtar
-else
-bsdtar_man_MANS=
-bsdtar_programs=
-endif
-
-#
-# bsdtar_test
-#
-
-bsdtar_test_SOURCES=						\
-	tar/getdate.c						\
-	tar/test/main.c						\
-	tar/test/test.h						\
-	tar/test/test_0.c					\
-	tar/test/test_basic.c					\
-	tar/test/test_copy.c					\
-	tar/test/test_empty_mtree.c				\
-	tar/test/test_getdate.c					\
-	tar/test/test_help.c					\
-	tar/test/test_option_T_upper.c				\
-	tar/test/test_option_q.c				\
-	tar/test/test_option_r.c				\
-	tar/test/test_option_s.c				\
-	tar/test/test_patterns.c				\
-	tar/test/test_stdio.c					\
-	tar/test/test_strip_components.c			\
-	tar/test/test_symlink_dir.c				\
-	tar/test/test_version.c					\
-	tar/test/test_windows.c
-
-# For now, bsdtar_test uses Windows shims from tar/bsdtar_windows.*
-if INC_WINDOWS_FILES
-bsdtar_test_SOURCES+=			\
-		tar/bsdtar_windows.h	\
-		tar/bsdtar_windows.c
-endif
-
-bsdtar_test_CPPFLAGS=\
-	-I$(top_srcdir)/libarchive -I$(top_srcdir)/libarchive_fe \
-	-I$(top_srcdir)/tar -I$(top_builddir)/tar/test \
-	$(PLATFORMCPPFLAGS)
-
-tar/test/list.h: Makefile
-	cat $(top_srcdir)/tar/test/test_*.c | grep DEFINE_TEST > tar/test/list.h
-
-if BUILD_BSDTAR
-bsdtar_test_programs= bsdtar_test
-bsdtar_TESTS_ENVIRONMENT= BSDTAR=`cd $(top_builddir);/bin/pwd`/bsdtar$(EXEEXT) BSDTAR_TEST_FILES=`cd $(top_srcdir);/bin/pwd`/tar/test
-else
-bsdtar_test_programs=
-bsdtar_TESTS_ENVIRONMENT=
-endif
-
-bsdtar_test_EXTRA_DIST=			\
-	tar/test/test_patterns_2.tar.uu	\
-	tar/test/test_patterns_3.tar.uu	\
-	tar/test/test_patterns_4.tar.uu	\
-	tar/test/CMakeLists.txt
-
-
-#
-#
-# bsdcpio source, docs, etc.
-#
-#
-
-bsdcpio_SOURCES=			\
-		cpio/cmdline.c		\
-		cpio/cpio.c		\
-		cpio/cpio.h		\
-		cpio/cpio_platform.h
-
-if INC_WINDOWS_FILES
-bsdcpio_SOURCES+=			\
-		cpio/cpio_windows.h	\
-		cpio/cpio_windows.c
-endif
-
-bsdcpio_DEPENDENCIES = libarchive.la libarchive_fe.la
-
-
-if STATIC_BSDCPIO
-bsdcpio_ldstatic= -static
-bsdcpio_ccstatic= -DLIBARCHIVE_STATIC
-else
-bsdcpio_ldstatic=
-bsdcpio_ccstatic=
-endif
-
-bsdcpio_LDADD= libarchive_fe.la libarchive.la
-bsdcpio_CPPFLAGS= -I$(top_srcdir)/libarchive -I$(top_srcdir)/libarchive_fe $(bsdcpio_ccstatic) $(PLATFORMCPPFLAGS)
-bsdcpio_LDFLAGS= $(bsdcpio_ldstatic)
-
-bsdcpio_EXTRA_DIST=		\
-	cpio/test/list.h	\
-	cpio/bsdcpio.1		\
-	cpio/cpio_windows.h	\
-	cpio/cpio_windows.c	\
-	cpio/CMakeLists.txt	\
-	cpio/config_freebsd.h
-
-
-if BUILD_BSDCPIO
-# Manpages to install
-bsdcpio_man_MANS= cpio/bsdcpio.1
-bsdcpio_programs= bsdcpio
-else
-bsdcpio_man_MANS=
-bsdcpio_programs=
-endif
-
-#
-# bsdcpio_test
-#
-
-bsdcpio_test_SOURCES=						\
-	cpio/cmdline.c						\
-	cpio/test/main.c					\
-	cpio/test/test.h					\
-	cpio/test/test_0.c					\
-	cpio/test/test_basic.c					\
-	cpio/test/test_cmdline.c				\
-	cpio/test/test_format_newc.c				\
-	cpio/test/test_gcpio_compat.c				\
-	cpio/test/test_option_B_upper.c				\
-	cpio/test/test_option_C_upper.c				\
-	cpio/test/test_option_J_upper.c				\
-	cpio/test/test_option_L_upper.c				\
-	cpio/test/test_option_Z_upper.c				\
-	cpio/test/test_option_a.c				\
-	cpio/test/test_option_c.c				\
-	cpio/test/test_option_d.c				\
-	cpio/test/test_option_f.c				\
-	cpio/test/test_option_help.c				\
-	cpio/test/test_option_l.c				\
-	cpio/test/test_option_lzma.c				\
-	cpio/test/test_option_m.c				\
-	cpio/test/test_option_t.c				\
-	cpio/test/test_option_u.c				\
-	cpio/test/test_option_version.c				\
-	cpio/test/test_option_y.c				\
-	cpio/test/test_option_z.c				\
-	cpio/test/test_owner_parse.c				\
-	cpio/test/test_passthrough_dotdot.c			\
-	cpio/test/test_passthrough_reverse.c			\
-	cpio/test/test_pathmatch.c
-
-bsdcpio_test_CPPFLAGS= \
-	-I$(top_srcdir)/libarchive -I$(top_srcdir)/libarchive_fe \
-	-I$(top_srcdir)/cpio -I$(top_builddir)/cpio/test \
-	$(PLATFORMCPPFLAGS)
-bsdcpio_test_LDADD=libarchive_fe.la
-
-cpio/test/list.h: Makefile
-	cat $(top_srcdir)/cpio/test/test_*.c | grep DEFINE_TEST > cpio/test/list.h
-
-if BUILD_BSDCPIO
-bsdcpio_test_programs= bsdcpio_test
-bsdcpio_TESTS_ENVIRONMENT= BSDCPIO=`cd $(top_builddir);/bin/pwd`/bsdcpio$(EXEEXT) BSDCPIO_TEST_FILES=`cd $(top_srcdir);/bin/pwd`/cpio/test
-else
-bsdcpio_test_programs=
-bsdcpio_TESTS_ENVIRONMENT=
-endif
-
-bsdcpio_test_EXTRA_DIST=			\
-	cpio/test/test_gcpio_compat_ref.bin.uu	\
-	cpio/test/test_gcpio_compat_ref.crc.uu	\
-	cpio/test/test_gcpio_compat_ref.newc.uu	\
-	cpio/test/test_gcpio_compat_ref.ustar.uu \
-	cpio/test/test_option_f.cpio.uu		\
-	cpio/test/test_option_m.cpio.uu		\
-	cpio/test/test_option_t.cpio.uu		\
-	cpio/test/test_option_t.stdout.uu	\
-	cpio/test/test_option_tv.stdout.uu	\
-	cpio/test/CMakeLists.txt
