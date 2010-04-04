@@ -59,6 +59,8 @@ static int archive_entry_free_count = 0;
 #endif
 
 static PyObject *PyArchiveError = NULL;
+// XXX: this won't survive long; hack
+static PyObject *StringIO_kls = NULL;
 
 /* utility funcs */
 
@@ -468,6 +470,33 @@ PyArchive_Entry_issym(PyArchiveEntry *self)
     Py_RETURN_FALSE;
 }
 
+/* XXX bloody hack */
+static PyObject *
+PyArchive_Entry_data(PyArchiveEntry *self)
+{
+    Py_ssize_t len = 0;
+    PyObject *str = NULL, *obj = NULL;
+    /* XXX: this really should go through the vm to get isreg, on the offchance
+      it's been overriden */
+    if(!(PyArchive_Entry_isreg(self))) {
+        PyErr_SetString(PyExc_TypeError, "data() is only usable on files");
+        return NULL;
+    }
+    len = archive_entry_size(self->archive_entry);
+    if(!(str = PyString_FromStringAndSize(NULL, len))) {
+        return NULL;
+    }
+    if(len != archive_read_data(self->archive->archive, 
+        PyString_AS_STRING(str), len)) {
+        _convert_and_set_archive_error(NULL, self->archive->archive);
+    } else {
+        obj = PyObject_CallFunction(StringIO_kls, "O", str);
+    }
+    Py_DECREF(str);
+    return obj;
+}
+
+
 static PyMethodDef PyArchiveEntry_methods[] = {
     {"isblk", (PyCFunction)PyArchive_Entry_isblk, METH_NOARGS},
     {"ischr", (PyCFunction)PyArchive_Entry_ischr, METH_NOARGS},
@@ -477,6 +506,7 @@ static PyMethodDef PyArchiveEntry_methods[] = {
     {"isreg", (PyCFunction)PyArchive_Entry_isreg, METH_NOARGS},
     {"isfile", (PyCFunction)PyArchive_Entry_isreg, METH_NOARGS},
     {"issym", (PyCFunction)PyArchive_Entry_issym, METH_NOARGS},
+    {"data", (PyCFunction)PyArchive_Entry_data, METH_NOARGS},
     {NULL},
 };
 
@@ -712,21 +742,36 @@ PyMODINIT_FUNC
 init_extension()
 {
     PyObject *new_m = NULL;
-    PyObject *err_m = NULL;
+    PyObject *tmp = NULL;
+
+    if(NULL == (tmp = PyImport_ImportModule("cStringIO"))) {
+        PyErr_Clear();
+        if(NULL == (tmp = PyImport_ImportModule("StringIO"))) {
+            return;
+        }
+    }
+
+    if(NULL == (StringIO_kls = PyObject_GetAttrString(tmp, "StringIO"))) {
+        Py_DECREF(tmp);
+        return;
+    }
+
+    Py_DECREF(tmp);
+
+    if(NULL == (tmp = PyImport_ImportModule("pyarchive.errors")))
+        return; 
+
+    if(!(PyArchiveError = PyObject_GetAttrString(tmp, "PyArchiveError"))) {
+        Py_DECREF(tmp);
+        return;
+    }
+
+    Py_DECREF(tmp);
+
     new_m = Py_InitModule3("pyarchive._extension", NULL,
         Pydocumentation);
     if(!new_m)
         return;
-
-    if(!(err_m = PyImport_ImportModule("pyarchive.errors")))
-        return; 
-
-    if(!(PyArchiveError = PyObject_GetAttrString(err_m, "PyArchiveError"))) {
-        Py_DECREF(err_m);
-        return;
-    }
-
-    Py_CLEAR(err_m);
 
     if(PyType_Ready(&PyArchiveStreamType) < 0)
         return;
