@@ -74,7 +74,7 @@ archive_write_open_memory(struct archive *a, void *buff, size_t buffSize, size_t
 	mine->buff = buff;
 	mine->size = buffSize;
 	mine->client_size = used;
-	return (archive_write_open(a, mine,
+	return (archive_write_open2(a, mine,
 		    memory_write_open, memory_write, memory_write_close));
 }
 

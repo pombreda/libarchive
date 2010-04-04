@@ -225,7 +225,7 @@ __archive_write_output(struct archive_write *a, const void *buff, size_t length)
  * Open the archive using the current settings.
  */
 int
-archive_write_open(struct archive *_a, void *client_data,
+archive_write_open2(struct archive *_a, void *client_data,
     transform_open_callback *opener, transform_write_callback *writer,
     transform_close_callback *closer)
 {
