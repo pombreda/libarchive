@@ -5,6 +5,7 @@
 #include <archive.h>
 #include <archive_entry.h>
 #include <unistd.h> /* gid_t, uid_t, time_t */
+#include <sys/stat.h> /* S_IS* crap */
 
 /*
 todo
@@ -385,7 +386,89 @@ static PyGetSetDef PyArchiveEntry_getsetters[] = {
     {NULL}
 };
 
+/*
+--methods--
 
+--compatibility crap for TarInfo behaviour --
+*/
+
+static PyObject *
+PyArchive_Entry_isblk(PyArchiveEntry *self)
+{
+    if(S_ISBLK(archive_entry_mode(self->archive_entry))) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
+PyArchive_Entry_ischr(PyArchiveEntry *self)
+{
+    if(S_ISCHR(archive_entry_mode(self->archive_entry))) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
+PyArchive_Entry_isdev(PyArchiveEntry *self)
+{
+    long mode = archive_entry_mode(self->archive_entry);
+    if(S_ISBLK(mode) || S_ISCHR(mode)) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
+PyArchive_Entry_isdir(PyArchiveEntry *self)
+{
+    if(S_ISDIR(archive_entry_mode(self->archive_entry))) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
+PyArchive_Entry_isfifo(PyArchiveEntry *self)
+{
+    if(S_ISFIFO(archive_entry_mode(self->archive_entry))) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
+}
+
+
+// note isreg serves double duty as isfile
+static PyObject *
+PyArchive_Entry_isreg(PyArchiveEntry *self)
+{
+    if(S_ISREG(archive_entry_mode(self->archive_entry))) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
+PyArchive_Entry_issym(PyArchiveEntry *self)
+{
+    if(S_ISLNK(archive_entry_mode(self->archive_entry))) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
+}
+
+static PyMethodDef PyArchiveEntry_methods[] = {
+    {"isblk", (PyCFunction)PyArchive_Entry_isblk, METH_NOARGS},
+    {"ischr", (PyCFunction)PyArchive_Entry_ischr, METH_NOARGS},
+    {"isdev", (PyCFunction)PyArchive_Entry_isdev, METH_NOARGS},
+    {"isdir", (PyCFunction)PyArchive_Entry_isdir, METH_NOARGS},
+    {"isfifo", (PyCFunction)PyArchive_Entry_isfifo, METH_NOARGS},
+    {"isreg", (PyCFunction)PyArchive_Entry_isreg, METH_NOARGS},
+    {"isfile", (PyCFunction)PyArchive_Entry_isreg, METH_NOARGS},
+    {"issym", (PyCFunction)PyArchive_Entry_issym, METH_NOARGS},
+    {NULL},
+};
 
 static PyTypeObject PyArchiveEntryType = {
     PyObject_HEAD_INIT(NULL)
@@ -417,7 +500,7 @@ static PyTypeObject PyArchiveEntryType = {
     0,                                /* tp_weaklistoffset */
     0,                                /* tp_iter */
     0,                                /* tp_iternext */
-    0,                                /* tp_methods */
+    PyArchiveEntry_methods,           /* tp_methods */
     0,                                /* tp_members */
     PyArchiveEntry_getsetters,        /* tp_getset */
     0,                                /* tp_base */
