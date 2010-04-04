@@ -76,7 +76,7 @@ distclean-local:
 #
 #
 
-include_HEADERS= libtransform/archive.h
+include_HEADERS= libtransform/transform.h
 
 libtransform_la_SOURCES = 									\
 	libtransform/transform_read_support_compression_all.c	\
