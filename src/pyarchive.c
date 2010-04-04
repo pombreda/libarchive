@@ -10,7 +10,7 @@
 typedef struct {
     PyObject_HEAD
     struct archive *archive;
-    PyObject *last_PyArchiveEntry;
+    Py_ssize_t header_position;
 } PyArchive;
 
 typedef struct {
@@ -20,26 +20,15 @@ typedef struct {
 } PyArchiveEntry;
 
 
-static PyArchiveEntry *_mk_archive_entry(PyArchive *,
-    struct archive_entry *);
-
-#define MAX_FREE_ARCHIVE_ENTRY 0
-static PyArchiveEntry *archive_entry_freelist[MAX_FREE_ARCHIVE_ENTRY];
-static int archive_entry_free_count = 0;
-
 static void
-PyArchiveEntry_Dealloc(PyArchiveEntry *pae)
+PyArchiveEntry_dealloc(PyArchiveEntry *pae)
 {
-    PyObject *archive = (PyObject *)pae->archive;
     PyObject_GC_UnTrack(pae);
-    if(archive_entry_free_count < MAX_FREE_ARCHIVE_ENTRY) {
-        archive_entry_clear(pae->archive_entry);
-        archive_entry_freelist[archive_entry_free_count++] = pae;
-    } else {
-        //archive_entry_free(pae->archive_entry);
-        pae->ob_type->tp_free((PyObject *)pae);
+    if(pae->archive_entry) {
+        archive_entry_free(pae->archive_entry);
     }
-    Py_XDECREF(archive);
+    Py_XDECREF(pae->archive);
+    pae->ob_type->tp_free((PyObject *)pae);
 }
 
 
@@ -49,7 +38,7 @@ static PyTypeObject PyArchiveEntryType = {
     "archive_entry",                  /* tp_name */
     sizeof(PyArchiveEntry),   /* tp_basicsize */
     0,                                /* tp_itemsize */
-    (destructor)PyArchiveEntry_Dealloc,
+    (destructor)PyArchiveEntry_dealloc,
                                       /* tp_dealloc */
     0,                                /* tp_print */
     0,                                /* tp_getattr */
@@ -89,24 +78,16 @@ static PyTypeObject PyArchiveEntryType = {
     
 
 static PyArchiveEntry *
-mk_PyArchiveEntry(PyArchive *archive)
+mk_PyArchiveEntry(PyArchive *archive, struct archive_entry *entry)
 {
-    PyArchiveEntry *pae;
-    if(archive_entry_free_count) {
-        archive_entry_free_count--;
-        pae = archive_entry_freelist[archive_entry_free_count];
-        _Py_NewReference((PyObject *)pae);
-    } else {
-        pae = PyObject_GC_New(PyArchiveEntry,
-            &PyArchiveEntryType);
-        if(!pae)
-            return NULL;
-        struct archive_entry *ae = NULL;//archive_entry_new();
-        if(!ae) {
-            Py_DECREF(pae);
-            return NULL;
-        }
-        pae->archive_entry = ae;
+    PyArchiveEntry *pae = PyObject_GC_New(PyArchiveEntry,
+        &PyArchiveEntryType);
+    if(!pae)
+        return NULL;
+    pae->archive_entry = archive_entry_clone(entry);
+    if(!pae) {
+        Py_DECREF(pae);
+        return NULL;
     }
     Py_INCREF(archive);
     pae->archive = archive;
@@ -147,6 +128,7 @@ PyArchive_init(PyArchive *self, PyObject *args, PyObject *kwds)
         self->archive = NULL;
         return NULL;
     }
+    self->header_position = 0;
     return NULL;
 }
 
@@ -154,12 +136,10 @@ PyArchive_init(PyArchive *self, PyObject *args, PyObject *kwds)
 static void
 PyArchive_dealloc(PyArchive *self)
 {
-    printf("deallocating a pyarchive\n");
     if(self->archive) {
         archive_read_finish(self->archive);
         self->archive = NULL;
     }
-    Py_CLEAR(self->last_PyArchiveEntry);
     self->ob_type->tp_free((PyObject *)self);
 }
 
@@ -167,18 +147,14 @@ PyArchive_dealloc(PyArchive *self)
 static PyObject *
 PyArchive_iternext(PyArchive *self)
 {
-    PyArchiveEntry *tmp = NULL, *pae = mk_PyArchiveEntry(self);
-    if(pae) {
-        int ret = archive_read_next_header(self->archive, &pae->archive_entry);
-        if(ret != ARCHIVE_OK) {
-            Py_DECREF(pae);
-        }
-        tmp = (PyArchiveEntry *)self->last_PyArchiveEntry;
-        self->last_PyArchiveEntry = (PyObject *)pae;
-        Py_XDECREF(tmp);
-        Py_INCREF(pae);
+    struct archive_entry *entry = NULL;
+    int ret = archive_read_next_header(self->archive, &entry);
+    if(ret != ARCHIVE_OK) {
+        // do something appropriate...
+        return NULL;
     }
-    return (PyObject *)pae;
+    self->header_position++;
+    return mk_PyArchiveEntry(self, entry);
 }
 
 static PyTypeObject PyArchiveType = {
@@ -239,6 +215,10 @@ initpyarchive()
         return;
 
     if(PyModule_AddObject(m, "archive",
+        (PyObject *)&PyArchiveType) == -1)
+        return;
+
+    if(PyModule_AddObject(m, "open",
         (PyObject *)&PyArchiveType) == -1)
         return;
 }
