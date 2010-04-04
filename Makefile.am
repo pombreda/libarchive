@@ -6,8 +6,7 @@ ACLOCAL_AMFLAGS = -I build/autoconf
 #
 # What to build and install
 #
-lib_LTLIBRARIES=	libarchive.la libstransform.la
-noinst_LTLIBRARIES=	libarchive_fe.la
+lib_LTLIBRARIES=	libstransform.la
 man_MANS= $(libarchive_man_MANS)
 BUILT_SOURCES= libarchive/test/list.h
 
@@ -15,9 +14,9 @@ BUILT_SOURCES= libarchive/test/list.h
 # What to test: We always test libarchive, test bsdtar and bsdcpio only
 # if we built them.
 #
-check_PROGRAMS= libarchive_test
-TESTS= libarchive_test
-TESTS_ENVIRONMENT= $(libarchive_TESTS_ENVIRONMENT)
+check_PROGRAMS=
+TESTS=
+TESTS_ENVIRONMENT=
 # Always build and test both bsdtar and bsdcpio as part of 'distcheck'
 # The next line is commented out by default in shipping libarchive releases.
 # It is uncommented by default in trunk.
@@ -77,75 +76,7 @@ distclean-local:
 #
 #
 
-include_HEADERS= libarchive/archive.h libarchive/archive_entry.h
-
-libarchive_la_SOURCES=						\
-	libarchive/archive_check_magic.c			\
-	libarchive/archive_crc32.h				\
-	libarchive/archive_endian.h				\
-	libarchive/archive_entry.c				\
-	libarchive/archive_entry.h				\
-	libarchive/archive_entry_copy_stat.c			\
-	libarchive/archive_entry_link_resolver.c		\
-	libarchive/archive_entry_private.h			\
-	libarchive/archive_entry_sparse.c			\
-	libarchive/archive_entry_stat.c				\
-	libarchive/archive_entry_strmode.c			\
-	libarchive/archive_entry_xattr.c			\
-	libarchive/archive_hash.h				\
-	libarchive/archive_platform.h				\
-	libarchive/archive_private.h				\
-	libarchive/archive_read.c				\
-	libarchive/archive_read_data_into_fd.c			\
-	libarchive/archive_read_disk.c				\
-	libarchive/archive_read_disk_entry_from_file.c		\
-	libarchive/archive_read_disk_private.h			\
-	libarchive/archive_read_disk_set_standard_lookup.c	\
-	libarchive/archive_read_extract.c			\
-	libarchive/archive_read_open_fd.c			\
-	libarchive/archive_read_open_file.c			\
-	libarchive/archive_read_open_filename.c			\
-	libarchive/archive_read_open_memory.c			\
-	libarchive/archive_read_private.h			\
-	libarchive/archive_read_support_format_all.c		\
-	libarchive/archive_read_support_format_ar.c		\
-	libarchive/archive_read_support_format_cpio.c		\
-	libarchive/archive_read_support_format_empty.c		\
-	libarchive/archive_read_support_format_iso9660.c	\
-	libarchive/archive_read_support_format_mtree.c		\
-	libarchive/archive_read_support_format_raw.c		\
-	libarchive/archive_read_support_format_tar.c		\
-	libarchive/archive_read_support_format_xar.c		\
-	libarchive/archive_read_support_format_zip.c		\
-	libarchive/archive_string.c				\
-	libarchive/archive_string.h				\
-	libarchive/archive_string_sprintf.c			\
-	libarchive/archive_util.c				\
-	libarchive/archive_virtual.c				\
-	libarchive/archive_write.c				\
-	libarchive/archive_write_disk.c				\
-	libarchive/archive_write_disk_private.h			\
-	libarchive/archive_write_disk_set_standard_lookup.c	\
-	libarchive/archive_write_open_fd.c			\
-	libarchive/archive_write_open_file.c			\
-	libarchive/archive_write_open_filename.c		\
-	libarchive/archive_write_open_memory.c			\
-	libarchive/archive_write_private.h			\
-	libarchive/archive_write_set_format.c			\
-	libarchive/archive_write_set_format_ar.c		\
-	libarchive/archive_write_set_format_by_name.c		\
-	libarchive/archive_write_set_format_cpio.c		\
-	libarchive/archive_write_set_format_cpio_newc.c		\
-	libarchive/archive_write_set_format_iso9660.c		\
-	libarchive/archive_write_set_format_mtree.c		\
-	libarchive/archive_write_set_format_pax.c		\
-	libarchive/archive_write_set_format_shar.c		\
-	libarchive/archive_write_set_format_ustar.c		\
-	libarchive/archive_write_set_format_zip.c		\
-	libarchive/archive_write_set_options.c			\
-	libarchive/config_freebsd.h
-
-libarchive_la_LIBADD = libstransform.la
+include_HEADERS= libarchive/archive.h
 
 libstransform_la_SOURCES = 									\
 	libarchive/archive_read_support_compression_all.c	\
@@ -167,39 +98,18 @@ libstransform_la_SOURCES = 									\
 	libarchive/filter_fork.h
 
 if INC_WINDOWS_FILES
-libarchive_la_SOURCES+=						\
-	libarchive/archive_entry_copy_bhfi.c			\
-	libarchive/archive_windows.h				\
-	libarchive/archive_windows.c				\
+libstransform_la_SOURCES+=						\
 	libarchive/filter_fork_windows.c
 endif
 
 # -no-undefined marks that libarchive doesn't rely on symbols
 # defined in the application.  This is mandatory for cygwin.
-libarchive_la_LDFLAGS= -no-undefined -version-info $(ARCHIVE_LIBTOOL_VERSION)
 libstransform_la_LDFLAGS= -no-undefined
 
 # Manpages to install
 libarchive_man_MANS=						\
-	libarchive/archive_entry.3				\
-	libarchive/archive_entry_acl.3				\
-	libarchive/archive_entry_linkify.3			\
-	libarchive/archive_entry_paths.3			\
-	libarchive/archive_entry_perms.3			\
-	libarchive/archive_entry_stat.3				\
-	libarchive/archive_entry_time.3				\
-	libarchive/archive_read.3				\
-	libarchive/archive_read_disk.3				\
-	libarchive/archive_util.3				\
-	libarchive/archive_write.3				\
-	libarchive/archive_write_disk.3				\
-	libarchive/archive_write_set_options.3			\
-	libarchive/cpio.5					\
 	libarchive/libarchive.3					\
-	libarchive/libarchive_internals.3			\
-	libarchive/libarchive-formats.5				\
-	libarchive/mtree.5					\
-	libarchive/tar.5
+	libarchive/libarchive_internals.3
 
 # Additional libarchive files to include in the distribution
 libarchive_EXTRA_DIST=			\
@@ -391,17 +301,3 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_read_format_zip.zip.uu			\
 	libarchive/test/CMakeLists.txt					\
 	libarchive/test/README
-
-#
-# Common code for libarchive frontends (cpio, tar)
-#
-libarchive_fe_la_SOURCES=			\
-	libarchive_fe/err.c			\
-	libarchive_fe/err.h			\
-	libarchive_fe/lafe_platform.h		\
-	libarchive_fe/line_reader.c		\
-	libarchive_fe/line_reader.h		\
-	libarchive_fe/matching.c		\
-	libarchive_fe/matching.h		\
-	libarchive_fe/pathmatch.c		\
-	libarchive_fe/pathmatch.h
