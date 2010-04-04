@@ -67,6 +67,7 @@ static int64_t	_transform_filter_bytes(struct transform *, int);
 static int	_transform_write_close(struct transform *);
 static int	_transform_write_free(struct transform *);
 static ssize_t	_transform_write_data(struct transform *, const void *, size_t);
+void __transform_write_filters_free(struct transform_write *);
 
 struct transform_none {
 	size_t buffer_size;
@@ -444,10 +445,19 @@ _transform_write_close(struct transform *_a)
 	return (r);
 }
 
-void
-__transform_write_filters_free(struct transform *_a)
+int
+transform_write_reset_filters(struct transform *_a)
 {
 	struct transform_write *a = (struct transform_write *)_a;
+	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
+	    TRANSFORM_STATE_NEW, "transform_write_reset_filters");
+	__transform_write_filters_free(a);
+	return (TRANSFORM_OK);
+}
+
+void
+__transform_write_filters_free(struct transform_write *a)
+{
 	int r = TRANSFORM_OK, r1;
 
 	while (a->filter_first != NULL) {
@@ -485,7 +495,7 @@ _transform_write_free(struct transform *_a)
 	if (a->transform.state != TRANSFORM_STATE_FATAL)
 		r = transform_write_close(&a->transform);
 
-	__transform_write_filters_free(_a);
+	__transform_write_filters_free(a);
 
 	transform_string_free(&a->transform.error_string);
 	a->transform.magic = 0;

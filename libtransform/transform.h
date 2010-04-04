@@ -349,6 +349,8 @@ __LA_DECL int		 transform_read_close(struct transform *);
 /* Release all resources and destroy the object. */
 /* Note that transform_read_free will call transform_read_close for you. */
 __LA_DECL int		 transform_read_free(struct transform *);
+/* reset all filters currently associated */
+__LA_DECL int 		 transform_write_reset_filters(struct transform *);
 
 /*-
  * To create an transform:
