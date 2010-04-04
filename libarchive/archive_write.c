@@ -217,10 +217,8 @@ archive_write_set_skip_file(struct archive *_a, int64_t d, int64_t i)
 int
 __archive_write_output(struct archive_write *a, const void *buff, size_t length)
 {
-	int ret;
-	ret = transform_write_output(a->archive.transform, buff, length);
-	return (__convert_transform_error_to_archive_error(&a->archive,
-		a->archive.transform, ret));
+	return (__convert_transform_fatal_error(&a->archive,
+		transform_write_output(a->archive.transform, buff, length)));
 }
 
 /*
