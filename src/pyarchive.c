@@ -144,49 +144,49 @@ PyArchive_Entry_get_birthtime_is_set(PyArchiveEntry *self, void *closure)
 static PyObject *
 PyArchive_Entry_get_ctime(PyArchiveEntry *self, void *closure)
 {
-    return PyLong_FromLong((long)archive_entry_ctime(self->archive_entry));
+    return PyInt_FromLong((long)archive_entry_ctime(self->archive_entry));
 }
 
 static PyObject *
 PyArchive_Entry_get_mtime(PyArchiveEntry *self, void *closure)
 {
-    return PyLong_FromLong((long)archive_entry_mtime(self->archive_entry));
+    return PyInt_FromLong((long)archive_entry_mtime(self->archive_entry));
 }
 
 static PyObject *
 PyArchive_Entry_get_atime(PyArchiveEntry *self, void *closure)
 {
-    return PyLong_FromLong((long)archive_entry_atime(self->archive_entry));
+    return PyInt_FromLong((long)archive_entry_atime(self->archive_entry));
 }
 
 static PyObject *
 PyArchive_Entry_get_birthtime(PyArchiveEntry *self, void *closure)
 {
-    return PyLong_FromLong((long)archive_entry_birthtime(self->archive_entry));
+    return PyInt_FromLong((long)archive_entry_birthtime(self->archive_entry));
 }
 
 static PyObject *
 PyArchive_Entry_get_atime_nsec(PyArchiveEntry *self, void *closure)
 {
-    return PyLong_FromLong((long)archive_entry_atime_nsec(self->archive_entry));
+    return PyInt_FromLong((long)archive_entry_atime_nsec(self->archive_entry));
 }
 
 static PyObject *
 PyArchive_Entry_get_mtime_nsec(PyArchiveEntry *self, void *closure)
 {
-    return PyLong_FromLong((long)archive_entry_mtime_nsec(self->archive_entry));
+    return PyInt_FromLong((long)archive_entry_mtime_nsec(self->archive_entry));
 }
 
 static PyObject *
 PyArchive_Entry_get_ctime_nsec(PyArchiveEntry *self, void *closure)
 {
-    return PyLong_FromLong((long)archive_entry_ctime_nsec(self->archive_entry));
+    return PyInt_FromLong((long)archive_entry_ctime_nsec(self->archive_entry));
 }
 
 static PyObject *
 PyArchive_Entry_get_birthtime_nsec(PyArchiveEntry *self, void *closure)
 {
-    return PyLong_FromLong((long)archive_entry_birthtime_nsec(self->archive_entry));
+    return PyInt_FromLong((long)archive_entry_birthtime_nsec(self->archive_entry));
 }
 
 /* 
@@ -197,13 +197,13 @@ wide char support was skipped; revisit
 static PyObject *
 PyArchive_Entry_get_gid(PyArchiveEntry *self, void *closure)
 {
-    return PyLong_FromLong((long)archive_entry_gid(self->archive_entry));
+    return PyInt_FromLong((long)archive_entry_gid(self->archive_entry));
 }
 
 static PyObject *
 PyArchive_Entry_get_uid(PyArchiveEntry *self, void *closure)
 {
-    return PyLong_FromLong((long)archive_entry_uid(self->archive_entry));
+    return PyInt_FromLong((long)archive_entry_uid(self->archive_entry));
 }
 
 static PyObject *
@@ -218,6 +218,9 @@ PyArchive_Entry_get_uname(PyArchiveEntry *self, void *closure)
     return PyString_FromString(archive_entry_uname(self->archive_entry));
 }
 
+/*
+-- misc --
+*/
 static PyObject *
 PyArchive_Entry_get_size_is_set(PyArchiveEntry *self, void *closure)
 {
@@ -232,6 +235,43 @@ PyArchive_Entry_get_size(PyArchiveEntry *self, void *closure)
 {
     return PyLong_FromLongLong(archive_entry_size(self->archive_entry));
 }
+
+static PyObject *
+PyArchive_Entry_get_dev(PyArchiveEntry *self, void *closure)
+{
+    return PyInt_FromLong(archive_entry_dev(self->archive_entry));
+}
+
+static PyObject *
+PyArchive_Entry_get_rdev(PyArchiveEntry *self, void *closure)
+{
+    return PyInt_FromLong(archive_entry_rdev(self->archive_entry));
+}
+
+static PyObject *
+PyArchive_Entry_get_devmajor(PyArchiveEntry *self, void *closure)
+{
+    return PyInt_FromLong(archive_entry_devmajor(self->archive_entry));
+}
+
+static PyObject *
+PyArchive_Entry_get_devminor(PyArchiveEntry *self, void *closure)
+{
+    return PyInt_FromLong(archive_entry_devminor(self->archive_entry));
+}
+
+static PyObject *
+PyArchive_Entry_get_rdevmajor(PyArchiveEntry *self, void *closure)
+{
+    return PyInt_FromLong(archive_entry_rdevmajor(self->archive_entry));
+}
+
+static PyObject *
+PyArchive_Entry_get_rdevminor(PyArchiveEntry *self, void *closure)
+{
+    return PyInt_FromLong(archive_entry_rdevminor(self->archive_entry));
+}
+
 
 static PyGetSetDef PyArchiveEntry_getsetters[] = {
     GETSET_HELPER(PyArchiveEntry, "name", name),
@@ -270,6 +310,18 @@ static PyGetSetDef PyArchiveEntry_getsetters[] = {
     {"size_is_set", (getter)PyArchive_Entry_get_size_is_set,
         (setter)PyArchive_Entry_generic_immutable, NULL},
     {"size", (getter)PyArchive_Entry_get_size,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"dev", (getter)PyArchive_Entry_get_dev,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"rdev", (getter)PyArchive_Entry_get_rdev,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"devmajor", (getter)PyArchive_Entry_get_devmajor,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"devminor", (getter)PyArchive_Entry_get_devminor,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"rdevmajor", (getter)PyArchive_Entry_get_rdevmajor,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"rdevminor", (getter)PyArchive_Entry_get_rdevminor,
         (setter)PyArchive_Entry_generic_immutable, NULL},
     {NULL}
 };
