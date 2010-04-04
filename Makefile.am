@@ -89,6 +89,7 @@ libtransform_la_SOURCES = 									\
 	libtransform/transform_read_support_compression_rpm.c	\
 	libtransform/transform_read_support_compression_uu.c	\
 	libtransform/transform_read_support_compression_xz.c	\
+	libtransform/transform_write.c							\
 	libtransform/transform_write_add_filter_bzip2.c	\
 	libtransform/transform_write_add_filter_compress.c	\
 	libtransform/transform_write_add_filter_gzip.c		\
