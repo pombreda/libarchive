@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
+#include "transform_platform.h"
 
 /* This capability is only available on POSIX systems. */
 #if defined(HAVE_PIPE) && defined(HAVE_FCNTL) && \

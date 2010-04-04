@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/archive_private.h 201098 2009-12-28 02:58:14Z kientzle $
+ * $FreeBSD: head/lib/libarchive/transform_private.h 201098 2009-12-28 02:58:14Z kientzle $
  */
 
 #ifndef __LIBARCHIVE_BUILD
@@ -33,7 +33,7 @@
 #define	ARCHIVE_PRIVATE_H_INCLUDED
 
 #include "transform.h"
-#include "archive_string.h"
+#include "transform_string.h"
 
 #if defined(__GNUC__) && (__GNUC__ > 2 || \
 			  (__GNUC__ == 2 && __GNUC_MINOR__ >= 5))

@@ -33,8 +33,8 @@
 #define	ARCHIVE_READ_PRIVATE_H_INCLUDED
 
 #include "transform.h"
-#include "archive_string.h"
-#include "archive_private.h"
+#include "transform_string.h"
+#include "transform_private.h"
 
 struct archive_read;
 struct archive_read_filter_bidder;

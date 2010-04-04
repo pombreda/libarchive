@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
+#include "transform_platform.h"
 __FBSDID("$FreeBSD: head/lib/libarchive/archive_string.c 201095 2009-12-28 02:33:22Z kientzle $");
 
 /*
@@ -44,8 +44,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_string.c 201095 2009-12-28 02:33
 #include <windows.h>
 #endif
 
-#include "archive_private.h"
-#include "archive_string.h"
+#include "transform_private.h"
+#include "transform_string.h"
 
 struct archive_string *
 __archive_string_append(struct archive_string *as, const char *p, size_t s)

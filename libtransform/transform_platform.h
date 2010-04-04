@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/archive_platform.h 201090 2009-12-28 02:22:04Z kientzle $
+ * $FreeBSD: head/lib/libarchive/transform_platform.h 201090 2009-12-28 02:22:04Z kientzle $
  */
 
 /* !!ONLY FOR USE INTERNALLY TO LIBARCHIVE!! */
@@ -49,7 +49,7 @@
 #include "config.h"
 #else
 /* Warn if the library hasn't been (automatically or manually) configured. */
-#error Oops: No config.h and no pre-built configuration in archive_platform.h.
+#error Oops: No config.h and no pre-built configuration in transform_platform.h.
 #endif
 
 /* It should be possible to get rid of this by extending the feature-test
@@ -57,7 +57,7 @@
  * refactoring of code to find structures that sit more cleanly on top of
  * either Windows or Posix APIs. */
 #if (defined(__WIN32__) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
-#include "archive_windows.h"
+#include "transform_windows.h"
 #endif
 
 /*

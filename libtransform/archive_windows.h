@@ -1,14 +1,13 @@
 /*-
  * Copyright (c) 2009,2010 Michihiro NAKAJIMA
- * Copyright (c) 2003-2006 Tim Kientzle
+ * Copyright (c) 2003-2007 Kees Zeelenberg
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -27,394 +26,1405 @@
  * $FreeBSD$
  */
 
-#ifndef __LIBARCHIVE_BUILD
-#error This header is only to be used internally to libarchive.
-#endif
-
 /*
- * TODO: A lot of stuff in here isn't actually used by libarchive and
- * can be trimmed out.  Note that this file is used by libarchive and
- * libtransform_test but nowhere else.  (But note that it gets compiled
- * with many different Windows environments, including MinGW, Visual
- * Studio, and Cygwin.  Significant changes should be tested in all three.)
+ * A set of compatibility glue for building libarchive on Windows platforms.
+ *
+ * Originally created as "libarchive-nonposix.c" by Kees Zeelenberg
+ * for the GnuWin32 project, trimmed significantly by Tim Kientzle.
+ *
+ * Much of the original file was unnecessary for libarchive, because
+ * many of the features it emulated were not strictly necessary for
+ * libarchive.  I hope for this to shrink further as libarchive
+ * internals are gradually reworked to sit more naturally on both
+ * POSIX and Windows.  Any ideas for this are greatly appreciated.
+ *
+ * The biggest remaining issue is the dev/ino emulation; libarchive
+ * has a couple of public APIs that rely on dev/ino uniquely
+ * identifying a file.  This doesn't match well with Windows.  I'm
+ * considering alternative APIs.
  */
 
-/*
- * TODO: Don't use off_t in here.  Use __int64 instead.  Note that
- * Visual Studio and the Windows SDK define off_t as 32 bits; Win32's
- * more modern file handling APIs all use __int64 instead of off_t.
- */
+#if defined(_WIN32) && !defined(__CYGWIN__)
 
-#ifndef LIBARCHIVE_ARCHIVE_WINDOWS_H_INCLUDED
-#define	LIBARCHIVE_ARCHIVE_WINDOWS_H_INCLUDED
-
-/* Start of configuration for native Win32  */
-
+#include "transform_platform.h"
+#include "transform_private.h"
+#include <ctype.h>
 #include <errno.h>
-#define	set_errno(val)	((errno)=val)
-#include <io.h>
-#include <stdlib.h>   //brings in NULL
-#if defined(HAVE_STDINT_H)
-#include <stdint.h>
+#include <stddef.h>
+#ifdef HAVE_SYS_UTIME_H
+#include <sys/utime.h>
 #endif
-#include <stdio.h>
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <process.h>
-#include <direct.h>
-#define NOCRYPT
+#include <stdlib.h>
+#include <wchar.h>
 #include <windows.h>
-//#define	EFTYPE 7
+#include <share.h>
 
-#if !defined(STDIN_FILENO)
-#define STDIN_FILENO 0
-#endif
+#define EPOC_TIME ARCHIVE_LITERAL_ULL(116444736000000000)
 
-#if !defined(STDOUT_FILENO)
-#define STDOUT_FILENO 1
-#endif
-
-#if !defined(STDERR_FILENO)
-#define STDERR_FILENO 2
-#endif
-
-
-#if defined(_MSC_VER)
-/* TODO: Fix the code, don't suppress the warnings. */
-#pragma warning(disable:4244)   /* 'conversion' conversion from 'type1' to 'type2', possible loss of data */
-#endif
-#if defined(__BORLANDC__)
-#pragma warn -8068	/* Constant out of range in comparison. */
-#pragma warn -8072	/* Suspicious pointer arithmetic. */
+#if defined(_MSC_VER) && _MSC_VER < 1300
+/* VS 6 does not provide SetFilePointerEx, so define it here.  */
+static BOOL SetFilePointerEx(HANDLE hFile,
+                             LARGE_INTEGER liDistanceToMove,
+                             PLARGE_INTEGER lpNewFilePointer,
+                             DWORD dwMoveMethod)
+{
+	LARGE_INTEGER li;
+	li.QuadPart = liDistanceToMove.QuadPart;
+	li.LowPart = SetFilePointer(
+	    hFile, li.LowPart, &li.HighPart, dwMoveMethod);
+	if(lpNewFilePointer) {
+		lpNewFilePointer->QuadPart = li.QuadPart;
+	}
+	return li.LowPart != -1 || GetLastError() == NO_ERROR;
+}
 #endif
 
-#ifndef NULL
-#ifdef  __cplusplus
-#define	NULL    0
-#else
-#define	NULL    ((void *)0)
-#endif
-#endif
-
-/* Alias the Windows _function to the POSIX equivalent. */
-#define	chdir		__la_chdir
-#define	chmod		__la_chmod
-#define	close		_close
-#define	fcntl		__la_fcntl
-#ifndef fileno
-#define	fileno		_fileno
-#endif
-#define	fstat		__la_fstat
-#define	ftruncate	__la_ftruncate
-#define	futimes		__la_futimes
-#define link		__la_link
-#define	lseek		__la_lseek
-#define	lstat		__la_stat
-#define	mbstowcs	__la_mbstowcs
-#define	mkdir(d,m)	__la_mkdir(d, m)
-#define	open		__la_open
-#define	read		__la_read
-#define	rmdir		__la_rmdir
-#if !defined(__BORLANDC__)
-#define setmode		_setmode
-#endif
-#define	stat(path,stref)		__la_stat(path,stref)
-#if !defined(__BORLANDC__)
-#define	strdup		_strdup
-#endif
-#define	tzset		_tzset
-#if !defined(__BORLANDC__)
-#define	umask		_umask
-#endif
-#define	unlink		__la_unlink
-#define	utimes		__la_utimes
-#define	waitpid		__la_waitpid
-#define	write		__la_write
-
-#ifndef O_RDONLY
-#define	O_RDONLY	_O_RDONLY
-#define	O_WRONLY	_O_WRONLY
-#define	O_TRUNC		_O_TRUNC
-#define	O_CREAT		_O_CREAT
-#define	O_EXCL		_O_EXCL
-#define	O_BINARY	_O_BINARY
-#endif
-
-#ifndef _S_IFIFO
-  #define	_S_IFIFO        0010000   /* pipe */
-#endif
-#ifndef _S_IFCHR
-  #define	_S_IFCHR        0020000   /* character special */
-#endif
-#ifndef _S_IFDIR
-  #define	_S_IFDIR        0040000   /* directory */
-#endif
-#ifndef _S_IFBLK
-  #define	_S_IFBLK        0060000   /* block special */
-#endif
-#ifndef _S_IFLNK
-  #define	_S_IFLNK        0120000   /* symbolic link */
-#endif
-#ifndef _S_IFSOCK
-  #define	_S_IFSOCK       0140000   /* socket */
-#endif
-#ifndef	_S_IFREG
-  #define	_S_IFREG        0100000   /* regular */
-#endif
-#ifndef	_S_IFMT
-  #define	_S_IFMT         0170000   /* file type mask */
-#endif
-
-#ifndef S_IFIFO
-#define	S_IFIFO     _S_IFIFO
-#endif
-//#define	S_IFCHR  _S_IFCHR
-//#define	S_IFDIR  _S_IFDIR
-#ifndef S_IFBLK
-#define	S_IFBLK     _S_IFBLK
-#endif
-#ifndef S_IFLNK
-#define	S_IFLNK     _S_IFLNK
-#endif
-#ifndef S_IFSOCK
-#define	S_IFSOCK    _S_IFSOCK
-#endif
-//#define	S_IFREG  _S_IFREG
-//#define	S_IFMT   _S_IFMT
-
-#ifndef S_ISBLK
-#define	S_ISBLK(m)	(((m) & S_IFMT) == S_IFBLK)	/* block special */
-#define	S_ISFIFO(m)	(((m) & S_IFMT) == S_IFIFO)	/* fifo or socket */
-#define	S_ISCHR(m)	(((m) & S_IFMT) == S_IFCHR)	/* char special */
-#define	S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)	/* directory */
-#define	S_ISREG(m)	(((m) & S_IFMT) == S_IFREG)	/* regular file */
-#endif
-#define	S_ISLNK(m)  (((m) & S_IFMT) == S_IFLNK) /* Symbolic link */
-#define	S_ISSOCK(m) (((m) & S_IFMT) == S_IFSOCK) /* Socket */
-
-#define	_S_ISUID        0004000   /* set user id on execution */
-#define	_S_ISGID        0002000   /* set group id on execution */
-#define	_S_ISVTX        0001000   /* save swapped text even after use */
-
-#define	S_ISUID        _S_ISUID
-#define	S_ISGID        _S_ISGID
-#define	S_ISVTX        _S_ISVTX
-
-#define	_S_IRWXU	     (_S_IREAD | _S_IWRITE | _S_IEXEC)
-#define	_S_IXUSR	     _S_IEXEC  /* read permission, user */
-#define	_S_IWUSR	     _S_IWRITE /* write permission, user */
-#define	_S_IRUSR	     _S_IREAD  /* execute/search permission, user */
-#define	_S_IRWXG        (_S_IRWXU >> 3)
-#define	_S_IXGRP        (_S_IXUSR >> 3) /* read permission, group */
-#define	_S_IWGRP        (_S_IWUSR >> 3) /* write permission, group */
-#define	_S_IRGRP        (_S_IRUSR >> 3) /* execute/search permission, group */
-#define	_S_IRWXO        (_S_IRWXG >> 3) 
-#define	_S_IXOTH        (_S_IXGRP >> 3) /* read permission, other */
-#define	_S_IWOTH        (_S_IWGRP >> 3) /* write permission, other */
-#define	_S_IROTH        (_S_IRGRP  >> 3) /* execute/search permission, other */
-
-#ifndef S_IRWXU
-#define	S_IRWXU	     _S_IRWXU
-#define	S_IXUSR	     _S_IXUSR
-#define	S_IWUSR	     _S_IWUSR
-#define	S_IRUSR	     _S_IRUSR
-#endif
-#define	S_IRWXG        _S_IRWXG
-#define	S_IXGRP        _S_IXGRP
-#define	S_IWGRP        _S_IWGRP
-#define	S_IRGRP        _S_IRGRP
-#define	S_IRWXO        _S_IRWXO
-#define	S_IXOTH        _S_IXOTH
-#define	S_IWOTH        _S_IWOTH
-#define	S_IROTH        _S_IROTH
-
-#define	F_DUPFD	  	0	/* Duplicate file descriptor.  */
-#define	F_GETFD		1	/* Get file descriptor flags.  */
-#define	F_SETFD		2	/* Set file descriptor flags.  */
-#define	F_GETFL		3	/* Get file status flags.  */
-#define	F_SETFL		4	/* Set file status flags.  */
-#define	F_GETOWN		5	/* Get owner (receiver of SIGIO).  */
-#define	F_SETOWN		6	/* Set owner (receiver of SIGIO).  */
-#define	F_GETLK		7	/* Get record locking info.  */
-#define	F_SETLK		8	/* Set record locking info (non-blocking).  */
-#define	F_SETLKW		9	/* Set record locking info (blocking).  */
-
-/* XXX missing */
-#define	F_GETLK64	7	/* Get record locking info.  */
-#define	F_SETLK64	8	/* Set record locking info (non-blocking).  */
-#define	F_SETLKW64	9	/* Set record locking info (blocking).  */
-
-/* File descriptor flags used with F_GETFD and F_SETFD.  */
-#define	FD_CLOEXEC	1	/* Close on exec.  */
-
-//NOT SURE IF O_NONBLOCK is OK here but at least the 0x0004 flag is not used by anything else...
-#define	O_NONBLOCK 0x0004 /* Non-blocking I/O.  */
-//#define	O_NDELAY   O_NONBLOCK
-
-/* Symbolic constants for the access() function */
-#if !defined(F_OK)
-    #define	R_OK    4       /*  Test for read permission    */
-    #define	W_OK    2       /*  Test for write permission   */
-    #define	X_OK    1       /*  Test for execute permission */
-    #define	F_OK    0       /*  Test for existence of file  */
-#endif
-
-
-#ifdef _LARGEFILE_SOURCE
-# define __USE_LARGEFILE 1		/* declare fseeko and ftello */
-#endif
-
-#if defined _FILE_OFFSET_BITS && _FILE_OFFSET_BITS == 64
-# define __USE_FILE_OFFSET64  1	/* replace 32-bit functions by 64-bit ones */
-#endif
-
-#if __USE_LARGEFILE && __USE_FILE_OFFSET64
-/* replace stat and seek by their large-file equivalents */
-#undef	stat
-#define	stat		_stati64
-
-#undef	lseek
-#define	lseek       _lseeki64
-#define	lseek64     _lseeki64
-#define	tell        _telli64
-#define	tell64      _telli64
-
-#ifdef __MINGW32__
-# define fseek      fseeko64
-# define fseeko     fseeko64
-# define ftell      ftello64
-# define ftello     ftello64
-# define ftell64    ftello64
-#endif /* __MINGW32__ */
-#endif /* LARGE_FILES */
-
-#ifdef USE_WINSOCK_TIMEVAL
-/* Winsock timeval has long size tv_sec. */
-#define __timeval timeval
-#else
-struct _timeval64i32 {
-	time_t		tv_sec;
-	long		tv_usec;
+struct ustat {
+	int64_t		st_atime;
+	uint32_t	st_atime_nsec;
+	int64_t		st_ctime;
+	uint32_t	st_ctime_nsec;
+	int64_t		st_mtime;
+	uint32_t	st_mtime_nsec;
+	gid_t		st_gid;
+	/* 64bits ino */
+	int64_t		st_ino;
+	mode_t		st_mode;
+	uint32_t	st_nlink;
+	uint64_t	st_size;
+	uid_t		st_uid;
+	dev_t		st_dev;
+	dev_t		st_rdev;
 };
-#define __timeval _timeval64i32
-#endif
 
-/* Message digest define */
+/* Local replacement for undocumented Windows CRT function. */
+static void la_dosmaperr(unsigned long e);
+
+/* Transform 64-bits ino into 32-bits by hashing.
+ * You do not forget that really unique number size is 64-bits.
+ */
+#define INOSIZE (8*sizeof(ino_t)) /* 32 */
+static __inline ino_t
+getino(struct ustat *ub)
+{
+	ULARGE_INTEGER ino64;
+	ino64.QuadPart = ub->st_ino;
+	/* I don't know this hashing is correct way */
+	return (ino64.LowPart ^ (ino64.LowPart >> INOSIZE));
+}
+
+/*
+ * Prepend "\\?\" to the path name and convert it to unicode to permit
+ * an extended-length path for a maximum total path length of 32767
+ * characters.
+ * see also http://msdn.microsoft.com/en-us/library/aa365247.aspx
+ */
+static wchar_t *
+permissive_name(const char *name)
+{
+	wchar_t *wn, *wnp;
+	wchar_t *ws, *wsp;
+	DWORD l, len, slen;
+	int unc;
+
+	len = (DWORD)strlen(name);
+	wn = malloc((len + 1) * sizeof(wchar_t));
+	if (wn == NULL)
+		return (NULL);
+	l = MultiByteToWideChar(CP_ACP, 0, name, (int)len, wn, (int)len);
+	if (l == 0) {
+		free(wn);
+		return (NULL);
+	}
+	wn[l] = L'\0';
+
+	/* Get a full path names */
+	l = GetFullPathNameW(wn, 0, NULL, NULL);
+	if (l == 0) {
+		free(wn);
+		return (NULL);
+	}
+	wnp = malloc(l * sizeof(wchar_t));
+	if (wnp == NULL) {
+		free(wn);
+		return (NULL);
+	}
+	len = GetFullPathNameW(wn, l, wnp, NULL);
+	free(wn);
+	wn = wnp;
+
+	if (wnp[0] == L'\\' && wnp[1] == L'\\' &&
+	    wnp[2] == L'?' && wnp[3] == L'\\')
+		/* We have already permissive names. */
+		return (wn);
+
+	if (wnp[0] == L'\\' && wnp[1] == L'\\' &&
+		wnp[2] == L'.' && wnp[3] == L'\\') {
+		/* Device names */
+		if (((wnp[4] >= L'a' && wnp[4] <= L'z') ||
+		     (wnp[4] >= L'A' && wnp[4] <= L'Z')) &&
+		    wnp[5] == L':' && wnp[6] == L'\\')
+			wnp[2] = L'?';/* Not device names. */
+		return (wn);
+	}
+
+	unc = 0;
+	if (wnp[0] == L'\\' && wnp[1] == L'\\' && wnp[2] != L'\\') {
+		wchar_t *p = &wnp[2];
+
+		/* Skip server-name letters. */
+		while (*p != L'\\' && *p != L'\0')
+			++p;
+		if (*p == L'\\') {
+			wchar_t *rp = ++p;
+			/* Skip share-name letters. */
+			while (*p != L'\\' && *p != L'\0')
+				++p;
+			if (*p == L'\\' && p != rp) {
+				/* Now, match patterns such as
+				 * "\\server-name\share-name\" */
+				wnp += 2;
+				len -= 2;
+				unc = 1;
+			}
+		}
+	}
+
+	slen = 4 + (unc * 4) + len + 1;
+	ws = wsp = malloc(slen * sizeof(wchar_t));
+	if (ws == NULL) {
+		free(wn);
+		return (NULL);
+	}
+	/* prepend "\\?\" */
+	wcsncpy(wsp, L"\\\\?\\", 4);
+	wsp += 4;
+	slen -= 4;
+	if (unc) {
+		/* append "UNC\" ---> "\\?\UNC\" */
+		wcsncpy(wsp, L"UNC\\", 4);
+		wsp += 4;
+		slen -= 4;
+	}
+	wcsncpy(wsp, wnp, slen);
+	wsp[slen - 1] = L'\0'; /* Ensure null termination. */
+	free(wn);
+	return (ws);
+}
+
+static HANDLE
+la_CreateFile(const char *path, DWORD dwDesiredAccess, DWORD dwShareMode,
+    LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition,
+    DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
+{
+	wchar_t *wpath;
+	HANDLE handle;
+
+	handle = CreateFileA(path, dwDesiredAccess, dwShareMode,
+	    lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes,
+	    hTemplateFile);
+	if (handle != INVALID_HANDLE_VALUE)
+		return (handle);
+	if (GetLastError() != ERROR_PATH_NOT_FOUND)
+		return (handle);
+	wpath = permissive_name(path);
+	if (wpath == NULL)
+		return (handle);
+	handle = CreateFileW(wpath, dwDesiredAccess, dwShareMode,
+	    lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes,
+	    hTemplateFile);
+	free(wpath);
+	return (handle);
+}
+
+static void *
+la_GetFunctionKernel32(const char *name)
+{
+	static HINSTANCE lib;
+	static int set;
+	if (!set) {
+		set = 1;
+		lib = LoadLibrary("kernel32.dll");
+	}
+	if (lib == NULL) {
+		fprintf(stderr, "Can't load kernel32.dll?!\n");
+		exit(1);
+	}
+	return (void *)GetProcAddress(lib, name);
+}
+
+static int
+la_CreateHardLinkW(wchar_t *linkname, wchar_t *target)
+{
+	static BOOLEAN (WINAPI *f)(LPWSTR, LPWSTR, LPSECURITY_ATTRIBUTES);
+	static int set;
+	if (!set) {
+		set = 1;
+		f = la_GetFunctionKernel32("CreateHardLinkW");
+	}
+	return f == NULL ? 0 : (*f)(linkname, target, NULL);
+}
+
+
+/* Make a link to src called dst.  */
+static int
+__link(const char *src, const char *dst)
+{
+	wchar_t *wsrc, *wdst;
+	int res, retval;
+	DWORD attr;
+
+	if (src == NULL || dst == NULL) {
+		set_errno (EINVAL);
+		return -1;
+	}
+
+	wsrc = permissive_name(src);
+	wdst = permissive_name(dst);
+	if (wsrc == NULL || wdst == NULL) {
+		free(wsrc);
+		free(wdst);
+		set_errno (EINVAL);
+		return -1;
+	}
+
+	if ((attr = GetFileAttributesW(wsrc)) != (DWORD)-1) {
+		res = la_CreateHardLinkW(wdst, wsrc);
+	} else {
+		/* wsrc does not exist; try src prepend it with the dirname of wdst */
+		wchar_t *wnewsrc, *slash;
+		int i, n, slen, wlen;
+
+		if (strlen(src) >= 3 && isalpha((unsigned char)src[0]) &&
+		    src[1] == ':' && src[2] == '\\') {
+			/* Original src name is already full-path */
+			retval = -1;
+			goto exit;
+		}
+		if (src[0] == '\\') {
+			/* Original src name is almost full-path
+			 * (maybe src name is without drive) */
+			retval = -1;
+			goto exit;
+		}
+
+		wnewsrc = malloc ((wcslen(wsrc) + wcslen(wdst) + 1) * sizeof(wchar_t));
+		if (wnewsrc == NULL) {
+			errno = ENOMEM;
+			retval = -1;
+			goto exit;
+		}
+		/* Copying a dirname of wdst */
+		wcscpy(wnewsrc, wdst);
+		slash = wcsrchr(wnewsrc, L'\\');
+		if (slash != NULL)
+			*++slash = L'\0';
+		else
+			wcscat(wnewsrc, L"\\");
+		/* Converting multi-byte src to wide-char src */
+		wlen = (int)wcslen(wsrc);
+		slen = (int)strlen(src);
+		n = MultiByteToWideChar(CP_ACP, 0, src, slen, wsrc, wlen);
+		if (n == 0) {
+			free (wnewsrc);
+			retval = -1;
+			goto exit;
+		}
+		for (i = 0; i < n; i++)
+			if (wsrc[i] == L'/')
+				wsrc[i] = L'\\';
+		wcsncat(wnewsrc, wsrc, n);
+		/* Check again */
+		attr = GetFileAttributesW(wnewsrc);
+		if (attr == (DWORD)-1 || (attr & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+			if (attr == (DWORD)-1)
+				la_dosmaperr(GetLastError());
+			else
+				errno = EPERM;
+			free (wnewsrc);
+			retval = -1;
+			goto exit;
+		}
+		res = la_CreateHardLinkW(wdst, wnewsrc);
+		free (wnewsrc);
+	}
+	if (res == 0) {
+		la_dosmaperr(GetLastError());
+		retval = -1;
+	} else
+		retval = 0;
+exit:
+	free(wsrc);
+	free(wdst);
+	return (retval);
+}
+
+/* Make a hard link to src called dst.  */
+int
+__la_link(const char *src, const char *dst)
+{
+	return __link(src, dst);
+}
+
+int
+__la_ftruncate(int fd, off_t length)
+{
+	LARGE_INTEGER distance;
+	HANDLE handle;
+
+	if (fd < 0) {
+		errno = EBADF;
+		return (-1);
+	}
+	handle = (HANDLE)_get_osfhandle(fd);
+	if (GetFileType(handle) != FILE_TYPE_DISK) {
+		errno = EBADF;
+		return (-1);
+	}
+	distance.QuadPart = length;
+	if (!SetFilePointerEx(handle, distance, NULL, FILE_BEGIN)) {
+		la_dosmaperr(GetLastError());
+		return (-1);
+	}
+	if (!SetEndOfFile(handle)) {
+		la_dosmaperr(GetLastError());
+		return (-1);
+	}
+	return (0);
+}
+
+#define WINTIME(sec, usec)	((Int32x32To64(sec, 10000000) + EPOC_TIME) + (usec * 10))
+static int
+__hutimes(HANDLE handle, const struct __timeval *times)
+{
+	ULARGE_INTEGER wintm;
+	FILETIME fatime, fmtime;
+
+	wintm.QuadPart = WINTIME(times[0].tv_sec, times[0].tv_usec);
+	fatime.dwLowDateTime = wintm.LowPart;
+	fatime.dwHighDateTime = wintm.HighPart;
+	wintm.QuadPart = WINTIME(times[1].tv_sec, times[1].tv_usec);
+	fmtime.dwLowDateTime = wintm.LowPart;
+	fmtime.dwHighDateTime = wintm.HighPart;
+	if (SetFileTime(handle, NULL, &fatime, &fmtime) == 0) {
+		errno = EINVAL;
+		return (-1);
+	}
+	return (0);
+}
+
+int
+__la_futimes(int fd, const struct __timeval *times)
+{
+
+	return (__hutimes((HANDLE)_get_osfhandle(fd), times));
+}
+
+int
+__la_utimes(const char *name, const struct __timeval *times)
+{
+	int ret;
+	HANDLE handle;
+
+	handle = la_CreateFile(name, GENERIC_READ | GENERIC_WRITE,
+	    FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
+	    FILE_FLAG_BACKUP_SEMANTICS, NULL);
+	if (handle == INVALID_HANDLE_VALUE) {
+		la_dosmaperr(GetLastError());
+		return (-1);
+	}
+	ret = __hutimes(handle, times);
+	CloseHandle(handle);
+	return (ret);
+}
+
+int
+__la_chdir(const char *path)
+{
+	wchar_t *ws;
+	int r;
+
+	r = SetCurrentDirectoryA(path);
+	if (r == 0) {
+		if (GetLastError() != ERROR_FILE_NOT_FOUND) {
+			la_dosmaperr(GetLastError());
+			return (-1);
+		}
+	} else
+		return (0);
+	ws = permissive_name(path);
+	if (ws == NULL) {
+		errno = EINVAL;
+		return (-1);
+	}
+	r = SetCurrentDirectoryW(ws);
+	free(ws);
+	if (r == 0) {
+		la_dosmaperr(GetLastError());
+		return (-1);
+	}
+	return (0);
+}
+
+int
+__la_chmod(const char *path, mode_t mode)
+{
+	wchar_t *ws;
+	DWORD attr;
+	BOOL r;
+
+	ws = NULL;
+	attr = GetFileAttributesA(path);
+	if (attr == (DWORD)-1) {
+		if (GetLastError() != ERROR_FILE_NOT_FOUND) {
+			la_dosmaperr(GetLastError());
+			return (-1);
+		}
+		ws = permissive_name(path);
+		if (ws == NULL) {
+			errno = EINVAL;
+			return (-1);
+		}
+		attr = GetFileAttributesW(ws);
+		if (attr == (DWORD)-1) {
+			free(ws);
+			la_dosmaperr(GetLastError());
+			return (-1);
+		}
+	}
+	if (mode & _S_IWRITE)
+		attr &= ~FILE_ATTRIBUTE_READONLY;
+	else
+		attr |= FILE_ATTRIBUTE_READONLY;
+	if (ws == NULL)
+		r = SetFileAttributesA(path, attr);
+	else {
+		r = SetFileAttributesW(ws, attr);
+		free(ws);
+	}
+	if (r == 0) {
+		la_dosmaperr(GetLastError());
+		return (-1);
+	}
+	return (0);
+}
+
+/*
+ * This fcntl is limited implemention.
+ */
+int
+__la_fcntl(int fd, int cmd, int val)
+{
+	HANDLE handle;
+
+	handle = (HANDLE)_get_osfhandle(fd);
+	if (GetFileType(handle) == FILE_TYPE_PIPE) {
+		if (cmd == F_SETFL && val == 0) {
+			DWORD mode = PIPE_WAIT;
+			if (SetNamedPipeHandleState(
+			    handle, &mode, NULL, NULL) != 0)
+				return (0);
+		}
+	}
+	errno = EINVAL;
+	return (-1);
+}
+
+__int64
+__la_lseek(int fd, __int64 offset, int whence)
+{
+	LARGE_INTEGER distance;
+	LARGE_INTEGER newpointer;
+	HANDLE handle;
+
+	if (fd < 0) {
+		errno = EBADF;
+		return (-1);
+	}
+	handle = (HANDLE)_get_osfhandle(fd);
+	if (GetFileType(handle) != FILE_TYPE_DISK) {
+		errno = EBADF;
+		return (-1);
+	}
+	distance.QuadPart = offset;
+	if (!SetFilePointerEx(handle, distance, &newpointer, whence)) {
+		DWORD lasterr;
+
+		lasterr = GetLastError();
+		if (lasterr == ERROR_BROKEN_PIPE)
+			return (0);
+		if (lasterr == ERROR_ACCESS_DENIED)
+			errno = EBADF;
+		else
+			la_dosmaperr(lasterr);
+		return (-1);
+	}
+	return (newpointer.QuadPart);
+}
+
+int
+__la_mkdir(const char *path, mode_t mode)
+{
+	wchar_t *ws;
+	int r;
+
+	(void)mode;/* UNUSED */
+	r = CreateDirectoryA(path, NULL);
+	if (r == 0) {
+		DWORD lasterr = GetLastError();
+		if (lasterr != ERROR_FILENAME_EXCED_RANGE &&
+			lasterr != ERROR_PATH_NOT_FOUND) {
+			la_dosmaperr(GetLastError());
+			return (-1);
+		}
+	} else
+		return (0);
+	ws = permissive_name(path);
+	if (ws == NULL) {
+		errno = EINVAL;
+		return (-1);
+	}
+	r = CreateDirectoryW(ws, NULL);
+	free(ws);
+	if (r == 0) {
+		la_dosmaperr(GetLastError());
+		return (-1);
+	}
+	return (0);
+}
+
+/* Windows' mbstowcs is differrent error handling from other unix mbstowcs.
+ * That one is using MultiByteToWideChar function with MB_PRECOMPOSED and
+ * MB_ERR_INVALID_CHARS flags.
+ * This implements for only to pass libtransform_test.
+ */
+size_t
+__la_mbstowcs(wchar_t *wcstr, const char *mbstr, size_t nwchars)
+{
+
+	return (MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS,
+	    mbstr, (int)strlen(mbstr), wcstr,
+	    (int)nwchars));
+}
+
+int
+__la_open(const char *path, int flags, ...)
+{
+	va_list ap;
+	wchar_t *ws;
+	int r, pmode;
+	DWORD attr;
+
+	va_start(ap, flags);
+	pmode = va_arg(ap, int);
+	va_end(ap);
+	ws = NULL;
+	if ((flags & ~O_BINARY) == O_RDONLY) {
+		/*
+		 * When we open a directory, _open function returns 
+		 * "Permission denied" error.
+		 */
+		attr = GetFileAttributesA(path);
+		if (attr == (DWORD)-1 && GetLastError() == ERROR_PATH_NOT_FOUND) {
+			ws = permissive_name(path);
+			if (ws == NULL) {
+				errno = EINVAL;
+				return (-1);
+			}
+			attr = GetFileAttributesW(ws);
+		}
+		if (attr == (DWORD)-1) {
+			la_dosmaperr(GetLastError());
+			free(ws);
+			return (-1);
+		}
+		if (attr & FILE_ATTRIBUTE_DIRECTORY) {
+			HANDLE handle;
+
+			if (ws != NULL)
+				handle = CreateFileW(ws, 0, 0, NULL,
+				    OPEN_EXISTING,
+				    FILE_FLAG_BACKUP_SEMANTICS |
+				    FILE_ATTRIBUTE_READONLY,
+					NULL);
+			else
+				handle = CreateFileA(path, 0, 0, NULL,
+				    OPEN_EXISTING,
+				    FILE_FLAG_BACKUP_SEMANTICS |
+				    FILE_ATTRIBUTE_READONLY,
+					NULL);
+			free(ws);
+			if (handle == INVALID_HANDLE_VALUE) {
+				la_dosmaperr(GetLastError());
+				return (-1);
+			}
+			r = _open_osfhandle((intptr_t)handle, _O_RDONLY);
+			return (r);
+		}
+	}
+	if (ws == NULL) {
+#if defined(__BORLANDC__)
+		/* Borland has no mode argument.
+		   TODO: Fix mode of new file.  */
+		r = _open(path, flags);
+#else
+		r = _open(path, flags, pmode);
+#endif
+		if (r < 0 && errno == EACCES && (flags & O_CREAT) != 0) {
+			/* simular other POSIX system action to pass a test */
+			attr = GetFileAttributesA(path);
+			if (attr == (DWORD)-1)
+				la_dosmaperr(GetLastError());
+			else if (attr & FILE_ATTRIBUTE_DIRECTORY)
+				errno = EISDIR;
+			else
+				errno = EACCES;
+			return (-1);
+		}
+		if (r >= 0 || errno != ENOENT)
+			return (r);
+		ws = permissive_name(path);
+		if (ws == NULL) {
+			errno = EINVAL;
+			return (-1);
+		}
+	}
+	r = _wopen(ws, flags, pmode);
+	if (r < 0 && errno == EACCES && (flags & O_CREAT) != 0) {
+		/* simular other POSIX system action to pass a test */
+		attr = GetFileAttributesW(ws);
+		if (attr == (DWORD)-1)
+			la_dosmaperr(GetLastError());
+		else if (attr & FILE_ATTRIBUTE_DIRECTORY)
+			errno = EISDIR;
+		else
+			errno = EACCES;
+	}
+	free(ws);
+	return (r);
+}
+
+ssize_t
+__la_read(int fd, void *buf, size_t nbytes)
+{
+	HANDLE handle;
+	DWORD bytes_read, lasterr;
+	int r;
+
+#ifdef _WIN64
+	if (nbytes > UINT32_MAX)
+		nbytes = UINT32_MAX;
+#endif
+	if (fd < 0) {
+		errno = EBADF;
+		return (-1);
+	}
+	handle = (HANDLE)_get_osfhandle(fd);
+	if (GetFileType(handle) == FILE_TYPE_PIPE) {
+		DWORD sta;
+		if (GetNamedPipeHandleState(
+		    handle, &sta, NULL, NULL, NULL, NULL, 0) != 0 &&
+		    (sta & PIPE_NOWAIT) == 0) {
+			DWORD avail = -1;
+			int cnt = 3;
+
+			while (PeekNamedPipe(
+			    handle, NULL, 0, NULL, &avail, NULL) != 0 &&
+			    avail == 0 && --cnt)
+				Sleep(100);
+			if (avail == 0)
+				return (0);
+		}
+	}
+	r = ReadFile(handle, buf, (uint32_t)nbytes,
+	    &bytes_read, NULL);
+	if (r == 0) {
+		lasterr = GetLastError();
+		if (lasterr == ERROR_NO_DATA) {
+			errno = EAGAIN;
+			return (-1);
+		}
+		if (lasterr == ERROR_BROKEN_PIPE)
+			return (0);
+		if (lasterr == ERROR_ACCESS_DENIED)
+			errno = EBADF;
+		else
+			la_dosmaperr(lasterr);
+		return (-1);
+	}
+	return ((ssize_t)bytes_read);
+}
+
+/* Remove directory */
+int
+__la_rmdir(const char *path)
+{
+	wchar_t *ws;
+	int r;
+
+	r = _rmdir(path);
+	if (r >= 0 || errno != ENOENT)
+		return (r);
+	ws = permissive_name(path);
+	if (ws == NULL) {
+		errno = EINVAL;
+		return (-1);
+	}
+	r = _wrmdir(ws);
+	free(ws);
+	return (r);
+}
+
+/* Convert Windows FILETIME to UTC */
+__inline static void
+fileTimeToUTC(const FILETIME *filetime, time_t *time, long *ns)
+{
+	ULARGE_INTEGER utc;
+
+	utc.HighPart = filetime->dwHighDateTime;
+	utc.LowPart  = filetime->dwLowDateTime;
+	if (utc.QuadPart >= EPOC_TIME) {
+		utc.QuadPart -= EPOC_TIME;
+		*time = (time_t)(utc.QuadPart / 10000000);	/* milli seconds base */
+		*ns = (long)(utc.QuadPart % 10000000) * 100;/* nano seconds base */
+	} else {
+		*time = 0;
+		*ns = 0;
+	}
+}
+
+/* Stat by handle
+ * Windows' stat() does not accept path which is added "\\?\" especially "?"
+ * character.
+ * It means we cannot access a long name path(which is longer than MAX_PATH).
+ * So I've implemented simular Windows' stat() to access the long name path.
+ * And I've added some feature.
+ * 1. set st_ino by nFileIndexHigh and nFileIndexLow of
+ *    BY_HANDLE_FILE_INFORMATION.
+ * 2. set st_nlink by nNumberOfLinks of BY_HANDLE_FILE_INFORMATION.
+ * 3. set st_dev by dwVolumeSerialNumber by BY_HANDLE_FILE_INFORMATION.
+ */
+static int
+__hstat(HANDLE handle, struct ustat *st)
+{
+	BY_HANDLE_FILE_INFORMATION info;
+	ULARGE_INTEGER ino64;
+	DWORD ftype;
+	mode_t mode;
+	time_t time;
+	long ns;
+
+	switch (ftype = GetFileType(handle)) {
+	case FILE_TYPE_UNKNOWN:
+		errno = EBADF;
+		return (-1);
+	case FILE_TYPE_CHAR:
+	case FILE_TYPE_PIPE:
+		if (ftype == FILE_TYPE_CHAR) {
+			st->st_mode = S_IFCHR;
+			st->st_size = 0;
+		} else {
+			DWORD avail;
+
+			st->st_mode = S_IFIFO;
+			if (PeekNamedPipe(handle, NULL, 0, NULL, &avail, NULL))
+				st->st_size = avail;
+			else
+				st->st_size = 0;
+		}
+		st->st_atime = 0;
+		st->st_atime_nsec = 0;
+		st->st_mtime = 0;
+		st->st_mtime_nsec = 0;
+		st->st_ctime = 0;
+		st->st_ctime_nsec = 0;
+		st->st_ino = 0;
+		st->st_nlink = 1;
+		st->st_uid = 0;
+		st->st_gid = 0;
+		st->st_rdev = 0;
+		st->st_dev = 0;
+		return (0);
+	case FILE_TYPE_DISK:
+		break;
+	default:
+		/* This ftype is undocumented type. */
+		la_dosmaperr(GetLastError());
+		return (-1);
+	}
+
+	ZeroMemory(&info, sizeof(info));
+	if (!GetFileInformationByHandle (handle, &info)) {
+		la_dosmaperr(GetLastError());
+		return (-1);
+	}
+
+	mode = S_IRUSR | S_IRGRP | S_IROTH;
+	if ((info.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0)
+		mode |= S_IWUSR | S_IWGRP | S_IWOTH;
+	if (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+		mode |= S_IFDIR | S_IXUSR | S_IXGRP | S_IXOTH;
+	else
+		mode |= S_IFREG;
+	st->st_mode = mode;
+	
+	fileTimeToUTC(&info.ftLastAccessTime, &time, &ns);
+	st->st_atime = time; 
+	st->st_atime_nsec = ns;
+	fileTimeToUTC(&info.ftLastWriteTime, &time, &ns);
+	st->st_mtime = time;
+	st->st_mtime_nsec = ns;
+	fileTimeToUTC(&info.ftCreationTime, &time, &ns);
+	st->st_ctime = time;
+	st->st_ctime_nsec = ns;
+	st->st_size = 
+	    ((int64_t)(info.nFileSizeHigh) * ((int64_t)MAXDWORD + 1))
+		+ (int64_t)(info.nFileSizeLow);
+#ifdef SIMULATE_WIN_STAT
+	st->st_ino = 0;
+	st->st_nlink = 1;
+	st->st_dev = 0;
+#else
+	/* Getting FileIndex as i-node. We have to remove a sequence which
+	 * is high-16-bits of nFileIndexHigh. */
+	ino64.HighPart = info.nFileIndexHigh & 0x0000FFFFUL;
+	ino64.LowPart  = info.nFileIndexLow;
+	st->st_ino = ino64.QuadPart;
+	st->st_nlink = info.nNumberOfLinks;
+	if (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+		++st->st_nlink;/* Add parent directory. */
+	st->st_dev = info.dwVolumeSerialNumber;
+#endif
+	st->st_uid = 0;
+	st->st_gid = 0;
+	st->st_rdev = 0;
+	return (0);
+}
+
+static void
+copy_stat(struct stat *st, struct ustat *us)
+{
+	st->st_atime = us->st_atime;
+	st->st_ctime = us->st_ctime;
+	st->st_mtime = us->st_mtime;
+	st->st_gid = us->st_gid;
+	st->st_ino = getino(us);
+	st->st_mode = us->st_mode;
+	st->st_nlink = us->st_nlink;
+	st->st_size = us->st_size;
+	st->st_uid = us->st_uid;
+	st->st_dev = us->st_dev;
+	st->st_rdev = us->st_rdev;
+}
+
+int
+__la_fstat(int fd, struct stat *st)
+{
+	struct ustat u;
+	int ret;
+
+	if (fd < 0) {
+		errno = EBADF;
+		return (-1);
+	}
+	ret = __hstat((HANDLE)_get_osfhandle(fd), &u);
+	if (ret >= 0) {
+		copy_stat(st, &u);
+		if (u.st_mode & (S_IFCHR | S_IFIFO)) {
+			st->st_dev = fd;
+			st->st_rdev = fd;
+		}
+	}
+	return (ret);
+}
+
+int
+__la_stat(const char *path, struct stat *st)
+{
+	HANDLE handle;
+	struct ustat u;
+	int ret;
+
+	handle = la_CreateFile(path, 0, 0, NULL, OPEN_EXISTING,
+		FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_READONLY,
+		NULL);
+	if (handle == INVALID_HANDLE_VALUE) {
+		la_dosmaperr(GetLastError());
+		return (-1);
+	}
+	ret = __hstat(handle, &u);
+	CloseHandle(handle);
+	if (ret >= 0) {
+		char *p;
+
+		copy_stat(st, &u);
+		p = strrchr(path, '.');
+		if (p != NULL && strlen(p) == 4) {
+			char exttype[4];
+
+			++ p;
+			exttype[0] = toupper(*p++);
+			exttype[1] = toupper(*p++);
+			exttype[2] = toupper(*p++);
+			exttype[3] = '\0';
+			if (!strcmp(exttype, "EXE") || !strcmp(exttype, "CMD") ||
+				!strcmp(exttype, "BAT") || !strcmp(exttype, "COM"))
+				st->st_mode |= S_IXUSR | S_IXGRP | S_IXOTH;
+		}
+	}
+	return (ret);
+}
+
+int
+__la_unlink(const char *path)
+{
+	wchar_t *ws;
+	int r;
+
+	r = _unlink(path);
+	if (r >= 0 || errno != ENOENT)
+		return (r);
+	ws = permissive_name(path);
+	if (ws == NULL) {
+		errno = EINVAL;
+		return (-1);
+	}
+	r = _wunlink(ws);
+	free(ws);
+	return (r);
+}
+
+/*
+ * This waitpid is limited implemention.
+ */
+pid_t
+__la_waitpid(pid_t wpid, int *status, int option)
+{
+	HANDLE child;
+	DWORD cs, ret;
+
+	(void)option;/* UNUSED */
+	child = OpenProcess(PROCESS_QUERY_INFORMATION | SYNCHRONIZE, FALSE, wpid);
+	if (child == NULL) {
+		la_dosmaperr(GetLastError());
+		return (-1);
+	}
+	ret = WaitForSingleObject(child, INFINITE);
+	if (ret == WAIT_FAILED) {
+		CloseHandle(child);
+		la_dosmaperr(GetLastError());
+		return (-1);
+	}
+	if (GetExitCodeProcess(child, &cs) == 0) {
+		CloseHandle(child);
+		la_dosmaperr(GetLastError());
+		return (-1);
+	}
+	if (cs == STILL_ACTIVE)
+		*status = 0x100;
+	else
+		*status = (int)(cs & 0xff);
+	CloseHandle(child);
+	return (wpid);
+}
+
+ssize_t
+__la_write(int fd, const void *buf, size_t nbytes)
+{
+	DWORD bytes_written;
+
+#ifdef _WIN64
+	if (nbytes > UINT32_MAX)
+		nbytes = UINT32_MAX;
+#endif
+	if (fd < 0) {
+		errno = EBADF;
+		return (-1);
+	}
+	if (!WriteFile((HANDLE)_get_osfhandle(fd), buf, (uint32_t)nbytes,
+	    &bytes_written, NULL)) {
+		DWORD lasterr;
+
+		lasterr = GetLastError();
+		if (lasterr == ERROR_ACCESS_DENIED)
+			errno = EBADF;
+		else
+			la_dosmaperr(lasterr);
+		return (-1);
+	}
+	return (bytes_written);
+}
+
+/*
+ * The following function was modified from PostgreSQL sources and is
+ * subject to the copyright below.
+ */
+/*-------------------------------------------------------------------------
+ *
+ * win32error.c
+ *	  Map win32 error codes to errno values
+ *
+ * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ *
+ * IDENTIFICATION
+ *	  $PostgreSQL: pgsql/src/port/win32error.c,v 1.4 2008/01/01 19:46:00 momjian Exp $
+ *
+ *-------------------------------------------------------------------------
+ */
+/*
+PostgreSQL Database Management System
+(formerly known as Postgres, then as Postgres95)
+
+Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+
+Portions Copyright (c) 1994, The Regents of the University of California
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose, without fee, and without a written agreement
+is hereby granted, provided that the above copyright notice and this
+paragraph and the following two paragraphs appear in all copies.
+
+IN NO EVENT SHALL THE UNIVERSITY OF CALIFORNIA BE LIABLE TO ANY PARTY FOR
+DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING
+LOST PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS
+DOCUMENTATION, EVEN IF THE UNIVERSITY OF CALIFORNIA HAS BEEN ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+THE UNIVERSITY OF CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS
+ON AN "AS IS" BASIS, AND THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATIONS TO
+PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+*/
+
+static const struct {
+	DWORD		winerr;
+	int		doserr;
+} doserrors[] =
+{
+	{	ERROR_INVALID_FUNCTION, EINVAL	},
+	{	ERROR_FILE_NOT_FOUND, ENOENT	},
+	{	ERROR_PATH_NOT_FOUND, ENOENT	},
+	{	ERROR_TOO_MANY_OPEN_FILES, EMFILE	},
+	{	ERROR_ACCESS_DENIED, EACCES	},
+	{	ERROR_INVALID_HANDLE, EBADF	},
+	{	ERROR_ARENA_TRASHED, ENOMEM	},
+	{	ERROR_NOT_ENOUGH_MEMORY, ENOMEM	},
+	{	ERROR_INVALID_BLOCK, ENOMEM	},
+	{	ERROR_BAD_ENVIRONMENT, E2BIG	},
+	{	ERROR_BAD_FORMAT, ENOEXEC	},
+	{	ERROR_INVALID_ACCESS, EINVAL	},
+	{	ERROR_INVALID_DATA, EINVAL	},
+	{	ERROR_INVALID_DRIVE, ENOENT	},
+	{	ERROR_CURRENT_DIRECTORY, EACCES	},
+	{	ERROR_NOT_SAME_DEVICE, EXDEV	},
+	{	ERROR_NO_MORE_FILES, ENOENT	},
+	{	ERROR_LOCK_VIOLATION, EACCES	},
+	{	ERROR_SHARING_VIOLATION, EACCES	},
+	{	ERROR_BAD_NETPATH, ENOENT	},
+	{	ERROR_NETWORK_ACCESS_DENIED, EACCES	},
+	{	ERROR_BAD_NET_NAME, ENOENT	},
+	{	ERROR_FILE_EXISTS, EEXIST	},
+	{	ERROR_CANNOT_MAKE, EACCES	},
+	{	ERROR_FAIL_I24, EACCES	},
+	{	ERROR_INVALID_PARAMETER, EINVAL	},
+	{	ERROR_NO_PROC_SLOTS, EAGAIN	},
+	{	ERROR_DRIVE_LOCKED, EACCES	},
+	{	ERROR_BROKEN_PIPE, EPIPE	},
+	{	ERROR_DISK_FULL, ENOSPC	},
+	{	ERROR_INVALID_TARGET_HANDLE, EBADF	},
+	{	ERROR_INVALID_HANDLE, EINVAL	},
+	{	ERROR_WAIT_NO_CHILDREN, ECHILD	},
+	{	ERROR_CHILD_NOT_COMPLETE, ECHILD	},
+	{	ERROR_DIRECT_ACCESS_HANDLE, EBADF	},
+	{	ERROR_NEGATIVE_SEEK, EINVAL	},
+	{	ERROR_SEEK_ON_DEVICE, EACCES	},
+	{	ERROR_DIR_NOT_EMPTY, ENOTEMPTY	},
+	{	ERROR_NOT_LOCKED, EACCES	},
+	{	ERROR_BAD_PATHNAME, ENOENT	},
+	{	ERROR_MAX_THRDS_REACHED, EAGAIN	},
+	{	ERROR_LOCK_FAILED, EACCES	},
+	{	ERROR_ALREADY_EXISTS, EEXIST	},
+	{	ERROR_FILENAME_EXCED_RANGE, ENOENT	},
+	{	ERROR_NESTING_NOT_ALLOWED, EAGAIN	},
+	{	ERROR_NOT_ENOUGH_QUOTA, ENOMEM	}
+};
+
+static void
+la_dosmaperr(unsigned long e)
+{
+	int			i;
+
+	if (e == 0)
+	{
+		errno = 0;
+		return;
+	}
+
+	for (i = 0; i < sizeof(doserrors); i++)
+	{
+		if (doserrors[i].winerr == e)
+		{
+			errno = doserrors[i].doserr;
+			return;
+		}
+	}
+
+	/* fprintf(stderr, "unrecognized win32 error code: %lu", e); */
+	errno = EINVAL;
+	return;
+}
+
 #if !defined(HAVE_OPENSSL_MD5_H) && !defined(HAVE_OPENSSL_SHA_H)
-# if defined(_MSC_VER) && _MSC_VER < 1300
-#  define _WIN32_WINNT 0x0400
-# endif
-#include <wincrypt.h>
-typedef struct {
-	int		valid;
-	HCRYPTPROV cryptProv;
-	HCRYPTHASH hash;
-} Digest_CTX;
-#endif
+/*
+ * Message digest functions.
+ */
+static void
+Digest_Init(Digest_CTX *ctx, ALG_ID algId)
+{
 
-#if !defined(HAVE_OPENSSL_MD5_H) && defined(CALG_MD5)
-#define MD5_DIGEST_LENGTH	16
-#define HAVE_MD5 1
-#define MD5_CTX Digest_CTX
-#endif
-#ifndef HAVE_OPENSSL_SHA_H
-#ifdef CALG_SHA1
-#define SHA1_DIGEST_LENGTH	20
-#define HAVE_SHA1 1
-#define SHA1_CTX Digest_CTX
-#endif
+	ctx->valid = 0;
+	if (!CryptAcquireContext(&ctx->cryptProv, NULL, NULL,
+	    PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
+		if (GetLastError() != (DWORD)NTE_BAD_KEYSET)
+			return;
+		if (!CryptAcquireContext(&ctx->cryptProv, NULL, NULL,
+		    PROV_RSA_FULL, CRYPT_NEWKEYSET))
+			return;
+	}
+
+	if (!CryptCreateHash(ctx->cryptProv, algId, 0, 0, &ctx->hash)) {
+		CryptReleaseContext(ctx->cryptProv, 0);
+		return;
+	}
+
+	ctx->valid = 1;
+}
+
+static void
+Digest_Update(Digest_CTX *ctx, const unsigned char *buf, size_t len)
+{
+
+	if (!ctx->valid)
+	return;
+
+	CryptHashData(ctx->hash,
+		      (unsigned char *)(uintptr_t)buf,
+		      (DWORD)len, 0);
+}
+
+static void
+Digest_Final(unsigned char *buf, int bufsize, Digest_CTX *ctx)
+{
+	DWORD siglen = bufsize;
+
+	if (!ctx->valid)
+		return;
+
+	CryptGetHashParam(ctx->hash, HP_HASHVAL, buf, &siglen, 0);
+	CryptDestroyHash(ctx->hash);
+	CryptReleaseContext(ctx->cryptProv, 0);
+	ctx->valid = 0;
+}
+
+#define DIGEST_INIT(name, algid) \
+void name ## _Init(Digest_CTX *ctx)\
+{\
+	Digest_Init(ctx, algid);\
+}
+
+#define DIGEST_UPDATE(name) \
+void name ## _Update(Digest_CTX *ctx, const unsigned char *buf, size_t len)\
+{\
+	Digest_Update(ctx, buf, len);\
+}
+
+#define DIGEST_FINAL(name, size) \
+void name ## _Final(unsigned char *buf, Digest_CTX *ctx)\
+{\
+	Digest_Final(buf, size, ctx);\
+}
+
+DIGEST_INIT(MD5, CALG_MD5)
+DIGEST_UPDATE(MD5)
+DIGEST_FINAL(MD5, MD5_DIGEST_LENGTH)
+
+DIGEST_INIT(SHA1, CALG_SHA1)
+DIGEST_UPDATE(SHA1)
+DIGEST_FINAL(SHA1, SHA1_DIGEST_LENGTH)
+
+/*
+ * SHA256 nor SHA384 nor SHA512 are not supported on Windows XP and Windows 2000.
+ */
 #ifdef CALG_SHA_256
-#define SHA256_DIGEST_LENGTH	32
-#define HAVE_SHA256 1
-#define SHA256_CTX Digest_CTX
+DIGEST_INIT(SHA256, CALG_SHA_256)
+DIGEST_UPDATE(SHA256)
+DIGEST_FINAL(SHA256, SHA256_DIGEST_LENGTH)
 #endif
+
 #ifdef CALG_SHA_384
-#define SHA384_DIGEST_LENGTH	48
-#define HAVE_SHA384 1
-#define SHA384_CTX Digest_CTX
+DIGEST_INIT(SHA384, CALG_SHA_384)
+DIGEST_UPDATE(SHA384)
+DIGEST_FINAL(SHA384, SHA384_DIGEST_LENGTH)
 #endif
+
 #ifdef CALG_SHA_512
-#define SHA512_DIGEST_LENGTH	64
-#define HAVE_SHA512 1
-#define SHA512_CTX Digest_CTX
-#endif
-#endif /* HAVE_OPENSSL_SHA_H */
-
-/* End of Win32 definitions. */
-
-/* Tell libarchive code that we have simulations for these. */
-#ifndef HAVE_FTRUNCATE
-#define HAVE_FTRUNCATE 1
-#endif
-#ifndef HAVE_FUTIMES
-#define HAVE_FUTIMES 1
-#endif
-#ifndef HAVE_UTIMES
-#define HAVE_UTIMES 1
-#endif
-#ifndef HAVE_LINK
-#define HAVE_LINK 1
+DIGEST_INIT(SHA512, CALG_SHA_512)
+DIGEST_UPDATE(SHA512)
+DIGEST_FINAL(SHA512, SHA384_DIGEST_LENGTH)
 #endif
 
-/* Replacement POSIX function */
-extern int	 __la_chdir(const char *path);
-extern int	 __la_chmod(const char *path, mode_t mode);
-extern int	 __la_fcntl(int fd, int cmd, int val);
-extern int	 __la_fstat(int fd, struct stat *st);
-extern int	 __la_ftruncate(int fd, off_t length);
-extern int	 __la_futimes(int fd, const struct __timeval *times);
-extern int	 __la_link(const char *src, const char *dst);
-extern __int64	 __la_lseek(int fd, __int64 offset, int whence);
-extern size_t	 __la_mbstowcs(wchar_t *wcstr, const char *mbstr, size_t nwchars);
-extern int	 __la_mkdir(const char *path, mode_t mode);
-extern int	 __la_mkstemp(char *template);
-extern int	 __la_open(const char *path, int flags, ...);
-extern ssize_t	 __la_read(int fd, void *buf, size_t nbytes);
-extern int	 __la_rmdir(const char *path);
-extern int	 __la_stat(const char *path, struct stat *st);
-extern int	 __la_unlink(const char *path);
-extern int	 __la_utimes(const char *name, const struct __timeval *times);
-extern pid_t	 __la_waitpid(pid_t wpid, int *status, int option);
-extern ssize_t	 __la_write(int fd, const void *buf, size_t nbytes);
+#endif /* !HAVE_OPENSSL_MD5_H && !HAVE_OPENSSL_SHA_H */
 
-#define _stat64i32(path, st)	__la_stat(path, st)
-#define _stat64(path, st)	__la_stat(path, st)
-/* for status returned by la_waitpid */
-#define WIFEXITED(sts)		((sts & 0x100) == 0)
-#define WEXITSTATUS(sts)	(sts & 0x0FF)
+/*
+ * Create a temporary file.
+ *
+ * Do not use Windows tmpfile() function.
+ * It will make a temporary file under the root directory
+ * and it'll cause permission error if a user who is
+ * non-Administrator creates temporary files.
+ * Also Windows version of mktemp family including _mktemp_s
+ * are not secure.
+ */
+int
+__archive_mktemp(const char *tmpdir)
+{
+	static const char num[] = {
+		'0', '1', '2', '3', '4', '5', '6', '7',
+		'8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+		'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+		'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
+		'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd',
+		'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+		'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+		'u', 'v', 'w', 'x', 'y', 'z'
+	};
+	HCRYPTPROV hProv;
+	struct archive_string temp_name;
+	wchar_t *ws;
+	DWORD attr;
+	BYTE *xp, *ep;
+	int fd;
 
-/* Message digest function */
-#if !defined(HAVE_OPENSSL_MD5_H) && !defined(HAVE_OPENSSL_SHA_H)
-#ifdef MD5_DIGEST_LENGTH
-extern void	 MD5_Init(Digest_CTX *ctx);
-extern void	 MD5_Update(Digest_CTX *ctx, const unsigned char *buf,
-		     size_t len);
-extern void	 MD5_Final(unsigned char *buf, Digest_CTX *ctx);
-#endif
-#ifdef SHA1_DIGEST_LENGTH
-extern void	 SHA1_Init(Digest_CTX *ctx);
-extern void	 SHA1_Update(Digest_CTX *ctx, const unsigned char *buf,
-		     size_t len);
-extern void	 SHA1_Final(unsigned char *buf, Digest_CTX *ctx);
-#endif
-#ifdef SHA256_DIGEST_LENGTH
-extern void	 SHA256_Init(Digest_CTX *ctx);
-extern void	 SHA256_Update(Digest_CTX *ctx, const unsigned char *buf,
-		     size_t len);
-extern void	 SHA256_Final(unsigned char *buf, Digest_CTX *ctx);
-#endif
-#ifdef SHA384_DIGEST_LENGTH
-extern void	 SHA384_Init(Digest_CTX *ctx);
-extern void	 SHA384_Update(Digest_CTX *ctx, const unsigned char *buf,
-		     size_t len);
-extern void	 SHA384_Final(unsigned char *buf, Digest_CTX *ctx);
-#endif
-#ifdef SHA512_DIGEST_LENGTH
-extern void	 SHA512_Init(Digest_CTX *ctx);
-extern void	 SHA512_Update(Digest_CTX *ctx, const unsigned char *buf,
-		     size_t len);
-extern void	 SHA512_Final(unsigned char *buf, Digest_CTX *ctx);
-#endif
-#endif
+	hProv = (HCRYPTPROV)NULL;
+	fd = -1;
+	ws = NULL;
+	archive_string_init(&temp_name);
 
-#endif /* LIBARCHIVE_ARCHIVE_WINDOWS_H_INCLUDED */
+	/* Get a temporary directory. */
+	if (tmpdir == NULL) {
+		size_t l;
+		char *tmp;
+
+		l = GetTempPathA(0, NULL);
+		if (l == 0) {
+			la_dosmaperr(GetLastError());
+			goto exit_tmpfile;
+		}
+		tmp = malloc(l);
+		if (tmp == NULL) {
+			errno = ENOMEM;
+			goto exit_tmpfile;
+		}
+		GetTempPathA(l, tmp);
+		archive_strcpy(&temp_name, tmp);
+		free(tmp);
+	} else {
+		archive_strcpy(&temp_name, tmpdir);
+		if (temp_name.s[temp_name.length-1] != '/')
+			archive_strappend_char(&temp_name, '/');
+	}
+
+	/* Check if temp_name is a directory. */
+	attr = GetFileAttributesA(temp_name.s);
+	if (attr == (DWORD)-1) {
+		if (GetLastError() != ERROR_FILE_NOT_FOUND) {
+			la_dosmaperr(GetLastError());
+			goto exit_tmpfile;
+		}
+		ws = permissive_name(temp_name.s);
+		if (ws == NULL) {
+			errno = EINVAL;
+			goto exit_tmpfile;
+		}
+		attr = GetFileAttributesW(ws);
+		if (attr == (DWORD)-1) {
+			la_dosmaperr(GetLastError());
+			goto exit_tmpfile;
+		}
+	}
+	if (!(attr & FILE_ATTRIBUTE_DIRECTORY)) {
+		errno = ENOTDIR;
+		goto exit_tmpfile;
+	}
+
+	/*
+	 * Create a temporary file.
+	 */
+	archive_strcat(&temp_name, "libarchive_");
+	xp = temp_name.s + archive_strlen(&temp_name);
+	archive_strcat(&temp_name, "XXXXXXXXXX");
+	ep = temp_name.s + archive_strlen(&temp_name);
+
+	if (!CryptAcquireContext(&hProv, NULL, NULL, PROV_RSA_FULL,
+		CRYPT_VERIFYCONTEXT)) {
+		la_dosmaperr(GetLastError());
+		goto exit_tmpfile;
+	}
+
+	for (;;) {
+		BYTE *p;
+		HANDLE h;
+
+		/* Generate a random file name through CryptGenRandom(). */
+		p = xp;
+		if (!CryptGenRandom(hProv, ep - p, p)) {
+			la_dosmaperr(GetLastError());
+			goto exit_tmpfile;
+		}
+		for (; p < ep; p++)
+			*p = num[*p % sizeof(num)];
+
+		free(ws);
+		ws = permissive_name(temp_name.s);
+		if (ws == NULL) {
+			errno = EINVAL;
+			goto exit_tmpfile;
+		}
+		/* Specifies FILE_FLAG_DELETE_ON_CLOSE flag is to
+		 * delete this temporary file immediately when this
+		 * file closed. */
+		h = CreateFileW(ws,
+		    GENERIC_READ | GENERIC_WRITE | DELETE,
+		    0,/* Not share */
+		    NULL,
+		    CREATE_NEW,/* Create a new file only */
+		    FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE,
+		    NULL);
+		if (h == INVALID_HANDLE_VALUE) {
+			/* The same file already exists. retry with
+			 * a new filename. */
+			if (GetLastError() == ERROR_FILE_EXISTS)
+				continue;
+			/* Otherwise, fail creation temporary file. */
+			la_dosmaperr(GetLastError());
+			goto exit_tmpfile;
+		}
+		fd = _open_osfhandle((intptr_t)h, _O_BINARY | _O_RDWR);
+		if (fd == -1) {
+			CloseHandle(h);
+			goto exit_tmpfile;
+		} else
+			break;/* success! */
+	}
+exit_tmpfile:
+	if (hProv != (HCRYPTPROV)NULL)
+		CryptReleaseContext(hProv, 0);
+	free(ws);
+	archive_string_free(&temp_name);
+	return (fd);
+}
+
+#endif /* _WIN32 && !__CYGWIN__ */

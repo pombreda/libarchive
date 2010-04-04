@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
+#include "transform_platform.h"
 __FBSDID("$FreeBSD: head/lib/libarchive/archive_check_magic.c 201089 2009-12-28 02:20:23Z kientzle $");
 
 #ifdef HAVE_SYS_TYPES_H
@@ -45,7 +45,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_check_magic.c 201089 2009-12-28 
 #include <winbase.h>
 #endif
 
-#include "archive_private.h"
+#include "transform_private.h"
 
 static void
 errmsg(const char *m)

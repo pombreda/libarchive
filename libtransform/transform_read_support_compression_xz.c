@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
+#include "transform_platform.h"
 
 __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_xz.c 201167 2009-12-29 06:06:20Z kientzle $");
 
@@ -48,8 +48,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_xz.c 20
 #endif
 
 #include "transform.h"
-#include "archive_endian.h"
-#include "archive_private.h"
+#include "transform_endian.h"
+#include "transform_private.h"
 #include "transform_read_private.h"
 
 #if HAVE_LZMA_H && HAVE_LIBLZMA

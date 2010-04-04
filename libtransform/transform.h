@@ -30,7 +30,7 @@
 
 /*
  * Note: transform.h is for use outside of libarchive; the configuration
- * headers (config.h, archive_platform.h, etc.) are purely internal.
+ * headers (config.h, transform_platform.h, etc.) are purely internal.
  * Do NOT use HAVE_XXX configuration macros to control the behavior of
  * this header!  If you must conditionalize, use predefined compiler and/or
  * platform macros.
@@ -184,7 +184,7 @@ struct archive_entry;
 /*
  * As far as possible, archive_errno returns standard platform errno codes.
  * Of course, the details vary by platform, so the actual definitions
- * here are stored in "archive_platform.h".  The symbols are listed here
+ * here are stored in "transform_platform.h".  The symbols are listed here
  * for reference; as a rule, clients should not need to know the exact
  * platform-dependent error code.
  */

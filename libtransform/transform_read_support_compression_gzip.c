@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
+#include "transform_platform.h"
 
 __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_gzip.c 201082 2009-12-28 02:05:28Z kientzle $");
 
@@ -45,7 +45,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_gzip.c 
 #endif
 
 #include "transform.h"
-#include "archive_private.h"
+#include "transform_private.h"
 #include "transform_read_private.h"
 
 #ifdef HAVE_ZLIB_H

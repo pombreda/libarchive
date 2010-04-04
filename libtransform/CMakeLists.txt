@@ -14,7 +14,7 @@ SET(include_HEADERS
 # Sources and private headers
 SET(libarchive_SOURCES
   archive_check_magic.c
-  archive_endian.h
+  transform_endian.h
   archive_entry.c
   archive_entry.h
   archive_entry_copy_stat.c
@@ -24,9 +24,9 @@ SET(libarchive_SOURCES
   archive_entry_stat.c
   archive_entry_strmode.c
   archive_entry_xattr.c
-  archive_hash.h
-  archive_platform.h
-  archive_private.h
+  transform_hash.h
+  transform_platform.h
+  transform_private.h
   archive_read.c
   transform_read_data_into_fd.c
   transform_read_disk.c
@@ -59,7 +59,7 @@ SET(libarchive_SOURCES
   transform_read_support_format_xar.c
   transform_read_support_format_zip.c
   archive_string.c
-  archive_string.h
+  transform_string.h
   archive_string_sprintf.c
   archive_util.c
   archive_virtual.c
@@ -120,7 +120,7 @@ SET(libarchive_MANS
 IF(WIN32 AND NOT CYGWIN)
   LIST(APPEND libarchive_SOURCES archive_entry_copy_bhfi.c)
   LIST(APPEND libarchive_SOURCES archive_windows.c)
-  LIST(APPEND libarchive_SOURCES archive_windows.h)
+  LIST(APPEND libarchive_SOURCES transform_windows.h)
   LIST(APPEND libarchive_SOURCES filter_fork_windows.c)
 ENDIF(WIN32 AND NOT CYGWIN)
 

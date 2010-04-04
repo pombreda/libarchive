@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
+#include "transform_platform.h"
 __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_all.c 201248 2009-12-30 06:12:03Z kientzle $");
 
 #include "transform.h"

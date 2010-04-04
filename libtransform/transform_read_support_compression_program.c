@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
+#include "transform_platform.h"
 __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_program.c 201112 2009-12-28 06:59:35Z kientzle $");
 
 #ifdef HAVE_SYS_WAIT_H
@@ -52,7 +52,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_program
 #endif
 
 #include "transform.h"
-#include "archive_private.h"
+#include "transform_private.h"
 #include "transform_read_private.h"
 
 int

@@ -114,8 +114,8 @@ libtransform_man_MANS=						\
 # Additional libtransform files to include in the distribution
 libtransform_EXTRA_DIST=			\
 	libtransform/test/list.h		\
-	libtransform/archive_windows.c	\
-	libtransform/archive_windows.h	\
+	libtransform/transform_windows.c	\
+	libtransform/transform_windows.h	\
 	libtransform/filter_fork_windows.c	\
 	libtransform/CMakeLists.txt	\
 	$(libtransform_man_MANS)

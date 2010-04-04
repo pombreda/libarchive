@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
+#include "transform_platform.h"
 __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_uu.c 201248 2009-12-30 06:12:03Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
@@ -37,7 +37,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_uu.c 20
 #endif
 
 #include "transform.h"
-#include "archive_private.h"
+#include "transform_private.h"
 #include "transform_read_private.h"
 
 struct uudecode {

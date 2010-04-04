@@ -63,7 +63,7 @@
  */
 
 
-#include "archive_platform.h"
+#include "transform_platform.h"
 __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_compress.c 201094 2009-12-28 02:29:21Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
@@ -80,7 +80,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_compres
 #endif
 
 #include "transform.h"
-#include "archive_private.h"
+#include "transform_private.h"
 #include "transform_read_private.h"
 
 /*

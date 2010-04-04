@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
+#include "transform_platform.h"
 __FBSDID("$FreeBSD: head/lib/libarchive/archive_string_sprintf.c 189435 2009-03-06 05:14:55Z kientzle $");
 
 /*
@@ -41,8 +41,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_string_sprintf.c 189435 2009-03-
 
 #include <stdio.h>
 
-#include "archive_string.h"
-#include "archive_private.h"
+#include "transform_string.h"
+#include "transform_private.h"
 
 /*
  * Utility functions to format signed/unsigned integers and append

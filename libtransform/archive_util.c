@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
+#include "transform_platform.h"
 __FBSDID("$FreeBSD: head/lib/libarchive/archive_util.c 201098 2009-12-28 02:58:14Z kientzle $");
 
 #ifdef HAVE_SYS_TYPES_H
@@ -44,8 +44,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_util.c 201098 2009-12-28 02:58:1
 #endif
 
 #include "transform.h"
-#include "archive_private.h"
-#include "archive_string.h"
+#include "transform_private.h"
+#include "transform_string.h"
 
 #if ARCHIVE_VERSION_NUMBER < 3000000
 /* These disappear in libarchive 3.0 */

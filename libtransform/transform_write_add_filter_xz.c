@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
+#include "transform_platform.h"
 
 __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_compression_xz.c 201108 2009-12-28 03:28:21Z kientzle $");
 
@@ -43,7 +43,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_compression_xz.c 20110
 #endif
 
 #include "transform.h"
-#include "archive_private.h"
+#include "transform_private.h"
 #include "transform_write_private.h"
 
 #if ARCHIVE_VERSION_NUMBER < 4000000

@@ -23,12 +23,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
+#include "transform_platform.h"
 __FBSDID("$FreeBSD: head/lib/libarchive/archive_virtual.c 201098 2009-12-28 02:58:14Z kientzle $");
 
 #include "transform.h"
 #include "archive_entry.h"
-#include "archive_private.h"
+#include "transform_private.h"
 
 int
 archive_filter_code(struct archive *a, int n)
