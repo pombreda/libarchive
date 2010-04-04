@@ -27,9 +27,11 @@ class mysdist(sdist.sdist):
         ('no-changelog', None, 'do not create the ChangeLog file'),
         ]
 
-    boolean_options = sdist.sdist.boolean_options + ['changelog']
+    #boolean_options = sdist.sdist.boolean_options + ['changelog']
+    boolean_options = sdist.sdist.boolean_options[:]
 
-    negative_opt = {'no-changelog': 'changelog'}
+    #negative_opt = {'no-changelog': 'changelog'}
+    negative_opt = {}
     negative_opt.update(sdist.sdist.negative_opt)
 
     default_format = dict(sdist.sdist.default_format)
@@ -37,7 +39,8 @@ class mysdist(sdist.sdist):
 
     def initialize_options(self):
         sdist.sdist.initialize_options(self)
-        self.changelog = True
+        #self.changelog = True
+        self.changelog = False
 
     def get_file_list(self):
         """Get a filelist without doing anything involving MANIFEST files."""
@@ -88,12 +91,12 @@ class mysdist(sdist.sdist):
                 [bzrbin, 'log', '--verbose'],
                 stdout=open(os.path.join(base_dir, 'ChangeLog'), 'w')):
                 raise errors.DistutilsExecError('bzr log failed')
-        log.info('generating bzr_verinfo')
-        if subprocess.call(
-            [bzrbin, 'version-info', '--format=python'],
-            stdout=open(os.path.join(
-                    base_dir, 'snakeoil', 'bzr_verinfo.py'), 'w')):
-            raise errors.DistutilsExecError('bzr version-info failed')
+        #log.info('generating bzr_verinfo')
+        #if subprocess.call(
+        #    [bzrbin, 'version-info', '--format=python'],
+        #    stdout=open(os.path.join(
+        #            base_dir, 'snakeoil', 'bzr_verinfo.py'), 'w')):
+        #    raise errors.DistutilsExecError('bzr version-info failed')
 
 
 class pyarchive_build_py(build_py.build_py):
