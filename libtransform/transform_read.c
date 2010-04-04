@@ -147,24 +147,6 @@ transform_read_set_filter_options(struct transform *_a, const char *s)
 }
 
 /*
- * Set read options for the format and the filter.
- */
-int
-transform_read_set_options(struct transform *_a, const char *s)
-{
-	int r;
-
-	transform_check_magic(_a, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
-	    "transform_read_set_options");
-	transform_clear_error(_a);
-
-	r = transform_read_set_filter_options(_a, s);
-	if (r != TRANSFORM_OK)
-		return (r);
-	return (TRANSFORM_OK);
-}
-
-/*
  * Open the transform
  */
 int

@@ -297,9 +297,6 @@ __LA_DECL int transform_read_data_into_fd(struct transform *, int fd);
 /* Apply option string to the filter only. */
 __LA_DECL int transform_read_set_filter_options(struct transform *_a,
 			    const char *s);
-/* Apply option string to both the format and the filter. */
-__LA_DECL int transform_read_set_options(struct transform *_a,
-			    const char *s);
 
 /*-
  * Convenience function to recreate the current entry (whose header
