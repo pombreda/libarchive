@@ -491,24 +491,6 @@ __LA_DECL int archive_write_add_filter_program(struct archive *,
 __LA_DECL int archive_write_add_filter_xz(struct archive *);
 
 
-/* A convenience function to set the format based on the code or name. */
-__LA_DECL int archive_write_set_format(struct archive *, int format_code);
-__LA_DECL int archive_write_set_format_by_name(struct archive *,
-		     const char *name);
-/* To minimize link pollution, use one or more of the following. */
-__LA_DECL int archive_write_set_format_ar_bsd(struct archive *);
-__LA_DECL int archive_write_set_format_ar_svr4(struct archive *);
-__LA_DECL int archive_write_set_format_cpio(struct archive *);
-__LA_DECL int archive_write_set_format_cpio_newc(struct archive *);
-__LA_DECL int archive_write_set_format_iso9660(struct archive *);
-__LA_DECL int archive_write_set_format_mtree(struct archive *);
-/* TODO: int archive_write_set_format_old_tar(struct archive *); */
-__LA_DECL int archive_write_set_format_pax(struct archive *);
-__LA_DECL int archive_write_set_format_pax_restricted(struct archive *);
-__LA_DECL int archive_write_set_format_shar(struct archive *);
-__LA_DECL int archive_write_set_format_shar_dump(struct archive *);
-__LA_DECL int archive_write_set_format_ustar(struct archive *);
-__LA_DECL int archive_write_set_format_zip(struct archive *);
 __LA_DECL int archive_write_open(struct archive *, void *,
 		     archive_open_callback *, archive_write_callback *,
 		     archive_close_callback *);
@@ -559,9 +541,6 @@ __LA_DECL int		 archive_write_finish(struct archive *);
 /* Apply option string to both the format and all filters. */
 __LA_DECL int		archive_write_set_options(struct archive *_a,
 			    const char *s);
-/* Apply option string to the format only. */
-__LA_DECL int		archive_write_set_format_options(struct archive *_a,
-			    const char *s);
 /* Apply option string to all matching filters. */
 __LA_DECL int		archive_write_set_filter_options(struct archive *_a,
 			    const char *s);
@@ -600,8 +579,6 @@ __LA_DECL int		 archive_compression(struct archive *);
 
 __LA_DECL int		 archive_errno(struct archive *);
 __LA_DECL const char	*archive_error_string(struct archive *);
-__LA_DECL const char	*archive_format_name(struct archive *);
-__LA_DECL int		 archive_format(struct archive *);
 __LA_DECL void		 archive_clear_error(struct archive *);
 __LA_DECL void		 archive_set_error(struct archive *, int _err,
 			    const char *fmt, ...) __LA_PRINTF(3, 4);
