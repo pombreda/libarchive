@@ -723,8 +723,6 @@ PyArchiveStream_iternext(PyArchiveStream *self)
     }
     Py_DECREF(pae);
     return NULL;
-    self->header_position++;
-    return (PyObject *)pae;
 }
 
 static PyMemberDef PyArchiveStream_members[] = {
