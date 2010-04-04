@@ -136,11 +136,7 @@ struct transform;
  */
 #define	TRANSFORM_EOF	  1	/* Found end of transform. */
 #define	TRANSFORM_OK	  0	/* Operation was successful. */
-#define	TRANSFORM_RETRY	(-10)	/* Retry might succeed. */
 #define	TRANSFORM_WARN	(-20)	/* Partial success. */
-/* For example, if write_header "fails", then you can't push data. */
-#define	TRANSFORM_FAILED	(-25)	/* Current operation cannot complete. */
-/* But if write_header is "fatal," then this transform is dead and useless. */
 #define	TRANSFORM_FATAL	(-30)	/* No more operations are possible. */
 
 /*
