@@ -388,7 +388,9 @@ static PyGetSetDef PyArchiveEntry_getsetters[] = {
 
 /*
 --methods--
+*/
 
+/*
 --compatibility crap for TarInfo behaviour --
 */
 
