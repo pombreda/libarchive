@@ -24,7 +24,7 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/transform_read_support_compression_uu.c 201248 2009-12-30 06:12:03Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_read_support_compression_uu.c 201248 2009-12-30 06:12:03Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -70,16 +70,16 @@ transform_read_support_compression_uu(struct transform *_a)
 	struct transform_read_filter_bidder *bidder;
 
 	bidder = __transform_read_get_bidder(a);
-	archive_clear_error(_a);
+	transform_clear_error(_a);
 	if (bidder == NULL)
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 
 	bidder->data = NULL;
 	bidder->bid = uudecode_bidder_bid;
 	bidder->init = uudecode_bidder_init;
 	bidder->options = NULL;
 	bidder->free = NULL;
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 static const unsigned char ascii[256] = {
@@ -344,7 +344,7 @@ uudecode_bidder_init(struct transform_read_filter *self)
 	void *out_buff;
 	void *in_buff;
 
-	self->code = ARCHIVE_FILTER_UU;
+	self->code = TRANSFORM_FILTER_UU;
 	self->name = "uu";
 	self->read = uudecode_filter_read;
 	self->skip = NULL; /* not supported */
@@ -354,12 +354,12 @@ uudecode_bidder_init(struct transform_read_filter *self)
 	out_buff = malloc(OUT_BUFF_SIZE);
 	in_buff = malloc(IN_BUFF_SIZE);
 	if (uudecode == NULL || out_buff == NULL || in_buff == NULL) {
-		archive_set_error(&self->archive->archive, ENOMEM,
+		transform_set_error(&self->transform->transform, ENOMEM,
 		    "Can't allocate data for uudecode");
 		free(uudecode);
 		free(out_buff);
 		free(in_buff);
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	}
 
 	self->data = uudecode;
@@ -369,7 +369,7 @@ uudecode_bidder_init(struct transform_read_filter *self)
 	uudecode->out_buff = out_buff;
 	uudecode->state = ST_FIND_HEAD;
 
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 static int
@@ -386,10 +386,10 @@ ensure_in_buff_size(struct transform_read_filter *self,
 		if (ptr == NULL ||
 		    newsize < uudecode->in_allocated) {
 			free(ptr);
-			archive_set_error(&self->archive->archive,
+			transform_set_error(&self->transform->transform,
 			    ENOMEM,
     			    "Can't allocate data for uudecode");
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		}
 		if (uudecode->in_cnt)
 			memmove(ptr, uudecode->in_buff,
@@ -398,7 +398,7 @@ ensure_in_buff_size(struct transform_read_filter *self,
 		uudecode->in_buff = ptr;
 		uudecode->in_allocated = newsize;
 	}
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 static ssize_t
@@ -417,7 +417,7 @@ uudecode_filter_read(struct transform_read_filter *self, const void **buff)
 read_more:
 	d = __transform_read_filter_ahead(self->upstream, 1, &avail_in);
 	if (d == NULL && avail_in < 0)
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	/* Quiet a code analyzer; make sure avail_in must be zero
 	 * when d is NULL. */
 	if (d == NULL)
@@ -432,8 +432,8 @@ read_more:
 		 * previous calling, use it first.
 		 */
 		if (ensure_in_buff_size(self, uudecode,
-		    avail_in + uudecode->in_cnt) != ARCHIVE_OK)
-			return (ARCHIVE_FATAL);
+		    avail_in + uudecode->in_cnt) != TRANSFORM_OK)
+			return (TRANSFORM_FATAL);
 		memcpy(uudecode->in_buff + uudecode->in_cnt,
 		    d, avail_in);
 		d = uudecode->in_buff;
@@ -447,10 +447,10 @@ read_more:
 		len = get_line(b, avail_in - used, &nl);
 		if (len < 0) {
 			/* Non-ascii character is found. */
-			archive_set_error(&self->archive->archive,
-			    ARCHIVE_ERRNO_MISC,
+			transform_set_error(&self->transform->transform,
+			    TRANSFORM_ERRNO_MISC,
 			    "Insufficient compressed data");
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		}
 		llen = len;
 		if (nl == 0) {
@@ -459,8 +459,8 @@ read_more:
 			 * NL('\n','\r').
 			 */
 			if (ensure_in_buff_size(self, uudecode, len)
-			    != ARCHIVE_OK)
-				return (ARCHIVE_FATAL);
+			    != TRANSFORM_OK)
+				return (TRANSFORM_FATAL);
 			if (uudecode->in_buff != b)
 				memmove(uudecode->in_buff, b, len);
 			uudecode->in_cnt = len;
@@ -497,19 +497,19 @@ read_more:
 		case ST_READ_UU:
 			body = len - nl;
 			if (!uuchar[*b] || body <= 0) {
-				archive_set_error(&self->archive->archive,
-				    ARCHIVE_ERRNO_MISC,
+				transform_set_error(&self->transform->transform,
+				    TRANSFORM_ERRNO_MISC,
 				    "Insufficient compressed data");
-				return (ARCHIVE_FATAL);
+				return (TRANSFORM_FATAL);
 			}
 			/* Get length of undecoded bytes of curent line. */
 			l = UUDECODE(*b++);
 			body--;
 			if (l > body) {
-				archive_set_error(&self->archive->archive,
-				    ARCHIVE_ERRNO_MISC,
+				transform_set_error(&self->transform->transform,
+				    TRANSFORM_ERRNO_MISC,
 				    "Insufficient compressed data");
-				return (ARCHIVE_FATAL);
+				return (TRANSFORM_FATAL);
 			}
 			if (l == 0) {
 				uudecode->state = ST_UUEND;
@@ -542,20 +542,20 @@ read_more:
 				}
 			}
 			if (l) {
-				archive_set_error(&self->archive->archive,
-				    ARCHIVE_ERRNO_MISC,
+				transform_set_error(&self->transform->transform,
+				    TRANSFORM_ERRNO_MISC,
 				    "Insufficient compressed data");
-				return (ARCHIVE_FATAL);
+				return (TRANSFORM_FATAL);
 			}
 			break;
 		case ST_UUEND:
 			if (len - nl == 3 && memcmp(b, "end ", 3) == 0)
 				uudecode->state = ST_FIND_HEAD;
 			else {
-				archive_set_error(&self->archive->archive,
-				    ARCHIVE_ERRNO_MISC,
+				transform_set_error(&self->transform->transform,
+				    TRANSFORM_ERRNO_MISC,
 				    "Insufficient compressed data");
-				return (ARCHIVE_FATAL);
+				return (TRANSFORM_FATAL);
 			}
 			break;
 		case ST_READ_BASE64:
@@ -596,10 +596,10 @@ read_more:
 				}
 			}
 			if (l && *b != '=') {
-				archive_set_error(&self->archive->archive,
-				    ARCHIVE_ERRNO_MISC,
+				transform_set_error(&self->transform->transform,
+				    TRANSFORM_ERRNO_MISC,
 				    "Insufficient compressed data");
-				return (ARCHIVE_FATAL);
+				return (TRANSFORM_FATAL);
 			}
 			break;
 		}
@@ -622,6 +622,6 @@ uudecode_filter_close(struct transform_read_filter *self)
 	free(uudecode->out_buff);
 	free(uudecode);
 
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 

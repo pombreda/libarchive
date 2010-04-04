@@ -98,22 +98,22 @@
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}">
 			<File
-				RelativePath="..\..\libtransform\archive_check_magic.c">
+				RelativePath="..\..\libtransform\transform_check_magic.c">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_entry.c">
+				RelativePath="..\..\libtransform\transform_entry.c">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_entry_copy_stat.c">
+				RelativePath="..\..\libtransform\transform_entry_copy_stat.c">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_entry_link_resolver.c">
+				RelativePath="..\..\libtransform\transform_entry_link_resolver.c">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_entry_stat.c">
+				RelativePath="..\..\libtransform\transform_entry_stat.c">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_entry_strmode.c">
+				RelativePath="..\..\libtransform\transform_entry_strmode.c">
 			</File>
 			<File
 				RelativePath="..\..\libtransform\transform_read.c">
@@ -188,19 +188,19 @@
 				RelativePath="..\..\libtransform\transform_read_support_format_zip.c">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_string.c">
+				RelativePath="..\..\libtransform\transform_string.c">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_string_sprintf.c">
+				RelativePath="..\..\libtransform\transform_string_sprintf.c">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_util.c">
+				RelativePath="..\..\libtransform\transform_util.c">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_virtual.c">
+				RelativePath="..\..\libtransform\transform_virtual.c">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_windows.c">
+				RelativePath="..\..\libtransform\transform_windows.c">
 			</File>
 			<File
 				RelativePath="..\..\libtransform\transform_write.c">
@@ -274,22 +274,22 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
 			<File
-				RelativePath="..\..\libtransform\archive.h">
+				RelativePath="..\..\libtransform\transform.h">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_endian.h">
+				RelativePath="..\..\libtransform\transform_endian.h">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_entry.h">
+				RelativePath="..\..\libtransform\transform_entry.h">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_entry_private.h">
+				RelativePath="..\..\libtransform\transform_entry_private.h">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_platform.h">
+				RelativePath="..\..\libtransform\transform_platform.h">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_private.h">
+				RelativePath="..\..\libtransform\transform_private.h">
 			</File>
 			<File
 				RelativePath="..\..\libtransform\transform_read_disk_private.h">
@@ -298,10 +298,10 @@
 				RelativePath="..\..\libtransform\transform_read_private.h">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_string.h">
+				RelativePath="..\..\libtransform\transform_string.h">
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_windows.h">
+				RelativePath="..\..\libtransform\transform_windows.h">
 			</File>
 			<File
 				RelativePath="..\..\libtransform\transform_write_disk_private.h">

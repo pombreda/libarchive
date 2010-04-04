@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_pax_filename_encoding.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_pax_filename_encoding.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 #include <locale.h>
 
@@ -35,7 +35,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_pax_filename_encoding.c 201247
  */
 
 /*
- * Read a manually-created archive that has filenames that are
+ * Read a manually-created transform that has filenames that are
  * stored in binary instead of UTF-8 and verify that we get
  * the right filename returned and that we get a warning only
  * if the header isn't marked as binary.
@@ -53,30 +53,30 @@ test_pax_filename_encoding_1(void)
 	struct transform_entry *entry;
 
 	/*
-	 * Read an archive that has non-UTF8 pax filenames in it.
+	 * Read an transform that has non-UTF8 pax filenames in it.
 	 */
 	extract_reference_file(testname);
 	a = transform_read_new();
-	assertEqualInt(ARCHIVE_OK, transform_read_support_format_tar(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_support_compression_all(a));
-	assertEqualInt(ARCHIVE_OK,
+	assertEqualInt(TRANSFORM_OK, transform_read_support_format_tar(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_support_compression_all(a));
+	assertEqualInt(TRANSFORM_OK,
 	    transform_read_open_filename(a, testname, 10240));
 	/*
-	 * First entry in this test archive has an invalid UTF-8 sequence
+	 * First entry in this test transform has an invalid UTF-8 sequence
 	 * in it, but the header is not marked as hdrcharset=BINARY, so that
 	 * requires a warning.
 	 */
-	failure("Invalid UTF8 in a pax archive pathname should cause a warning");
-	assertEqualInt(ARCHIVE_WARN, transform_read_next_header(a, &entry));
-	assertEqualString(filename, archive_entry_pathname(entry));
+	failure("Invalid UTF8 in a pax transform pathname should cause a warning");
+	assertEqualInt(TRANSFORM_WARN, transform_read_next_header(a, &entry));
+	assertEqualString(filename, transform_entry_pathname(entry));
 	/*
 	 * Second entry is identical except that it does have
 	 * hdrcharset=BINARY, so no warning should be generated.
 	 */
 	failure("A pathname with hdrcharset=BINARY can have invalid UTF8\n"
 	    " characters in it without generating a warning");
-	assertEqualInt(ARCHIVE_OK, transform_read_next_header(a, &entry));
-	assertEqualString(filename, archive_entry_pathname(entry));
+	assertEqualInt(TRANSFORM_OK, transform_read_next_header(a, &entry));
+	assertEqualString(filename, transform_entry_pathname(entry));
 	transform_read_free(a);
 }
 
@@ -121,38 +121,38 @@ test_pax_filename_encoding_2(void)
 	assertEqualInt(0,
 	    transform_write_open_memory(a, buff, sizeof(buff), &used));
 
-	assert((entry = archive_entry_new()) != NULL);
+	assert((entry = transform_entry_new()) != NULL);
 	/* Set pathname, gname, uname, hardlink to nonconvertible values. */
-	archive_entry_copy_pathname(entry, filename);
-	archive_entry_copy_gname(entry, filename);
-	archive_entry_copy_uname(entry, filename);
-	archive_entry_copy_hardlink(entry, filename);
-	archive_entry_set_filetype(entry, AE_IFREG);
+	transform_entry_copy_pathname(entry, filename);
+	transform_entry_copy_gname(entry, filename);
+	transform_entry_copy_uname(entry, filename);
+	transform_entry_copy_hardlink(entry, filename);
+	transform_entry_set_filetype(entry, AE_IFREG);
 	failure("This should generate a warning for nonconvertible names.");
-	assertEqualInt(ARCHIVE_WARN, transform_write_header(a, entry));
-	archive_entry_free(entry);
+	assertEqualInt(TRANSFORM_WARN, transform_write_header(a, entry));
+	transform_entry_free(entry);
 
-	assert((entry = archive_entry_new()) != NULL);
+	assert((entry = transform_entry_new()) != NULL);
 	/* Set path, gname, uname, and symlink to nonconvertible values. */
-	archive_entry_copy_pathname(entry, filename);
-	archive_entry_copy_gname(entry, filename);
-	archive_entry_copy_uname(entry, filename);
-	archive_entry_copy_symlink(entry, filename);
-	archive_entry_set_filetype(entry, AE_IFLNK);
+	transform_entry_copy_pathname(entry, filename);
+	transform_entry_copy_gname(entry, filename);
+	transform_entry_copy_uname(entry, filename);
+	transform_entry_copy_symlink(entry, filename);
+	transform_entry_set_filetype(entry, AE_IFLNK);
 	failure("This should generate a warning for nonconvertible names.");
-	assertEqualInt(ARCHIVE_WARN, transform_write_header(a, entry));
-	archive_entry_free(entry);
+	assertEqualInt(TRANSFORM_WARN, transform_write_header(a, entry));
+	transform_entry_free(entry);
 
-	assert((entry = archive_entry_new()) != NULL);
+	assert((entry = transform_entry_new()) != NULL);
 	/* Set pathname to a very long nonconvertible value. */
-	archive_entry_copy_pathname(entry, longname);
-	archive_entry_set_filetype(entry, AE_IFREG);
+	transform_entry_copy_pathname(entry, longname);
+	transform_entry_set_filetype(entry, AE_IFREG);
 	failure("This should generate a warning for nonconvertible names.");
-	assertEqualInt(ARCHIVE_WARN, transform_write_header(a, entry));
-	archive_entry_free(entry);
+	assertEqualInt(TRANSFORM_WARN, transform_write_header(a, entry));
+	transform_entry_free(entry);
 
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
 	/*
 	 * Now read the entries back.
@@ -163,22 +163,22 @@ test_pax_filename_encoding_2(void)
 	assertEqualInt(0, transform_read_open_memory(a, buff, used));
 
 	assertEqualInt(0, transform_read_next_header(a, &entry));
-	assertEqualString(filename, archive_entry_pathname(entry));
-	assertEqualString(filename, archive_entry_gname(entry));
-	assertEqualString(filename, archive_entry_uname(entry));
-	assertEqualString(filename, archive_entry_hardlink(entry));
+	assertEqualString(filename, transform_entry_pathname(entry));
+	assertEqualString(filename, transform_entry_gname(entry));
+	assertEqualString(filename, transform_entry_uname(entry));
+	assertEqualString(filename, transform_entry_hardlink(entry));
 
 	assertEqualInt(0, transform_read_next_header(a, &entry));
-	assertEqualString(filename, archive_entry_pathname(entry));
-	assertEqualString(filename, archive_entry_gname(entry));
-	assertEqualString(filename, archive_entry_uname(entry));
-	assertEqualString(filename, archive_entry_symlink(entry));
+	assertEqualString(filename, transform_entry_pathname(entry));
+	assertEqualString(filename, transform_entry_gname(entry));
+	assertEqualString(filename, transform_entry_uname(entry));
+	assertEqualString(filename, transform_entry_symlink(entry));
 
 	assertEqualInt(0, transform_read_next_header(a, &entry));
-	assertEqualString(longname, archive_entry_pathname(entry));
+	assertEqualString(longname, transform_entry_pathname(entry));
 
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 /*
@@ -220,16 +220,16 @@ test_pax_filename_encoding_3(void)
 		return;
 	}
 
-	/* Skip test if archive_entry_update_pathname_utf8() is broken. */
+	/* Skip test if transform_entry_update_pathname_utf8() is broken. */
 	/* In particular, this is currently broken on Win32 because
 	 * setlocale() does not set the default encoding for CP_ACP. */
-	entry = archive_entry_new();
-	if (archive_entry_update_pathname_utf8(entry, badname_utf8)) {
-		archive_entry_free(entry);
+	entry = transform_entry_new();
+	if (transform_entry_update_pathname_utf8(entry, badname_utf8)) {
+		transform_entry_free(entry);
 		skipping("Cannot test conversion failures.");
 		return;
 	}
-	archive_entry_free(entry);
+	transform_entry_free(entry);
 
 	assert((a = transform_write_new()) != NULL);
 	assertEqualIntA(a, 0, transform_write_set_format_pax(a));
@@ -238,47 +238,47 @@ test_pax_filename_encoding_3(void)
 	assertEqualInt(0,
 	    transform_write_open_memory(a, buff, sizeof(buff), &used));
 
-	assert((entry = archive_entry_new()) != NULL);
+	assert((entry = transform_entry_new()) != NULL);
 	/* Set pathname to non-convertible wide value. */
-	archive_entry_copy_pathname_w(entry, badname);
-	archive_entry_set_filetype(entry, AE_IFREG);
-	assertEqualInt(ARCHIVE_OK, transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_copy_pathname_w(entry, badname);
+	transform_entry_set_filetype(entry, AE_IFREG);
+	assertEqualInt(TRANSFORM_OK, transform_write_header(a, entry));
+	transform_entry_free(entry);
 
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname_w(entry, L"abc");
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname_w(entry, L"abc");
 	/* Set gname to non-convertible wide value. */
-	archive_entry_copy_gname_w(entry, badname);
-	archive_entry_set_filetype(entry, AE_IFREG);
-	assertEqualInt(ARCHIVE_OK, transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_copy_gname_w(entry, badname);
+	transform_entry_set_filetype(entry, AE_IFREG);
+	assertEqualInt(TRANSFORM_OK, transform_write_header(a, entry));
+	transform_entry_free(entry);
 
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname_w(entry, L"abc");
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname_w(entry, L"abc");
 	/* Set uname to non-convertible wide value. */
-	archive_entry_copy_uname_w(entry, badname);
-	archive_entry_set_filetype(entry, AE_IFREG);
-	assertEqualInt(ARCHIVE_OK, transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_copy_uname_w(entry, badname);
+	transform_entry_set_filetype(entry, AE_IFREG);
+	assertEqualInt(TRANSFORM_OK, transform_write_header(a, entry));
+	transform_entry_free(entry);
 
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname_w(entry, L"abc");
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname_w(entry, L"abc");
 	/* Set hardlink to non-convertible wide value. */
-	archive_entry_copy_hardlink_w(entry, badname);
-	archive_entry_set_filetype(entry, AE_IFREG);
-	assertEqualInt(ARCHIVE_OK, transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_copy_hardlink_w(entry, badname);
+	transform_entry_set_filetype(entry, AE_IFREG);
+	assertEqualInt(TRANSFORM_OK, transform_write_header(a, entry));
+	transform_entry_free(entry);
 
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname_w(entry, L"abc");
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname_w(entry, L"abc");
 	/* Set symlink to non-convertible wide value. */
-	archive_entry_copy_symlink_w(entry, badname);
-	archive_entry_set_filetype(entry, AE_IFLNK);
-	assertEqualInt(ARCHIVE_OK, transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_copy_symlink_w(entry, badname);
+	transform_entry_set_filetype(entry, AE_IFLNK);
+	assertEqualInt(TRANSFORM_OK, transform_write_header(a, entry));
+	transform_entry_free(entry);
 
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
 	/*
 	 * Now read the entries back.
@@ -289,40 +289,40 @@ test_pax_filename_encoding_3(void)
 	assertEqualInt(0, transform_read_open_memory(a, buff, used));
 
 	failure("A non-convertible pathname should cause a warning.");
-	assertEqualInt(ARCHIVE_WARN, transform_read_next_header(a, &entry));
-	assertEqualWString(badname, archive_entry_pathname_w(entry));
+	assertEqualInt(TRANSFORM_WARN, transform_read_next_header(a, &entry));
+	assertEqualWString(badname, transform_entry_pathname_w(entry));
 	failure("If native locale can't convert, we should get UTF-8 back.");
-	assertEqualString(badname_utf8, archive_entry_pathname(entry));
+	assertEqualString(badname_utf8, transform_entry_pathname(entry));
 
 	failure("A non-convertible gname should cause a warning.");
-	assertEqualInt(ARCHIVE_WARN, transform_read_next_header(a, &entry));
-	assertEqualWString(badname, archive_entry_gname_w(entry));
+	assertEqualInt(TRANSFORM_WARN, transform_read_next_header(a, &entry));
+	assertEqualWString(badname, transform_entry_gname_w(entry));
 	failure("If native locale can't convert, we should get UTF-8 back.");
-	assertEqualString(badname_utf8, archive_entry_gname(entry));
+	assertEqualString(badname_utf8, transform_entry_gname(entry));
 
 	failure("A non-convertible uname should cause a warning.");
-	assertEqualInt(ARCHIVE_WARN, transform_read_next_header(a, &entry));
-	assertEqualWString(badname, archive_entry_uname_w(entry));
+	assertEqualInt(TRANSFORM_WARN, transform_read_next_header(a, &entry));
+	assertEqualWString(badname, transform_entry_uname_w(entry));
 	failure("If native locale can't convert, we should get UTF-8 back.");
-	assertEqualString(badname_utf8, archive_entry_uname(entry));
+	assertEqualString(badname_utf8, transform_entry_uname(entry));
 
 	failure("A non-convertible hardlink should cause a warning.");
-	assertEqualInt(ARCHIVE_WARN, transform_read_next_header(a, &entry));
-	assertEqualWString(badname, archive_entry_hardlink_w(entry));
+	assertEqualInt(TRANSFORM_WARN, transform_read_next_header(a, &entry));
+	assertEqualWString(badname, transform_entry_hardlink_w(entry));
 	failure("If native locale can't convert, we should get UTF-8 back.");
-	assertEqualString(badname_utf8, archive_entry_hardlink(entry));
+	assertEqualString(badname_utf8, transform_entry_hardlink(entry));
 
 	failure("A non-convertible symlink should cause a warning.");
-	assertEqualInt(ARCHIVE_WARN, transform_read_next_header(a, &entry));
-	assertEqualWString(badname, archive_entry_symlink_w(entry));
-	assertEqualWString(NULL, archive_entry_hardlink_w(entry));
+	assertEqualInt(TRANSFORM_WARN, transform_read_next_header(a, &entry));
+	assertEqualWString(badname, transform_entry_symlink_w(entry));
+	assertEqualWString(NULL, transform_entry_hardlink_w(entry));
 	failure("If native locale can't convert, we should get UTF-8 back.");
-	assertEqualString(badname_utf8, archive_entry_symlink(entry));
+	assertEqualString(badname_utf8, transform_entry_symlink(entry));
 
-	assertEqualInt(ARCHIVE_EOF, transform_read_next_header(a, &entry));
+	assertEqualInt(TRANSFORM_EOF, transform_read_next_header(a, &entry));
 
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 DEFINE_TEST(test_pax_filename_encoding)

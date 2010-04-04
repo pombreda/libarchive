@@ -23,20 +23,20 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_fuzz.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_fuzz.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
  * This was inspired by an ISO fuzz tester written by Michal Zalewski
  * and posted to the "vulnwatch" mailing list on March 17, 2005:
  *    http://seclists.org/vulnwatch/2005/q1/0088.html
  *
- * This test simply reads each archive image into memory, pokes
- * random values into it and runs it through libarchive.  It tries
+ * This test simply reads each transform image into memory, pokes
+ * random values into it and runs it through libtransform.  It tries
  * to damage about 1% of each file and repeats the exercise 100 times
  * with each file.
  *
- * Unlike most other tests, this test does not verify libarchive's
- * responses other than to ensure that libarchive doesn't crash.
+ * Unlike most other tests, this test does not verify libtransform's
+ * responses other than to ensure that libtransform doesn't crash.
  *
  * Due to the deliberately random nature of this test, it may be hard
  * to reproduce failures.  Because this test deliberately attempts to
@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_fuzz.c 201247 2009-12-30 05:59
  * post-failure diagnostics.
  */
 
-/* Because this works for any archive, we can just re-use the archives
+/* Because this works for any transform, we can just re-use the transforms
  * developed for other tests. */
 static struct {
 	int uncompress; /* If 1, decompress the file before fuzzing. */
@@ -91,23 +91,23 @@ DEFINE_TEST(test_fuzz)
 			int r;
 			/* Use format_raw to decompress the data. */
 			assert((a = transform_read_new()) != NULL);
-			assertEqualIntA(a, ARCHIVE_OK,
+			assertEqualIntA(a, TRANSFORM_OK,
 			    transform_read_support_compression_all(a));
-			assertEqualIntA(a, ARCHIVE_OK,
+			assertEqualIntA(a, TRANSFORM_OK,
 			    transform_read_support_format_raw(a));
 			r = transform_read_open_filename(a, filename, 16384);
-			if (r != ARCHIVE_OK) {
+			if (r != TRANSFORM_OK) {
 				transform_read_free(a);
 				skipping("Cannot uncompress %s", filename);
 				continue;
 			}
-			assertEqualIntA(a, ARCHIVE_OK,
+			assertEqualIntA(a, TRANSFORM_OK,
 			    transform_read_next_header(a, &ae));
 			rawimage = malloc(buffsize);
 			size = transform_read_data(a, rawimage, buffsize);
-			assertEqualIntA(a, ARCHIVE_EOF,
+			assertEqualIntA(a, TRANSFORM_EOF,
 			    transform_read_next_header(a, &ae));
-			assertEqualInt(ARCHIVE_OK,
+			assertEqualInt(TRANSFORM_OK,
 			    transform_read_free(a));
 			assert(size > 0);
 			failure("Internal buffer is not big enough for "
@@ -129,7 +129,7 @@ DEFINE_TEST(test_fuzz)
 			FILE *f;
 			int j, numbytes;
 
-			/* Fuzz < 1% of the bytes in the archive. */
+			/* Fuzz < 1% of the bytes in the transform. */
 			memcpy(image, rawimage, size);
 			numbytes = (int)(rand() % (size / 100));
 			for (j = 0; j < numbytes; ++j)
@@ -138,14 +138,14 @@ DEFINE_TEST(test_fuzz)
 			/* Save the messed-up image to a file.
 			 * If we crash, that file will be useful. */
 			f = fopen("after.test.failure.send.this.file."
-			    "to.libarchive.maintainers.with.system.details", "wb");
+			    "to.libtransform.maintainers.with.system.details", "wb");
 			fwrite(image, 1, (size_t)size, f);
 			fclose(f);
 
 			assert((a = transform_read_new()) != NULL);
-			assertEqualIntA(a, ARCHIVE_OK,
+			assertEqualIntA(a, TRANSFORM_OK,
 			    transform_read_support_compression_all(a));
-			assertEqualIntA(a, ARCHIVE_OK,
+			assertEqualIntA(a, TRANSFORM_OK,
 			    transform_read_support_format_all(a));
 
 			if (0 == transform_read_open_memory(a, image, size)) {

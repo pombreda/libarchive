@@ -26,7 +26,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_ar.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_ar.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 
 DEFINE_TEST(test_read_format_ar)
@@ -44,44 +44,44 @@ DEFINE_TEST(test_read_format_ar)
 
 	/* Filename table.  */
 	assertA(0 == transform_read_next_header(a, &ae));
-	assertEqualString("//", archive_entry_pathname(ae));
-	assertEqualInt(0, archive_entry_mtime(ae));
-	assertEqualInt(0, archive_entry_uid(ae));
-	assertEqualInt(0, archive_entry_gid(ae));
-	assertEqualInt(0, archive_entry_size(ae));
+	assertEqualString("//", transform_entry_pathname(ae));
+	assertEqualInt(0, transform_entry_mtime(ae));
+	assertEqualInt(0, transform_entry_uid(ae));
+	assertEqualInt(0, transform_entry_gid(ae));
+	assertEqualInt(0, transform_entry_size(ae));
 
 	/* First Entry */
 	assertA(0 == transform_read_next_header(a, &ae));
-	assertEqualString("yyytttsssaaafff.o", archive_entry_pathname(ae));
-	assertEqualInt(1175465652, archive_entry_mtime(ae));
-	assertEqualInt(1001, archive_entry_uid(ae));
-	assertEqualInt(0, archive_entry_gid(ae));
-	assert(8 == archive_entry_size(ae));
+	assertEqualString("yyytttsssaaafff.o", transform_entry_pathname(ae));
+	assertEqualInt(1175465652, transform_entry_mtime(ae));
+	assertEqualInt(1001, transform_entry_uid(ae));
+	assertEqualInt(0, transform_entry_gid(ae));
+	assert(8 == transform_entry_size(ae));
 	assertA(8 == transform_read_data(a, buff, 10));
 	assert(0 == memcmp(buff, "55667788", 8));
 
 	/* Second Entry */
 	assertA(0 == transform_read_next_header(a, &ae));
-	assertEqualString("gghh.o", archive_entry_pathname(ae));
-	assertEqualInt(1175465668, archive_entry_mtime(ae));
-	assertEqualInt(1001, archive_entry_uid(ae));
-	assertEqualInt(0, archive_entry_gid(ae));
-	assert(4 == archive_entry_size(ae));
+	assertEqualString("gghh.o", transform_entry_pathname(ae));
+	assertEqualInt(1175465668, transform_entry_mtime(ae));
+	assertEqualInt(1001, transform_entry_uid(ae));
+	assertEqualInt(0, transform_entry_gid(ae));
+	assert(4 == transform_entry_size(ae));
 	assertA(4 == transform_read_data(a, buff, 10));
 	assert(0 == memcmp(buff, "3333", 4));
 
 	/* Third Entry */
 	assertA(0 == transform_read_next_header(a, &ae));
-	assertEqualString("hhhhjjjjkkkkllll.o", archive_entry_pathname(ae));
-	assertEqualInt(1175465713, archive_entry_mtime(ae));
-	assertEqualInt(1001, archive_entry_uid(ae));
-	assertEqualInt(0, archive_entry_gid(ae));
-	assert(9 == archive_entry_size(ae));
+	assertEqualString("hhhhjjjjkkkkllll.o", transform_entry_pathname(ae));
+	assertEqualInt(1175465713, transform_entry_mtime(ae));
+	assertEqualInt(1001, transform_entry_uid(ae));
+	assertEqualInt(0, transform_entry_gid(ae));
+	assert(9 == transform_entry_size(ae));
 	assertA(9 == transform_read_data(a, buff, 9));
 	assert(0 == memcmp(buff, "987654321", 9));
 
 	/* Test EOF */
 	assertA(1 == transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }

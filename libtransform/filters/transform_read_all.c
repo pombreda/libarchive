@@ -24,7 +24,7 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/transform_read_support_compression_all.c 201248 2009-12-30 06:12:03Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_read_support_compression_all.c 201248 2009-12-30 06:12:03Z kientzle $");
 
 #include "transform.h"
 
@@ -49,12 +49,12 @@ transform_read_support_compression_all(struct transform *a)
 	/* The decode code doesn't use an outside library. */
 	transform_read_support_compression_rpm(a);
 
-	/* Note: We always return ARCHIVE_OK here, even if some of the
-	 * above return ARCHIVE_WARN.  The intent here is to enable
+	/* Note: We always return TRANSFORM_OK here, even if some of the
+	 * above return TRANSFORM_WARN.  The intent here is to enable
 	 * "as much as possible."  Clients who need specific
 	 * compression should enable those individually so they can
 	 * verify the level of support. */
 	/* Clear any warning messages set by the above functions. */
-	archive_clear_error(a);
-	return (ARCHIVE_OK);
+	transform_clear_error(a);
+	return (TRANSFORM_OK);
 }

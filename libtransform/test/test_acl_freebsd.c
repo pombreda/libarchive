@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_acl_freebsd.c 189427 2009-03-06 04:21:23Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_acl_freebsd.c 189427 2009-03-06 04:21:23Z kientzle $");
 
 #if defined(__FreeBSD__) && __FreeBSD__ > 4
 #include <sys/acl.h>
@@ -37,22 +37,22 @@ struct myacl_t {
 };
 
 static struct myacl_t acls2[] = {
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, ARCHIVE_ENTRY_ACL_EXECUTE | ARCHIVE_ENTRY_ACL_READ,
-	  ARCHIVE_ENTRY_ACL_USER_OBJ, -1, "" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, ARCHIVE_ENTRY_ACL_READ,
-	  ARCHIVE_ENTRY_ACL_USER, 77, "user77" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, 0,
-	  ARCHIVE_ENTRY_ACL_USER, 78, "user78" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, ARCHIVE_ENTRY_ACL_READ,
-	  ARCHIVE_ENTRY_ACL_GROUP_OBJ, -1, "" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, 0007,
-	  ARCHIVE_ENTRY_ACL_GROUP, 78, "group78" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS,
-	  ARCHIVE_ENTRY_ACL_WRITE | ARCHIVE_ENTRY_ACL_EXECUTE,
-	  ARCHIVE_ENTRY_ACL_OTHER, -1, "" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS,
-	  ARCHIVE_ENTRY_ACL_WRITE | ARCHIVE_ENTRY_ACL_READ | ARCHIVE_ENTRY_ACL_EXECUTE,
-	  ARCHIVE_ENTRY_ACL_MASK, -1, "" },
+	{ TRANSFORM_ENTRY_ACL_TYPE_ACCESS, TRANSFORM_ENTRY_ACL_EXECUTE | TRANSFORM_ENTRY_ACL_READ,
+	  TRANSFORM_ENTRY_ACL_USER_OBJ, -1, "" },
+	{ TRANSFORM_ENTRY_ACL_TYPE_ACCESS, TRANSFORM_ENTRY_ACL_READ,
+	  TRANSFORM_ENTRY_ACL_USER, 77, "user77" },
+	{ TRANSFORM_ENTRY_ACL_TYPE_ACCESS, 0,
+	  TRANSFORM_ENTRY_ACL_USER, 78, "user78" },
+	{ TRANSFORM_ENTRY_ACL_TYPE_ACCESS, TRANSFORM_ENTRY_ACL_READ,
+	  TRANSFORM_ENTRY_ACL_GROUP_OBJ, -1, "" },
+	{ TRANSFORM_ENTRY_ACL_TYPE_ACCESS, 0007,
+	  TRANSFORM_ENTRY_ACL_GROUP, 78, "group78" },
+	{ TRANSFORM_ENTRY_ACL_TYPE_ACCESS,
+	  TRANSFORM_ENTRY_ACL_WRITE | TRANSFORM_ENTRY_ACL_EXECUTE,
+	  TRANSFORM_ENTRY_ACL_OTHER, -1, "" },
+	{ TRANSFORM_ENTRY_ACL_TYPE_ACCESS,
+	  TRANSFORM_ENTRY_ACL_WRITE | TRANSFORM_ENTRY_ACL_READ | TRANSFORM_ENTRY_ACL_EXECUTE,
+	  TRANSFORM_ENTRY_ACL_MASK, -1, "" },
 	{ 0, 0, 0, 0, NULL }
 };
 
@@ -61,9 +61,9 @@ set_acls(struct transform_entry *ae, struct myacl_t *acls)
 {
 	int i;
 
-	archive_entry_acl_clear(ae);
+	transform_entry_acl_clear(ae);
 	for (i = 0; acls[i].name != NULL; i++) {
-		archive_entry_acl_add_entry(ae,
+		transform_entry_acl_add_entry(ae,
 		    acls[i].type, acls[i].permset, acls[i].tag, acls[i].qual,
 		    acls[i].name);
 	}
@@ -83,21 +83,21 @@ acl_match(acl_entry_t aclent, struct myacl_t *myacl)
 	/* translate the silly opaque permset to a bitmap */
 	acl_get_permset(aclent, &opaque_ps);
 	if (acl_get_perm_np(opaque_ps, ACL_EXECUTE))
-		permset |= ARCHIVE_ENTRY_ACL_EXECUTE;
+		permset |= TRANSFORM_ENTRY_ACL_EXECUTE;
 	if (acl_get_perm_np(opaque_ps, ACL_WRITE))
-		permset |= ARCHIVE_ENTRY_ACL_WRITE;
+		permset |= TRANSFORM_ENTRY_ACL_WRITE;
 	if (acl_get_perm_np(opaque_ps, ACL_READ))
-		permset |= ARCHIVE_ENTRY_ACL_READ;
+		permset |= TRANSFORM_ENTRY_ACL_READ;
 
 	if (permset != myacl->permset)
 		return (0);
 
 	switch (tag_type) {
 	case ACL_USER_OBJ:
-		if (myacl->tag != ARCHIVE_ENTRY_ACL_USER_OBJ) return (0);
+		if (myacl->tag != TRANSFORM_ENTRY_ACL_USER_OBJ) return (0);
 		break;
 	case ACL_USER:
-		if (myacl->tag != ARCHIVE_ENTRY_ACL_USER)
+		if (myacl->tag != TRANSFORM_ENTRY_ACL_USER)
 			return (0);
 		up = acl_get_qualifier(aclent);
 		u = *up;
@@ -106,10 +106,10 @@ acl_match(acl_entry_t aclent, struct myacl_t *myacl)
 			return (0);
 		break;
 	case ACL_GROUP_OBJ:
-		if (myacl->tag != ARCHIVE_ENTRY_ACL_GROUP_OBJ) return (0);
+		if (myacl->tag != TRANSFORM_ENTRY_ACL_GROUP_OBJ) return (0);
 		break;
 	case ACL_GROUP:
-		if (myacl->tag != ARCHIVE_ENTRY_ACL_GROUP)
+		if (myacl->tag != TRANSFORM_ENTRY_ACL_GROUP)
 			return (0);
 		gp = acl_get_qualifier(aclent);
 		g = *gp;
@@ -118,10 +118,10 @@ acl_match(acl_entry_t aclent, struct myacl_t *myacl)
 			return (0);
 		break;
 	case ACL_MASK:
-		if (myacl->tag != ARCHIVE_ENTRY_ACL_MASK) return (0);
+		if (myacl->tag != TRANSFORM_ENTRY_ACL_MASK) return (0);
 		break;
 	case ACL_OTHER:
-		if (myacl->tag != ARCHIVE_ENTRY_ACL_OTHER) return (0);
+		if (myacl->tag != TRANSFORM_ENTRY_ACL_OTHER) return (0);
 		break;
 	}
 	return (1);
@@ -228,21 +228,21 @@ DEFINE_TEST(test_acl_freebsd)
 	/* Create a write-to-disk object. */
 	assert(NULL != (a = transform_write_disk_new()));
 	transform_write_disk_set_options(a,
-	    ARCHIVE_EXTRACT_TIME | ARCHIVE_EXTRACT_PERM | ARCHIVE_EXTRACT_ACL);
+	    TRANSFORM_EXTRACT_TIME | TRANSFORM_EXTRACT_PERM | TRANSFORM_EXTRACT_ACL);
 
-	/* Populate an archive entry with some metadata, including ACL info */
-	ae = archive_entry_new();
+	/* Populate an transform entry with some metadata, including ACL info */
+	ae = transform_entry_new();
 	assert(ae != NULL);
-	archive_entry_set_pathname(ae, "test0");
-	archive_entry_set_mtime(ae, 123456, 7890);
-	archive_entry_set_size(ae, 0);
+	transform_entry_set_pathname(ae, "test0");
+	transform_entry_set_mtime(ae, 123456, 7890);
+	transform_entry_set_size(ae, 0);
 	set_acls(ae, acls2);
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
-	archive_entry_free(ae);
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_header(a, ae));
+	transform_entry_free(ae);
 
-	/* Close the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	/* Close the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
 	/* Verify the data on disk. */
 	assertEqualInt(0, stat("test0", &st));

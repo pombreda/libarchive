@@ -213,7 +213,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\libtransform\test\test_archive_api_feature.c"
+				RelativePath="..\..\..\libtransform\test\test_transform_api_feature.c"
 				>
 			</File>
 			<File

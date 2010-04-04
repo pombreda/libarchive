@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_iso_multi_extent.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_iso_multi_extent.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 DEFINE_TEST(test_read_format_iso_multi_extent)
 {
@@ -40,7 +40,7 @@ DEFINE_TEST(test_read_format_iso_multi_extent)
 	assert((a = transform_read_new()) != NULL);
 	assertEqualInt(0, transform_read_support_compression_all(a));
 	assertEqualInt(0, transform_read_support_format_all(a));
-	assertEqualInt(ARCHIVE_OK,
+	assertEqualInt(TRANSFORM_OK,
 	    transform_read_open_filename(a, refname, 10240));
 
 	/* Retrieve each of the 2 files on the ISO image and
@@ -48,47 +48,47 @@ DEFINE_TEST(test_read_format_iso_multi_extent)
 	for (i = 0; i < 2; ++i) {
 		assertEqualInt(0, transform_read_next_header(a, &ae));
 
-		if (strcmp(".", archive_entry_pathname(ae)) == 0) {
+		if (strcmp(".", transform_entry_pathname(ae)) == 0) {
 			/* '.' root directory. */
-			assertEqualInt(AE_IFDIR, archive_entry_filetype(ae));
-			assertEqualInt(2048, archive_entry_size(ae));
-			assertEqualInt(86401, archive_entry_mtime(ae));
-			assertEqualInt(0, archive_entry_mtime_nsec(ae));
-			assertEqualInt(2, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualIntA(a, ARCHIVE_EOF,
+			assertEqualInt(AE_IFDIR, transform_entry_filetype(ae));
+			assertEqualInt(2048, transform_entry_size(ae));
+			assertEqualInt(86401, transform_entry_mtime(ae));
+			assertEqualInt(0, transform_entry_mtime_nsec(ae));
+			assertEqualInt(2, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualIntA(a, TRANSFORM_EOF,
 			    transform_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
-		} else if (strcmp("file", archive_entry_pathname(ae)) == 0) {
+		} else if (strcmp("file", transform_entry_pathname(ae)) == 0) {
 			/* A regular file. */
-			assertEqualString("file", archive_entry_pathname(ae));
-			assertEqualInt(AE_IFREG, archive_entry_filetype(ae));
-			assertEqualInt(262280, archive_entry_size(ae));
+			assertEqualString("file", transform_entry_pathname(ae));
+			assertEqualInt(AE_IFREG, transform_entry_filetype(ae));
+			assertEqualInt(262280, transform_entry_size(ae));
 			assertEqualInt(0,
 			    transform_read_data_block(a, &p, &size, &offset));
 			assertEqualInt(0, offset);
 			assertEqualMem(p, "head--head--head", 16);
-			assertEqualInt(86401, archive_entry_mtime(ae));
-			assertEqualInt(86401, archive_entry_atime(ae));
-			assertEqualInt(1, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
+			assertEqualInt(86401, transform_entry_mtime(ae));
+			assertEqualInt(86401, transform_entry_atime(ae));
+			assertEqualInt(1, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
 		} else {
 			failure("Saw a file that shouldn't have been there");
-			assertEqualString(archive_entry_pathname(ae), "");
+			assertEqualString(transform_entry_pathname(ae), "");
 		}
 	}
 
-	/* End of archive. */
-	assertEqualInt(ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	/* End of transform. */
+	assertEqualInt(TRANSFORM_EOF, transform_read_next_header(a, &ae));
 
-	/* Verify archive format. */
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_COMPRESS);
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_ISO9660_ROCKRIDGE);
+	/* Verify transform format. */
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_COMPRESS);
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_ISO9660_ROCKRIDGE);
 
-	/* Close the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	/* Close the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 

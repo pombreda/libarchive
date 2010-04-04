@@ -4,20 +4,20 @@
  *    and run on any system with a C compiler.
  *  * Extremely portable standard C.  The only non-ANSI function
  *    used is mkdir().
- *  * Reads basic ustar tar archives.
- *  * Does not require libarchive or any other special library.
+ *  * Reads basic ustar tar transforms.
+ *  * Does not require libtransform or any other special library.
  *
  * To compile: cc -o untar untar.c
  *
- * Usage:  untar <archive>
+ * Usage:  untar <transform>
  *
  * In particular, this program should be sufficient to extract the
- * distribution for libarchive, allowing people to bootstrap
- * libarchive on systems that do not already have a tar program.
+ * distribution for libtransform, allowing people to bootstrap
+ * libtransform on systems that do not already have a tar program.
  *
- * To unpack libarchive-x.y.z.tar.gz:
- *    * gunzip libarchive-x.y.z.tar.gz
- *    * untar libarchive-x.y.z.tar
+ * To unpack libtransform-x.y.z.tar.gz:
+ *    * gunzip libtransform-x.y.z.tar.gz
+ *    * untar libtransform-x.y.z.tar
  *
  * Written by Tim Kientzle, March 2009.
  *
@@ -53,7 +53,7 @@ parseoct(const char *p, size_t n)
 
 /* Returns true if this is 512 zero bytes. */
 static int
-is_end_of_archive(const char *p)
+is_end_of_transform(const char *p)
 {
 	int n;
 	for (n = 511; n >= 0; --n)
@@ -125,7 +125,7 @@ verify_checksum(const char *p)
 	return (u == parseoct(p + 148, 8));
 }
 
-/* Extract a tar archive. */
+/* Extract a tar transform. */
 static void
 untar(FILE *a, const char *path)
 {
@@ -143,7 +143,7 @@ untar(FILE *a, const char *path)
 			    path, bytes_read);
 			return;
 		}
-		if (is_end_of_archive(buff)) {
+		if (is_end_of_transform(buff)) {
 			printf("End of %s\n", path);
 			return;
 		}

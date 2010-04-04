@@ -58,7 +58,7 @@
 
 #include "transform_platform.h"
 
-__FBSDID("$FreeBSD: head/lib/libarchive/transform_write_set_compression_compress.c 201111 2009-12-28 03:33:05Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_write_set_compression_compress.c 201111 2009-12-28 03:33:05Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -108,11 +108,11 @@ struct private_data {
 	size_t		 compressed_offset;
 };
 
-static int archive_compressor_compress_open(struct transform_write_filter *);
-static int archive_compressor_compress_write(struct transform_write_filter *,
+static int transform_compressor_compress_open(struct transform_write_filter *);
+static int transform_compressor_compress_write(struct transform_write_filter *,
 		    const void *, size_t);
-static int archive_compressor_compress_close(struct transform_write_filter *);
-static int archive_compressor_compress_free(struct transform_write_filter *);
+static int transform_compressor_compress_close(struct transform_write_filter *);
+static int transform_compressor_compress_free(struct transform_write_filter *);
 
 /*
  * Add a compress filter to this write handle.
@@ -123,50 +123,50 @@ transform_write_add_filter_compress(struct transform *_a)
 	struct transform_write *a = (struct transform_write *)_a;
 	struct transform_write_filter *f = __transform_write_allocate_filter(_a);
 
-	transform_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
+	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
 	    TRANSFORM_STATE_NEW, "transform_write_add_filter_compress");
-	f->open = &archive_compressor_compress_open;
-	f->code = ARCHIVE_FILTER_COMPRESS;
+	f->open = &transform_compressor_compress_open;
+	f->code = TRANSFORM_FILTER_COMPRESS;
 	f->name = "compress";
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 /*
  * Setup callback.
  */
 static int
-archive_compressor_compress_open(struct transform_write_filter *f)
+transform_compressor_compress_open(struct transform_write_filter *f)
 {
 	int ret;
 	struct private_data *state;
 
-	f->code = ARCHIVE_FILTER_COMPRESS;
+	f->code = TRANSFORM_FILTER_COMPRESS;
 	f->name = "compress";
 
 	ret = __transform_write_open_filter(f->next_filter);
-	if (ret != ARCHIVE_OK)
+	if (ret != TRANSFORM_OK)
 		return (ret);
 
 	state = (struct private_data *)calloc(1, sizeof(*state));
 	if (state == NULL) {
-		archive_set_error(f->archive, ENOMEM,
+		transform_set_error(f->transform, ENOMEM,
 		    "Can't allocate data for compression");
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	}
 
 	state->compressed_buffer_size = 65536;
 	state->compressed = malloc(state->compressed_buffer_size);
 
 	if (state->compressed == NULL) {
-		archive_set_error(f->archive, ENOMEM,
+		transform_set_error(f->transform, ENOMEM,
 		    "Can't allocate data for compression buffer");
 		free(state);
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	}
 
-	f->write = archive_compressor_compress_write;
-	f->close = archive_compressor_compress_close;
-	f->free = archive_compressor_compress_free;
+	f->write = transform_compressor_compress_write;
+	f->close = transform_compressor_compress_close;
+	f->free = transform_compressor_compress_free;
 
 	state->max_maxcode = 0x10000;	/* Should NEVER generate this code. */
 	state->in_count = 0;		/* Length of input. */
@@ -222,11 +222,11 @@ output_byte(struct transform_write_filter *f, unsigned char c)
 		bytes_written = __transform_write_filter(f->next_filter,
 		    state->compressed, state->compressed_buffer_size);
 		if (bytes_written <= 0)
-			return ARCHIVE_FATAL;
+			return TRANSFORM_FATAL;
 		state->compressed_offset = 0;
 	}
 
-	return ARCHIVE_OK;
+	return TRANSFORM_OK;
 }
 
 static int
@@ -271,7 +271,7 @@ output_code(struct transform_write_filter *f, int ocode)
 		if (state->bit_offset > 0) {
 			while (state->bit_offset < state->code_len * 8) {
 				ret = output_byte(f, state->bit_buf);
-				if (ret != ARCHIVE_OK)
+				if (ret != TRANSFORM_OK)
 					return ret;
 				state->bit_offset += 8;
 				state->bit_buf = 0;
@@ -292,7 +292,7 @@ output_code(struct transform_write_filter *f, int ocode)
 		}
 	}
 
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 static int
@@ -305,18 +305,18 @@ output_flush(struct transform_write_filter *f)
 	if (state->bit_offset % 8) {
 		state->code_len = (state->bit_offset % 8 + 7) / 8;
 		ret = output_byte(f, state->bit_buf);
-		if (ret != ARCHIVE_OK)
+		if (ret != TRANSFORM_OK)
 			return ret;
 	}
 
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 /*
  * Write data to the compressed stream.
  */
 static int
-archive_compressor_compress_write(struct transform_write_filter *f,
+transform_compressor_compress_write(struct transform_write_filter *f,
     const void *buff, size_t length)
 {
 	struct private_data *state = (struct private_data *)f->data;
@@ -326,7 +326,7 @@ archive_compressor_compress_write(struct transform_write_filter *f,
 	const unsigned char *bp;
 
 	if (length == 0)
-		return ARCHIVE_OK;
+		return TRANSFORM_OK;
 
 	bp = buff;
 
@@ -365,7 +365,7 @@ archive_compressor_compress_write(struct transform_write_filter *f,
 			goto probe;
  nomatch:
 		ret = output_code(f, state->cur_code);
-		if (ret != ARCHIVE_OK)
+		if (ret != TRANSFORM_OK)
 			return ret;
 		state->cur_code = c;
 		if (state->first_free < state->max_maxcode) {
@@ -392,12 +392,12 @@ archive_compressor_compress_write(struct transform_write_filter *f,
 			memset(state->hashtab, 0xff, sizeof(state->hashtab));
 			state->first_free = FIRST;
 			ret = output_code(f, CLEAR);
-			if (ret != ARCHIVE_OK)
+			if (ret != TRANSFORM_OK)
 				return ret;
 		}
 	}
 
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 
@@ -405,16 +405,16 @@ archive_compressor_compress_write(struct transform_write_filter *f,
  * Finish the compression...
  */
 static int
-archive_compressor_compress_close(struct transform_write_filter *f)
+transform_compressor_compress_close(struct transform_write_filter *f)
 {
 	struct private_data *state = (struct private_data *)f->data;
 	int ret;
 
 	ret = output_code(f, state->cur_code);
-	if (ret != ARCHIVE_OK)
+	if (ret != TRANSFORM_OK)
 		goto cleanup;
 	ret = output_flush(f);
-	if (ret != ARCHIVE_OK)
+	if (ret != TRANSFORM_OK)
 		goto cleanup;
 
 	/* Write the last block */
@@ -428,8 +428,8 @@ cleanup:
 }
 
 static int
-archive_compressor_compress_free(struct transform_write_filter *f)
+transform_compressor_compress_free(struct transform_write_filter *f)
 {
 	(void)f; /* UNUSED */
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }

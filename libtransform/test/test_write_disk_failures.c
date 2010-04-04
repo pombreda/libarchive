@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk_failures.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_write_disk_failures.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 DEFINE_TEST(test_write_disk_failures)
 {
@@ -50,16 +50,16 @@ DEFINE_TEST(test_write_disk_failures)
 	}
 
 	/* Try to extract a regular file into the directory above. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "dir/file");
-	archive_entry_set_mode(ae, S_IFREG | 0755);
-	archive_entry_set_size(ae, 8);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "dir/file");
+	transform_entry_set_mode(ae, S_IFREG | 0755);
+	transform_entry_set_size(ae, 8);
 	assert((a = transform_write_disk_new()) != NULL);
-        transform_write_disk_set_options(a, ARCHIVE_EXTRACT_TIME);
-	archive_entry_set_mtime(ae, 123456789, 0);
-	assertEqualIntA(a, ARCHIVE_FAILED, transform_write_header(a, ae));
+        transform_write_disk_set_options(a, TRANSFORM_EXTRACT_TIME);
+	transform_entry_set_mtime(ae, 123456789, 0);
+	assertEqualIntA(a, TRANSFORM_FAILED, transform_write_header(a, ae));
 	assertEqualIntA(a, 0, transform_write_finish_entry(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
-	archive_entry_free(ae);
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
+	transform_entry_free(ae);
 #endif
 }

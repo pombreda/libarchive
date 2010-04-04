@@ -12,22 +12,22 @@ TIMEFORMAT=$'%R\t%U\t%S\t%P'
 LC_ALL=C
 
 test $# -ge 2 || {
-        echo -e "usage:\t$0 source_dir where_to_place_archive 
+        echo -e "usage:\t$0 source_dir where_to_place_transform 
 [where_to_extract_it]
 
 TCP, version $version
 TCP stands for Tar Comparision Program here.
-It currently compares: BSD tar (bsdtar), GNU tar (gnutar) and star in archive
-creation, listing, extraction and archive-to-extracted comparision.
+It currently compares: BSD tar (bsdtar), GNU tar (gnutar) and star in transform
+creation, listing, extraction and transform-to-extracted comparision.
 Tcp prints out best time of n=$n repetitions.
 
-Tcp creates temporary archive named tcp.tar with $pax and some native
+Tcp creates temporary transform named tcp.tar with $pax and some native
 (--seek/-no-fsync) options and extracts it to [\$3]/tcptmp/.
 If unset, third argument defaults to [\$2].
 After normal exit tcp removes tarball and extracted files.
 Tcp does not check filesystems destination directories are on for free space,
 so make sure there is enough space (a bit more than source_dir uses) for both:
-archive and extracted files.
+transform and extracted files.
 Do not use white space in arguments.
         Jan Psota, $version"
         exit 0
@@ -69,7 +69,7 @@ echo -e "\nbest time of $n repetitions,\n"\
 `du -sh $src | awk '{print $1}'`" in "`find $src | wc -l`" files, "\
 "avg "$((`du -sk $src | awk '{print $1}'`/`find $src -type f | wc 
 -l`))"KB/file,\n"\
-"       archive=$dst, extract to $dst_path"
+"       transform=$dst, extract to $dst_path"
 
 echo -e "program\toperation\treal\tuser\tsystem\t%CPU\t     speed"
 > /tmp/tcp

@@ -1,7 +1,7 @@
-More complete build documentation is available on the libarchive
-Wiki:  http://libarchive.googlecode.com/
+More complete build documentation is available on the libtransform
+Wiki:  http://libtransform.googlecode.com/
 
-On most Unix-like systems, you should be able to install libarchive,
+On most Unix-like systems, you should be able to install libtransform,
 bsdtar, and bsdcpio using the following common steps:
     ./configure
     make
@@ -12,7 +12,7 @@ the build setting, use
     ./configure --help
 to list the configure options.
 
-If you are developing libarchive and need to update the
+If you are developing libtransform and need to update the
 configure script and other build files:
     /bin/sh build/autogen.sh
 
@@ -24,7 +24,7 @@ http://cmake.org/) to generate suitable build files for your platform.
 Cmake requires the name of the directory containing CmakeLists.txt and
 the "generator" to use for your build environment.  For example, to
 build with Xcode on Mac OS, you can use the following command:
-    cmake -G "Xcode" ~/libarchive-download-dir/
+    cmake -G "Xcode" ~/libtransform-download-dir/
 The result will be appropriate makefiles, solution files, or project
 files that can be used with the corresponding development tool.
-See the libarchive Wiki or the cmake site for further documentation.
+See the libtransform Wiki or the cmake site for further documentation.

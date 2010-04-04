@@ -23,10 +23,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_write_format_shar_empty.c,v 1.3 2008/09/01 05:38:33 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libtransform/test/test_write_format_shar_empty.c,v 1.3 2008/09/01 05:38:33 kientzle Exp $");
 
 /*
- * Check that an "empty" shar archive is correctly created as an empty file.
+ * Check that an "empty" shar transform is correctly created as an empty file.
  */
 
 DEFINE_TEST(test_write_format_shar_empty)
@@ -35,7 +35,7 @@ DEFINE_TEST(test_write_format_shar_empty)
 	char buff[2048];
 	size_t used;
 
-	/* Create a new archive in memory. */
+	/* Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_shar(a));
 	assertA(0 == transform_write_set_compression_none(a));
@@ -45,10 +45,10 @@ DEFINE_TEST(test_write_format_shar_empty)
 	assertA(0 == transform_write_set_bytes_in_last_block(a, 1));
 	assertA(0 == transform_write_open_memory(a, buff, sizeof(buff), &used));
 
-	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
-	failure("Empty shar archive should be exactly 0 bytes, was %d.", used);
+	failure("Empty shar transform should be exactly 0 bytes, was %d.", used);
 	assert(used == 0);
 }

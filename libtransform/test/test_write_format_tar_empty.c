@@ -23,10 +23,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_tar_empty.c 189308 2009-03-03 17:02:51Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_write_format_tar_empty.c 189308 2009-03-03 17:02:51Z kientzle $");
 
 /*
- * Check that an "empty" tar archive is correctly created.
+ * Check that an "empty" tar transform is correctly created.
  */
 
 DEFINE_TEST(test_write_format_tar_empty)
@@ -36,7 +36,7 @@ DEFINE_TEST(test_write_format_tar_empty)
 	size_t used;
 	unsigned int i;
 
-	/* USTAR format: Create a new archive in memory. */
+	/* USTAR format: Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_ustar(a));
 	assertA(0 == transform_write_set_compression_none(a));
@@ -44,17 +44,17 @@ DEFINE_TEST(test_write_format_tar_empty)
 	assertA(0 == transform_write_set_bytes_in_last_block(a, 512));
 	assertA(0 == transform_write_open_memory(a, buff, sizeof(buff), &used));
 
-	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
 	assert(used == 1024);
 	for (i = 0; i < used; i++) {
-		failure("Empty tar archive should be all nulls.");
+		failure("Empty tar transform should be all nulls.");
 		assert(buff[i] == 0);
 	}
 
-	/* PAX format: Create a new archive in memory. */
+	/* PAX format: Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_pax(a));
 	assertA(0 == transform_write_set_compression_none(a));
@@ -62,13 +62,13 @@ DEFINE_TEST(test_write_format_tar_empty)
 	assertA(0 == transform_write_set_bytes_in_last_block(a, 512));
 	assertA(0 == transform_write_open_memory(a, buff, sizeof(buff), &used));
 
-	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
 	assertEqualInt((int)used, 1024);
 	for (i = 0; i < used; i++) {
-		failure("Empty tar archive should be all nulls.");
+		failure("Empty tar transform should be all nulls.");
 		assert(buff[i] == 0);
 	}
 }

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_cpio_newc.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_write_format_cpio_newc.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 
 static int
@@ -45,7 +45,7 @@ is_hex(const char *p, size_t l)
 }
 
 /*
- * Detailed verification that cpio 'newc' archives are written with
+ * Detailed verification that cpio 'newc' transforms are written with
  * the correct format.
  */
 DEFINE_TEST(test_write_format_cpio_newc)
@@ -58,7 +58,7 @@ DEFINE_TEST(test_write_format_cpio_newc)
 
 	buff = malloc(buffsize);
 
-	/* Create a new archive in memory. */
+	/* Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertEqualIntA(a, 0, transform_write_set_format_cpio_newc(a));
 	assertEqualIntA(a, 0, transform_write_set_compression_none(a));
@@ -70,51 +70,51 @@ DEFINE_TEST(test_write_format_cpio_newc)
 	 */
 
 	/* Regular file */
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(entry, 1, 10);
-	archive_entry_set_pathname(entry, "file");
-	archive_entry_set_mode(entry, S_IFREG | 0664);
-	archive_entry_set_size(entry, 10);
-	archive_entry_set_uid(entry, 80);
-	archive_entry_set_gid(entry, 90);
-	archive_entry_set_dev(entry, 12);
-	archive_entry_set_ino(entry, 89);
-	archive_entry_set_nlink(entry, 1);
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(entry, 1, 10);
+	transform_entry_set_pathname(entry, "file");
+	transform_entry_set_mode(entry, S_IFREG | 0664);
+	transform_entry_set_size(entry, 10);
+	transform_entry_set_uid(entry, 80);
+	transform_entry_set_gid(entry, 90);
+	transform_entry_set_dev(entry, 12);
+	transform_entry_set_ino(entry, 89);
+	transform_entry_set_nlink(entry, 1);
 	assertEqualIntA(a, 0, transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_free(entry);
 	assertEqualIntA(a, 10, transform_write_data(a, "1234567890", 10));
 
 	/* Directory */
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(entry, 2, 20);
-	archive_entry_set_pathname(entry, "dir");
-	archive_entry_set_mode(entry, S_IFDIR | 0775);
-	archive_entry_set_size(entry, 10);
-	archive_entry_set_nlink(entry, 2);
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(entry, 2, 20);
+	transform_entry_set_pathname(entry, "dir");
+	transform_entry_set_mode(entry, S_IFDIR | 0775);
+	transform_entry_set_size(entry, 10);
+	transform_entry_set_nlink(entry, 2);
 	assertEqualIntA(a, 0, transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_free(entry);
 	assertEqualIntA(a, 0, transform_write_data(a, "1234567890", 10));
 
 	/* Symlink */
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(entry, 3, 30);
-	archive_entry_set_pathname(entry, "lnk");
-	archive_entry_set_mode(entry, 0664);
-	archive_entry_set_filetype(entry, AE_IFLNK);
-	archive_entry_set_size(entry, 0);
-	archive_entry_set_uid(entry, 83);
-	archive_entry_set_gid(entry, 93);
-	archive_entry_set_dev(entry, 13);
-	archive_entry_set_ino(entry, 88);
-	archive_entry_set_nlink(entry, 1);
-	archive_entry_set_symlink(entry,"a");
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(entry, 3, 30);
+	transform_entry_set_pathname(entry, "lnk");
+	transform_entry_set_mode(entry, 0664);
+	transform_entry_set_filetype(entry, AE_IFLNK);
+	transform_entry_set_size(entry, 0);
+	transform_entry_set_uid(entry, 83);
+	transform_entry_set_gid(entry, 93);
+	transform_entry_set_dev(entry, 13);
+	transform_entry_set_ino(entry, 88);
+	transform_entry_set_nlink(entry, 1);
+	transform_entry_set_symlink(entry,"a");
 	assertEqualIntA(a, 0, transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_free(entry);
 
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
 	/*
-	 * Verify the archive format.
+	 * Verify the transform format.
 	 */
 	e = buff;
 
@@ -183,7 +183,7 @@ DEFINE_TEST(test_write_format_cpio_newc)
 
 	/* TODO: Verify other types of entries. */
 
-	/* Last entry is end-of-archive marker. */
+	/* Last entry is end-of-transform marker. */
 	assert(is_hex(e, 76));
 	assertEqualMem(e + 0, "070701", 6); /* Magic */
 	assertEqualMem(e + 6, "00000000", 8); /* ino */

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_bad_fd.c,v 1.2 2008/09/01 05:38:33 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libtransform/test/test_bad_fd.c,v 1.2 2008/09/01 05:38:33 kientzle Exp $");
 
 /* Verify that attempting to open an invalid fd returns correct error. */
 DEFINE_TEST(test_bad_fd)
@@ -31,7 +31,7 @@ DEFINE_TEST(test_bad_fd)
 	struct transform *a;
 	assert((a = transform_read_new()) != NULL);
 	assertA(0 == transform_read_support_compression_all(a));
-	assertA(ARCHIVE_FATAL == transform_read_open_fd(a, -1, 1024));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertA(TRANSFORM_FATAL == transform_read_open_fd(a, -1, 1024));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }

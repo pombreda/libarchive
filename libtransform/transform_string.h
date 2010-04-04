@@ -22,16 +22,16 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/transform_string.h 201092 2009-12-28 02:26:06Z kientzle $
+ * $FreeBSD: head/lib/libtransform/transform_string.h 201092 2009-12-28 02:26:06Z kientzle $
  *
  */
 
-#ifndef __LIBARCHIVE_BUILD
-#error This header is only to be used internally to libarchive.
+#ifndef __LIBTRANSFORM_BUILD
+#error This header is only to be used internally to libtransform.
 #endif
 
-#ifndef ARCHIVE_STRING_H_INCLUDED
-#define	ARCHIVE_STRING_H_INCLUDED
+#ifndef TRANSFORM_STRING_H_INCLUDED
+#define	TRANSFORM_STRING_H_INCLUDED
 
 #include <stdarg.h>
 #ifdef HAVE_STDLIB_H
@@ -52,7 +52,7 @@
  * Unlike sbuf(9), the buffers here are fully reusable and track the
  * length throughout.
  *
- * Note that all visible symbols here begin with "__archive" as they
+ * Note that all visible symbols here begin with "__transform" as they
  * are internal symbols not intended for anyone outside of this library
  * to see or use.
  */
@@ -63,46 +63,46 @@ struct transform_string {
 	size_t	 buffer_length; /* Length of malloc-ed storage */
 };
 
-/* Initialize an archive_string object on the stack or elsewhere. */
-#define	archive_string_init(a)	\
+/* Initialize an transform_string object on the stack or elsewhere. */
+#define	transform_string_init(a)	\
 	do { (a)->s = NULL; (a)->length = 0; (a)->buffer_length = 0; } while(0)
 
-/* Append a C char to an archive_string, resizing as necessary. */
+/* Append a C char to an transform_string, resizing as necessary. */
 struct transform_string *
-__archive_strappend_char(struct transform_string *, char);
-#define	archive_strappend_char __archive_strappend_char
+__transform_strappend_char(struct transform_string *, char);
+#define	transform_strappend_char __transform_strappend_char
 
 /* Convert a wide-char string to UTF-8 and append the result. */
 struct transform_string *
-__archive_strappend_w_utf8(struct transform_string *, const wchar_t *);
-#define	archive_strappend_w_utf8	__archive_strappend_w_utf8
+__transform_strappend_w_utf8(struct transform_string *, const wchar_t *);
+#define	transform_strappend_w_utf8	__transform_strappend_w_utf8
 
 /* Convert a wide-char string to current locale and append the result. */
 /* Returns NULL if conversion fails. */
 struct transform_string *
-__archive_strappend_w_mbs(struct transform_string *, const wchar_t *);
-#define	archive_strappend_w_mbs	__archive_strappend_w_mbs
+__transform_strappend_w_mbs(struct transform_string *, const wchar_t *);
+#define	transform_strappend_w_mbs	__transform_strappend_w_mbs
 
 /* Basic append operation. */
 struct transform_string *
-__archive_string_append(struct transform_string *as, const char *p, size_t s);
+__transform_string_append(struct transform_string *as, const char *p, size_t s);
 
-/* Copy one archive_string to another */
+/* Copy one transform_string to another */
 void
-__archive_string_copy(struct transform_string *dest, struct transform_string *src);
-#define archive_string_copy(dest, src) \
-	__archive_string_copy(dest, src)
+__transform_string_copy(struct transform_string *dest, struct transform_string *src);
+#define transform_string_copy(dest, src) \
+	__transform_string_copy(dest, src)
 
-/* Concatenate one archive_string to another */
+/* Concatenate one transform_string to another */
 void
-__archive_string_concat(struct transform_string *dest, struct transform_string *src);
-#define archive_string_concat(dest, src) \
-	__archive_string_concat(dest, src)
+__transform_string_concat(struct transform_string *dest, struct transform_string *src);
+#define transform_string_concat(dest, src) \
+	__transform_string_concat(dest, src)
 
 /* Ensure that the underlying buffer is at least as large as the request. */
 struct transform_string *
-__archive_string_ensure(struct transform_string *, size_t);
-#define	archive_string_ensure __archive_string_ensure
+__transform_string_ensure(struct transform_string *, size_t);
+#define	transform_string_ensure __transform_string_ensure
 
 /* Append C string, which may lack trailing \0. */
 /* The source is declared void * here because this gets used with
@@ -110,42 +110,42 @@ __archive_string_ensure(struct transform_string *, size_t);
  * Declaring it "char *" as with some of the other functions just
  * leads to a lot of extra casts. */
 struct transform_string *
-__archive_strncat(struct transform_string *, const void *, size_t);
-#define	archive_strncat  __archive_strncat
+__transform_strncat(struct transform_string *, const void *, size_t);
+#define	transform_strncat  __transform_strncat
 
-/* Append a C string to an archive_string, resizing as necessary. */
-#define	archive_strcat(as,p) __archive_string_append((as),(p),strlen(p))
+/* Append a C string to an transform_string, resizing as necessary. */
+#define	transform_strcat(as,p) __transform_string_append((as),(p),strlen(p))
 
-/* Copy a C string to an archive_string, resizing as necessary. */
-#define	archive_strcpy(as,p) \
-	((as)->length = 0, __archive_string_append((as), (p), p == NULL ? 0 : strlen(p)))
+/* Copy a C string to an transform_string, resizing as necessary. */
+#define	transform_strcpy(as,p) \
+	((as)->length = 0, __transform_string_append((as), (p), p == NULL ? 0 : strlen(p)))
 
-/* Copy a C string to an archive_string with limit, resizing as necessary. */
-#define	archive_strncpy(as,p,l) \
-	((as)->length=0, archive_strncat((as), (p), (l)))
+/* Copy a C string to an transform_string with limit, resizing as necessary. */
+#define	transform_strncpy(as,p,l) \
+	((as)->length=0, transform_strncat((as), (p), (l)))
 
 /* Return length of string. */
-#define	archive_strlen(a) ((a)->length)
+#define	transform_strlen(a) ((a)->length)
 
 /* Set string length to zero. */
-#define	archive_string_empty(a) ((a)->length = 0)
+#define	transform_string_empty(a) ((a)->length = 0)
 
 /* Release any allocated storage resources. */
-void	__archive_string_free(struct transform_string *);
-#define	archive_string_free  __archive_string_free
+void	__transform_string_free(struct transform_string *);
+#define	transform_string_free  __transform_string_free
 
 /* Like 'vsprintf', but resizes the underlying string as necessary. */
-void	__archive_string_vsprintf(struct transform_string *, const char *,
+void	__transform_string_vsprintf(struct transform_string *, const char *,
 	    va_list) __LA_PRINTF(2, 0);
-#define	archive_string_vsprintf	__archive_string_vsprintf
+#define	transform_string_vsprintf	__transform_string_vsprintf
 
-void	__archive_string_sprintf(struct transform_string *, const char *, ...)
+void	__transform_string_sprintf(struct transform_string *, const char *, ...)
 	    __LA_PRINTF(2, 3);
-#define	archive_string_sprintf	__archive_string_sprintf
+#define	transform_string_sprintf	__transform_string_sprintf
 
 /* Allocates a fresh buffer and converts as (assumed to be UTF-8) into it.
  * Returns NULL if conversion failed in any way. */
-wchar_t *__archive_string_utf8_w(struct transform_string *as);
+wchar_t *__transform_string_utf8_w(struct transform_string *as);
 
 
 #endif

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk_secure.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_write_disk_secure.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 #define UMASK 022
 
@@ -48,18 +48,18 @@ DEFINE_TEST(test_write_disk_secure)
 	assert((a = transform_write_disk_new()) != NULL);
 
 	/* Write a regular dir to it. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "dir");
-	archive_entry_set_mode(ae, S_IFDIR | 0777);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "dir");
+	transform_entry_set_mode(ae, S_IFDIR | 0777);
 	assert(0 == transform_write_header(a, ae));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 	assert(0 == transform_write_finish_entry(a));
 
 	/* Write a symlink to the dir above. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "link_to_dir");
-	archive_entry_set_mode(ae, S_IFLNK | 0777);
-	archive_entry_set_symlink(ae, "dir");
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "link_to_dir");
+	transform_entry_set_mode(ae, S_IFLNK | 0777);
+	transform_entry_set_symlink(ae, "dir");
 	transform_write_disk_set_options(a, 0);
 	assert(0 == transform_write_header(a, ae));
 	assert(0 == transform_write_finish_entry(a));
@@ -68,27 +68,27 @@ DEFINE_TEST(test_write_disk_secure)
 	 * Without security checks, we should be able to
 	 * extract a file through the link.
 	 */
-	assert(archive_entry_clear(ae) != NULL);
-	archive_entry_copy_pathname(ae, "link_to_dir/filea");
-	archive_entry_set_mode(ae, S_IFREG | 0777);
+	assert(transform_entry_clear(ae) != NULL);
+	transform_entry_copy_pathname(ae, "link_to_dir/filea");
+	transform_entry_set_mode(ae, S_IFREG | 0777);
 	assert(0 == transform_write_header(a, ae));
 	assert(0 == transform_write_finish_entry(a));
 
 	/* But with security checks enabled, this should fail. */
-	assert(archive_entry_clear(ae) != NULL);
-	archive_entry_copy_pathname(ae, "link_to_dir/fileb");
-	archive_entry_set_mode(ae, S_IFREG | 0777);
-	transform_write_disk_set_options(a, ARCHIVE_EXTRACT_SECURE_SYMLINKS);
+	assert(transform_entry_clear(ae) != NULL);
+	transform_entry_copy_pathname(ae, "link_to_dir/fileb");
+	transform_entry_set_mode(ae, S_IFREG | 0777);
+	transform_write_disk_set_options(a, TRANSFORM_EXTRACT_SECURE_SYMLINKS);
 	failure("Extracting a file through a symlink should fail here.");
-	assertEqualInt(ARCHIVE_FAILED, transform_write_header(a, ae));
-	archive_entry_free(ae);
+	assertEqualInt(TRANSFORM_FAILED, transform_write_header(a, ae));
+	transform_entry_free(ae);
 	assert(0 == transform_write_finish_entry(a));
 
 	/* Create another link. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "link_to_dir2");
-	archive_entry_set_mode(ae, S_IFLNK | 0777);
-	archive_entry_set_symlink(ae, "dir");
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "link_to_dir2");
+	transform_entry_set_mode(ae, S_IFLNK | 0777);
+	transform_entry_set_symlink(ae, "dir");
 	transform_write_disk_set_options(a, 0);
 	assert(0 == transform_write_header(a, ae));
 	assert(0 == transform_write_finish_entry(a));
@@ -97,12 +97,12 @@ DEFINE_TEST(test_write_disk_secure)
 	 * With symlink check and unlink option, it should remove
 	 * the link and create the dir.
 	 */
-	assert(archive_entry_clear(ae) != NULL);
-	archive_entry_copy_pathname(ae, "link_to_dir2/filec");
-	archive_entry_set_mode(ae, S_IFREG | 0777);
-	transform_write_disk_set_options(a, ARCHIVE_EXTRACT_SECURE_SYMLINKS | ARCHIVE_EXTRACT_UNLINK);
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
-	archive_entry_free(ae);
+	assert(transform_entry_clear(ae) != NULL);
+	transform_entry_copy_pathname(ae, "link_to_dir2/filec");
+	transform_entry_set_mode(ae, S_IFREG | 0777);
+	transform_write_disk_set_options(a, TRANSFORM_EXTRACT_SECURE_SYMLINKS | TRANSFORM_EXTRACT_UNLINK);
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_header(a, ae));
+	transform_entry_free(ae);
 	assert(0 == transform_write_finish_entry(a));
 
 	/*
@@ -110,75 +110,75 @@ DEFINE_TEST(test_write_disk_secure)
 	 * dir should follow the link.
 	 */
 	/* Create a symlink to a dir. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "link_to_dir3");
-	archive_entry_set_mode(ae, S_IFLNK | 0777);
-	archive_entry_set_symlink(ae, "dir");
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "link_to_dir3");
+	transform_entry_set_mode(ae, S_IFLNK | 0777);
+	transform_entry_set_symlink(ae, "dir");
 	transform_write_disk_set_options(a, 0);
 	assert(0 == transform_write_header(a, ae));
 	assert(0 == transform_write_finish_entry(a));
 	/* Extract a dir whose name matches the symlink. */
-	assert(archive_entry_clear(ae) != NULL);
-	archive_entry_copy_pathname(ae, "link_to_dir3");
-	archive_entry_set_mode(ae, S_IFDIR | 0777);
+	assert(transform_entry_clear(ae) != NULL);
+	transform_entry_copy_pathname(ae, "link_to_dir3");
+	transform_entry_set_mode(ae, S_IFDIR | 0777);
 	assert(0 == transform_write_header(a, ae));
 	assert(0 == transform_write_finish_entry(a));
 	/* Verify link was followed. */
 	assertEqualInt(0, lstat("link_to_dir3", &st));
 	assert(S_ISLNK(st.st_mode));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
 	/*
 	 * As above, but a broken link, so the link should get replaced.
 	 */
 	/* Create a symlink to a dir. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "link_to_dir4");
-	archive_entry_set_mode(ae, S_IFLNK | 0777);
-	archive_entry_set_symlink(ae, "nonexistent_dir");
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "link_to_dir4");
+	transform_entry_set_mode(ae, S_IFLNK | 0777);
+	transform_entry_set_symlink(ae, "nonexistent_dir");
 	transform_write_disk_set_options(a, 0);
 	assert(0 == transform_write_header(a, ae));
 	assert(0 == transform_write_finish_entry(a));
 	/* Extract a dir whose name matches the symlink. */
-	assert(archive_entry_clear(ae) != NULL);
-	archive_entry_copy_pathname(ae, "link_to_dir4");
-	archive_entry_set_mode(ae, S_IFDIR | 0777);
+	assert(transform_entry_clear(ae) != NULL);
+	transform_entry_copy_pathname(ae, "link_to_dir4");
+	transform_entry_set_mode(ae, S_IFDIR | 0777);
 	assert(0 == transform_write_header(a, ae));
 	assert(0 == transform_write_finish_entry(a));
 	/* Verify link was replaced. */
 	assertEqualInt(0, lstat("link_to_dir4", &st));
 	assert(S_ISDIR(st.st_mode));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
 	/*
 	 * As above, but a link to a non-dir, so the link should get replaced.
 	 */
 	/* Create a regular file and a symlink to it */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "non_dir");
-	archive_entry_set_mode(ae, S_IFREG | 0777);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "non_dir");
+	transform_entry_set_mode(ae, S_IFREG | 0777);
 	transform_write_disk_set_options(a, 0);
 	assert(0 == transform_write_header(a, ae));
 	assert(0 == transform_write_finish_entry(a));
 	/* Create symlink to the file. */
-	archive_entry_copy_pathname(ae, "link_to_dir5");
-	archive_entry_set_mode(ae, S_IFLNK | 0777);
-	archive_entry_set_symlink(ae, "non_dir");
+	transform_entry_copy_pathname(ae, "link_to_dir5");
+	transform_entry_set_mode(ae, S_IFLNK | 0777);
+	transform_entry_set_symlink(ae, "non_dir");
 	transform_write_disk_set_options(a, 0);
 	assert(0 == transform_write_header(a, ae));
 	assert(0 == transform_write_finish_entry(a));
 	/* Extract a dir whose name matches the symlink. */
-	assert(archive_entry_clear(ae) != NULL);
-	archive_entry_copy_pathname(ae, "link_to_dir5");
-	archive_entry_set_mode(ae, S_IFDIR | 0777);
+	assert(transform_entry_clear(ae) != NULL);
+	transform_entry_copy_pathname(ae, "link_to_dir5");
+	transform_entry_set_mode(ae, S_IFDIR | 0777);
 	assert(0 == transform_write_header(a, ae));
 	assert(0 == transform_write_finish_entry(a));
 	/* Verify link was replaced. */
 	assertEqualInt(0, lstat("link_to_dir5", &st));
 	assert(S_ISDIR(st.st_mode));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
 	/* Test the entries on disk. */
 	assert(0 == lstat("dir", &st));

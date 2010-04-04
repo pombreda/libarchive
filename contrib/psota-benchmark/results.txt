@@ -25,13 +25,13 @@ Linux 2.6.22-suspend2-r2 / Gentoo Base System release 2.0.0_rc5
 gcc (GCC) 4.2.2 (Gentoo 4.2.2 p1.0)
 CFLAGS="-O2 -march=k8 -pipe"
 
-bsdtar: bsdtar 2.3.4 - libarchive 2.3.4
+bsdtar: bsdtar 2.3.4 - libtransform 2.3.4
 gnutar: tar (GNU tar) 1.19
 star:   star: star 1.5a85 (x86_64-unknown-linux-gnu)
 
 best time of 5 repetitions,
         src=linux-2.6.23, 291M in 23867 files, avg 13KB/file,
-        archive=/tmp/tcp.tar, extract to /tmp/tcptmp
+        transform=/tmp/tcp.tar, extract to /tmp/tcptmp
 program operation       real    user    system  %CPU         speed
 bsdtar  create          0.764   0.232   0.532   99.96       370308 KB/s
 gnutar  create          0.743   0.200   0.512   95.87       380775 KB/s
@@ -52,7 +52,7 @@ star    compare         0.695   0.224   0.636   100.00      372679 KB/s
 [...]
 best time of 3 repetitions,
         src=/home, 3.2G in 7447 files, avg 554KB/file,
-        archive=/var/tcp.tar, extract to /mnt/a/tcptmp
+        transform=/var/tcp.tar, extract to /mnt/a/tcptmp
 program operation       real    user    system  %CPU         speed
 bsdtar  create          184.680 0.552   13.365  7.53         17958 KB/s
 gnutar  create          159.240 0.256   12.417  7.95         20827 KB/s
@@ -76,13 +76,13 @@ Linux 2.6.22-suspend2-smp / Gentoo Base System release 2.0.0_rc5
 gcc (GCC) 4.2.2 (Gentoo 4.2.2 p1.0)
 CFLAGS="-O2 -march=athlon-xp -mfpmath=sse -frename-registers -pipe"
 
-bsdtar: bsdtar 2.3.4 - libarchive 2.3.4
+bsdtar: bsdtar 2.3.4 - libtransform 2.3.4
 gnutar: tar (GNU tar) 1.19
 star:   star: star 1.5a85 (i686-pc-linux-gnu)
 
 best time of 3 repetitions,
         src=/usr/src/linux-2.6.22-suspend2/drivers, 119M in 5900 files,
-        avg 21KB/file, archive=/tmp/tcp.tar, extract to /tmp/tcptmp
+        avg 21KB/file, transform=/tmp/tcp.tar, extract to /tmp/tcptmp
 program operation       real    user    system  %CPU         speed
 bsdtar  create          1.329   0.192   1.132   99.63        89784 KB/s
 gnutar  create          1.223   0.124   1.092   99.46        97566 KB/s
@@ -103,7 +103,7 @@ star    compare         1.569   0.376   1.096   93.79        72285 KB/s
 [...]
 best time of 3 repetitions,
         src=/home/jasiu, 2.1G in 8416 files, avg 277KB/file,
-        archive=/home/j2/tcp.tar, extract to /mnt/a/tar/tcptmp
+        transform=/home/j2/tcp.tar, extract to /mnt/a/tar/tcptmp
 program operation       real    user    system  %CPU         speed
 bsdtar  create          182.171 1.692   29.130  16.91        11584 KB/s
 gnutar  create          174.999 0.632   27.450  16.04        12059 KB/s

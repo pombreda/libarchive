@@ -7,7 +7,7 @@
 
 # Collect list of man pages, relative to my subdirs
 cd man
-MANPAGES=`for d in libarchive tar cpio;do ls ../../$d/*.[135];done | grep -v '\.so\.'`
+MANPAGES=`for d in libtransform tar cpio;do ls ../../$d/*.[135];done | grep -v '\.so\.'`
 cd ..
 
 # Build Makefile in 'man' directory

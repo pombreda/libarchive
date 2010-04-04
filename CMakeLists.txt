@@ -1,11 +1,11 @@
 #
 #
-PROJECT(libarchive C)
+PROJECT(libtransform C)
 #
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6.3 FATAL_ERROR)
 SET(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/build/cmake")
 if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${libarchive_BINARY_DIR}/bin)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${libtransform_BINARY_DIR}/bin)
 endif()
 
 #
@@ -27,8 +27,8 @@ STRING(REGEX REPLACE "[0]*([^0][0-9]*)$" "\\1" _revision ${_revision})
 SET(VERSION                    "${_major}.${_minor}.${_revision}${_quality}")
 SET(BSDCPIO_VERSION_STRING     "${VERSION}")
 SET(BSDTAR_VERSION_STRING      "${VERSION}")
-SET(LIBARCHIVE_VERSION_NUMBER  "${_version_number}")
-SET(LIBARCHIVE_VERSION_STRING  "${VERSION}")
+SET(LIBTRANSFORM_VERSION_NUMBER  "${_version_number}")
+SET(LIBTRANSFORM_VERSION_STRING  "${VERSION}")
 # Shared library number
 SET(SOVERSION                   8)
 
@@ -684,7 +684,7 @@ ENDIF(ENABLE_XATTR)
 #
 # Check for ACL libraries, headers, and functions
 #
-# The ACL support in libarchive is written against the POSIX1e draft,
+# The ACL support in libtransform is written against the POSIX1e draft,
 # which was never officially approved and varies quite a bit across
 # platforms.  Worse, some systems have completely non-POSIX acl functions,
 # which makes the following checks rather more complex than I would like.
@@ -744,7 +744,7 @@ ENDIF(WIN32 AND NOT CYGWIN)
 #
 #
 #
-INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/libarchive)
+INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/libtransform)
 #
 IF(MSVC)
   ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
@@ -760,6 +760,6 @@ IF(ENABLE_TEST)
 ADD_CUSTOM_TARGET(run_all_tests)
 ENDIF(ENABLE_TEST)
 
-add_subdirectory(libarchive)
+add_subdirectory(libtransform)
 add_subdirectory(tar)
 add_subdirectory(cpio)

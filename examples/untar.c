@@ -4,12 +4,12 @@
  */
 
 /*
- * This is a compact tar extraction program using libarchive whose
+ * This is a compact tar extraction program using libtransform whose
  * primary goal is small executable size.  Statically linked, it can
  * be very small, depending in large part on how cleanly factored your
- * system libraries are.  Note that this uses the standard libarchive,
+ * system libraries are.  Note that this uses the standard libtransform,
  * without any special recompilation.  The only functional concession
- * is that this program uses the uid/gid from the archive instead of
+ * is that this program uses the uid/gid from the transform instead of
  * doing uname/gname lookups.  (Add a call to
  * transform_write_disk_set_standard_lookup() to enable uname/gname
  * lookups, but be aware that this can add 500k or more to a static
@@ -18,11 +18,11 @@
  * resolver libraries.)
  *
  * To build:
- * $ gcc -static -Wall -o untar untar.c -larchive
+ * $ gcc -static -Wall -o untar untar.c -ltransform
  * $ strip untar
  *
  * NOTE: On some systems, you may need to add additional flags
- * to ensure that untar.c is compiled the same way as libarchive
+ * to ensure that untar.c is compiled the same way as libtransform
  * was compiled.  In particular, Linux users will probably
  * have to add -D_FILE_OFFSET_BITS=64 to the command line above.
  *
@@ -43,7 +43,7 @@
  *
  * On a slightly customized FreeBSD 5 system that I used around
  * 2005, hello above compiled to 89k compared to untar of 69k.  So at
- * that time, libarchive's tar reader and extract-to-disk routines
+ * that time, libtransform's tar reader and extract-to-disk routines
  * compiled to less code than printf().
  *
  * On my FreeBSD development system today (August, 2009):
@@ -57,8 +57,8 @@ __FBSDID("$FreeBSD$");
 
 #include <sys/stat.h>
 
-#include <archive.h>
-#include <archive_entry.h>
+#include <transform.h>
+#include <transform_entry.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -85,7 +85,7 @@ main(int argc, const char **argv)
 	mode = 'x';
 	verbose = 0;
 	compress = '\0';
-	flags = ARCHIVE_EXTRACT_TIME;
+	flags = TRANSFORM_EXTRACT_TIME;
 
 	/* Among other sins, getopt(3) pulls in printf(3). */
 	while (*++argv != NULL && **argv == '-') {
@@ -101,9 +101,9 @@ main(int argc, const char **argv)
 				p += strlen(p);
 				break;
 			case 'p':
-				flags |= ARCHIVE_EXTRACT_PERM;
-				flags |= ARCHIVE_EXTRACT_ACL;
-				flags |= ARCHIVE_EXTRACT_FFLAGS;
+				flags |= TRANSFORM_EXTRACT_PERM;
+				flags |= TRANSFORM_EXTRACT_ACL;
+				flags |= TRANSFORM_EXTRACT_FFLAGS;
 				break;
 			case 't':
 				mode = opt;
@@ -151,7 +151,7 @@ extract(const char *filename, int do_extract, int flags)
 	 */
 	transform_read_support_format_tar(a);
 	/*
-	 * On my system, enabling other archive formats adds 20k-30k
+	 * On my system, enabling other transform formats adds 20k-30k
 	 * each.  Enabling gzip decompression adds about 20k.
 	 * Enabling bzip2 is more expensive because the libbz2 library
 	 * isn't very well factored.
@@ -160,29 +160,29 @@ extract(const char *filename, int do_extract, int flags)
 		filename = NULL;
 	if ((r = transform_read_open_file(a, filename, 10240)))
 		fail("transform_read_open_file()",
-		    archive_error_string(a), r);
+		    transform_error_string(a), r);
 	for (;;) {
 		r = transform_read_next_header(a, &entry);
-		if (r == ARCHIVE_EOF)
+		if (r == TRANSFORM_EOF)
 			break;
-		if (r != ARCHIVE_OK)
+		if (r != TRANSFORM_OK)
 			fail("transform_read_next_header()",
-			    archive_error_string(a), 1);
+			    transform_error_string(a), 1);
 		if (verbose && do_extract)
 			msg("x ");
 		if (verbose || !do_extract)
-			msg(archive_entry_pathname(entry));
+			msg(transform_entry_pathname(entry));
 		if (do_extract) {
 			r = transform_write_header(ext, entry);
-			if (r != ARCHIVE_OK)
+			if (r != TRANSFORM_OK)
 				warn("transform_write_header()",
-				    archive_error_string(ext));
+				    transform_error_string(ext));
 			else {
 				copy_data(a, ext);
 				r = transform_write_finish_entry(ext);
-				if (r != ARCHIVE_OK)
+				if (r != TRANSFORM_OK)
 					fail("transform_write_finish_entry()",
-					    archive_error_string(ext), 1);
+					    transform_error_string(ext), 1);
 			}
 
 		}
@@ -204,14 +204,14 @@ copy_data(struct transform *ar, struct transform *aw)
 
 	for (;;) {
 		r = transform_read_data_block(ar, &buff, &size, &offset);
-		if (r == ARCHIVE_EOF)
-			return (ARCHIVE_OK);
-		if (r != ARCHIVE_OK)
+		if (r == TRANSFORM_EOF)
+			return (TRANSFORM_OK);
+		if (r != TRANSFORM_OK)
 			return (r);
 		r = transform_write_data_block(aw, buff, size, offset);
-		if (r != ARCHIVE_OK) {
+		if (r != TRANSFORM_OK) {
 			warn("transform_write_data_block()",
-			    archive_error_string(aw));
+			    transform_error_string(aw));
 			return (r);
 		}
 	}

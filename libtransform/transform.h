@@ -22,14 +22,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libarchive/transform.h.in,v 1.50 2008/05/26 17:00:22 kientzle Exp $
+ * $FreeBSD: src/lib/libtransform/transform.h.in,v 1.50 2008/05/26 17:00:22 kientzle Exp $
  */
 
-#ifndef ARCHIVE_H_INCLUDED
-#define	ARCHIVE_H_INCLUDED
+#ifndef TRANSFORM_H_INCLUDED
+#define	TRANSFORM_H_INCLUDED
 
 /*
- * Note: transform.h is for use outside of libarchive; the configuration
+ * Note: transform.h is for use outside of libtransform; the configuration
  * headers (config.h, transform_platform.h, etc.) are purely internal.
  * Do NOT use HAVE_XXX configuration macros to control the behavior of
  * this header!  If you must conditionalize, use predefined compiler and/or
@@ -74,12 +74,12 @@
 #endif
 
 /*
- * On Windows, define LIBARCHIVE_STATIC if you're building or using a
+ * On Windows, define LIBTRANSFORM_STATIC if you're building or using a
  * .lib.  The default here assumes you're building a DLL.  Only
- * libarchive source should ever define __LIBARCHIVE_BUILD.
+ * libtransform source should ever define __LIBTRANSFORM_BUILD.
  */
-#if ((defined __WIN32__) || (defined _WIN32) || defined(__CYGWIN__)) && (!defined LIBARCHIVE_STATIC)
-# ifdef __LIBARCHIVE_BUILD
+#if ((defined __WIN32__) || (defined _WIN32) || defined(__CYGWIN__)) && (!defined LIBTRANSFORM_STATIC)
+# ifdef __LIBTRANSFORM_BUILD
 #  ifdef __GNUC__
 #   define __LA_DECL	__attribute__((dllexport)) extern
 #  else
@@ -117,61 +117,61 @@ extern "C" {
  * strangeness.  Don't do that.
  */
 
-#define	ARCHIVE_VERSION_NUMBER 2008900
-__LA_DECL int		archive_version_number(void);
+#define	TRANSFORM_VERSION_NUMBER 2008900
+__LA_DECL int		transform_version_number(void);
 
 /*
  * Textual name/version of the library, useful for version displays.
  */
-#define	ARCHIVE_VERSION_STRING "libtransform 2.8.900a"
-__LA_DECL const char *	archive_version_string(void);
+#define	TRANSFORM_VERSION_STRING "libtransform 2.8.900a"
+__LA_DECL const char *	transform_version_string(void);
 
 /* Declare our basic types. */
 struct transform;
 
 /*
- * Error codes: Use archive_errno() and archive_error_string()
+ * Error codes: Use transform_errno() and transform_error_string()
  * to retrieve details.  Unless specified otherwise, all functions
  * that return 'int' use these codes.
  */
-#define	ARCHIVE_EOF	  1	/* Found end of archive. */
-#define	ARCHIVE_OK	  0	/* Operation was successful. */
-#define	ARCHIVE_RETRY	(-10)	/* Retry might succeed. */
-#define	ARCHIVE_WARN	(-20)	/* Partial success. */
+#define	TRANSFORM_EOF	  1	/* Found end of transform. */
+#define	TRANSFORM_OK	  0	/* Operation was successful. */
+#define	TRANSFORM_RETRY	(-10)	/* Retry might succeed. */
+#define	TRANSFORM_WARN	(-20)	/* Partial success. */
 /* For example, if write_header "fails", then you can't push data. */
-#define	ARCHIVE_FAILED	(-25)	/* Current operation cannot complete. */
-/* But if write_header is "fatal," then this archive is dead and useless. */
-#define	ARCHIVE_FATAL	(-30)	/* No more operations are possible. */
+#define	TRANSFORM_FAILED	(-25)	/* Current operation cannot complete. */
+/* But if write_header is "fatal," then this transform is dead and useless. */
+#define	TRANSFORM_FATAL	(-30)	/* No more operations are possible. */
 
 /*
- * As far as possible, archive_errno returns standard platform errno codes.
+ * As far as possible, transform_errno returns standard platform errno codes.
  * Of course, the details vary by platform, so the actual definitions
  * here are stored in "transform_platform.h".  The symbols are listed here
  * for reference; as a rule, clients should not need to know the exact
  * platform-dependent error code.
  */
 /* Unrecognized or invalid file format. */
-/* #define	ARCHIVE_ERRNO_FILE_FORMAT */
+/* #define	TRANSFORM_ERRNO_FILE_FORMAT */
 /* Illegal usage of the library. */
-/* #define	ARCHIVE_ERRNO_PROGRAMMER_ERROR */
+/* #define	TRANSFORM_ERRNO_PROGRAMMER_ERROR */
 /* Unknown or unclassified error. */
-/* #define	ARCHIVE_ERRNO_MISC */
+/* #define	TRANSFORM_ERRNO_MISC */
 
 /*
  * Callbacks are invoked to automatically read/skip/write/open/close the
- * archive. You can provide your own for complex tasks (like breaking
- * archives across multiple tapes) or use standard ones built into the
+ * transform. You can provide your own for complex tasks (like breaking
+ * transforms across multiple tapes) or use standard ones built into the
  * library.
  */
 
-/* Returns pointer and size of next block of data from archive. */
+/* Returns pointer and size of next block of data from transform. */
 typedef __LA_SSIZE_T	transform_read_callback(struct transform *,
 			    void *_client_data, const void **_buffer);
 
-/* Skips at most request bytes from archive and returns the skipped amount */
-/* Libarchive 3.0 uses int64_t here, which is actually guaranteed to be
+/* Skips at most request bytes from transform and returns the skipped amount */
+/* Libtransform 3.0 uses int64_t here, which is actually guaranteed to be
  * 64 bits on every platform. */
-typedef __LA_INT64_T	archive_skip_callback(struct transform *,
+typedef __LA_INT64_T	transform_skip_callback(struct transform *,
 			    void *_client_data, __LA_INT64_T request);
 
 /* Returns size actually written, zero on EOF, -1 on error. */
@@ -179,32 +179,32 @@ typedef __LA_SSIZE_T	transform_write_callback(struct transform *,
 			    void *_client_data,
 			    const void *_buffer, size_t _length);
 
-typedef int	archive_open_callback(struct transform *, void *_client_data);
+typedef int	transform_open_callback(struct transform *, void *_client_data);
 
-typedef int	archive_close_callback(struct transform *, void *_client_data);
+typedef int	transform_close_callback(struct transform *, void *_client_data);
 
 /*
  * Codes to identify various stream filters.
  */
-#define	ARCHIVE_FILTER_NONE	0
-#define	ARCHIVE_FILTER_GZIP	1
-#define	ARCHIVE_FILTER_BZIP2	2
-#define	ARCHIVE_FILTER_COMPRESS	3
-#define	ARCHIVE_FILTER_PROGRAM	4
-#define	ARCHIVE_FILTER_LZMA	5
-#define	ARCHIVE_FILTER_XZ	6
-#define	ARCHIVE_FILTER_UU	7
-#define	ARCHIVE_FILTER_RPM	8
+#define	TRANSFORM_FILTER_NONE	0
+#define	TRANSFORM_FILTER_GZIP	1
+#define	TRANSFORM_FILTER_BZIP2	2
+#define	TRANSFORM_FILTER_COMPRESS	3
+#define	TRANSFORM_FILTER_PROGRAM	4
+#define	TRANSFORM_FILTER_LZMA	5
+#define	TRANSFORM_FILTER_XZ	6
+#define	TRANSFORM_FILTER_UU	7
+#define	TRANSFORM_FILTER_RPM	8
 
 /*-
- * Basic outline for reading an archive:
- *   1) Ask transform_read_new for an archive reader object.
+ * Basic outline for reading an transform:
+ *   1) Ask transform_read_new for an transform reader object.
  *   2) Update any global properties as appropriate.
  *      In particular, you'll certainly want to call appropriate
  *      transform_read_support_XXX functions.
- *   3) Call transform_read_open_XXX to open the archive
+ *   3) Call transform_read_open_XXX to open the transform
  *   4) Repeatedly call transform_read_next_header to get information about
- *      successive archive entries.  Call transform_read_data to extract
+ *      successive transform entries.  Call transform_read_data to extract
  *      data for entries of interest.
  *   5) Call transform_read_finish to end processing.
  */
@@ -212,12 +212,12 @@ __LA_DECL struct transform	*transform_read_new(void);
 
 /*
  * The transform_read_support_XXX calls enable auto-detect for this
- * archive handle.  They also link in the necessary support code.
+ * transform handle.  They also link in the necessary support code.
  * For example, if you don't want bzlib linked in, don't invoke
  * support_compression_bzip2().  The "all" functions provide the
  * obvious shorthand.
  */
-/* TODO: Rename 'compression' here to 'filter' for libarchive 3.0, deprecate
+/* TODO: Rename 'compression' here to 'filter' for libtransform 3.0, deprecate
  * the old names. */
 
 __LA_DECL int transform_read_support_compression_all(struct transform *);
@@ -237,13 +237,13 @@ __LA_DECL int transform_read_support_compression_uu(struct transform *);
 __LA_DECL int transform_read_support_compression_xz(struct transform *);
 
 
-/* Open the archive using callbacks for archive I/O. */
+/* Open the transform using callbacks for transform I/O. */
 __LA_DECL int transform_read_open(struct transform *, void *_client_data,
-		     archive_open_callback *, transform_read_callback *,
-		     archive_close_callback *);
+		     transform_open_callback *, transform_read_callback *,
+		     transform_close_callback *);
 __LA_DECL int transform_read_open2(struct transform *, void *_client_data,
-		     archive_open_callback *, transform_read_callback *,
-		     archive_skip_callback *, archive_close_callback *);
+		     transform_open_callback *, transform_read_callback *,
+		     transform_skip_callback *, transform_close_callback *);
 
 /*
  * A variety of shortcuts that invoke transform_read_open() with
@@ -256,16 +256,16 @@ __LA_DECL int transform_read_open_filename(struct transform *,
 /* transform_read_open_file() is a deprecated synonym for ..._open_filename(). */
 __LA_DECL int transform_read_open_file(struct transform *,
 		     const char *_filename, size_t _block_size);
-/* Read an archive that's stored in memory. */
+/* Read an transform that's stored in memory. */
 __LA_DECL int transform_read_open_memory(struct transform *,
 		     void * buff, size_t size);
 /* A more involved version that is only used for internal testing. */
 __LA_DECL int transform_read_open_memory2(struct transform *a, void *buff,
 		     size_t size, size_t read_size);
-/* Read an archive that's already open, using the file descriptor. */
+/* Read an transform that's already open, using the file descriptor. */
 __LA_DECL int transform_read_open_fd(struct transform *, int _fd,
 		     size_t _block_size);
-/* Read an archive that's already open, using a FILE *. */
+/* Read an transform that's already open, using a FILE *. */
 /* Note: DO NOT use this with tape drives. */
 __LA_DECL int transform_read_open_FILE(struct transform *, FILE *_file);
 
@@ -305,8 +305,8 @@ __LA_DECL int transform_read_set_options(struct transform *_a,
  *  - Creates intermediate directories as required.
  *  - Manages directory permissions:  non-writable directories will
  *    be initially created with write permission enabled; when the
- *    archive is closed, dir permissions are edited to the values specified
- *    in the archive.
+ *    transform is closed, dir permissions are edited to the values specified
+ *    in the transform.
  *  - Checks hardlinks:  hardlinks will not be extracted unless the
  *    linked-to file was also extracted within the same session. (TODO)
  */
@@ -314,32 +314,32 @@ __LA_DECL int transform_read_set_options(struct transform *_a,
 /* The "flags" argument selects optional behavior, 'OR' the flags you want. */
 
 /* Default: Do not try to set owner/group. */
-#define	ARCHIVE_EXTRACT_OWNER			(0x0001)
+#define	TRANSFORM_EXTRACT_OWNER			(0x0001)
 /* Default: Do obey umask, do not restore SUID/SGID/SVTX bits. */
-#define	ARCHIVE_EXTRACT_PERM			(0x0002)
+#define	TRANSFORM_EXTRACT_PERM			(0x0002)
 /* Default: Do not restore mtime/atime. */
-#define	ARCHIVE_EXTRACT_TIME			(0x0004)
+#define	TRANSFORM_EXTRACT_TIME			(0x0004)
 /* Default: Replace existing files. */
-#define	ARCHIVE_EXTRACT_NO_OVERWRITE 		(0x0008)
+#define	TRANSFORM_EXTRACT_NO_OVERWRITE 		(0x0008)
 /* Default: Try create first, unlink only if create fails with EEXIST. */
-#define	ARCHIVE_EXTRACT_UNLINK			(0x0010)
+#define	TRANSFORM_EXTRACT_UNLINK			(0x0010)
 /* Default: Do not restore ACLs. */
-#define	ARCHIVE_EXTRACT_ACL			(0x0020)
+#define	TRANSFORM_EXTRACT_ACL			(0x0020)
 /* Default: Do not restore fflags. */
-#define	ARCHIVE_EXTRACT_FFLAGS			(0x0040)
+#define	TRANSFORM_EXTRACT_FFLAGS			(0x0040)
 /* Default: Do not restore xattrs. */
-#define	ARCHIVE_EXTRACT_XATTR 			(0x0080)
+#define	TRANSFORM_EXTRACT_XATTR 			(0x0080)
 /* Default: Do not try to guard against extracts redirected by symlinks. */
-/* Note: With ARCHIVE_EXTRACT_UNLINK, will remove any intermediate symlink. */
-#define	ARCHIVE_EXTRACT_SECURE_SYMLINKS		(0x0100)
+/* Note: With TRANSFORM_EXTRACT_UNLINK, will remove any intermediate symlink. */
+#define	TRANSFORM_EXTRACT_SECURE_SYMLINKS		(0x0100)
 /* Default: Do not reject entries with '..' as path elements. */
-#define	ARCHIVE_EXTRACT_SECURE_NODOTDOT		(0x0200)
+#define	TRANSFORM_EXTRACT_SECURE_NODOTDOT		(0x0200)
 /* Default: Create parent directories as needed. */
-#define	ARCHIVE_EXTRACT_NO_AUTODIR		(0x0400)
+#define	TRANSFORM_EXTRACT_NO_AUTODIR		(0x0400)
 /* Default: Overwrite files, even if one on disk is newer. */
-#define	ARCHIVE_EXTRACT_NO_OVERWRITE_NEWER	(0x0800)
+#define	TRANSFORM_EXTRACT_NO_OVERWRITE_NEWER	(0x0800)
 /* Detect blocks of 0 and write holes instead. */
-#define	ARCHIVE_EXTRACT_SPARSE			(0x1000)
+#define	TRANSFORM_EXTRACT_SPARSE			(0x1000)
 
 /* Close the file and release most resources. */
 __LA_DECL int		 transform_read_close(struct transform *);
@@ -348,8 +348,8 @@ __LA_DECL int		 transform_read_close(struct transform *);
 __LA_DECL int		 transform_read_free(struct transform *);
 
 /*-
- * To create an archive:
- *   1) Ask transform_write_new for a archive writer object.
+ * To create an transform:
+ *   1) Ask transform_write_new for a transform writer object.
  *   2) Set any global properties.  In particular, you should set
  *      the compression and format to use.
  *   3) Call transform_write_open to open the file (most people
@@ -371,8 +371,8 @@ __LA_DECL int transform_write_set_bytes_in_last_block(struct transform *,
 		     int bytes_in_last_block);
 __LA_DECL int transform_write_get_bytes_in_last_block(struct transform *);
 
-/* The dev/ino of a file that won't be archived.  This is used
- * to avoid recursively adding an archive to itself. */
+/* The dev/ino of a file that won't be transformd.  This is used
+ * to avoid recursively adding an transform to itself. */
 __LA_DECL int transform_write_set_skip_file(struct transform *,
     __LA_INT64_T, __LA_INT64_T);
 
@@ -387,8 +387,8 @@ __LA_DECL int transform_write_add_filter_xz(struct transform *);
 
 
 __LA_DECL int transform_write_open(struct transform *, void *,
-		     archive_open_callback *, transform_write_callback *,
-		     archive_close_callback *);
+		     transform_open_callback *, transform_write_callback *,
+		     transform_close_callback *);
 __LA_DECL int transform_write_open_fd(struct transform *, int _fd);
 __LA_DECL int transform_write_open_filename(struct transform *, const char *_file);
 /* A deprecated synonym for transform_write_open_filename() */
@@ -406,12 +406,12 @@ __LA_DECL int transform_write_open_memory(struct transform *,
 __LA_DECL __LA_SSIZE_T	transform_write_data(struct transform *,
 			    const void *, size_t);
 
-/* Libarchive 3.0 uses explicit int64_t to ensure consistent 64-bit support. */
+/* Libtransform 3.0 uses explicit int64_t to ensure consistent 64-bit support. */
 __LA_DECL __LA_SSIZE_T	 transform_write_data_block(struct transform *,
 				    const void *, size_t, __LA_INT64_T);
 __LA_DECL int		 transform_write_finish_entry(struct transform *);
 __LA_DECL int		 transform_write_close(struct transform *);
-/* This can fail if the archive wasn't already closed, in which case
+/* This can fail if the transform wasn't already closed, in which case
  * transform_write_free() will implicitly call transform_write_close(). */
 __LA_DECL int		 transform_write_free(struct transform *);
 
@@ -436,17 +436,17 @@ __LA_DECL int		transform_write_set_filter_options(struct transform *_a,
 /* Filter #0 is the one closest to the format, -1 is a synonym for the
  * last filter, which is always the pseudo-filter that wraps the
  * client callbacks. */
-__LA_DECL int		 archive_filter_count(struct transform *);
-__LA_DECL __LA_INT64_T	 archive_filter_bytes(struct transform *, int);
-__LA_DECL int		 archive_filter_code(struct transform *, int);
-__LA_DECL const char *	 archive_filter_name(struct transform *, int);
+__LA_DECL int		 transform_filter_count(struct transform *);
+__LA_DECL __LA_INT64_T	 transform_filter_bytes(struct transform *, int);
+__LA_DECL int		 transform_filter_code(struct transform *, int);
+__LA_DECL const char *	 transform_filter_name(struct transform *, int);
 
-__LA_DECL int		 archive_errno(struct transform *);
-__LA_DECL const char	*archive_error_string(struct transform *);
-__LA_DECL void		 archive_clear_error(struct transform *);
-__LA_DECL void		 archive_set_error(struct transform *, int _err,
+__LA_DECL int		 transform_errno(struct transform *);
+__LA_DECL const char	*transform_error_string(struct transform *);
+__LA_DECL void		 transform_clear_error(struct transform *);
+__LA_DECL void		 transform_set_error(struct transform *, int _err,
 			    const char *fmt, ...) __LA_PRINTF(3, 4);
-__LA_DECL void		 archive_copy_error(struct transform *dest,
+__LA_DECL void		 transform_copy_error(struct transform *dest,
 			    struct transform *src);
 
 #ifdef __cplusplus
@@ -463,4 +463,4 @@ __LA_DECL void		 archive_copy_error(struct transform *dest,
 /* #undef __LA_INT64_T */
 /* #undef __LA_SSIZE_T */
 
-#endif /* !ARCHIVE_H_INCLUDED */
+#endif /* !TRANSFORM_H_INCLUDED */

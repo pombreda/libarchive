@@ -40,10 +40,10 @@ cd ..
 # Clean up the source dir as much as we can.
 /bin/sh build/clean.sh
 
-# Substitute the versions into Libtransform's archive.h and archive_entry.h
-perl -p -i -e "s/^(#define\tARCHIVE_VERSION_NUMBER).*/\$1 $VN/" libtransform/archive.h
-perl -p -i -e "s/^(#define\tARCHIVE_VERSION_NUMBER).*/\$1 $VN/" libtransform/archive_entry.h
-perl -p -i -e "s/^(#define\tARCHIVE_VERSION_STRING).*/\$1 \"libtransform $VS\"/" libtransform/archive.h
+# Substitute the versions into Libtransform's transform.h and transform_entry.h
+perl -p -i -e "s/^(#define\tTRANSFORM_VERSION_NUMBER).*/\$1 $VN/" libtransform/transform.h
+perl -p -i -e "s/^(#define\tTRANSFORM_VERSION_NUMBER).*/\$1 $VN/" libtransform/transform_entry.h
+perl -p -i -e "s/^(#define\tTRANSFORM_VERSION_STRING).*/\$1 \"libtransform $VS\"/" libtransform/transform.h
 # Substitute versions into configure.ac as well
 perl -p -i -e 's/(m4_define\(\[LIBTRANSFORM_VERSION_S\]),.*\)/$1,['"$VS"'])/' configure.ac
 perl -p -i -e 's/(m4_define\(\[LIBTRANSFORM_VERSION_N\]),.*\)/$1,['"$VN"'])/' configure.ac

@@ -24,7 +24,7 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_string.c 201095 2009-12-28 02:33:22Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_string.c 201095 2009-12-28 02:33:22Z kientzle $");
 
 /*
  * Basic resizable string support, to simplify manipulating arbitrary-sized
@@ -48,10 +48,10 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_string.c 201095 2009-12-28 02:33
 #include "transform_string.h"
 
 struct transform_string *
-__archive_string_append(struct transform_string *as, const char *p, size_t s)
+__transform_string_append(struct transform_string *as, const char *p, size_t s)
 {
-	if (__archive_string_ensure(as, as->length + s + 1) == NULL)
-		__archive_errx(1, "Out of memory");
+	if (__transform_string_ensure(as, as->length + s + 1) == NULL)
+		__transform_errx(1, "Out of memory");
 	memcpy(as->s + as->length, p, s);
 	as->s[as->length + s] = 0;
 	as->length += s;
@@ -59,13 +59,13 @@ __archive_string_append(struct transform_string *as, const char *p, size_t s)
 }
 
 void
-__archive_string_copy(struct transform_string *dest, struct transform_string *src)
+__transform_string_copy(struct transform_string *dest, struct transform_string *src)
 {
 	if (src->length == 0)
 		dest->length = 0;
 	else {
-		if (__archive_string_ensure(dest, src->length + 1) == NULL)
-			__archive_errx(1, "Out of memory");
+		if (__transform_string_ensure(dest, src->length + 1) == NULL)
+			__transform_errx(1, "Out of memory");
 		memcpy(dest->s, src->s, src->length);
 		dest->length = src->length;
 		dest->s[dest->length] = 0;
@@ -73,11 +73,11 @@ __archive_string_copy(struct transform_string *dest, struct transform_string *sr
 }
 
 void
-__archive_string_concat(struct transform_string *dest, struct transform_string *src)
+__transform_string_concat(struct transform_string *dest, struct transform_string *src)
 {
 	if (src->length > 0) {
-		if (__archive_string_ensure(dest, dest->length + src->length + 1) == NULL)
-			__archive_errx(1, "Out of memory");
+		if (__transform_string_ensure(dest, dest->length + src->length + 1) == NULL)
+			__transform_errx(1, "Out of memory");
 		memcpy(dest->s + dest->length, src->s, src->length);
 		dest->length += src->length;
 		dest->s[dest->length] = 0;
@@ -85,7 +85,7 @@ __archive_string_concat(struct transform_string *dest, struct transform_string *
 }
 
 void
-__archive_string_free(struct transform_string *as)
+__transform_string_free(struct transform_string *as)
 {
 	as->length = 0;
 	as->buffer_length = 0;
@@ -97,7 +97,7 @@ __archive_string_free(struct transform_string *as)
 
 /* Returns NULL on any allocation failure. */
 struct transform_string *
-__archive_string_ensure(struct transform_string *as, size_t s)
+__transform_string_ensure(struct transform_string *as, size_t s)
 {
 	/* If buffer is already big enough, don't reallocate. */
 	if (as->s && (s <= as->buffer_length))
@@ -142,7 +142,7 @@ __archive_string_ensure(struct transform_string *as, size_t s)
 }
 
 struct transform_string *
-__archive_strncat(struct transform_string *as, const void *_p, size_t n)
+__transform_strncat(struct transform_string *as, const void *_p, size_t n)
 {
 	size_t s;
 	const char *p, *pp;
@@ -156,22 +156,22 @@ __archive_strncat(struct transform_string *as, const void *_p, size_t n)
 		pp++;
 		s++;
 	}
-	return (__archive_string_append(as, p, s));
+	return (__transform_string_append(as, p, s));
 }
 
 struct transform_string *
-__archive_strappend_char(struct transform_string *as, char c)
+__transform_strappend_char(struct transform_string *as, char c)
 {
-	return (__archive_string_append(as, &c, 1));
+	return (__transform_string_append(as, &c, 1));
 }
 
 /*
  * Translates a wide character string into UTF-8 and appends
- * to the archive_string.  Note: returns NULL if conversion fails,
+ * to the transform_string.  Note: returns NULL if conversion fails,
  * but still leaves a best-effort conversion in the argument as.
  */
 struct transform_string *
-__archive_strappend_w_utf8(struct transform_string *as, const wchar_t *w)
+__transform_strappend_w_utf8(struct transform_string *as, const wchar_t *w)
 {
 	char *p;
 	unsigned wc;
@@ -188,7 +188,7 @@ __archive_strappend_w_utf8(struct transform_string *as, const wchar_t *w)
 		/* (No encoding has a single character >16 bytes.) */
 		if ((size_t)(p - buff) >= (size_t)(sizeof(buff) - 16)) {
 			*p = '\0';
-			archive_strcat(as, buff);
+			transform_strcat(as, buff);
 			p = buff;
 		}
 		wc = *w++;
@@ -226,7 +226,7 @@ __archive_strappend_w_utf8(struct transform_string *as, const wchar_t *w)
 		}
 	}
 	*p = '\0';
-	archive_strcat(as, buff);
+	transform_strcat(as, buff);
 	return (return_val);
 }
 
@@ -280,12 +280,12 @@ utf8_to_unicode(int *pwc, const char *s, size_t n)
 }
 
 /*
- * Return a wide-character Unicode string by converting this archive_string
+ * Return a wide-character Unicode string by converting this transform_string
  * from UTF-8.  We assume that systems with 16-bit wchar_t always use
  * UTF16 and systems with 32-bit wchar_t can accept UCS4.
  */
 wchar_t *
-__archive_string_utf8_w(struct transform_string *as)
+__transform_string_utf8_w(struct transform_string *as)
 {
 	wchar_t *ws, *dest;
 	int wc, wc2;/* Must be large enough for a 21-bit Unicode code point. */
@@ -294,7 +294,7 @@ __archive_string_utf8_w(struct transform_string *as)
 
 	ws = (wchar_t *)malloc((as->length + 1) * sizeof(wchar_t));
 	if (ws == NULL)
-		__archive_errx(1, "Out of memory");
+		__transform_errx(1, "Out of memory");
 	dest = ws;
 	src = as->s;
 	while (*src != '\0') {
@@ -350,7 +350,7 @@ __archive_string_utf8_w(struct transform_string *as)
 
 /*
  * Translates a wide character string into current locale character set
- * and appends to the archive_string.  Note: returns NULL if conversion
+ * and appends to the transform_string.  Note: returns NULL if conversion
  * fails.
  *
  * Win32 builds use WideCharToMultiByte from the Windows API.
@@ -359,7 +359,7 @@ __archive_string_utf8_w(struct transform_string *as)
  * wrapper is going to know.)
  */
 struct transform_string *
-__archive_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
+__transform_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
 {
 	char *p;
 	int l, wl;
@@ -369,7 +369,7 @@ __archive_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
 	l = wl * 4 + 4;
 	p = malloc(l);
 	if (p == NULL)
-		__archive_errx(1, "Out of memory");
+		__transform_errx(1, "Out of memory");
 	/* To check a useDefaultChar is to simulate error handling of
 	 * the my_wcstombs() which is running on non Windows system with
 	 * wctomb().
@@ -381,7 +381,7 @@ __archive_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
 		free(p);
 		return (NULL);
 	}
-	__archive_string_append(as, p, l);
+	__transform_string_append(as, p, l);
 	free(p);
 	return (as);
 }
@@ -390,7 +390,7 @@ __archive_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
 
 /*
  * Translates a wide character string into current locale character set
- * and appends to the archive_string.  Note: returns NULL if conversion
+ * and appends to the transform_string.  Note: returns NULL if conversion
  * fails.
  *
  * Non-Windows uses ISO C wcrtomb() or wctomb() to perform the conversion
@@ -398,11 +398,11 @@ __archive_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
  * either of these, fall back to the built-in UTF8 conversion.
  */
 struct transform_string *
-__archive_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
+__transform_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
 {
 #if !defined(HAVE_WCTOMB) && !defined(HAVE_WCRTOMB)
 	/* If there's no built-in locale support, fall back to UTF8 always. */
-	return __archive_strappend_w_utf8(as, w);
+	return __transform_strappend_w_utf8(as, w);
 #else
 	/* We cannot use the standard wcstombs() here because it
 	 * cannot tell us how big the output buffer should be.  So
@@ -432,7 +432,7 @@ __archive_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
 		/* (No encoding has a single character >16 bytes.) */
 		if ((size_t)(p - buff) >= (size_t)(sizeof(buff) - MB_CUR_MAX)) {
 			*p = '\0';
-			archive_strcat(as, buff);
+			transform_strcat(as, buff);
 			p = buff;
 		}
 #if HAVE_WCRTOMB
@@ -445,7 +445,7 @@ __archive_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
 		p += n;
 	}
 	*p = '\0';
-	archive_strcat(as, buff);
+	transform_strcat(as, buff);
 	return (as);
 #endif
 }

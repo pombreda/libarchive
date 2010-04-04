@@ -25,7 +25,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_mtree.c 191183 2009-04-17 01:06:31Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_write_format_mtree.c 191183 2009-04-17 01:06:31Z kientzle $");
 
 static char buff[4096];
 static struct {
@@ -57,37 +57,37 @@ test_write_format_mtree_sub(int use_set, int dironly)
 	size_t used;
 	int i;
 
-	/* Create a mtree format archive. */
+	/* Create a mtree format transform. */
 	assert((a = transform_write_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_set_format_mtree(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_set_format_mtree(a));
 	if (use_set)
-		assertEqualIntA(a, ARCHIVE_OK, transform_write_set_options(a, "use-set"));
+		assertEqualIntA(a, TRANSFORM_OK, transform_write_set_options(a, "use-set"));
 	if (dironly)
-		assertEqualIntA(a, ARCHIVE_OK, transform_write_set_options(a, "dironly"));
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_open_memory(a, buff, sizeof(buff)-1, &used));
+		assertEqualIntA(a, TRANSFORM_OK, transform_write_set_options(a, "dironly"));
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_open_memory(a, buff, sizeof(buff)-1, &used));
 
 	/* Write entries */
 	for (i = 0; entries[i].path != NULL; i++) {
-		assert((ae = archive_entry_new()) != NULL);
-		archive_entry_set_mtime(ae, entries[i].mtime, 0);
-		assert(entries[i].mtime == archive_entry_mtime(ae));
-		archive_entry_set_mode(ae, entries[i].mode);
-		assert(entries[i].mode == archive_entry_mode(ae));
-		archive_entry_set_uid(ae, entries[i].uid);
-		assert(entries[i].uid == archive_entry_uid(ae));
-		archive_entry_set_gid(ae, entries[i].gid);
-		assert(entries[i].gid == archive_entry_gid(ae));
-		archive_entry_copy_pathname(ae, entries[i].path);
+		assert((ae = transform_entry_new()) != NULL);
+		transform_entry_set_mtime(ae, entries[i].mtime, 0);
+		assert(entries[i].mtime == transform_entry_mtime(ae));
+		transform_entry_set_mode(ae, entries[i].mode);
+		assert(entries[i].mode == transform_entry_mode(ae));
+		transform_entry_set_uid(ae, entries[i].uid);
+		assert(entries[i].uid == transform_entry_uid(ae));
+		transform_entry_set_gid(ae, entries[i].gid);
+		assert(entries[i].gid == transform_entry_gid(ae));
+		transform_entry_copy_pathname(ae, entries[i].path);
 		if ((entries[i].mode & AE_IFMT) != S_IFDIR)
-			archive_entry_set_size(ae, 8);
-		assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
+			transform_entry_set_size(ae, 8);
+		assertEqualIntA(a, TRANSFORM_OK, transform_write_header(a, ae));
 		if ((entries[i].mode & AE_IFMT) != S_IFDIR)
 			assertEqualIntA(a, 8,
 			    transform_write_data(a, "Hello012", 15));
-		archive_entry_free(ae);
+		transform_entry_free(ae);
 	}
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-        assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+        assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
 	if (use_set) {
 		const char *p;
@@ -115,25 +115,25 @@ test_write_format_mtree_sub(int use_set, int dironly)
 	 * Read the data and check it.
 	 */
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_memory(a, buff, used));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_open_memory(a, buff, used));
 
 	/* Read entries */
 	for (i = 0; entries[i].path != NULL; i++) {
 		if (dironly && (entries[i].mode & AE_IFMT) != S_IFDIR)
 			continue;
-		assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-		assertEqualInt(entries[i].mtime, archive_entry_mtime(ae));
-		assertEqualInt(entries[i].mode, archive_entry_mode(ae));
-		assertEqualInt(entries[i].uid, archive_entry_uid(ae));
-		assertEqualInt(entries[i].gid, archive_entry_gid(ae));
-		assertEqualString(entries[i].path, archive_entry_pathname(ae));
+		assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+		assertEqualInt(entries[i].mtime, transform_entry_mtime(ae));
+		assertEqualInt(entries[i].mode, transform_entry_mode(ae));
+		assertEqualInt(entries[i].uid, transform_entry_uid(ae));
+		assertEqualInt(entries[i].gid, transform_entry_gid(ae));
+		assertEqualString(entries[i].path, transform_entry_pathname(ae));
 		if ((entries[i].mode & AE_IFMT) != S_IFDIR)
-			assertEqualInt(8, archive_entry_size(ae));
+			assertEqualInt(8, transform_entry_size(ae));
 	}
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 DEFINE_TEST(test_write_format_mtree)

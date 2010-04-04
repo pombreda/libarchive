@@ -30,7 +30,7 @@
 #include "filter_fork.h"
 
 pid_t
-__archive_create_child(const char *path, int *child_stdin, int *child_stdout)
+__transform_create_child(const char *path, int *child_stdin, int *child_stdout)
 {
 	HANDLE childStdout[2], childStdin[2], childStdinWr, childStdoutRd;
 	SECURITY_ATTRIBUTES secAtts;

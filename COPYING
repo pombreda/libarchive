@@ -1,4 +1,4 @@
-The libarchive distribution as a whole is Copyright by Tim Kientzle
+The libtransform distribution as a whole is Copyright by Tim Kientzle
 and is subject to the copyright notice reproduced at the bottom of
 this file.
 
@@ -15,10 +15,10 @@ the actual statements in the files are controlling.
 * The following source files are also subject in whole or in part to
   a 3-clause UC Regents copyright; please read the individual source
   files for details:
-   libarchive/archive_entry.c
-   libarchive/transform_read_support_compression_compress.c
-   libarchive/transform_write_set_compression_compress.c
-   libarchive/mtree.5
+   libtransform/transform_entry.c
+   libtransform/transform_read_support_compression_compress.c
+   libtransform/transform_write_set_compression_compress.c
+   libtransform/mtree.5
    tar/matching.c
 
 * The following source files are in the public domain:

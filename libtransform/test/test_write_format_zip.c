@@ -31,7 +31,7 @@
 /* TODO: reader does not yet restore permissions. */
 
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_zip.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_write_format_zip.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 DEFINE_TEST(test_write_format_zip)
 {
@@ -45,97 +45,97 @@ DEFINE_TEST(test_write_format_zip)
 
 	buff = malloc(buffsize);
 
-	/* Create a new archive in memory. */
+	/* Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_set_format_zip(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_set_format_zip(a));
 #ifdef HAVE_ZLIB_H
 	compression_type = "zip:compression=deflate";
 #else
 	compression_type = "zip:compression=store";
 #endif
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_set_format_options(a, compression_type));
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_set_compression_none(a));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_set_compression_none(a));
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_open_memory(a, buff, buffsize, &used));
 
 	/*
 	 * Write a file to it.
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(ae, 1, 10);
-	assertEqualInt(1, archive_entry_mtime(ae));
-	assertEqualInt(10, archive_entry_mtime_nsec(ae));
-	archive_entry_copy_pathname(ae, "file");
-	assertEqualString("file", archive_entry_pathname(ae));
-	archive_entry_set_mode(ae, S_IFREG | 0755);
-	assertEqualInt((S_IFREG | 0755), archive_entry_mode(ae));
-	archive_entry_set_size(ae, 8);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(ae, 1, 10);
+	assertEqualInt(1, transform_entry_mtime(ae));
+	assertEqualInt(10, transform_entry_mtime_nsec(ae));
+	transform_entry_copy_pathname(ae, "file");
+	assertEqualString("file", transform_entry_pathname(ae));
+	transform_entry_set_mode(ae, S_IFREG | 0755);
+	assertEqualInt((S_IFREG | 0755), transform_entry_mode(ae));
+	transform_entry_set_size(ae, 8);
 
 	assertEqualInt(0, transform_write_header(a, ae));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 	assertEqualInt(8, transform_write_data(a, "12345678", 9));
 	assertEqualInt(0, transform_write_data(a, "1", 1));
 
 	/*
 	 * Write another file to it.
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(ae, 1, 10);
-	assertEqualInt(1, archive_entry_mtime(ae));
-	assertEqualInt(10, archive_entry_mtime_nsec(ae));
-	archive_entry_copy_pathname(ae, "file2");
-	assertEqualString("file2", archive_entry_pathname(ae));
-	archive_entry_set_mode(ae, S_IFREG | 0755);
-	assertEqualInt((S_IFREG | 0755), archive_entry_mode(ae));
-	archive_entry_set_size(ae, 4);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(ae, 1, 10);
+	assertEqualInt(1, transform_entry_mtime(ae));
+	assertEqualInt(10, transform_entry_mtime_nsec(ae));
+	transform_entry_copy_pathname(ae, "file2");
+	assertEqualString("file2", transform_entry_pathname(ae));
+	transform_entry_set_mode(ae, S_IFREG | 0755);
+	assertEqualInt((S_IFREG | 0755), transform_entry_mode(ae));
+	transform_entry_set_size(ae, 4);
 
-	assertEqualInt(ARCHIVE_OK, transform_write_header(a, ae));
-	archive_entry_free(ae);
+	assertEqualInt(TRANSFORM_OK, transform_write_header(a, ae));
+	transform_entry_free(ae);
 	assertEqualInt(4, transform_write_data(a, "1234", 5));
 
 	/*
 	 * Write a directory to it.
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(ae, 11, 110);
-	archive_entry_copy_pathname(ae, "dir");
-	archive_entry_set_mode(ae, S_IFDIR | 0755);
-	archive_entry_set_size(ae, 512);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(ae, 11, 110);
+	transform_entry_copy_pathname(ae, "dir");
+	transform_entry_set_mode(ae, S_IFDIR | 0755);
+	transform_entry_set_size(ae, 512);
 
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_header(a, ae));
 	failure("size should be zero so that applications know not to write");
-	assertEqualInt(0, archive_entry_size(ae));
-	archive_entry_free(ae);
+	assertEqualInt(0, transform_entry_size(ae));
+	transform_entry_free(ae);
 	assertEqualIntA(a, 0, transform_write_data(a, "12345678", 9));
 
-	/* Close out the archive. */
-	assertEqualInt(ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualInt(TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
 	/*
 	 * Now, read the data back.
 	 */
 	ae = NULL;
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_open_memory(a, buff, used));
 
 	/*
 	 * Read and verify first file.
 	 */
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	assertEqualInt(1, archive_entry_mtime(ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	assertEqualInt(1, transform_entry_mtime(ae));
 	/* Zip doesn't store high-resolution mtime. */
-	assertEqualInt(0, archive_entry_mtime_nsec(ae));
-	assertEqualInt(0, archive_entry_atime(ae));
-	assertEqualInt(0, archive_entry_ctime(ae));
-	assertEqualString("file", archive_entry_pathname(ae));
-	//assertEqualInt((S_IFREG | 0755), archive_entry_mode(ae));
-	assertEqualInt(0, archive_entry_size(ae));
+	assertEqualInt(0, transform_entry_mtime_nsec(ae));
+	assertEqualInt(0, transform_entry_atime(ae));
+	assertEqualInt(0, transform_entry_ctime(ae));
+	assertEqualString("file", transform_entry_pathname(ae));
+	//assertEqualInt((S_IFREG | 0755), transform_entry_mode(ae));
+	assertEqualInt(0, transform_entry_size(ae));
 	assertEqualIntA(a, 8,
 	    transform_read_data(a, filedata, sizeof(filedata)));
 	assertEqualMem(filedata, "12345678", 8);
@@ -144,17 +144,17 @@ DEFINE_TEST(test_write_format_zip)
 	/*
 	 * Read the second file back.
 	 */
-	if (!assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae))){
+	if (!assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae))){
 		free(buff);
 		return;
 	}
-	assertEqualInt(1, archive_entry_mtime(ae));
-	assertEqualInt(0, archive_entry_mtime_nsec(ae));
-	assertEqualInt(0, archive_entry_atime(ae));
-	assertEqualInt(0, archive_entry_ctime(ae));
-	assertEqualString("file2", archive_entry_pathname(ae));
-	//assert((S_IFREG | 0755) == archive_entry_mode(ae));
-	assertEqualInt(0, archive_entry_size(ae));
+	assertEqualInt(1, transform_entry_mtime(ae));
+	assertEqualInt(0, transform_entry_mtime_nsec(ae));
+	assertEqualInt(0, transform_entry_atime(ae));
+	assertEqualInt(0, transform_entry_ctime(ae));
+	assertEqualString("file2", transform_entry_pathname(ae));
+	//assert((S_IFREG | 0755) == transform_entry_mode(ae));
+	assertEqualInt(0, transform_entry_size(ae));
 	assertEqualIntA(a, 4,
 	    transform_read_data(a, filedata, sizeof(filedata)));
 	assertEqualMem(filedata, "1234", 4);
@@ -162,19 +162,19 @@ DEFINE_TEST(test_write_format_zip)
 	/*
 	 * Read the dir entry back.
 	 */
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	assertEqualInt(11, archive_entry_mtime(ae));
-	assertEqualInt(0, archive_entry_mtime_nsec(ae));
-	assertEqualInt(0, archive_entry_atime(ae));
-	assertEqualInt(0, archive_entry_ctime(ae));
-	assertEqualString("dir/", archive_entry_pathname(ae));
-	//assertEqualInt((S_IFDIR | 0755), archive_entry_mode(ae));
-	assertEqualInt(0, archive_entry_size(ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	assertEqualInt(11, transform_entry_mtime(ae));
+	assertEqualInt(0, transform_entry_mtime_nsec(ae));
+	assertEqualInt(0, transform_entry_atime(ae));
+	assertEqualInt(0, transform_entry_ctime(ae));
+	assertEqualString("dir/", transform_entry_pathname(ae));
+	//assertEqualInt((S_IFDIR | 0755), transform_entry_mode(ae));
+	assertEqualInt(0, transform_entry_size(ae));
 	assertEqualIntA(a, 0, transform_read_data(a, filedata, 10));
 
-	/* Verify the end of the archive. */
-	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
-	assertEqualInt(ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	/* Verify the end of the transform. */
+	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
+	assertEqualInt(TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 	free(buff);
 }

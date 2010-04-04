@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_isorr_new_bz2.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_isorr_new_bz2.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 
 /*
@@ -67,7 +67,7 @@ DEFINE_TEST(test_read_format_isorr_new_bz2)
 	assert((a = transform_read_new()) != NULL);
 	assertEqualInt(0, transform_read_support_compression_all(a));
 	assertEqualInt(0, transform_read_support_format_all(a));
-	assertEqualInt(ARCHIVE_OK,
+	assertEqualInt(TRANSFORM_OK,
 	    transform_read_open_filename(a, refname, 10240));
 
 	/* Retrieve each of the 8 files on the ISO image and
@@ -75,130 +75,130 @@ DEFINE_TEST(test_read_format_isorr_new_bz2)
 	for (i = 0; i < 10; ++i) {
 		assertEqualInt(0, transform_read_next_header(a, &ae));
 
-		if (strcmp(".", archive_entry_pathname(ae)) == 0) {
+		if (strcmp(".", transform_entry_pathname(ae)) == 0) {
 			/* '.' root directory. */
-			assertEqualInt(AE_IFDIR, archive_entry_filetype(ae));
-			assertEqualInt(2048, archive_entry_size(ae));
+			assertEqualInt(AE_IFDIR, transform_entry_filetype(ae));
+			assertEqualInt(2048, transform_entry_size(ae));
 			/* Now, we read timestamp recorded by RRIP "TF". */
-			assertEqualInt(86401, archive_entry_mtime(ae));
-			assertEqualInt(0, archive_entry_mtime_nsec(ae));
+			assertEqualInt(86401, transform_entry_mtime(ae));
+			assertEqualInt(0, transform_entry_mtime_nsec(ae));
 			/* Now, we read links recorded by RRIP "PX". */
-			assertEqualInt(3, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualIntA(a, ARCHIVE_EOF,
+			assertEqualInt(3, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualIntA(a, TRANSFORM_EOF,
 			    transform_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
-		} else if (strcmp("dir", archive_entry_pathname(ae)) == 0) {
+		} else if (strcmp("dir", transform_entry_pathname(ae)) == 0) {
 			/* A directory. */
-			assertEqualString("dir", archive_entry_pathname(ae));
-			assertEqualInt(AE_IFDIR, archive_entry_filetype(ae));
-			assertEqualInt(2048, archive_entry_size(ae));
-			assertEqualInt(86401, archive_entry_mtime(ae));
-			assertEqualInt(86401, archive_entry_atime(ae));
-			assertEqualInt(2, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
-		} else if (strcmp("hardlink", archive_entry_pathname(ae)) == 0) {
+			assertEqualString("dir", transform_entry_pathname(ae));
+			assertEqualInt(AE_IFDIR, transform_entry_filetype(ae));
+			assertEqualInt(2048, transform_entry_size(ae));
+			assertEqualInt(86401, transform_entry_mtime(ae));
+			assertEqualInt(86401, transform_entry_atime(ae));
+			assertEqualInt(2, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
+		} else if (strcmp("hardlink", transform_entry_pathname(ae)) == 0) {
 			/* A regular file. */
-			assertEqualString("hardlink", archive_entry_pathname(ae));
-			assertEqualInt(AE_IFREG, archive_entry_filetype(ae));
-			assertEqualInt(12345684, archive_entry_size(ae));
+			assertEqualString("hardlink", transform_entry_pathname(ae));
+			assertEqualInt(AE_IFREG, transform_entry_filetype(ae));
+			assertEqualInt(12345684, transform_entry_size(ae));
 			assertEqualInt(0,
 			    transform_read_data_block(a, &p, &size, &offset));
 			assertEqualInt(0, offset);
 			assertEqualMem(p, "hello\n", 6);
-			assertEqualInt(86401, archive_entry_mtime(ae));
-			assertEqualInt(86401, archive_entry_atime(ae));
-			assertEqualInt(2, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
-		} else if (strcmp("file", archive_entry_pathname(ae)) == 0) {
+			assertEqualInt(86401, transform_entry_mtime(ae));
+			assertEqualInt(86401, transform_entry_atime(ae));
+			assertEqualInt(2, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
+		} else if (strcmp("file", transform_entry_pathname(ae)) == 0) {
 			/* A hardlink to the regular file. */
 			/* Note: If "hardlink" gets returned before "file",
 			 * then "hardlink" will get returned as a regular file
 			 * and "file" will get returned as the hardlink.
 			 * This test should tolerate that, since it's a
-			 * perfectly permissible thing for libarchive to do. */
-			assertEqualString("file", archive_entry_pathname(ae));
-			assertEqualInt(AE_IFREG, archive_entry_filetype(ae));
-			assertEqualString("hardlink", archive_entry_hardlink(ae));
-			assertEqualInt(0, archive_entry_size_is_set(ae));
-			assertEqualInt(0, archive_entry_size(ae));
-			assertEqualInt(86401, archive_entry_mtime(ae));
-			assertEqualInt(86401, archive_entry_atime(ae));
-			assertEqualInt(2, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
-		} else if (strcmp("symlink", archive_entry_pathname(ae)) == 0) {
+			 * perfectly permissible thing for libtransform to do. */
+			assertEqualString("file", transform_entry_pathname(ae));
+			assertEqualInt(AE_IFREG, transform_entry_filetype(ae));
+			assertEqualString("hardlink", transform_entry_hardlink(ae));
+			assertEqualInt(0, transform_entry_size_is_set(ae));
+			assertEqualInt(0, transform_entry_size(ae));
+			assertEqualInt(86401, transform_entry_mtime(ae));
+			assertEqualInt(86401, transform_entry_atime(ae));
+			assertEqualInt(2, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
+		} else if (strcmp("symlink", transform_entry_pathname(ae)) == 0) {
 			/* A symlink to the regular file. */
-			assertEqualInt(AE_IFLNK, archive_entry_filetype(ae));
-			assertEqualString("file", archive_entry_symlink(ae));
-			assertEqualInt(0, archive_entry_size(ae));
-			assertEqualInt(172802, archive_entry_mtime(ae));
-			assertEqualInt(172802, archive_entry_atime(ae));
-			assertEqualInt(1, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
-		} else if (strcmp("symlink2", archive_entry_pathname(ae)) == 0) {
+			assertEqualInt(AE_IFLNK, transform_entry_filetype(ae));
+			assertEqualString("file", transform_entry_symlink(ae));
+			assertEqualInt(0, transform_entry_size(ae));
+			assertEqualInt(172802, transform_entry_mtime(ae));
+			assertEqualInt(172802, transform_entry_atime(ae));
+			assertEqualInt(1, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
+		} else if (strcmp("symlink2", transform_entry_pathname(ae)) == 0) {
 			/* A symlink to /tmp/ (an absolute path) */
-			assertEqualInt(AE_IFLNK, archive_entry_filetype(ae));
-			assertEqualString("/tmp/", archive_entry_symlink(ae));
-			assertEqualInt(0, archive_entry_size(ae));
-			assertEqualInt(1, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
-		} else if (strcmp("symlink3", archive_entry_pathname(ae)) == 0) {
+			assertEqualInt(AE_IFLNK, transform_entry_filetype(ae));
+			assertEqualString("/tmp/", transform_entry_symlink(ae));
+			assertEqualInt(0, transform_entry_size(ae));
+			assertEqualInt(1, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
+		} else if (strcmp("symlink3", transform_entry_pathname(ae)) == 0) {
 			/* A symlink to /tmp/../ (with a ".." component) */
-			assertEqualInt(AE_IFLNK, archive_entry_filetype(ae));
-			assertEqualString("/tmp/../", archive_entry_symlink(ae));
-			assertEqualInt(0, archive_entry_size(ae));
-			assertEqualInt(1, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
-		} else if (strcmp("symlink4", archive_entry_pathname(ae)) == 0) {
+			assertEqualInt(AE_IFLNK, transform_entry_filetype(ae));
+			assertEqualString("/tmp/../", transform_entry_symlink(ae));
+			assertEqualInt(0, transform_entry_size(ae));
+			assertEqualInt(1, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
+		} else if (strcmp("symlink4", transform_entry_pathname(ae)) == 0) {
 			/* A symlink to a path with ".." and "." components */
-			assertEqualInt(AE_IFLNK, archive_entry_filetype(ae));
+			assertEqualInt(AE_IFLNK, transform_entry_filetype(ae));
 			assertEqualString(".././../tmp/",
-			    archive_entry_symlink(ae));
-			assertEqualInt(0, archive_entry_size(ae));
-			assertEqualInt(1, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
-		} else if (strcmp("symlink5", archive_entry_pathname(ae)) == 0) {
+			    transform_entry_symlink(ae));
+			assertEqualInt(0, transform_entry_size(ae));
+			assertEqualInt(1, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
+		} else if (strcmp("symlink5", transform_entry_pathname(ae)) == 0) {
 			/* A symlink to the regular file with "/" components. */
-			assertEqualInt(AE_IFLNK, archive_entry_filetype(ae));
-			assertEqualString(".///file", archive_entry_symlink(ae));
-			assertEqualInt(0, archive_entry_size(ae));
-			assertEqualInt(172802, archive_entry_mtime(ae));
-			assertEqualInt(172802, archive_entry_atime(ae));
-			assertEqualInt(1, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
-		} else if (strcmp("symlink6", archive_entry_pathname(ae)) == 0) {
+			assertEqualInt(AE_IFLNK, transform_entry_filetype(ae));
+			assertEqualString(".///file", transform_entry_symlink(ae));
+			assertEqualInt(0, transform_entry_size(ae));
+			assertEqualInt(172802, transform_entry_mtime(ae));
+			assertEqualInt(172802, transform_entry_atime(ae));
+			assertEqualInt(1, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
+		} else if (strcmp("symlink6", transform_entry_pathname(ae)) == 0) {
 			/* A symlink to /tmp//../
 			 * (with "/" and ".." components) */
-			assertEqualInt(AE_IFLNK, archive_entry_filetype(ae));
-			assertEqualString("/tmp//../", archive_entry_symlink(ae));
-			assertEqualInt(0, archive_entry_size(ae));
-			assertEqualInt(1, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
+			assertEqualInt(AE_IFLNK, transform_entry_filetype(ae));
+			assertEqualString("/tmp//../", transform_entry_symlink(ae));
+			assertEqualInt(0, transform_entry_size(ae));
+			assertEqualInt(1, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
 		} else {
 			failure("Saw a file that shouldn't have been there");
-			assertEqualString(archive_entry_pathname(ae), "");
+			assertEqualString(transform_entry_pathname(ae), "");
 		}
 	}
 
-	/* End of archive. */
-	assertEqualInt(ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	/* End of transform. */
+	assertEqualInt(TRANSFORM_EOF, transform_read_next_header(a, &ae));
 
-	/* Verify archive format. */
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_COMPRESS);
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_ISO9660_ROCKRIDGE);
+	/* Verify transform format. */
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_COMPRESS);
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_ISO9660_ROCKRIDGE);
 
-	/* Close the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	/* Close the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 

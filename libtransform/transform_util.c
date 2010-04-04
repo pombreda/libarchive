@@ -25,7 +25,7 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_util.c 201098 2009-12-28 02:58:14Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_util.c 201098 2009-12-28 02:58:14Z kientzle $");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -48,25 +48,25 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_util.c 201098 2009-12-28 02:58:1
 #include "transform_string.h"
 
 int
-archive_version_number(void)
+transform_version_number(void)
 {
-	return (ARCHIVE_VERSION_NUMBER);
+	return (TRANSFORM_VERSION_NUMBER);
 }
 
 const char *
-archive_version_string(void)
+transform_version_string(void)
 {
-	return (ARCHIVE_VERSION_STRING);
+	return (TRANSFORM_VERSION_STRING);
 }
 
 int
-archive_errno(struct transform *a)
+transform_errno(struct transform *a)
 {
-	return (a->archive_error_number);
+	return (a->transform_error_number);
 }
 
 const char *
-archive_error_string(struct transform *a)
+transform_error_string(struct transform *a)
 {
 
 	if (a->error != NULL  &&  *a->error != '\0')
@@ -76,15 +76,15 @@ archive_error_string(struct transform *a)
 }
 
 int
-archive_compression(struct transform *a)
+transform_compression(struct transform *a)
 {
-	return archive_filter_code(a, 0);
+	return transform_filter_code(a, 0);
 }
 
 const char *
-archive_compression_name(struct transform *a)
+transform_compression_name(struct transform *a)
 {
-	return archive_filter_name(a, 0);
+	return transform_filter_name(a, 0);
 }
 
 
@@ -92,58 +92,58 @@ archive_compression_name(struct transform *a)
  * Return a count of the number of compressed bytes processed.
  */
 int64_t
-archive_position_compressed(struct transform *a)
+transform_position_compressed(struct transform *a)
 {
-	return archive_filter_bytes(a, -1);
+	return transform_filter_bytes(a, -1);
 }
 
 /*
  * Return a count of the number of uncompressed bytes processed.
  */
 int64_t
-archive_position_uncompressed(struct transform *a)
+transform_position_uncompressed(struct transform *a)
 {
-	return archive_filter_bytes(a, 0);
+	return transform_filter_bytes(a, 0);
 }
 
 void
-archive_clear_error(struct transform *a)
+transform_clear_error(struct transform *a)
 {
-	archive_string_empty(&a->error_string);
+	transform_string_empty(&a->error_string);
 	a->error = NULL;
-	a->archive_error_number = 0;
+	a->transform_error_number = 0;
 }
 
 void
-archive_set_error(struct transform *a, int error_number, const char *fmt, ...)
+transform_set_error(struct transform *a, int error_number, const char *fmt, ...)
 {
 	va_list ap;
 
-	a->archive_error_number = error_number;
+	a->transform_error_number = error_number;
 	if (fmt == NULL) {
 		a->error = NULL;
 		return;
 	}
 
 	va_start(ap, fmt);
-	archive_string_vsprintf(&(a->error_string), fmt, ap);
+	transform_string_vsprintf(&(a->error_string), fmt, ap);
 	va_end(ap);
 	a->error = a->error_string.s;
 }
 
 void
-archive_copy_error(struct transform *dest, struct transform *src)
+transform_copy_error(struct transform *dest, struct transform *src)
 {
-	dest->archive_error_number = src->archive_error_number;
+	dest->transform_error_number = src->transform_error_number;
 
-	archive_string_copy(&dest->error_string, &src->error_string);
+	transform_string_copy(&dest->error_string, &src->error_string);
 	dest->error = dest->error_string.s;
 }
 
 void
-__archive_errx(int retvalue, const char *msg)
+__transform_errx(int retvalue, const char *msg)
 {
-	static const char *msg1 = "Fatal Internal Error in libarchive: ";
+	static const char *msg1 = "Fatal Internal Error in libtransform: ";
 	size_t s;
 
 	s = write(2, msg1, strlen(msg1));
@@ -183,7 +183,7 @@ __archive_errx(int retvalue, const char *msg)
  *
  */
 int
-__archive_parse_options(const char *p, const char *fn, int keysize, char *key,
+__transform_parse_options(const char *p, const char *fn, int keysize, char *key,
     int valsize, char *val)
 {
 	const char *p_org;
@@ -364,10 +364,10 @@ get_tempdir(struct transform_string *temppath)
 #else
                 tmp = "/tmp";
 #endif
-	archive_strcpy(temppath, tmp);
+	transform_strcpy(temppath, tmp);
 	if (temppath->s[temppath->length-1] != '/')
-		archive_strappend_char(temppath, '/');
-	return (ARCHIVE_OK);
+		transform_strappend_char(temppath, '/');
+	return (TRANSFORM_OK);
 }
 
 #if defined(HAVE_MKSTEMP)
@@ -377,27 +377,27 @@ get_tempdir(struct transform_string *temppath)
  */
 
 int
-__archive_mktemp(const char *tmpdir)
+__transform_mktemp(const char *tmpdir)
 {
 	struct transform_string temp_name;
 	int fd;
 
-	archive_string_init(&temp_name);
+	transform_string_init(&temp_name);
 	if (tmpdir == NULL) {
-		if (get_tempdir(&temp_name) != ARCHIVE_OK)
+		if (get_tempdir(&temp_name) != TRANSFORM_OK)
 			goto exit_tmpfile;
 	} else {
-		archive_strcpy(&temp_name, tmpdir);
+		transform_strcpy(&temp_name, tmpdir);
 		if (temp_name.s[temp_name.length-1] != '/')
-			archive_strappend_char(&temp_name, '/');
+			transform_strappend_char(&temp_name, '/');
 	}
-	archive_strcat(&temp_name, "libarchive_XXXXXX");
+	transform_strcat(&temp_name, "libtransform_XXXXXX");
 	fd = mkstemp(temp_name.s);
 	if (fd < 0)
 		goto exit_tmpfile;
 	unlink(temp_name.s);
 exit_tmpfile:
-	archive_string_free(&temp_name);
+	transform_string_free(&temp_name);
 	return (fd);
 }
 
@@ -408,7 +408,7 @@ exit_tmpfile:
  */
 
 int
-__archive_mktemp(const char *tmpdir)
+__transform_mktemp(const char *tmpdir)
 {
         static const char num[] = {
 		'0', '1', '2', '3', '4', '5', '6', '7',
@@ -427,12 +427,12 @@ __archive_mktemp(const char *tmpdir)
 	unsigned seed;
 
 	fd = -1;
-	archive_string_init(&temp_name);
+	transform_string_init(&temp_name);
 	if (tmpdir == NULL) {
-		if (get_tempdir(&temp_name) != ARCHIVE_OK)
+		if (get_tempdir(&temp_name) != TRANSFORM_OK)
 			goto exit_tmpfile;
 	} else
-		archive_strcpy(&temp_name, tmpdir);
+		transform_strcpy(&temp_name, tmpdir);
 	if (temp_name.s[temp_name.length-1] == '/') {
 		temp_name.s[temp_name.length-1] = '\0';
 		temp_name.length --;
@@ -443,10 +443,10 @@ __archive_mktemp(const char *tmpdir)
 		errno = ENOTDIR;
 		goto exit_tmpfile;
 	}
-	archive_strcat(&temp_name, "/libarchive_");
-	tp = temp_name.s + archive_strlen(&temp_name);
-	archive_strcat(&temp_name, "XXXXXXXXXX");
-	ep = temp_name.s + archive_strlen(&temp_name);
+	transform_strcat(&temp_name, "/libtransform_");
+	tp = temp_name.s + transform_strlen(&temp_name);
+	transform_strcat(&temp_name, "XXXXXXXXXX");
+	ep = temp_name.s + transform_strlen(&temp_name);
 
 	fd = open("/dev/random", O_RDONLY);
 	if (fd < 0)
@@ -468,7 +468,7 @@ __archive_mktemp(const char *tmpdir)
 		goto exit_tmpfile;
 	unlink(temp_name.s);
 exit_tmpfile:
-	archive_string_free(&temp_name);
+	transform_string_free(&temp_name);
 	return (fd);
 }
 

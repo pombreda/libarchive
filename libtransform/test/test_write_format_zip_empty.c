@@ -28,7 +28,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_zip_empty.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_write_format_zip_empty.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 DEFINE_TEST(test_write_format_zip_empty)
 {
@@ -36,7 +36,7 @@ DEFINE_TEST(test_write_format_zip_empty)
 	char buff[256];
 	size_t used;
 
-	/* Zip format: Create a new archive in memory. */
+	/* Zip format: Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_zip(a));
 	assertA(0 == transform_write_set_compression_none(a));
@@ -44,11 +44,11 @@ DEFINE_TEST(test_write_format_zip_empty)
 	assertA(0 == transform_write_set_bytes_in_last_block(a, 1));
 	assertA(0 == transform_write_open_memory(a, buff, sizeof(buff), &used));
 
-	/* Close out the archive without writing anything. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform without writing anything. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
-	/* Verify the correct format for an empy Zip archive. */
+	/* Verify the correct format for an empy Zip transform. */
 	assertEqualInt(used, 22);
 	assertEqualMem(buff,
 	    "PK\005\006\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",

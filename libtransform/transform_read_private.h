@@ -22,11 +22,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/transform_read_private.h 201088 2009-12-28 02:18:55Z kientzle $
+ * $FreeBSD: head/lib/libtransform/transform_read_private.h 201088 2009-12-28 02:18:55Z kientzle $
  */
 
-#ifndef __LIBARCHIVE_BUILD
-#error This header is only to be used internally to libarchive.
+#ifndef __LIBTRANSFORM_BUILD
+#error This header is only to be used internally to libtransform.
 #endif
 
 #ifndef TRANSFORM_READ_PRIVATE_H_INCLUDED
@@ -81,7 +81,7 @@ struct transform_read_filter {
 	 * just declare them here. */
 	struct transform_read_filter_bidder *bidder; /* My bidder. */
 	struct transform_read_filter *upstream; /* Who I read from. */
-	struct transform_read *archive; /* Associated archive. */
+	struct transform_read *transform; /* Associated transform. */
 	/* Return next block. */
 	ssize_t (*read)(struct transform_read_filter *, const void **);
 	/* Skip forward this many bytes. */
@@ -114,16 +114,16 @@ struct transform_read_filter {
  * TODO: Make transform_read_filter and transform_read_client identical so
  * that users of the library can easily register their own
  * transformation filters.  This will probably break the API/ABI and
- * so should be deferred at least until libarchive 3.0.
+ * so should be deferred at least until libtransform 3.0.
  */
 struct transform_read_client {
 	transform_read_callback	*reader;
-	archive_skip_callback	*skipper;
-	archive_close_callback	*closer;
+	transform_skip_callback	*skipper;
+	transform_close_callback	*closer;
 };
 
 struct transform_read {
-	struct transform	archive;
+	struct transform	transform;
 
 
 	/*
@@ -135,7 +135,7 @@ struct transform_read {
 	off_t		  read_data_output_offset;
 	size_t		  read_data_remaining;
 
-	/* Callbacks to open/read/write/close client archive stream. */
+	/* Callbacks to open/read/write/close client transform stream. */
 	struct transform_read_client client;
 
 	/* Registered filter bidders. */

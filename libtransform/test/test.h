@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/test/test.h 201247 2009-12-30 05:59:21Z kientzle $
+ * $FreeBSD: head/lib/libtransform/test/test.h 201247 2009-12-30 05:59:21Z kientzle $
  */
 
 /* Every test program should #include "test.h" as the first thing. */
@@ -279,18 +279,18 @@ char *slurpfile(size_t *, const char *fmt, ...);
 void extract_reference_file(const char *);
 
 /*
- * Special interfaces for libarchive test harness.
+ * Special interfaces for libtransform test harness.
  */
 
-#include "archive.h"
-#include "archive_entry.h"
+#include "transform.h"
+#include "transform_entry.h"
 
 /* Special customized read-from-memory interface. */
 int read_open_memory(struct transform *, void *, size_t, size_t);
-/* "2" version exercises a slightly different set of libarchive APIs. */
+/* "2" version exercises a slightly different set of libtransform APIs. */
 int read_open_memory2(struct transform *, void *, size_t, size_t);
 
-/* Versions of above that accept an archive argument for additional info. */
+/* Versions of above that accept an transform argument for additional info. */
 #define assertA(e)   assertion_assert(__FILE__, __LINE__, (e), #e, (a))
 #define assertEqualIntA(a,v1,v2)   \
   assertion_equal_int(__FILE__, __LINE__, (v1), #v1, (v2), #v2, (a))

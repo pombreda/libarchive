@@ -24,7 +24,7 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/transform_read_support_compression_program.c 201112 2009-12-28 06:59:35Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_read_support_compression_program.c 201112 2009-12-28 06:59:35Z kientzle $");
 
 #ifdef HAVE_SYS_WAIT_H
 #  include <sys/wait.h>
@@ -79,9 +79,9 @@ transform_read_support_compression_program_signature(struct transform *_a,
 	(void)signature; /* UNUSED */
 	(void)signature_len; /* UNUSED */
 
-	archive_set_error(_a, -1,
+	transform_set_error(_a, -1,
 	    "External compression programs not supported on this platform");
-	return (ARCHIVE_FATAL);
+	return (TRANSFORM_FATAL);
 }
 
 int
@@ -90,9 +90,9 @@ __transform_read_program(struct transform_read_filter *self, const char *cmd)
 	(void)self; /* UNUSED */
 	(void)cmd; /* UNUSED */
 
-	archive_set_error(&self->archive->archive, -1,
+	transform_set_error(&self->transform->transform, -1,
 	    "External compression programs not supported on this platform");
-	return (ARCHIVE_FATAL);
+	return (TRANSFORM_FATAL);
 }
 
 #else
@@ -147,14 +147,14 @@ transform_read_support_compression_program_signature(struct transform *_a,
 	 */
 	bidder = __transform_read_get_bidder(a);
 	if (bidder == NULL)
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 
 	/*
 	 * Allocate our private state.
 	 */
 	state = (struct program_bidder *)calloc(sizeof (*state), 1);
 	if (state == NULL)
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	state->cmd = strdup(cmd);
 	if (signature != NULL && signature_len > 0) {
 		state->signature_len = signature_len;
@@ -170,7 +170,7 @@ transform_read_support_compression_program_signature(struct transform *_a,
 	bidder->init = program_bidder_init;
 	bidder->options = NULL;
 	bidder->free = program_bidder_free;
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 static int
@@ -180,7 +180,7 @@ program_bidder_free(struct transform_read_filter_bidder *self)
 	free(state->cmd);
 	free(state->signature);
 	free(self->data);
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 /*
@@ -216,7 +216,7 @@ program_bidder_bid(struct transform_read_filter_bidder *self,
 }
 
 /*
- * Shut down the child, return ARCHIVE_OK if it exited normally.
+ * Shut down the child, return TRANSFORM_OK if it exited normally.
  *
  * Note that the return value is sticky; if we're called again,
  * we won't reap the child again, but we will return the same status
@@ -246,42 +246,42 @@ child_stop(struct transform_read_filter *self, struct program_filter *state)
 
 	if (state->waitpid_return < 0) {
 		/* waitpid() failed?  This is ugly. */
-		archive_set_error(&self->archive->archive, ARCHIVE_ERRNO_MISC,
+		transform_set_error(&self->transform->transform, TRANSFORM_ERRNO_MISC,
 		    "Child process exited badly");
-		return (ARCHIVE_WARN);
+		return (TRANSFORM_WARN);
 	}
 
 #if !defined(_WIN32) || defined(__CYGWIN__)
 	if (WIFSIGNALED(state->exit_status)) {
 #ifdef SIGPIPE
 		/* If the child died because we stopped reading before
-		 * it was done, that's okay.  Some archive formats
+		 * it was done, that's okay.  Some transform formats
 		 * have padding at the end that we routinely ignore. */
 		/* The alternative to this would be to add a step
 		 * before close(child_stdout) above to read from the
 		 * child until the child has no more to write. */
 		if (WTERMSIG(state->exit_status) == SIGPIPE)
-			return (ARCHIVE_OK);
+			return (TRANSFORM_OK);
 #endif
-		archive_set_error(&self->archive->archive, ARCHIVE_ERRNO_MISC,
+		transform_set_error(&self->transform->transform, TRANSFORM_ERRNO_MISC,
 		    "Child process exited with signal %d",
 		    WTERMSIG(state->exit_status));
-		return (ARCHIVE_WARN);
+		return (TRANSFORM_WARN);
 	}
 #endif /* !_WIN32 || __CYGWIN__ */
 
 	if (WIFEXITED(state->exit_status)) {
 		if (WEXITSTATUS(state->exit_status) == 0)
-			return (ARCHIVE_OK);
+			return (TRANSFORM_OK);
 
-		archive_set_error(&self->archive->archive,
-		    ARCHIVE_ERRNO_MISC,
+		transform_set_error(&self->transform->transform,
+		    TRANSFORM_ERRNO_MISC,
 		    "Child process exited with status %d",
 		    WEXITSTATUS(state->exit_status));
-		return (ARCHIVE_WARN);
+		return (TRANSFORM_WARN);
 	}
 
-	return (ARCHIVE_WARN);
+	return (TRANSFORM_WARN);
 }
 
 /*
@@ -366,15 +366,15 @@ __transform_read_program(struct transform_read_filter *self, const char *cmd)
 	out_buf = (char *)malloc(out_buf_len);
 	description = (char *)malloc(strlen(prefix) + strlen(cmd) + 1);
 	if (state == NULL || out_buf == NULL || description == NULL) {
-		archive_set_error(&self->archive->archive, ENOMEM,
+		transform_set_error(&self->transform->transform, ENOMEM,
 		    "Can't allocate input data");
 		free(state);
 		free(out_buf);
 		free(description);
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	}
 
-	self->code = ARCHIVE_FILTER_PROGRAM;
+	self->code = TRANSFORM_FILTER_PROGRAM;
 	state->description = description;
 	strcpy(state->description, prefix);
 	strcat(state->description, cmd);
@@ -383,13 +383,13 @@ __transform_read_program(struct transform_read_filter *self, const char *cmd)
 	state->out_buf = out_buf;
 	state->out_buf_len = out_buf_len;
 
-	if ((state->child = __archive_create_child(cmd,
+	if ((state->child = __transform_create_child(cmd,
 		 &state->child_stdin, &state->child_stdout)) == -1) {
 		free(state->out_buf);
 		free(state);
-		archive_set_error(&self->archive->archive, EINVAL,
+		transform_set_error(&self->transform->transform, EINVAL,
 		    "Can't initialise filter");
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	}
 
 	self->data = state;
@@ -398,7 +398,7 @@ __transform_read_program(struct transform_read_filter *self, const char *cmd)
 	self->close = program_filter_close;
 
 	/* XXX Check that we can read at least one byte? */
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 static int
@@ -427,7 +427,7 @@ program_filter_read(struct transform_read_filter *self, const void **buff)
 		if (bytes < 0)
 			/* No recovery is possible if we can no longer
 			 * read from the child. */
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		if (bytes == 0)
 			/* We got EOF from the child. */
 			break;

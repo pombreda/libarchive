@@ -4,19 +4,19 @@
 #
 ############################################
 IF(ENABLE_TEST)
-  FOREACH (_src ${libarchive_SOURCES})
-    LIST(APPEND parent_libarchive_SOURCES "../${_src}")
+  FOREACH (_src ${libtransform_SOURCES})
+    LIST(APPEND parent_libtransform_SOURCES "../${_src}")
   ENDFOREACH(_src)
 
   SET(libtransform_test_SOURCES
-    ${parent_libarchive_SOURCES}
+    ${parent_libtransform_SOURCES}
     main.c
     read_open_memory.c
     test.h
     test_acl_basic.c
     test_acl_freebsd.c
     test_acl_pax.c
-    test_archive_api_feature.c
+    test_transform_api_feature.c
     test_bad_fd.c
     test_compat_bzip2.c
     test_compat_cpio.c
@@ -134,7 +134,7 @@ IF(ENABLE_TEST)
   ADD_EXECUTABLE(libtransform_test ${libtransform_test_SOURCES})
   TARGET_LINK_LIBRARIES(libtransform_test ${ADDITIONAL_LIBS})
   SET_PROPERTY(TARGET libtransform_test PROPERTY COMPILE_DEFINITIONS
-    LIBARCHIVE_STATIC LIST_H)
+    LIBTRANSFORM_STATIC LIST_H)
 
   #
   # Generate list.h by grepping DEFINE_TEST() lines out of the C sources.
@@ -149,7 +149,7 @@ IF(ENABLE_TEST)
   # defining a DEFINE_TEST macro and reading list.h in.
   MACRO (DEFINE_TEST _testname)
     ADD_TEST_28(
-      NAME libarchive_${_testname}
+      NAME libtransform_${_testname}
       COMMAND libtransform_test -vv
                               -r ${CMAKE_CURRENT_SOURCE_DIR}
                               ${_testname})

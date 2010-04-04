@@ -25,7 +25,7 @@
 
 #include "transform_platform.h"
 
-__FBSDID("$FreeBSD: head/lib/libarchive/transform_read_support_compression_bzip2.c 201108 2009-12-28 03:28:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_read_support_compression_bzip2.c 201108 2009-12-28 03:28:21Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -63,7 +63,7 @@ static int	bzip2_filter_close(struct transform_read_filter *);
 #endif
 
 /*
- * Note that we can detect bzip2 archives even if we can't decompress
+ * Note that we can detect bzip2 transforms even if we can't decompress
  * them.  (In fact, we like detecting them because we can give better
  * error messages.)  So the bid framework here gets compiled even
  * if bzlib is unavailable.
@@ -79,7 +79,7 @@ transform_read_support_compression_bzip2(struct transform *_a)
 	struct transform_read_filter_bidder *reader = __transform_read_get_bidder(a);
 
 	if (reader == NULL)
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 
 	reader->data = NULL;
 	reader->bid = bzip2_reader_bid;
@@ -87,18 +87,18 @@ transform_read_support_compression_bzip2(struct transform *_a)
 	reader->options = NULL;
 	reader->free = bzip2_reader_free;
 #if HAVE_BZLIB_H
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 #else
-	archive_set_error(_a, ARCHIVE_ERRNO_MISC,
+	transform_set_error(_a, TRANSFORM_ERRNO_MISC,
 	    "Using external bunzip2 program");
-	return (ARCHIVE_WARN);
+	return (TRANSFORM_WARN);
 #endif
 }
 
 static int
 bzip2_reader_free(struct transform_read_filter_bidder *self){
 	(void)self; /* UNUSED */
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 /*
@@ -117,7 +117,7 @@ bzip2_reader_bid(struct transform_read_filter_bidder *self, struct transform_rea
 
 	(void)self; /* UNUSED */
 
-	/* Minimal bzip2 archive is 14 bytes. */
+	/* Minimal bzip2 transform is 14 bytes. */
 	buffer = __transform_read_filter_ahead(filter, 14, &avail);
 	if (buffer == NULL)
 		return (0);
@@ -150,7 +150,7 @@ bzip2_reader_bid(struct transform_read_filter_bidder *self, struct transform_rea
 
 /*
  * If we don't have the library on this system, we can't actually do the
- * decompression.  We can, however, still detect compressed archives
+ * decompression.  We can, however, still detect compressed transforms
  * and emit a useful message.
  */
 static int
@@ -162,7 +162,7 @@ bzip2_reader_init(struct transform_read_filter *self)
 	/* Note: We set the format here even if __transform_read_program()
 	 * above fails.  We do, after all, know what the format is
 	 * even if we weren't able to read it. */
-	self->code = ARCHIVE_FILTER_BZIP2;
+	self->code = TRANSFORM_FILTER_BZIP2;
 	self->name = "bzip2";
 	return (r);
 }
@@ -180,17 +180,17 @@ bzip2_reader_init(struct transform_read_filter *self)
 	void *out_block;
 	struct private_data *state;
 
-	self->code = ARCHIVE_FILTER_BZIP2;
+	self->code = TRANSFORM_FILTER_BZIP2;
 	self->name = "bzip2";
 
 	state = (struct private_data *)calloc(sizeof(*state), 1);
 	out_block = (unsigned char *)malloc(out_block_size);
 	if (self == NULL || state == NULL || out_block == NULL) {
-		archive_set_error(&self->archive->archive, ENOMEM,
+		transform_set_error(&self->transform->transform, ENOMEM,
 		    "Can't allocate data for bzip2 decompression");
 		free(out_block);
 		free(state);
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	}
 
 	self->data = state;
@@ -200,7 +200,7 @@ bzip2_reader_init(struct transform_read_filter *self)
 	self->skip = NULL; /* not supported */
 	self->close = bzip2_filter_close;
 
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 /*
@@ -248,7 +248,7 @@ bzip2_filter_read(struct transform_read_filter *self, const void **p)
 
 			if (ret != BZ_OK) {
 				const char *detail = NULL;
-				int err = ARCHIVE_ERRNO_MISC;
+				int err = TRANSFORM_ERRNO_MISC;
 				switch (ret) {
 				case BZ_PARAM_ERROR:
 					detail = "invalid setup parameter";
@@ -261,11 +261,11 @@ bzip2_filter_read(struct transform_read_filter *self, const void **p)
 					detail = "mis-compiled library";
 					break;
 				}
-				archive_set_error(&self->archive->archive, err,
+				transform_set_error(&self->transform->transform, err,
 				    "Internal error initializing decompressor%s%s",
 				    detail == NULL ? "" : ": ",
 				    detail);
-				return (ARCHIVE_FATAL);
+				return (TRANSFORM_FATAL);
 			}
 			state->valid = 1;
 		}
@@ -275,7 +275,7 @@ bzip2_filter_read(struct transform_read_filter *self, const void **p)
 		read_buf =
 		    __transform_read_filter_ahead(self->upstream, 1, &ret);
 		if (read_buf == NULL)
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		state->stream.next_in = (char *)(uintptr_t)read_buf;
 		state->stream.avail_in = ret;
 		/* There is no more data, return whatever we have. */
@@ -298,10 +298,10 @@ bzip2_filter_read(struct transform_read_filter *self, const void **p)
 			case BZ_OK:
 				break;
 			default:
-				archive_set_error(&(self->archive->archive),
-					  ARCHIVE_ERRNO_MISC,
+				transform_set_error(&(self->transform->transform),
+					  TRANSFORM_ERRNO_MISC,
 					  "Failed to clean up decompressor");
-				return (ARCHIVE_FATAL);
+				return (TRANSFORM_FATAL);
 			}
 			state->valid = 0;
 			/* FALLTHROUGH */
@@ -315,9 +315,9 @@ bzip2_filter_read(struct transform_read_filter *self, const void **p)
 			}
 			break;
 		default: /* Return an error. */
-			archive_set_error(&self->archive->archive,
-			    ARCHIVE_ERRNO_MISC, "bzip decompression failed");
-			return (ARCHIVE_FATAL);
+			transform_set_error(&self->transform->transform,
+			    TRANSFORM_ERRNO_MISC, "bzip decompression failed");
+			return (TRANSFORM_FATAL);
 		}
 	}
 }
@@ -329,7 +329,7 @@ static int
 bzip2_filter_close(struct transform_read_filter *self)
 {
 	struct private_data *state;
-	int ret = ARCHIVE_OK;
+	int ret = TRANSFORM_OK;
 
 	state = (struct private_data *)self->data;
 
@@ -338,10 +338,10 @@ bzip2_filter_close(struct transform_read_filter *self)
 		case BZ_OK:
 			break;
 		default:
-			archive_set_error(&self->archive->archive,
-					  ARCHIVE_ERRNO_MISC,
+			transform_set_error(&self->transform->transform,
+					  TRANSFORM_ERRNO_MISC,
 					  "Failed to clean up decompressor");
-			ret = ARCHIVE_FATAL;
+			ret = TRANSFORM_FATAL;
 		}
 		state->valid = 0;
 	}

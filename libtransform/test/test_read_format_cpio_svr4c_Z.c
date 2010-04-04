@@ -23,9 +23,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_cpio_svr4c_Z.c 189381 2009-03-05 00:31:48Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_cpio_svr4c_Z.c 189381 2009-03-05 00:31:48Z kientzle $");
 
-static unsigned char archive[] = {
+static unsigned char transform[] = {
 31,157,144,'0','n',4,132,'!',3,6,140,26,'8','n',228,16,19,195,160,'A',26,
 '1',202,144,'q','h','p','F',25,28,20,'a','X',196,152,145,' ',141,25,2,'k',
 192,160,'A',163,163,201,135,29,'c',136,'<',201,'2','c','A',147,'.',0,12,20,
@@ -37,22 +37,22 @@ DEFINE_TEST(test_read_format_cpio_svr4c_Z)
 {
 	struct transform_entry *ae;
 	struct transform *a;
-/*	printf("Archive address: start=%X, end=%X\n", archive, archive+sizeof(archive)); */
+/*	printf("Archive address: start=%X, end=%X\n", transform, transform+sizeof(transform)); */
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK,
-	    transform_read_open_memory(a, archive, sizeof(archive)));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	failure("archive_compression_name(a)=\"%s\"",
-	    archive_compression_name(a));
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_COMPRESS);
-	failure("archive_format_name(a)=\"%s\"", archive_format_name(a));
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_CPIO_SVR4_CRC);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK,
+	    transform_read_open_memory(a, transform, sizeof(transform)));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	failure("transform_compression_name(a)=\"%s\"",
+	    transform_compression_name(a));
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_COMPRESS);
+	failure("transform_format_name(a)=\"%s\"", transform_format_name(a));
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_CPIO_SVR4_CRC);
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 

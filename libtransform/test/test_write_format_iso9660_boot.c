@@ -101,7 +101,7 @@ _test_write_format_iso9660_boot(int write_info_tbl)
 	buff = malloc(buffsize);
 	assert(buff != NULL);
 
-	/* ISO9660 format: Create a new archive in memory. */
+	/* ISO9660 format: Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_iso9660(a));
 	assertA(0 == transform_write_set_compression_none(a));
@@ -114,23 +114,23 @@ _test_write_format_iso9660_boot(int write_info_tbl)
 	/*
 	 * "boot.img" has a bunch of attributes and 10K bytes of null data.
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_set_atime(ae, 2, 20);
-	archive_entry_set_birthtime(ae, 3, 30);
-	archive_entry_set_ctime(ae, 4, 40);
-	archive_entry_set_mtime(ae, 5, 50);
-	archive_entry_copy_pathname(ae, "boot.img");
-	archive_entry_set_mode(ae, S_IFREG | 0755);
-	archive_entry_set_nlink(ae, 1);
-	archive_entry_set_size(ae, 10*1024);
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
-	archive_entry_free(ae);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_set_atime(ae, 2, 20);
+	transform_entry_set_birthtime(ae, 3, 30);
+	transform_entry_set_ctime(ae, 4, 40);
+	transform_entry_set_mtime(ae, 5, 50);
+	transform_entry_copy_pathname(ae, "boot.img");
+	transform_entry_set_mode(ae, S_IFREG | 0755);
+	transform_entry_set_nlink(ae, 1);
+	transform_entry_set_size(ae, 10*1024);
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_header(a, ae));
+	transform_entry_free(ae);
 	for (i = 0; i < 10; i++)
 		assertEqualIntA(a, 1024, transform_write_data(a, nullb, 1024));
 
-	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_free(a));
 
 	assert(used == 2048 * 38);
 	/* Check System Area. */
@@ -216,25 +216,25 @@ _test_write_format_iso9660_boot(int write_info_tbl)
 	 * Root Directory entry must be in ISO image.
 	 */
 	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
-	assertEqualInt(archive_entry_atime(ae), archive_entry_ctime(ae));
-	assertEqualInt(archive_entry_atime(ae), archive_entry_mtime(ae));
-	assertEqualString(".", archive_entry_pathname(ae));
-	assert((S_IFDIR | 0555) == archive_entry_mode(ae));
-	assertEqualInt(2048, archive_entry_size(ae));
+	assertEqualInt(transform_entry_atime(ae), transform_entry_ctime(ae));
+	assertEqualInt(transform_entry_atime(ae), transform_entry_mtime(ae));
+	assertEqualString(".", transform_entry_pathname(ae));
+	assert((S_IFDIR | 0555) == transform_entry_mode(ae));
+	assertEqualInt(2048, transform_entry_size(ae));
 
 	/*
 	 * Read "boot.catalog".
 	 */
 	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
-	assertEqualString("boot.catalog", archive_entry_pathname(ae));
+	assertEqualString("boot.catalog", transform_entry_pathname(ae));
 #if !defined(_WIN32) && !defined(__CYGWIN__)
-	assert((S_IFREG | 0444) == archive_entry_mode(ae));
+	assert((S_IFREG | 0444) == transform_entry_mode(ae));
 #else
 	/* On Windows and CYGWIN, always set all exec bit ON by default. */ 
-	assert((S_IFREG | 0555) == archive_entry_mode(ae));
+	assert((S_IFREG | 0555) == transform_entry_mode(ae));
 #endif
-	assertEqualInt(1, archive_entry_nlink(ae));
-	assertEqualInt(2*1024, archive_entry_size(ae));
+	assertEqualInt(1, transform_entry_nlink(ae));
+	assertEqualInt(2*1024, transform_entry_size(ae));
 	assertEqualIntA(a, 1024, transform_read_data(a, buff2, 1024));
 	assertEqualMem(buff2, boot_catalog, 64);
 
@@ -242,14 +242,14 @@ _test_write_format_iso9660_boot(int write_info_tbl)
 	 * Read "boot.img".
 	 */
 	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
-	assertEqualInt(2, archive_entry_atime(ae));
-	assertEqualInt(3, archive_entry_birthtime(ae));
-	assertEqualInt(4, archive_entry_ctime(ae));
-	assertEqualInt(5, archive_entry_mtime(ae));
-	assertEqualString("boot.img", archive_entry_pathname(ae));
-	assert((S_IFREG | 0555) == archive_entry_mode(ae));
-	assertEqualInt(1, archive_entry_nlink(ae));
-	assertEqualInt(10*1024, archive_entry_size(ae));
+	assertEqualInt(2, transform_entry_atime(ae));
+	assertEqualInt(3, transform_entry_birthtime(ae));
+	assertEqualInt(4, transform_entry_ctime(ae));
+	assertEqualInt(5, transform_entry_mtime(ae));
+	assertEqualString("boot.img", transform_entry_pathname(ae));
+	assert((S_IFREG | 0555) == transform_entry_mode(ae));
+	assertEqualInt(1, transform_entry_nlink(ae));
+	assertEqualInt(10*1024, transform_entry_size(ae));
 	assertEqualIntA(a, 1024, transform_read_data(a, buff2, 1024));
 	if (write_info_tbl) {
 		assertEqualMem(buff2, nullb, 8);
@@ -259,11 +259,11 @@ _test_write_format_iso9660_boot(int write_info_tbl)
 		assertEqualMem(buff2, nullb, 1024);
 
 	/*
-	 * Verify the end of the archive.
+	 * Verify the end of the transform.
 	 */
-	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_free(a));
 
 	free(buff);
 }

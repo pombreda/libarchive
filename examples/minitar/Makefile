@@ -20,7 +20,7 @@ OBJS= minitar.o
 all: minitar
 
 minitar: $(OBJS)
-	cc -o minitar -static $(OBJS) -larchive -lz -lbz2
+	cc -o minitar -static $(OBJS) -ltransform -lz -lbz2
 	strip minitar
 	ls -l minitar
 

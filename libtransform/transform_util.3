@@ -22,57 +22,57 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: head/lib/libarchive/archive_util.3 201098 2009-12-28 02:58:14Z kientzle $
+.\" $FreeBSD: head/lib/libtransform/transform_util.3 201098 2009-12-28 02:58:14Z kientzle $
 .\"
 .Dd January 8, 2005
-.Dt archive_util 3
+.Dt transform_util 3
 .Os
 .Sh NAME
-.Nm archive_clear_error ,
-.Nm archive_compression ,
-.Nm archive_compression_name ,
-.Nm archive_copy_error ,
-.Nm archive_errno ,
-.Nm archive_error_string ,
-.Nm archive_file_count ,
-.Nm archive_filter_code ,
-.Nm archive_filter_count ,
-.Nm archive_filter_name ,
-.Nm archive_format ,
-.Nm archive_format_name ,
-.Nm archive_position ,
-.Nm archive_set_error
-.Nd libarchive utility functions
+.Nm transform_clear_error ,
+.Nm transform_compression ,
+.Nm transform_compression_name ,
+.Nm transform_copy_error ,
+.Nm transform_errno ,
+.Nm transform_error_string ,
+.Nm transform_file_count ,
+.Nm transform_filter_code ,
+.Nm transform_filter_count ,
+.Nm transform_filter_name ,
+.Nm transform_format ,
+.Nm transform_format_name ,
+.Nm transform_position ,
+.Nm transform_set_error
+.Nd libtransform utility functions
 .Sh SYNOPSIS
 .In transform.h
 .Ft void
-.Fn archive_clear_error "struct transform *"
+.Fn transform_clear_error "struct transform *"
 .Ft int
-.Fn archive_compression "struct transform *"
+.Fn transform_compression "struct transform *"
 .Ft const char *
-.Fn archive_compression_name "struct transform *"
+.Fn transform_compression_name "struct transform *"
 .Ft void
-.Fn archive_copy_error "struct transform *" "struct transform *"
+.Fn transform_copy_error "struct transform *" "struct transform *"
 .Ft int
-.Fn archive_errno "struct transform *"
+.Fn transform_errno "struct transform *"
 .Ft const char *
-.Fn archive_error_string "struct transform *"
+.Fn transform_error_string "struct transform *"
 .Ft int
-.Fn archive_file_count "struct transform *"
+.Fn transform_file_count "struct transform *"
 .Ft int
-.Fn archive_filter_code "struct transform *" "int"
+.Fn transform_filter_code "struct transform *" "int"
 .Ft int
-.Fn archive_filter_count "struct transform *" "int"
+.Fn transform_filter_count "struct transform *" "int"
 .Ft const char *
-.Fn archive_filter_name "struct transform *" "int"
+.Fn transform_filter_name "struct transform *" "int"
 .Ft int
-.Fn archive_format "struct transform *"
+.Fn transform_format "struct transform *"
 .Ft const char *
-.Fn archive_format_name "struct transform *"
+.Fn transform_format_name "struct transform *"
 .Ft int64_t
-.Fn archive_position "struct transform *" "int"
+.Fn transform_position "struct transform *" "int"
 .Ft void
-.Fo archive_set_error
+.Fo transform_set_error
 .Fa "struct transform *"
 .Fa "int error_code"
 .Fa "const char *fmt"
@@ -82,51 +82,51 @@
 These functions provide access to various information about the
 .Tn struct transform
 object used in the
-.Xr libarchive 3
+.Xr libtransform 3
 library.
 .Bl -tag -compact -width indent
-.It Fn archive_clear_error
+.It Fn transform_clear_error
 Clears any error information left over from a previous call.
 Not generally used in client code.
-.It Fn archive_compression
+.It Fn transform_compression
 Synonym for
-.Fn archive_filter_code(a, 0) .
-.It Fn archive_compression_name
+.Fn transform_filter_code(a, 0) .
+.It Fn transform_compression_name
 Synonym for
-.Fn archive_filter_name(a, 0) .
-.It Fn archive_copy_error
-Copies error information from one archive to another.
-.It Fn archive_errno
+.Fn transform_filter_name(a, 0) .
+.It Fn transform_copy_error
+Copies error information from one transform to another.
+.It Fn transform_errno
 Returns a numeric error code (see
 .Xr errno 2 )
 indicating the reason for the most recent error return.
 Note that this can not be reliably used to detect whether an
 error has occurred.
-It should be used only after another libarchive function
+It should be used only after another libtransform function
 has returned an error status.
-.It Fn archive_error_string
+.It Fn transform_error_string
 Returns a textual error message suitable for display.
 The error message here is usually more specific than that
 obtained from passing the result of
-.Fn archive_errno
+.Fn transform_errno
 to
 .Xr strerror 3 .
-.It Fn archive_file_count
-Returns a count of the number of files processed by this archive object.
+.It Fn transform_file_count
+Returns a count of the number of files processed by this transform object.
 The count is incremented by calls to
 .Xr transform_write_header
 or
 .Xr transform_read_next_header .
-.It Fn archive_filter_code
+.It Fn transform_filter_code
 Returns a numeric code identifying the indicated filter.
 See
-.Fn archive_filter_count
+.Fn transform_filter_count
 for details of the numbering.
-.It Fn archive_filter_count
+.It Fn transform_filter_count
 Returns the number of filters in the current pipeline.
-For read archive handles, these filters are added automatically
+For read transform handles, these filters are added automatically
 by the automatic format detection.
-For write archive handles, these filters are added by calls to the various
+For write transform handles, these filters are added by calls to the various
 .Fn transform_write_add_filter_XXX
 functions.
 Filters in the resulting pipeline are numbered so that filter 0
@@ -134,53 +134,53 @@ is the filter closest to the format handler.
 As a convenience, functions that expect a filter number will
 accept -1 as a synonym for the highest-numbered filter.
 .Pp
-For example, when reading a uuencoded gzipped tar archive, there
+For example, when reading a uuencoded gzipped tar transform, there
 are three filters:
 filter 0 is the gunzip filter,
 filter 1 is the uudecode filter,
-and filter 2 is the pseudo-filter that wraps the archive read functions.
+and filter 2 is the pseudo-filter that wraps the transform read functions.
 In this case, requesting
-.Fn archive_position(a, -1)
+.Fn transform_position(a, -1)
 would be a synonym for
-.Fn archive_position(a, 2)
-which would return the number of bytes currently read from the archive, while
-.Fn archive_position(a, 1)
+.Fn transform_position(a, 2)
+which would return the number of bytes currently read from the transform, while
+.Fn transform_position(a, 1)
 would return the number of bytes after uudecoding, and
-.Fn archive_position(a, 0)
+.Fn transform_position(a, 0)
 would return the number of bytes after decompression.
-.It Fn archive_filter_name
+.It Fn transform_filter_name
 Returns a textual name identifying the indicated filter.
 See
-.Fn archive_filter_count
+.Fn transform_filter_count
 for details of the numbering.
-.It Fn archive_format
+.It Fn transform_format
 Returns a numeric code indicating the format of the current
-archive entry.
+transform entry.
 This value is set by a successful call to
 .Fn transform_read_next_header .
 Note that it is common for this value to change from
 entry to entry.
-For example, a tar archive might have several entries that
+For example, a tar transform might have several entries that
 utilize GNU tar extensions and several entries that do not.
 These entries will have different format codes.
-.It Fn archive_format_name
+.It Fn transform_format_name
 A textual description of the format of the current entry.
-.It Fn archive_position
+.It Fn transform_position
 Returns the number of bytes read from or written to the indicated filter.
 In particular,
-.Fn archive_position(a, 0)
+.Fn transform_position(a, 0)
 returns the number of bytes read or written by the format handler, while
-.Fn archive_position(a, -1)
-returns the number of bytes read or written to the archive.
+.Fn transform_position(a, -1)
+returns the number of bytes read or written to the transform.
 See
-.Fn archive_filter_count
+.Fn transform_filter_count
 for details of the numbering here.
-.It Fn archive_set_error
+.It Fn transform_set_error
 Sets the numeric error code and error description that will be returned
 by
-.Fn archive_errno
+.Fn transform_errno
 and
-.Fn archive_error_string .
+.Fn transform_error_string .
 This function should be used within I/O callbacks to set system-specific
 error codes and error descriptions.
 This function accepts a printf-like format string and arguments.
@@ -207,16 +207,16 @@ not uniformly supported and should not be used.
 .Sh SEE ALSO
 .Xr transform_read 3 ,
 .Xr transform_write 3 ,
-.Xr libarchive 3 ,
+.Xr libtransform 3 ,
 .Xr printf 3
 .Sh HISTORY
 The
-.Nm libarchive
+.Nm libtransform
 library first appeared in
 .Fx 5.3 .
 .Sh AUTHORS
 .An -nosplit
 The
-.Nm libarchive
+.Nm libtransform
 library was written by
 .An Tim Kientzle Aq kientzle@acm.org .

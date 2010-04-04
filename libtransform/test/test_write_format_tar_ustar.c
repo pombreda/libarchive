@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_tar_ustar.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_write_format_tar_ustar.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 static int
 is_null(const char *p, size_t l)
@@ -44,7 +44,7 @@ is_null(const char *p, size_t l)
 #define myAssertEqualMem(a,b,s) assertEqualMem(a, b, s); memset(a, 0, s)
 
 /*
- * Detailed verification that 'ustar' archives are written with
+ * Detailed verification that 'ustar' transforms are written with
  * the correct format.
  */
 DEFINE_TEST(test_write_format_tar_ustar)
@@ -74,13 +74,13 @@ DEFINE_TEST(test_write_format_tar_ustar)
 
 	buff = malloc(buffsize);
 
-	/* Create a new archive in memory. */
+	/* Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_set_format_ustar(a));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_set_compression_none(a));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_open_memory(a, buff, buffsize, &used));
 
 	/*
@@ -89,121 +89,121 @@ DEFINE_TEST(test_write_format_tar_ustar)
 	 */
 
 	/* "file" with 10 bytes of content */
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(entry, 1, 10);
-	archive_entry_set_pathname(entry, "file");
-	archive_entry_set_mode(entry, S_IFREG | 0664);
-	archive_entry_set_size(entry, 10);
-	archive_entry_set_uid(entry, 80);
-	archive_entry_set_gid(entry, 90);
-	archive_entry_set_dev(entry, 12);
-	archive_entry_set_ino(entry, 89);
-	archive_entry_set_nlink(entry, 2);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(entry, 1, 10);
+	transform_entry_set_pathname(entry, "file");
+	transform_entry_set_mode(entry, S_IFREG | 0664);
+	transform_entry_set_size(entry, 10);
+	transform_entry_set_uid(entry, 80);
+	transform_entry_set_gid(entry, 90);
+	transform_entry_set_dev(entry, 12);
+	transform_entry_set_ino(entry, 89);
+	transform_entry_set_nlink(entry, 2);
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_free(entry);
 	assertEqualIntA(a, 10, transform_write_data(a, "1234567890", 10));
 
 	/* Hardlink to "file" with 10 bytes of content */
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(entry, 1, 10);
-	archive_entry_set_pathname(entry, "linkfile");
-	archive_entry_set_mode(entry, S_IFREG | 0664);
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(entry, 1, 10);
+	transform_entry_set_pathname(entry, "linkfile");
+	transform_entry_set_mode(entry, S_IFREG | 0664);
 	/* TODO: Put this back and fix the bug. */
-	/* archive_entry_set_size(entry, 10); */
-	archive_entry_set_uid(entry, 80);
-	archive_entry_set_gid(entry, 90);
-	archive_entry_set_dev(entry, 12);
-	archive_entry_set_ino(entry, 89);
-	archive_entry_set_nlink(entry, 2);
-	assertEqualIntA(a, ARCHIVE_OK,
+	/* transform_entry_set_size(entry, 10); */
+	transform_entry_set_uid(entry, 80);
+	transform_entry_set_gid(entry, 90);
+	transform_entry_set_dev(entry, 12);
+	transform_entry_set_ino(entry, 89);
+	transform_entry_set_nlink(entry, 2);
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_free(entry);
 	/* Write of data to dir should fail == zero bytes get written. */
 	assertEqualIntA(a, 0, transform_write_data(a, "1234567890", 10));
 
 	/* "dir" */
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(entry, 2, 20);
-	archive_entry_set_pathname(entry, "dir");
-	archive_entry_set_mode(entry, S_IFDIR | 0775);
-	archive_entry_set_size(entry, 10);
-	archive_entry_set_nlink(entry, 2);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(entry, 2, 20);
+	transform_entry_set_pathname(entry, "dir");
+	transform_entry_set_mode(entry, S_IFDIR | 0775);
+	transform_entry_set_size(entry, 10);
+	transform_entry_set_nlink(entry, 2);
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_free(entry);
 	/* Write of data to dir should fail == zero bytes get written. */
 	assertEqualIntA(a, 0, transform_write_data(a, "1234567890", 10));
 
 	/* "symlink" pointing to "file" */
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(entry, 3, 30);
-	archive_entry_set_pathname(entry, "symlink");
-	archive_entry_set_mode(entry, 0664);
-	archive_entry_set_filetype(entry, AE_IFLNK);
-	archive_entry_set_symlink(entry,"file");
-	archive_entry_set_size(entry, 0);
-	archive_entry_set_uid(entry, 88);
-	archive_entry_set_gid(entry, 98);
-	archive_entry_set_dev(entry, 12);
-	archive_entry_set_ino(entry, 90);
-	archive_entry_set_nlink(entry, 1);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(entry, 3, 30);
+	transform_entry_set_pathname(entry, "symlink");
+	transform_entry_set_mode(entry, 0664);
+	transform_entry_set_filetype(entry, AE_IFLNK);
+	transform_entry_set_symlink(entry,"file");
+	transform_entry_set_size(entry, 0);
+	transform_entry_set_uid(entry, 88);
+	transform_entry_set_gid(entry, 98);
+	transform_entry_set_dev(entry, 12);
+	transform_entry_set_ino(entry, 90);
+	transform_entry_set_nlink(entry, 1);
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_free(entry);
 	/* Write of data to symlink should fail == zero bytes get written. */
 	assertEqualIntA(a, 0, transform_write_data(a, "1234567890", 10));
 
 	/* file with 99-char filename. */
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(entry, 1, 10);
-	archive_entry_set_pathname(entry, f99);
-	archive_entry_set_mode(entry, S_IFREG | 0664);
-	archive_entry_set_size(entry, 0);
-	archive_entry_set_uid(entry, 82);
-	archive_entry_set_gid(entry, 93);
-	archive_entry_set_dev(entry, 102);
-	archive_entry_set_ino(entry, 7);
-	archive_entry_set_nlink(entry, 1);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(entry, 1, 10);
+	transform_entry_set_pathname(entry, f99);
+	transform_entry_set_mode(entry, S_IFREG | 0664);
+	transform_entry_set_size(entry, 0);
+	transform_entry_set_uid(entry, 82);
+	transform_entry_set_gid(entry, 93);
+	transform_entry_set_dev(entry, 102);
+	transform_entry_set_ino(entry, 7);
+	transform_entry_set_nlink(entry, 1);
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_free(entry);
 
 	/* file with 100-char filename. */
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(entry, 1, 10);
-	archive_entry_set_pathname(entry, f100);
-	archive_entry_set_mode(entry, S_IFREG | 0664);
-	archive_entry_set_size(entry, 0);
-	archive_entry_set_uid(entry, 82);
-	archive_entry_set_gid(entry, 93);
-	archive_entry_set_dev(entry, 102);
-	archive_entry_set_ino(entry, 7);
-	archive_entry_set_nlink(entry, 1);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(entry, 1, 10);
+	transform_entry_set_pathname(entry, f100);
+	transform_entry_set_mode(entry, S_IFREG | 0664);
+	transform_entry_set_size(entry, 0);
+	transform_entry_set_uid(entry, 82);
+	transform_entry_set_gid(entry, 93);
+	transform_entry_set_dev(entry, 102);
+	transform_entry_set_ino(entry, 7);
+	transform_entry_set_nlink(entry, 1);
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_free(entry);
 
 	/* file with 256-char filename. */
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(entry, 1, 10);
-	archive_entry_set_pathname(entry, f256);
-	archive_entry_set_mode(entry, S_IFREG | 0664);
-	archive_entry_set_size(entry, 0);
-	archive_entry_set_uid(entry, 82);
-	archive_entry_set_gid(entry, 93);
-	archive_entry_set_dev(entry, 102);
-	archive_entry_set_ino(entry, 7);
-	archive_entry_set_nlink(entry, 1);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(entry, 1, 10);
+	transform_entry_set_pathname(entry, f256);
+	transform_entry_set_mode(entry, S_IFREG | 0664);
+	transform_entry_set_size(entry, 0);
+	transform_entry_set_uid(entry, 82);
+	transform_entry_set_gid(entry, 93);
+	transform_entry_set_dev(entry, 102);
+	transform_entry_set_ino(entry, 7);
+	transform_entry_set_nlink(entry, 1);
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_free(entry);
 
-	/* Close out the archive. */
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
 	/*
-	 * Verify the archive format.
+	 * Verify the transform format.
 	 */
 	e = buff;
 
@@ -344,7 +344,7 @@ DEFINE_TEST(test_write_format_tar_ustar)
 
 	/* TODO: Verify other types of entries. */
 
-	/* Last entry is end-of-archive marker. */
+	/* Last entry is end-of-transform marker. */
 	assert(is_null(e, 1024));
 	e += 1024;
 

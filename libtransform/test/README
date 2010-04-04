@@ -1,6 +1,6 @@
-$FreeBSD: src/lib/libarchive/test/README,v 1.3 2008/01/01 22:28:04 kientzle Exp $
+$FreeBSD: src/lib/libtransform/test/README,v 1.3 2008/01/01 22:28:04 kientzle Exp $
 
-This is the test harness for libarchive.
+This is the test harness for libtransform.
 
 It compiles into a single program "libtransform_test" that is intended
 to exercise as much of the library as possible.  It is, of course,

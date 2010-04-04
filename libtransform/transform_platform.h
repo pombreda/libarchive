@@ -22,24 +22,24 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/transform_platform.h 201090 2009-12-28 02:22:04Z kientzle $
+ * $FreeBSD: head/lib/libtransform/transform_platform.h 201090 2009-12-28 02:22:04Z kientzle $
  */
 
-/* !!ONLY FOR USE INTERNALLY TO LIBARCHIVE!! */
+/* !!ONLY FOR USE INTERNALLY TO LIBTRANSFORM!! */
 
 /*
- * This header is the first thing included in any of the libarchive
+ * This header is the first thing included in any of the libtransform
  * source files.  As far as possible, platform-specific issues should
  * be dealt with here and not within individual source files.  I'm
  * actively trying to minimize #if blocks within the main source,
  * since they obfuscate the code.
  */
 
-#ifndef ARCHIVE_PLATFORM_H_INCLUDED
-#define	ARCHIVE_PLATFORM_H_INCLUDED
+#ifndef TRANSFORM_PLATFORM_H_INCLUDED
+#define	TRANSFORM_PLATFORM_H_INCLUDED
 
-/* transform.h and archive_entry.h require this. */
-#define	__LIBARCHIVE_BUILD 1
+/* transform.h and transform_entry.h require this. */
+#define	__LIBTRANSFORM_BUILD 1
 
 #if defined(PLATFORM_CONFIG_H)
 /* Use hand-built config.h in environments that need it. */
@@ -142,24 +142,24 @@
 #endif
 
 /* Set up defaults for internal error codes. */
-#ifndef ARCHIVE_ERRNO_FILE_FORMAT
+#ifndef TRANSFORM_ERRNO_FILE_FORMAT
 #if HAVE_EFTYPE
-#define	ARCHIVE_ERRNO_FILE_FORMAT EFTYPE
+#define	TRANSFORM_ERRNO_FILE_FORMAT EFTYPE
 #else
 #if HAVE_EILSEQ
-#define	ARCHIVE_ERRNO_FILE_FORMAT EILSEQ
+#define	TRANSFORM_ERRNO_FILE_FORMAT EILSEQ
 #else
-#define	ARCHIVE_ERRNO_FILE_FORMAT EINVAL
+#define	TRANSFORM_ERRNO_FILE_FORMAT EINVAL
 #endif
 #endif
 #endif
 
-#ifndef ARCHIVE_ERRNO_PROGRAMMER
-#define	ARCHIVE_ERRNO_PROGRAMMER EINVAL
+#ifndef TRANSFORM_ERRNO_PROGRAMMER
+#define	TRANSFORM_ERRNO_PROGRAMMER EINVAL
 #endif
 
-#ifndef ARCHIVE_ERRNO_MISC
-#define	ARCHIVE_ERRNO_MISC (-1)
+#ifndef TRANSFORM_ERRNO_MISC
+#define	TRANSFORM_ERRNO_MISC (-1)
 #endif
 
-#endif /* !ARCHIVE_PLATFORM_H_INCLUDED */
+#endif /* !TRANSFORM_PLATFORM_H_INCLUDED */

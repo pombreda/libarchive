@@ -235,16 +235,16 @@ verify_sparse_file(struct transform *a, const char *path,
 #else
 	assertEqualInt(stat(path, &stb), 0);
 #endif
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_set_pathname(ae, path);
-	archive_entry_copy_sourcepath(ae, path);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_set_pathname(ae, path);
+	transform_entry_copy_sourcepath(ae, path);
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_disk_entry_from_file(a, ae, -1, st));
 	/* Verify the number of holes only, not its offset nor its
 	 * length because those alignments are deeply dependence on
 	 * its filesystem. */ 
-	assertEqualInt(blocks, archive_entry_sparse_count(ae));
-	archive_entry_free(ae);
+	assertEqualInt(blocks, transform_entry_sparse_count(ae));
+	transform_entry_free(ae);
 }
 
 DEFINE_TEST(test_sparse_basic)
@@ -333,5 +333,5 @@ DEFINE_TEST(test_sparse_basic)
 	strcpy(p, "/file3");
 	verify_sparse_file(a, path, sparse_file3, 0);
 
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }

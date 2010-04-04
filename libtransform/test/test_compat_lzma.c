@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_compat_lzma.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_compat_lzma.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
 Execute the following to rebuild the data for this program:
@@ -107,35 +107,35 @@ compat_lzma(const char *name)
 	int i, r;
 
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_compression_all(a));
 	r = transform_read_support_compression_lzma(a);
-	if (r == ARCHIVE_WARN) {
+	if (r == TRANSFORM_WARN) {
 		skipping("lzma reading not fully supported on this platform");
-		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+		assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 		return;
 	}
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
 	extract_reference_file(name);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_filename(a, name, 2));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_open_filename(a, name, 2));
 
 	/* Read entries, match up names with list above. */
 	for (i = 0; i < 6; ++i) {
 		failure("Could not read file %d (%s) from %s", i, n[i], name);
-		assertEqualIntA(a, ARCHIVE_OK,
+		assertEqualIntA(a, TRANSFORM_OK,
 		    transform_read_next_header(a, &ae));
-		assertEqualString(n[i], archive_entry_pathname(ae));
+		assertEqualString(n[i], transform_entry_pathname(ae));
 	}
 
-	/* Verify the end-of-archive. */
-	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	/* Verify the end-of-transform. */
+	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
 
 	/* Verify that the format detection worked. */
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_LZMA);
-	assertEqualString(archive_compression_name(a), "lzma");
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_LZMA);
+	assertEqualString(transform_compression_name(a), "lzma");
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
 
-	assertEqualInt(ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 
@@ -145,11 +145,11 @@ DEFINE_TEST(test_compat_lzma)
 	compat_lzma("test_compat_lzma_1.tlz");
 	/* This sample has been made by lzma with option -e,
 	 * the first byte of which is 0x5e.
-	 * Not supported in libarchive 2.7.* and earlier */
+	 * Not supported in libtransform 2.7.* and earlier */
 	compat_lzma("test_compat_lzma_2.tlz");
 	/* This sample has been made by lzma of LZMA SDK with
 	 * option -d12, second byte and third byte of which is
 	 * not zero.
-	 * Not supported in libarchive 2.7.* and earlier */
+	 * Not supported in libtransform 2.7.* and earlier */
 	compat_lzma("test_compat_lzma_3.tlz");
 }

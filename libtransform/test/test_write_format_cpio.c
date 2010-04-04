@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_cpio.c 185672 2008-12-06 06:02:26Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_write_format_cpio.c 185672 2008-12-06 06:02:26Z kientzle $");
 
 /* The version stamp macro was introduced after cpio write support. */
 static void
@@ -40,7 +40,7 @@ test_format(int	(*set_format)(struct transform *))
 
 	buff = malloc(buffsize);
 
-	/* Create a new archive in memory. */
+	/* Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == (*set_format)(a));
 	assertA(0 == transform_write_set_compression_none(a));
@@ -49,61 +49,61 @@ test_format(int	(*set_format)(struct transform *))
 	/*
 	 * Write a file to it.
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(ae, 1, 10);
-	assert(1 == archive_entry_mtime(ae));
-	assert(10 == archive_entry_mtime_nsec(ae));
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(ae, 1, 10);
+	assert(1 == transform_entry_mtime(ae));
+	assert(10 == transform_entry_mtime_nsec(ae));
 	p = strdup("file");
-	archive_entry_copy_pathname(ae, p);
+	transform_entry_copy_pathname(ae, p);
 	strcpy(p, "XXXX");
 	free(p);
-	assertEqualString("file", archive_entry_pathname(ae));
-	archive_entry_set_mode(ae, S_IFREG | 0755);
-	assert((S_IFREG | 0755) == archive_entry_mode(ae));
-	archive_entry_set_size(ae, 8);
+	assertEqualString("file", transform_entry_pathname(ae));
+	transform_entry_set_mode(ae, S_IFREG | 0755);
+	assert((S_IFREG | 0755) == transform_entry_mode(ae));
+	transform_entry_set_size(ae, 8);
 
 	assertA(0 == transform_write_header(a, ae));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 	assertA(8 == transform_write_data(a, "12345678", 9));
 
 	/*
 	 * Write another file to it.
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(ae, 1, 10);
-	assert(1 == archive_entry_mtime(ae));
-	assert(10 == archive_entry_mtime_nsec(ae));
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(ae, 1, 10);
+	assert(1 == transform_entry_mtime(ae));
+	assert(10 == transform_entry_mtime_nsec(ae));
 	p = strdup("file2");
-	archive_entry_copy_pathname(ae, p);
+	transform_entry_copy_pathname(ae, p);
 	strcpy(p, "XXXX");
 	free(p);
-	assertEqualString("file2", archive_entry_pathname(ae));
-	archive_entry_set_mode(ae, S_IFREG | 0755);
-	assert((S_IFREG | 0755) == archive_entry_mode(ae));
-	archive_entry_set_size(ae, 4);
+	assertEqualString("file2", transform_entry_pathname(ae));
+	transform_entry_set_mode(ae, S_IFREG | 0755);
+	assert((S_IFREG | 0755) == transform_entry_mode(ae));
+	transform_entry_set_size(ae, 4);
 
 	assertA(0 == transform_write_header(a, ae));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 	assertA(4 == transform_write_data(a, "1234", 5));
 
 	/*
 	 * Write a directory to it.
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_set_mtime(ae, 11, 110);
-	archive_entry_copy_pathname(ae, "dir");
-	archive_entry_set_mode(ae, S_IFDIR | 0755);
-	archive_entry_set_size(ae, 512);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_set_mtime(ae, 11, 110);
+	transform_entry_copy_pathname(ae, "dir");
+	transform_entry_set_mode(ae, S_IFDIR | 0755);
+	transform_entry_set_size(ae, 512);
 
 	assertA(0 == transform_write_header(a, ae));
-	assertEqualInt(0, archive_entry_size(ae));
-	archive_entry_free(ae);
+	assertEqualInt(0, transform_entry_size(ae));
+	transform_entry_free(ae);
 	assertEqualIntA(a, 0, transform_write_data(a, "12345678", 9));
 
 
-	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
 	/*
 	 * Damage the second entry to test the search-ahead recovery.
@@ -136,14 +136,14 @@ test_format(int	(*set_format)(struct transform *))
 		return;
 	}
 
-	assertEqualInt(1, archive_entry_mtime(ae));
+	assertEqualInt(1, transform_entry_mtime(ae));
 	/* Not the same as above: cpio doesn't store hi-res times. */
-	assert(0 == archive_entry_mtime_nsec(ae));
-	assert(0 == archive_entry_atime(ae));
-	assert(0 == archive_entry_ctime(ae));
-	assertEqualString("file", archive_entry_pathname(ae));
-	assertEqualInt((S_IFREG | 0755), archive_entry_mode(ae));
-	assertEqualInt(8, archive_entry_size(ae));
+	assert(0 == transform_entry_mtime_nsec(ae));
+	assert(0 == transform_entry_atime(ae));
+	assert(0 == transform_entry_ctime(ae));
+	assertEqualString("file", transform_entry_pathname(ae));
+	assertEqualInt((S_IFREG | 0755), transform_entry_mode(ae));
+	assertEqualInt(8, transform_entry_size(ae));
 	assertA(8 == transform_read_data(a, filedata, 10));
 	assert(0 == memcmp(filedata, "12345678", 8));
 
@@ -153,22 +153,22 @@ test_format(int	(*set_format)(struct transform *))
 
 	/*
 	 * Read the dir entry back.
-	 * ARCHIVE_WARN here because the damaged entry was skipped.
+	 * TRANSFORM_WARN here because the damaged entry was skipped.
 	 */
-	assertEqualIntA(a, ARCHIVE_WARN, transform_read_next_header(a, &ae));
-	assertEqualInt(11, archive_entry_mtime(ae));
-	assert(0 == archive_entry_mtime_nsec(ae));
-	assert(0 == archive_entry_atime(ae));
-	assert(0 == archive_entry_ctime(ae));
-	assertEqualString("dir", archive_entry_pathname(ae));
-	assertEqualInt((S_IFDIR | 0755), archive_entry_mode(ae));
-	assertEqualInt(0, archive_entry_size(ae));
+	assertEqualIntA(a, TRANSFORM_WARN, transform_read_next_header(a, &ae));
+	assertEqualInt(11, transform_entry_mtime(ae));
+	assert(0 == transform_entry_mtime_nsec(ae));
+	assert(0 == transform_entry_atime(ae));
+	assert(0 == transform_entry_ctime(ae));
+	assertEqualString("dir", transform_entry_pathname(ae));
+	assertEqualInt((S_IFDIR | 0755), transform_entry_mode(ae));
+	assertEqualInt(0, transform_entry_size(ae));
 	assertEqualIntA(a, 0, transform_read_data(a, filedata, 10));
 
-	/* Verify the end of the archive. */
+	/* Verify the end of the transform. */
 	assertEqualIntA(a, 1, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 
 	free(buff);
 }

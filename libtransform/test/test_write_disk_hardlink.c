@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk_hardlink.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_write_disk_hardlink.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 /* Execution bits, Group members bits and others bits do not work. */
@@ -63,29 +63,29 @@ DEFINE_TEST(test_write_disk_hardlink)
 	 */
 
 	/* Regular file. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "link1a");
-	archive_entry_set_mode(ae, S_IFREG | 0755);
-	archive_entry_set_size(ae, sizeof(data));
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "link1a");
+	transform_entry_set_mode(ae, S_IFREG | 0755);
+	transform_entry_set_size(ae, sizeof(data));
 	assertEqualIntA(ad, 0, transform_write_header(ad, ae));
 	assertEqualInt(sizeof(data),
 	    transform_write_data(ad, data, sizeof(data)));
 	assertEqualIntA(ad, 0, transform_write_finish_entry(ad));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
 	/* Link.  Size of zero means this doesn't carry data. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "link1b");
-	archive_entry_set_mode(ae, S_IFREG | 0642);
-	archive_entry_set_size(ae, 0);
-	archive_entry_copy_hardlink(ae, "link1a");
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "link1b");
+	transform_entry_set_mode(ae, S_IFREG | 0642);
+	transform_entry_set_size(ae, 0);
+	transform_entry_copy_hardlink(ae, "link1a");
 	assertEqualIntA(ad, 0, r = transform_write_header(ad, ae));
-	if (r >= ARCHIVE_WARN) {
-		assertEqualInt(ARCHIVE_WARN,
+	if (r >= TRANSFORM_WARN) {
+		assertEqualInt(TRANSFORM_WARN,
 		    transform_write_data(ad, data, sizeof(data)));
 		assertEqualIntA(ad, 0, transform_write_finish_entry(ad));
 	}
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
 	/*
 	 * Repeat tar approach test, but use unset to mark the
@@ -93,29 +93,29 @@ DEFINE_TEST(test_write_disk_hardlink)
 	 */
 
 	/* Regular file. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "link2a");
-	archive_entry_set_mode(ae, S_IFREG | 0755);
-	archive_entry_set_size(ae, sizeof(data));
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "link2a");
+	transform_entry_set_mode(ae, S_IFREG | 0755);
+	transform_entry_set_size(ae, sizeof(data));
 	assertEqualIntA(ad, 0, transform_write_header(ad, ae));
 	assertEqualInt(sizeof(data),
 	    transform_write_data(ad, data, sizeof(data)));
 	assertEqualIntA(ad, 0, transform_write_finish_entry(ad));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
 	/* Link.  Unset size means this doesn't carry data. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "link2b");
-	archive_entry_set_mode(ae, S_IFREG | 0642);
-	archive_entry_unset_size(ae);
-	archive_entry_copy_hardlink(ae, "link2a");
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "link2b");
+	transform_entry_set_mode(ae, S_IFREG | 0642);
+	transform_entry_unset_size(ae);
+	transform_entry_copy_hardlink(ae, "link2a");
 	assertEqualIntA(ad, 0, r = transform_write_header(ad, ae));
-	if (r >= ARCHIVE_WARN) {
-		assertEqualInt(ARCHIVE_WARN,
+	if (r >= TRANSFORM_WARN) {
+		assertEqualInt(TRANSFORM_WARN,
 		    transform_write_data(ad, data, sizeof(data)));
 		assertEqualIntA(ad, 0, transform_write_finish_entry(ad));
 	}
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
 	/*
 	 * Second, try an old-cpio-like approach; a regular file, then
@@ -123,28 +123,28 @@ DEFINE_TEST(test_write_disk_hardlink)
 	 */
 
 	/* Regular file. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "link3a");
-	archive_entry_set_mode(ae, S_IFREG | 0600);
-	archive_entry_set_size(ae, sizeof(data));
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "link3a");
+	transform_entry_set_mode(ae, S_IFREG | 0600);
+	transform_entry_set_size(ae, sizeof(data));
 	assertEqualIntA(ad, 0, transform_write_header(ad, ae));
 	assertEqualInt(sizeof(data), transform_write_data(ad, data, sizeof(data)));
 	assertEqualIntA(ad, 0, transform_write_finish_entry(ad));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
 	/* Link. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "link3b");
-	archive_entry_set_mode(ae, S_IFREG | 0755);
-	archive_entry_set_size(ae, sizeof(data));
-	archive_entry_copy_hardlink(ae, "link3a");
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "link3b");
+	transform_entry_set_mode(ae, S_IFREG | 0755);
+	transform_entry_set_size(ae, sizeof(data));
+	transform_entry_copy_hardlink(ae, "link3a");
 	assertEqualIntA(ad, 0, r = transform_write_header(ad, ae));
-	if (r > ARCHIVE_WARN) {
+	if (r > TRANSFORM_WARN) {
 		assertEqualInt(sizeof(data),
 		    transform_write_data(ad, data, sizeof(data)));
 		assertEqualIntA(ad, 0, transform_write_finish_entry(ad));
 	}
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
 	/*
 	 * Finally, try a new-cpio-like approach, where the initial
@@ -152,34 +152,34 @@ DEFINE_TEST(test_write_disk_hardlink)
 	 */
 
 	/* Regular file. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "link4a");
-	archive_entry_set_mode(ae, S_IFREG | 0600);
-	archive_entry_set_size(ae, 0);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "link4a");
+	transform_entry_set_mode(ae, S_IFREG | 0600);
+	transform_entry_set_size(ae, 0);
 	assertEqualIntA(ad, 0, transform_write_header(ad, ae));
-	assertEqualInt(ARCHIVE_WARN, transform_write_data(ad, data, 1));
+	assertEqualInt(TRANSFORM_WARN, transform_write_data(ad, data, 1));
 	assertEqualIntA(ad, 0, transform_write_finish_entry(ad));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
 	/* Link. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "link4b");
-	archive_entry_set_mode(ae, S_IFREG | 0755);
-	archive_entry_set_size(ae, sizeof(data));
-	archive_entry_copy_hardlink(ae, "link4a");
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "link4b");
+	transform_entry_set_mode(ae, S_IFREG | 0755);
+	transform_entry_set_size(ae, sizeof(data));
+	transform_entry_copy_hardlink(ae, "link4a");
 	assertEqualIntA(ad, 0, r = transform_write_header(ad, ae));
-	if (r > ARCHIVE_FAILED) {
+	if (r > TRANSFORM_FAILED) {
 		assertEqualInt(sizeof(data),
 		    transform_write_data(ad, data, sizeof(data)));
 		assertEqualIntA(ad, 0, transform_write_finish_entry(ad));
 	}
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 	assertEqualInt(0, transform_write_free(ad));
 
 	/* Test the entries on disk. */
 
 	/* Test #1 */
-	/* If the hardlink was successfully created and the archive
+	/* If the hardlink was successfully created and the transform
 	 * doesn't carry data for it, we consider it to be
 	 * non-authoritive for meta data as well.  This is consistent
 	 * with GNU tar and BSD pax.  */

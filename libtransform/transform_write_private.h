@@ -22,11 +22,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/transform_write_private.h 201155 2009-12-29 05:20:12Z kientzle $
+ * $FreeBSD: head/lib/libtransform/transform_write_private.h 201155 2009-12-29 05:20:12Z kientzle $
  */
 
-#ifndef __LIBARCHIVE_BUILD
-#error This header is only to be used internally to libarchive.
+#ifndef __LIBTRANSFORM_BUILD
+#error This header is only to be used internally to libtransform.
 #endif
 
 #ifndef TRANSFORM_WRITE_PRIVATE_H_INCLUDED
@@ -40,7 +40,7 @@ struct transform_write;
 
 struct transform_write_filter {
 	int64_t bytes_written;
-	struct transform *archive; /* Associated archive. */
+	struct transform *transform; /* Associated transform. */
 	struct transform_write_filter *next_filter; /* Who I write to. */
 	int	(*options)(struct transform_write_filter *,
 	    const char *key, const char *value);
@@ -63,16 +63,16 @@ int __transform_write_open_filter(struct transform_write_filter *);
 int __transform_write_close_filter(struct transform_write_filter *);
 
 struct transform_write {
-	struct transform	archive;
+	struct transform	transform;
 
 	/* Utility:  Pointer to a block of nulls. */
 	const unsigned char	*nulls;
 	size_t			 null_length;
 
-	/* Callbacks to open/read/write/close archive stream. */
-	archive_open_callback	*client_opener;
+	/* Callbacks to open/read/write/close transform stream. */
+	transform_open_callback	*client_opener;
 	transform_write_callback	*client_writer;
-	archive_close_callback	*client_closer;
+	transform_close_callback	*client_closer;
 	void			*client_data;
 
 	/*

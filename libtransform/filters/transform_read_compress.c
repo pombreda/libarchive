@@ -64,7 +64,7 @@
 
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/transform_read_support_compression_compress.c 201094 2009-12-28 02:29:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_read_support_compression_compress.c 201094 2009-12-28 02:29:21Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -147,14 +147,14 @@ transform_read_support_compression_compress(struct transform *_a)
 	struct transform_read_filter_bidder *bidder = __transform_read_get_bidder(a);
 
 	if (bidder == NULL)
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 
 	bidder->data = NULL;
 	bidder->bid = compress_bidder_bid;
 	bidder->init = compress_bidder_init;
 	bidder->options = NULL;
 	bidder->free = compress_bidder_free;
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 /*
@@ -206,7 +206,7 @@ compress_bidder_init(struct transform_read_filter *self)
 	void *out_block;
 	int code;
 
-	self->code = ARCHIVE_FILTER_COMPRESS;
+	self->code = TRANSFORM_FILTER_COMPRESS;
 	self->name = "compress (.Z)";
 
 	state = (struct private_data *)calloc(sizeof(*state), 1);
@@ -214,10 +214,10 @@ compress_bidder_init(struct transform_read_filter *self)
 	if (state == NULL || out_block == NULL) {
 		free(out_block);
 		free(state);
-		archive_set_error(&self->archive->archive, ENOMEM,
+		transform_set_error(&self->transform->transform, ENOMEM,
 		    "Can't allocate data for %s decompression",
 		    self->name);
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	}
 
 	self->data = state;
@@ -251,7 +251,7 @@ compress_bidder_init(struct transform_read_filter *self)
 	}
 	next_code(self);
 
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 /*
@@ -280,7 +280,7 @@ compress_filter_read(struct transform_read_filter *self, const void **pblock)
 			ret = next_code(self);
 			if (ret == -1)
 				state->end_of_stream = ret;
-			else if (ret != ARCHIVE_OK)
+			else if (ret != TRANSFORM_OK)
 				return (ret);
 		}
 	}
@@ -296,7 +296,7 @@ static int
 compress_bidder_free(struct transform_read_filter_bidder *self)
 {
 	self->data = NULL;
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 /*
@@ -309,13 +309,13 @@ compress_filter_close(struct transform_read_filter *self)
 
 	free(state->out_block);
 	free(state);
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 /*
  * Process the next code and fill the stack with the expansion
- * of the code.  Returns ARCHIVE_FATAL if there is a fatal I/O or
- * format error, ARCHIVE_EOF if we hit end of data, ARCHIVE_OK otherwise.
+ * of the code.  Returns TRANSFORM_FATAL if there is a fatal I/O or
+ * format error, TRANSFORM_EOF if we hit end of data, TRANSFORM_OK otherwise.
  */
 static int
 next_code(struct transform_read_filter *self)
@@ -363,9 +363,9 @@ next_code(struct transform_read_filter *self)
 
 	if (code > state->free_ent) {
 		/* An invalid code is a fatal error. */
-		archive_set_error(&(self->archive->archive), -1,
+		transform_set_error(&(self->transform->transform), -1,
 		    "Invalid compressed data");
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	}
 
 	/* Special case for KwKwK string. */
@@ -399,7 +399,7 @@ next_code(struct transform_read_filter *self)
 
 	/* Remember previous code. */
 	state->oldcode = newcode;
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 /*
@@ -426,7 +426,7 @@ getbits(struct transform_read_filter *self, int n)
 			if (ret == 0)
 				return (-1);
 			if (ret < 0 || state->next_in == NULL)
-				return (ARCHIVE_FATAL);
+				return (TRANSFORM_FATAL);
 			state->avail_in = ret;
 			__transform_read_filter_consume(self->upstream, ret);
 		}

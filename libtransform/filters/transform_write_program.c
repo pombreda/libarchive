@@ -24,7 +24,7 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/transform_write_set_compression_program.c 201104 2009-12-28 03:14:30Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_write_set_compression_program.c 201104 2009-12-28 03:14:30Z kientzle $");
 
 #ifdef HAVE_SYS_WAIT_H
 #  include <sys/wait.h>
@@ -57,9 +57,9 @@ __FBSDID("$FreeBSD: head/lib/libarchive/transform_write_set_compression_program.
 int
 transform_write_add_filter_program(struct transform *_a, const char *cmd)
 {
-	archive_set_error(_a, -1,
+	transform_set_error(_a, -1,
 	    "External compression programs not supported on this platform");
-	return (ARCHIVE_FATAL);
+	return (TRANSFORM_FATAL);
 }
 
 #else
@@ -76,11 +76,11 @@ struct private_data {
 	size_t		 child_buf_len, child_buf_avail;
 };
 
-static int archive_compressor_program_open(struct transform_write_filter *);
-static int archive_compressor_program_write(struct transform_write_filter *,
+static int transform_compressor_program_open(struct transform_write_filter *);
+static int transform_compressor_program_write(struct transform_write_filter *,
 		    const void *, size_t);
-static int archive_compressor_program_close(struct transform_write_filter *);
-static int archive_compressor_program_free(struct transform_write_filter *);
+static int transform_compressor_program_close(struct transform_write_filter *);
+static int transform_compressor_program_free(struct transform_write_filter *);
 
 /*
  * Add a filter to this write handle that passes all data through an
@@ -93,12 +93,12 @@ transform_write_add_filter_program(struct transform *_a, const char *cmd)
 	struct transform_write *a = (struct transform_write *)_a;
 	struct private_data *data;
 	static const char *prefix = "Program: ";
-	transform_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
+	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
 	    TRANSFORM_STATE_NEW, "transform_write_add_filter_program");
 	data = calloc(1, sizeof(*data));
 	if (data == NULL) {
-		archive_set_error(&a->archive, ENOMEM, "Out of memory");
-		return (ARCHIVE_FATAL);
+		transform_set_error(&a->transform, ENOMEM, "Out of memory");
+		return (TRANSFORM_FATAL);
 	}
 	data->cmd = strdup(cmd);
 	data->description = (char *)malloc(strlen(prefix) + strlen(cmd) + 1);
@@ -107,22 +107,22 @@ transform_write_add_filter_program(struct transform *_a, const char *cmd)
 
 	f->name = data->description;
 	f->data = data;
-	f->open = &archive_compressor_program_open;
-	f->code = ARCHIVE_FILTER_PROGRAM;
-	return (ARCHIVE_OK);
+	f->open = &transform_compressor_program_open;
+	f->code = TRANSFORM_FILTER_PROGRAM;
+	return (TRANSFORM_OK);
 }
 
 /*
  * Setup callback.
  */
 static int
-archive_compressor_program_open(struct transform_write_filter *f)
+transform_compressor_program_open(struct transform_write_filter *f)
 {
 	struct private_data *data = (struct private_data *)f->data;
 	int ret;
 
 	ret = __transform_write_open_filter(f->next_filter);
-	if (ret != ARCHIVE_OK)
+	if (ret != TRANSFORM_OK)
 		return (ret);
 
 	if (data->child_buf == NULL) {
@@ -131,22 +131,22 @@ archive_compressor_program_open(struct transform_write_filter *f)
 		data->child_buf = malloc(data->child_buf_len);
 
 		if (data->child_buf == NULL) {
-			archive_set_error(f->archive, ENOMEM,
+			transform_set_error(f->transform, ENOMEM,
 			    "Can't allocate compression buffer");
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		}
 	}
 
-	if ((data->child = __archive_create_child(data->cmd,
+	if ((data->child = __transform_create_child(data->cmd,
 		 &data->child_stdin, &data->child_stdout)) == -1) {
-		archive_set_error(f->archive, EINVAL,
+		transform_set_error(f->transform, EINVAL,
 		    "Can't initialise filter");
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	}
 
-	f->write = archive_compressor_program_write;
-	f->close = archive_compressor_program_close;
-	f->free = archive_compressor_program_free;
+	f->write = transform_compressor_program_write;
+	f->close = transform_compressor_program_close;
+	f->free = transform_compressor_program_free;
 	return (0);
 }
 
@@ -222,7 +222,7 @@ restart_write:
  * Write data to the compressed stream.
  */
 static int
-archive_compressor_program_write(struct transform_write_filter *f,
+transform_compressor_program_write(struct transform_write_filter *f,
     const void *buff, size_t length)
 {
 	ssize_t ret;
@@ -232,14 +232,14 @@ archive_compressor_program_write(struct transform_write_filter *f,
 	while (length > 0) {
 		ret = child_write(f, buf, length);
 		if (ret == -1 || ret == 0) {
-			archive_set_error(f->archive, EIO,
+			transform_set_error(f->transform, EIO,
 			    "Can't write to filter");
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		}
 		length -= ret;
 		buf += ret;
 	}
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 
@@ -247,7 +247,7 @@ archive_compressor_program_write(struct transform_write_filter *f,
  * Finish the compression...
  */
 static int
-archive_compressor_program_close(struct transform_write_filter *f)
+transform_compressor_program_close(struct transform_write_filter *f)
 {
 	struct private_data *data = (struct private_data *)f->data;
 	int ret, r1, status;
@@ -269,17 +269,17 @@ archive_compressor_program_close(struct transform_write_filter *f)
 			break;
 
 		if (bytes_read == -1) {
-			archive_set_error(f->archive, errno,
+			transform_set_error(f->transform, errno,
 			    "Read from filter failed unexpectedly.");
-			ret = ARCHIVE_FATAL;
+			ret = TRANSFORM_FATAL;
 			goto cleanup;
 		}
 		data->child_buf_avail += bytes_read;
 
 		ret = __transform_write_filter(f->next_filter,
 		    data->child_buf, data->child_buf_avail);
-		if (ret != ARCHIVE_OK) {
-			ret = ARCHIVE_FATAL;
+		if (ret != TRANSFORM_OK) {
+			ret = TRANSFORM_FATAL;
 			goto cleanup;
 		}
 		data->child_buf_avail = 0;
@@ -295,16 +295,16 @@ cleanup:
 		continue;
 
 	if (status != 0) {
-		archive_set_error(f->archive, EIO,
+		transform_set_error(f->transform, EIO,
 		    "Filter exited with failure.");
-		ret = ARCHIVE_FATAL;
+		ret = TRANSFORM_FATAL;
 	}
 	r1 = __transform_write_close_filter(f->next_filter);
 	return (r1 < ret ? r1 : ret);
 }
 
 static int
-archive_compressor_program_free(struct transform_write_filter *f)
+transform_compressor_program_free(struct transform_write_filter *f)
 {
 	struct private_data *data = (struct private_data *)f->data;
 	free(data->cmd);
@@ -312,7 +312,7 @@ archive_compressor_program_free(struct transform_write_filter *f)
 	free(data->child_buf);
 	free(data);
 	f->data = NULL;
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 #endif /* !defined(HAVE_PIPE) || !defined(HAVE_VFORK) || !defined(HAVE_FCNTL) */

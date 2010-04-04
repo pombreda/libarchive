@@ -45,7 +45,7 @@
 #define	HAVE_DIRENT_H 1
 #define	HAVE_ERRNO_H 1
 #define	HAVE_FCNTL_H 1
-#define	HAVE_LIBARCHIVE 1
+#define	HAVE_LIBTRANSFORM 1
 #define	HAVE_STDLIB_H 1
 #define	HAVE_STRING_H 1
 #define	HAVE_SYS_STAT_H 1
@@ -65,14 +65,14 @@
 #define	__FBSDID(a)     struct _undefined_hack
 #endif
 
-#ifdef HAVE_LIBARCHIVE
-/* If we're using the platform libarchive, include system headers. */
-#include <archive.h>
-#include <archive_entry.h>
+#ifdef HAVE_LIBTRANSFORM
+/* If we're using the platform libtransform, include system headers. */
+#include <transform.h>
+#include <transform_entry.h>
 #else
 /* Otherwise, include user headers. */
-#include "archive.h"
-#include "archive_entry.h"
+#include "transform.h"
+#include "transform_entry.h"
 #endif
 
 #endif /* !TREE_CONFIG_H_INCLUDED */

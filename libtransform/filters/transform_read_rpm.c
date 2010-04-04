@@ -49,7 +49,7 @@ struct rpm {
 		ST_HEADER_DATA,	/* Skipping 'Header' section. */
 		ST_PADDING,	/* Skipping padding data after the
 				 * 'Header' section. */
-		ST_ARCHIVE	/* Reading 'Archive' section. */
+		ST_TRANSFORM	/* Reading 'Archive' section. */
 	}		 state;
 	int		 first_header;
 };
@@ -70,16 +70,16 @@ transform_read_support_compression_rpm(struct transform *_a)
 	struct transform_read_filter_bidder *bidder;
 
 	bidder = __transform_read_get_bidder(a);
-	archive_clear_error(_a);
+	transform_clear_error(_a);
 	if (bidder == NULL)
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 
 	bidder->data = NULL;
 	bidder->bid = rpm_bidder_bid;
 	bidder->init = rpm_bidder_init;
 	bidder->options = NULL;
 	bidder->free = NULL;
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 static int
@@ -136,7 +136,7 @@ rpm_bidder_init(struct transform_read_filter *self)
 {
 	struct rpm   *rpm;
 
-	self->code = ARCHIVE_FILTER_RPM;
+	self->code = TRANSFORM_FILTER_RPM;
 	self->name = "rpm";
 	self->read = rpm_filter_read;
 	self->skip = NULL; /* not supported */
@@ -144,15 +144,15 @@ rpm_bidder_init(struct transform_read_filter *self)
 
 	rpm = (struct rpm *)calloc(sizeof(*rpm), 1);
 	if (rpm == NULL) {
-		archive_set_error(&self->archive->archive, ENOMEM,
+		transform_set_error(&self->transform->transform, ENOMEM,
 		    "Can't allocate data for rpm");
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	}
 
 	self->data = rpm;
 	rpm->state = ST_LEAD;
 
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 static ssize_t
@@ -176,7 +176,7 @@ rpm_filter_read(struct transform_read_filter *self, const void **buff)
 			    &avail_in);
 			if (b == NULL) {
 				if (avail_in < 0)
-					return (ARCHIVE_FATAL);
+					return (TRANSFORM_FATAL);
 				else
 					break;
 			}
@@ -211,20 +211,20 @@ rpm_filter_read(struct transform_read_filter *self, const void **buff)
 				    rpm->header[2] != 0xe8 ||
 				    rpm->header[3] != 0x01) {
 					if (rpm->first_header) {
-						archive_set_error(
-						    &self->archive->archive,
-						    ARCHIVE_ERRNO_FILE_FORMAT,
+						transform_set_error(
+						    &self->transform->transform,
+						    TRANSFORM_ERRNO_FILE_FORMAT,
 						    "Unrecoginized rpm header");
-						return (ARCHIVE_FATAL);
+						return (TRANSFORM_FATAL);
 					}
-					rpm->state = ST_ARCHIVE;
+					rpm->state = ST_TRANSFORM;
 					*buff = rpm->header;
 					total = rpm->hpos;
 					break;
 				}
 				/* Calculate 'Header' length. */
-				section = archive_be32dec(rpm->header+8);
-				bytes = archive_be32dec(rpm->header+12);
+				section = transform_be32dec(rpm->header+8);
+				bytes = transform_be32dec(rpm->header+12);
 				rpm->hlen = 16 + section * 16 + bytes;
 				rpm->state = ST_HEADER_DATA;
 				rpm->first_header = 0;
@@ -253,7 +253,7 @@ rpm_filter_read(struct transform_read_filter *self, const void **buff)
 				used++;
 			}
 			break;
-		case ST_ARCHIVE:
+		case ST_TRANSFORM:
 			*buff = b;
 			total = avail_in;
 			used = avail_in;
@@ -282,6 +282,6 @@ rpm_filter_close(struct transform_read_filter *self)
 	rpm = (struct rpm *)self->data;
 	free(rpm);
 
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 

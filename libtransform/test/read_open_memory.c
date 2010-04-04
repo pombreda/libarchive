@@ -24,18 +24,18 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/read_open_memory.c 191183 2009-04-17 01:06:31Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/read_open_memory.c 191183 2009-04-17 01:06:31Z kientzle $");
 
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
 /*
- * Read an archive from a block of memory.
+ * Read an transform from a block of memory.
  *
  * This is identical to transform_read_open_memory(), except
  * that it goes out of its way to be a little bit unpleasant,
- * in order to better test the libarchive internals.
+ * in order to better test the libtransform internals.
  */
 
 struct read_memory_data {
@@ -79,8 +79,8 @@ read_open_memory_internal(struct transform *a, void *buff,
 
 	mine = (struct read_memory_data *)malloc(sizeof(*mine));
 	if (mine == NULL) {
-		archive_set_error(a, ENOMEM, "No memory");
-		return (ARCHIVE_FATAL);
+		transform_set_error(a, ENOMEM, "No memory");
+		return (TRANSFORM_FATAL);
 	}
 	memset(mine, 0, sizeof(*mine));
 	mine->buffer = (unsigned char *)buff;
@@ -106,11 +106,11 @@ memory_read_open(struct transform *a, void *client_data)
 {
 	(void)a; /* UNUSED */
 	(void)client_data; /* UNUSED */
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 /*
- * In order to exercise libarchive's internal read-combining logic,
+ * In order to exercise libtransform's internal read-combining logic,
  * we deliberately copy data for each read to a separate buffer.
  * That way, code that runs off the end of the provided data
  * will screw up.
@@ -163,5 +163,5 @@ memory_read_close(struct transform *a, void *client_data)
 	(void)a; /* UNUSED */
 	free(mine->copy_buff);
 	free(mine);
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }

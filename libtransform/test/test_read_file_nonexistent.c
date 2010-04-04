@@ -23,13 +23,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_file_nonexistent.c 189473 2009-03-07 02:09:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_file_nonexistent.c 189473 2009-03-07 02:09:21Z kientzle $");
 
 DEFINE_TEST(test_read_file_nonexistent)
 {
 	struct transform* a = transform_read_new();
-	assertEqualInt(ARCHIVE_OK, transform_read_support_format_all(a));
-	assertEqualInt(ARCHIVE_FATAL,
+	assertEqualInt(TRANSFORM_OK, transform_read_support_format_all(a));
+	assertEqualInt(TRANSFORM_FATAL,
 	    transform_read_open_filename(a, "notexistent.tar", 512));
 	transform_read_free(a);
 }

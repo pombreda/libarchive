@@ -22,16 +22,16 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/archive_crc32.h 201102 2009-12-28 03:11:36Z kientzle $
+ * $FreeBSD: head/lib/libtransform/transform_crc32.h 201102 2009-12-28 03:11:36Z kientzle $
  */
 
-#ifndef __LIBARCHIVE_BUILD
-#error This header is only to be used internally to libarchive.
+#ifndef __LIBTRANSFORM_BUILD
+#error This header is only to be used internally to libtransform.
 #endif
 
 /*
  * When zlib is unavailable, we should still be able to validate
- * uncompressed zip archives.  That requires us to be able to compute
+ * uncompressed zip transforms.  That requires us to be able to compute
  * the CRC32 check value.  This is a drop-in compatible replacement
  * for crc32() from zlib.  It's slower than the zlib implementation,
  * but still pretty fast: This runs about 300MB/s on my 3GHz P4

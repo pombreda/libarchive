@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_isorr_ce.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_isorr_ce.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
 Execute the following command to rebuild the data for this program:
@@ -102,7 +102,7 @@ DEFINE_TEST(test_read_format_isorr_ce)
 	assert((a = transform_read_new()) != NULL);
 	assertEqualInt(0, transform_read_support_compression_all(a));
 	assertEqualInt(0, transform_read_support_format_all(a));
-	assertEqualInt(ARCHIVE_OK,
+	assertEqualInt(TRANSFORM_OK,
 	    transform_read_open_filename(a, refname, 10240));
 
 	/* Retrieve each of the 8 files on the ISO image and
@@ -110,114 +110,114 @@ DEFINE_TEST(test_read_format_isorr_ce)
 	for (i = 0; i < 8; ++i) {
 		assertEqualInt(0, transform_read_next_header(a, &ae));
 
-		if (strcmp(".", archive_entry_pathname(ae)) == 0) {
+		if (strcmp(".", transform_entry_pathname(ae)) == 0) {
 			/* '.' root directory. */
-			assertEqualInt(AE_IFDIR, archive_entry_filetype(ae));
-			assertEqualInt(2048, archive_entry_size(ae));
+			assertEqualInt(AE_IFDIR, transform_entry_filetype(ae));
+			assertEqualInt(2048, transform_entry_size(ae));
 			/* Now, we read timestamp recorded by RRIP "TF". */
-			assertEqualInt(86401, archive_entry_mtime(ae));
-			assertEqualInt(0, archive_entry_mtime_nsec(ae));
+			assertEqualInt(86401, transform_entry_mtime(ae));
+			assertEqualInt(0, transform_entry_mtime_nsec(ae));
 			/* Now, we read links recorded by RRIP "PX". */
-			assertEqualInt(3, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualIntA(a, ARCHIVE_EOF,
+			assertEqualInt(3, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualIntA(a, TRANSFORM_EOF,
 			    transform_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
-		} else if (strcmp("dir", archive_entry_pathname(ae)) == 0) {
+		} else if (strcmp("dir", transform_entry_pathname(ae)) == 0) {
 			/* A directory. */
-			assertEqualString("dir", archive_entry_pathname(ae));
-			assertEqualInt(AE_IFDIR, archive_entry_filetype(ae));
-			assertEqualInt(2048, archive_entry_size(ae));
-			assertEqualInt(86401, archive_entry_mtime(ae));
-			assertEqualInt(86401, archive_entry_atime(ae));
-			assertEqualInt(2, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
-		} else if (strcmp(path1, archive_entry_pathname(ae)) == 0) {
+			assertEqualString("dir", transform_entry_pathname(ae));
+			assertEqualInt(AE_IFDIR, transform_entry_filetype(ae));
+			assertEqualInt(2048, transform_entry_size(ae));
+			assertEqualInt(86401, transform_entry_mtime(ae));
+			assertEqualInt(86401, transform_entry_atime(ae));
+			assertEqualInt(2, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
+		} else if (strcmp(path1, transform_entry_pathname(ae)) == 0) {
 			/* A regular file. */
-			assertEqualString(path1, archive_entry_pathname(ae));
-			assertEqualInt(AE_IFREG, archive_entry_filetype(ae));
-			assertEqualInt(4090, archive_entry_size(ae));
+			assertEqualString(path1, transform_entry_pathname(ae));
+			assertEqualInt(AE_IFREG, transform_entry_filetype(ae));
+			assertEqualInt(4090, transform_entry_size(ae));
 			assertEqualInt(0,
 			    transform_read_data_block(a, &p, &size, &offset));
 			assertEqualInt(0, offset);
 			assertEqualMem(p, "hello 151\n", 10);
-			assertEqualInt(86401, archive_entry_mtime(ae));
-			assertEqualInt(86401, archive_entry_atime(ae));
-			assertEqualInt(1, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
-		} else if (strcmp(path2, archive_entry_pathname(ae)) == 0) {
+			assertEqualInt(86401, transform_entry_mtime(ae));
+			assertEqualInt(86401, transform_entry_atime(ae));
+			assertEqualInt(1, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
+		} else if (strcmp(path2, transform_entry_pathname(ae)) == 0) {
 			/* A regular file. */
-			assertEqualString(path2, archive_entry_pathname(ae));
-			assertEqualInt(AE_IFREG, archive_entry_filetype(ae));
-			assertEqualInt(4090, archive_entry_size(ae));
+			assertEqualString(path2, transform_entry_pathname(ae));
+			assertEqualInt(AE_IFREG, transform_entry_filetype(ae));
+			assertEqualInt(4090, transform_entry_size(ae));
 			assertEqualInt(0,
 			    transform_read_data_block(a, &p, &size, &offset));
 			assertEqualInt(0, offset);
 			assertEqualMem(p, "hello 152\n", 10);
-			assertEqualInt(86401, archive_entry_mtime(ae));
-			assertEqualInt(86401, archive_entry_atime(ae));
-			assertEqualInt(1, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
-		} else if (strcmp(path3, archive_entry_pathname(ae)) == 0) {
+			assertEqualInt(86401, transform_entry_mtime(ae));
+			assertEqualInt(86401, transform_entry_atime(ae));
+			assertEqualInt(1, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
+		} else if (strcmp(path3, transform_entry_pathname(ae)) == 0) {
 			/* A regular file. */
-			assertEqualString(path3, archive_entry_pathname(ae));
-			assertEqualInt(AE_IFREG, archive_entry_filetype(ae));
-			assertEqualInt(4090, archive_entry_size(ae));
+			assertEqualString(path3, transform_entry_pathname(ae));
+			assertEqualInt(AE_IFREG, transform_entry_filetype(ae));
+			assertEqualInt(4090, transform_entry_size(ae));
 			assertEqualInt(0,
 			    transform_read_data_block(a, &p, &size, &offset));
 			assertEqualInt(0, offset);
 			assertEqualMem(p, "hello 153\n", 10);
-			assertEqualInt(86401, archive_entry_mtime(ae));
-			assertEqualInt(86401, archive_entry_atime(ae));
-			assertEqualInt(1, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
-		} else if (strcmp("sym1", archive_entry_pathname(ae)) == 0) {
+			assertEqualInt(86401, transform_entry_mtime(ae));
+			assertEqualInt(86401, transform_entry_atime(ae));
+			assertEqualInt(1, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
+		} else if (strcmp("sym1", transform_entry_pathname(ae)) == 0) {
 			/* A symlink to the regular file. */
-			assertEqualInt(AE_IFLNK, archive_entry_filetype(ae));
-			assertEqualString(path1, archive_entry_symlink(ae));
-			assertEqualInt(0, archive_entry_size(ae));
-			assertEqualInt(172802, archive_entry_mtime(ae));
-			assertEqualInt(1, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
-		} else if (strcmp("sym2", archive_entry_pathname(ae)) == 0) {
+			assertEqualInt(AE_IFLNK, transform_entry_filetype(ae));
+			assertEqualString(path1, transform_entry_symlink(ae));
+			assertEqualInt(0, transform_entry_size(ae));
+			assertEqualInt(172802, transform_entry_mtime(ae));
+			assertEqualInt(1, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
+		} else if (strcmp("sym2", transform_entry_pathname(ae)) == 0) {
 			/* A symlink to the regular file. */
-			assertEqualInt(AE_IFLNK, archive_entry_filetype(ae));
-			assertEqualString(path2, archive_entry_symlink(ae));
-			assertEqualInt(0, archive_entry_size(ae));
-			assertEqualInt(172802, archive_entry_mtime(ae));
-			assertEqualInt(1, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
-		} else if (strcmp("sym3", archive_entry_pathname(ae)) == 0) {
+			assertEqualInt(AE_IFLNK, transform_entry_filetype(ae));
+			assertEqualString(path2, transform_entry_symlink(ae));
+			assertEqualInt(0, transform_entry_size(ae));
+			assertEqualInt(172802, transform_entry_mtime(ae));
+			assertEqualInt(1, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
+		} else if (strcmp("sym3", transform_entry_pathname(ae)) == 0) {
 			/* A symlink to the regular file. */
-			assertEqualInt(AE_IFLNK, archive_entry_filetype(ae));
-			assertEqualString(path3, archive_entry_symlink(ae));
-			assertEqualInt(0, archive_entry_size(ae));
-			assertEqualInt(172802, archive_entry_mtime(ae));
-			assertEqualInt(1, archive_entry_stat(ae)->st_nlink);
-			assertEqualInt(1, archive_entry_uid(ae));
-			assertEqualInt(2, archive_entry_gid(ae));
+			assertEqualInt(AE_IFLNK, transform_entry_filetype(ae));
+			assertEqualString(path3, transform_entry_symlink(ae));
+			assertEqualInt(0, transform_entry_size(ae));
+			assertEqualInt(172802, transform_entry_mtime(ae));
+			assertEqualInt(1, transform_entry_stat(ae)->st_nlink);
+			assertEqualInt(1, transform_entry_uid(ae));
+			assertEqualInt(2, transform_entry_gid(ae));
 		} else {
 			failure("Saw a file that shouldn't have been there");
-			assertEqualString(archive_entry_pathname(ae), "");
+			assertEqualString(transform_entry_pathname(ae), "");
 		}
 	}
 
-	/* End of archive. */
-	assertEqualInt(ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	/* End of transform. */
+	assertEqualInt(TRANSFORM_EOF, transform_read_next_header(a, &ae));
 
-	/* Verify archive format. */
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_COMPRESS);
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_ISO9660_ROCKRIDGE);
+	/* Verify transform format. */
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_COMPRESS);
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_ISO9660_ROCKRIDGE);
 
-	/* Close the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	/* Close the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 

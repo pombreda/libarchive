@@ -23,9 +23,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_compress_program.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_compress_program.c 201247 2009-12-30 05:59:21Z kientzle $");
 
-static unsigned char archive[] = {
+static unsigned char transform[] = {
 31,139,8,0,222,'C','p','C',0,3,211,'c',160,'=','0','0','0','0','7','5','U',
 0,210,134,230,166,6,200,'4',28,'(',24,26,24,27,155,24,152,24,154,27,155,')',
 24,24,26,152,154,25,'2','(',152,210,193,'m',12,165,197,'%',137,'E','@',167,
@@ -44,18 +44,18 @@ DEFINE_TEST(test_read_compress_program)
 	 */
 	assert((a = transform_read_new()) != NULL);
 	r = transform_read_support_compression_program(a, "nonexistent");
-	if (r == ARCHIVE_FATAL) {
+	if (r == TRANSFORM_FATAL) {
 		skipping("transform_read_support_compression_program() "
 		    "unsupported on this platform");
 		return;
 	}
-	assertEqualIntA(a, ARCHIVE_OK, r);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK, r);
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_FATAL,
-	    transform_read_open_memory(a, archive, sizeof(archive)));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_FATAL,
+	    transform_read_open_memory(a, transform, sizeof(transform)));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 
 	/*
 	 * If we have "gzip -d", try using that.
@@ -65,20 +65,20 @@ DEFINE_TEST(test_read_compress_program)
 		return;
 	}
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_support_compression_none(a));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_support_compression_program(a, "gunzip"));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK,
-	    transform_read_open_memory(a, archive, sizeof(archive)));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
+	    transform_read_open_memory(a, transform, sizeof(transform)));
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_next_header(a, &ae));
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_PROGRAM);
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_PROGRAM);
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 

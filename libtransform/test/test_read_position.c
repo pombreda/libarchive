@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_position.c 189389 2009-03-05 02:19:42Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_position.c 189389 2009-03-05 02:19:42Z kientzle $");
 
 static unsigned char nulls[10000];
 static unsigned char  buff[10000000];
@@ -41,27 +41,27 @@ DEFINE_TEST(test_read_position)
 	/* Sanity test */
 	assert(sizeof(nulls) + 512 + 1024 <= sizeof(buff));
 
-	/* Create an archive. */
+	/* Create an transform. */
 	assert(NULL != (a = transform_write_new()));
 	assertA(0 == transform_write_set_format_pax_restricted(a));
 	assertA(0 == transform_write_set_bytes_per_block(a, 512));
 	assertA(0 == transform_write_open_memory(a, buff, sizeof(buff), &write_pos));
 
 	for (i = 0; i < sizeof(data_sizes)/sizeof(data_sizes[0]); ++i) {
-		/* Create a simple archive_entry. */
-		assert((ae = archive_entry_new()) != NULL);
-		archive_entry_set_pathname(ae, "testfile");
-		archive_entry_set_mode(ae, S_IFREG);
-		archive_entry_set_size(ae, data_sizes[i]);
+		/* Create a simple transform_entry. */
+		assert((ae = transform_entry_new()) != NULL);
+		transform_entry_set_pathname(ae, "testfile");
+		transform_entry_set_mode(ae, S_IFREG);
+		transform_entry_set_size(ae, data_sizes[i]);
 		assertA(0 == transform_write_header(a, ae));
-		archive_entry_free(ae);
+		transform_entry_free(ae);
 		assertA(data_sizes[i]
 		    == (size_t)transform_write_data(a, nulls, sizeof(nulls)));
 	}
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
-	/* Read the archive back. */
+	/* Read the transform back. */
 	assert(NULL != (a = transform_read_new()));
 	assertA(0 == transform_read_support_format_tar(a));
 	assertA(0 == transform_read_open_memory2(a, buff, sizeof(buff), 512));
@@ -75,7 +75,7 @@ DEFINE_TEST(test_read_position)
 		    == (intmax_t)transform_read_header_position(a));
 		/* Every other entry: read, then skip */
 		if (j & 1)
-			assertEqualInt(ARCHIVE_OK,
+			assertEqualInt(TRANSFORM_OK,
 			    transform_read_data_into_buffer(a, buff, 1));
 		assertA(0 == transform_read_data_skip(a));
 		/* read_data_skip() doesn't change header_position */
@@ -88,7 +88,7 @@ DEFINE_TEST(test_read_position)
 
 	assertA(1 == transform_read_next_header(a, &ae));
 	assert(read_position == (intmax_t)transform_read_header_position(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
 	assert(read_position == (intmax_t)transform_read_header_position(a));
 	transform_read_free(a);
 }

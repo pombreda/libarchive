@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_empty_write.c 189308 2009-03-03 17:02:51Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_empty_write.c 189308 2009-03-03 17:02:51Z kientzle $");
 
 DEFINE_TEST(test_empty_write)
 {
@@ -34,87 +34,87 @@ DEFINE_TEST(test_empty_write)
 	int r;
 
 	/*
-	 * Exercise a zero-byte write to a gzip-compressed archive.
+	 * Exercise a zero-byte write to a gzip-compressed transform.
 	 */
 
-	/* Create a new archive in memory. */
+	/* Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_ustar(a));
 	r = transform_write_set_compression_gzip(a);
-	if (r == ARCHIVE_FATAL) {
-		skipping("Empty write to gzip-compressed archive");
+	if (r == TRANSFORM_FATAL) {
+		skipping("Empty write to gzip-compressed transform");
 	} else {
-		assertEqualIntA(a, ARCHIVE_OK, r);
-		assertEqualIntA(a, ARCHIVE_OK,
+		assertEqualIntA(a, TRANSFORM_OK, r);
+		assertEqualIntA(a, TRANSFORM_OK,
 		    transform_write_open_memory(a, buff, sizeof(buff), &used));
 		/* Write a file to it. */
-		assert((ae = archive_entry_new()) != NULL);
-		archive_entry_copy_pathname(ae, "file");
-		archive_entry_set_mode(ae, S_IFREG | 0755);
-		archive_entry_set_size(ae, 0);
+		assert((ae = transform_entry_new()) != NULL);
+		transform_entry_copy_pathname(ae, "file");
+		transform_entry_set_mode(ae, S_IFREG | 0755);
+		transform_entry_set_size(ae, 0);
 		assertA(0 == transform_write_header(a, ae));
-		archive_entry_free(ae);
+		transform_entry_free(ae);
 
 		/* THE TEST: write zero bytes to this entry. */
 		/* This used to crash. */
 		assertEqualIntA(a, 0, transform_write_data(a, "", 0));
 
-		/* Close out the archive. */
-		assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-		assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+		/* Close out the transform. */
+		assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+		assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 	}
 
 	/*
 	 * Again, with bzip2 compression.
 	 */
 
-	/* Create a new archive in memory. */
+	/* Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_ustar(a));
 	r = transform_write_set_compression_bzip2(a);
-	if (r == ARCHIVE_FATAL) {
-		skipping("Empty write to bzip2-compressed archive");
+	if (r == TRANSFORM_FATAL) {
+		skipping("Empty write to bzip2-compressed transform");
 	} else {
-		assertEqualIntA(a, ARCHIVE_OK, r);
-		assertEqualIntA(a, ARCHIVE_OK,
+		assertEqualIntA(a, TRANSFORM_OK, r);
+		assertEqualIntA(a, TRANSFORM_OK,
 		    transform_write_open_memory(a, buff, sizeof(buff), &used));
 		/* Write a file to it. */
-		assert((ae = archive_entry_new()) != NULL);
-		archive_entry_copy_pathname(ae, "file");
-		archive_entry_set_mode(ae, S_IFREG | 0755);
-		archive_entry_set_size(ae, 0);
+		assert((ae = transform_entry_new()) != NULL);
+		transform_entry_copy_pathname(ae, "file");
+		transform_entry_set_mode(ae, S_IFREG | 0755);
+		transform_entry_set_size(ae, 0);
 		assertA(0 == transform_write_header(a, ae));
-		archive_entry_free(ae);
+		transform_entry_free(ae);
 
 		/* THE TEST: write zero bytes to this entry. */
 		assertEqualIntA(a, 0, transform_write_data(a, "", 0));
 
-		/* Close out the archive. */
-		assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-		assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+		/* Close out the transform. */
+		assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+		assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 	}
 
 	/*
 	 * For good measure, one more time with no compression.
 	 */
 
-	/* Create a new archive in memory. */
+	/* Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_ustar(a));
 	assertA(0 == transform_write_set_compression_none(a));
 	assertA(0 == transform_write_open_memory(a, buff, sizeof(buff), &used));
 	/* Write a file to it. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "file");
-	archive_entry_set_mode(ae, S_IFREG | 0755);
-	archive_entry_set_size(ae, 0);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "file");
+	transform_entry_set_mode(ae, S_IFREG | 0755);
+	transform_entry_set_size(ae, 0);
 	assertA(0 == transform_write_header(a, ae));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
 	/* THE TEST: write zero bytes to this entry. */
 	assertEqualIntA(a, 0, transform_write_data(a, "", 0));
 
-	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 }

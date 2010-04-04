@@ -24,9 +24,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_tlz.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_tlz.c 201247 2009-12-30 05:59:21Z kientzle $");
 
-static unsigned char archive[] = {
+static unsigned char transform[] = {
  93,  0,  0,128,  0,255,255,255,255,255,255,255,255,  0, 23,  0,
  51, 80, 24,164,204,238, 45, 77, 28,191, 13,144,  8, 10, 70,  5,
 173,215, 47,132,237,145,162, 96,  6,131,168,152,  8,135,161,189,
@@ -42,19 +42,19 @@ DEFINE_TEST(test_read_format_tlz)
 	int r;
 
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_compression_all(a));
 	r = transform_read_support_compression_lzma(a);
-	if (r == ARCHIVE_WARN) {
+	if (r == TRANSFORM_WARN) {
 		skipping("lzma reading not fully supported on this platform");
-		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+		assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 		return;
 	}
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK,
-	    transform_read_open_memory(a, archive, sizeof(archive)));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_LZMA);
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK,
+	    transform_read_open_memory(a, transform, sizeof(transform)));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_LZMA);
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }

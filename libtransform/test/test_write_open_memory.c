@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_open_memory.c 189308 2009-03-03 17:02:51Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_write_open_memory.c 189308 2009-03-03 17:02:51Z kientzle $");
 
 /* Try to force transform_write_open_memory.c to write past the end of an array. */
 static unsigned char buff[16384];
@@ -35,11 +35,11 @@ DEFINE_TEST(test_write_open_memory)
 	struct transform_entry *ae;
 	const char *name="/tmp/test";
 
-	/* Create a simple archive_entry. */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_set_pathname(ae, name);
-	archive_entry_set_mode(ae, S_IFREG);
-	assertEqualString(archive_entry_pathname(ae), name);
+	/* Create a simple transform_entry. */
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_set_pathname(ae, name);
+	transform_entry_set_mode(ae, S_IFREG);
+	assertEqualString(transform_entry_pathname(ae), name);
 
 	/* Try writing with different buffer sizes. */
 	/* Make sure that we get failure on too-small buffers, success on
@@ -48,37 +48,37 @@ DEFINE_TEST(test_write_open_memory)
 		size_t used;
 		size_t blocksize = 94;
 		assert((a = transform_write_new()) != NULL);
-		assertEqualIntA(a, ARCHIVE_OK,
+		assertEqualIntA(a, TRANSFORM_OK,
 		    transform_write_set_format_ustar(a));
-		assertEqualIntA(a, ARCHIVE_OK,
+		assertEqualIntA(a, TRANSFORM_OK,
 		    transform_write_set_bytes_in_last_block(a, 1));
-		assertEqualIntA(a, ARCHIVE_OK,
+		assertEqualIntA(a, TRANSFORM_OK,
 		    transform_write_set_bytes_per_block(a, (int)blocksize));
 		buff[i] = 0xAE;
-		assertEqualIntA(a, ARCHIVE_OK,
+		assertEqualIntA(a, TRANSFORM_OK,
 		    transform_write_open_memory(a, buff, i, &used));
 		/* If buffer is smaller than a tar header, this should fail. */
 		if (i < (511/blocksize)*blocksize)
-			assertEqualIntA(a, ARCHIVE_FATAL,
+			assertEqualIntA(a, TRANSFORM_FATAL,
 			    transform_write_header(a,ae));
 		else
-			assertEqualIntA(a, ARCHIVE_OK,
+			assertEqualIntA(a, TRANSFORM_OK,
 			    transform_write_header(a, ae));
 		/* If buffer is smaller than a tar header plus 1024 byte
-		 * end-of-archive marker, then this should fail. */
+		 * end-of-transform marker, then this should fail. */
 		failure("buffer size=%d\n", (int)i);
 		if (i < 1536)
-			assertEqualIntA(a, ARCHIVE_FATAL,
+			assertEqualIntA(a, TRANSFORM_FATAL,
 			    transform_write_close(a));
 		else {
-			assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-			assertEqualInt(used, archive_position_compressed(a));
-			assertEqualInt(archive_position_compressed(a),
-			    archive_position_uncompressed(a));
+			assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+			assertEqualInt(used, transform_position_compressed(a));
+			assertEqualInt(transform_position_compressed(a),
+			    transform_position_uncompressed(a));
 		}
-		assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+		assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 		assertEqualInt(buff[i], 0xAE);
 		assert(used <= i);
 	}
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 }

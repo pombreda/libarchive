@@ -40,10 +40,10 @@ ln f1 hardlink
 chown $UNAME:$GNAME hardlink
 chmod 0644 hardlink
 env TZ=utc touch -afm -t 197001020000.01 f1 hardlink
-xar -cf archive1.xar f1 hardlink
-od -t x1 archive1.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  archive1.xar.txt
+xar -cf transform1.xar f1 hardlink
+od -t x1 transform1.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  transform1.xar.txt
 */
-static unsigned char archive1[] = {
+static unsigned char transform1[] = {
 0x78,0x61,0x72,0x21,0x00,0x1c,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0xc6,
 0x00,0x00,0x00,0x00,0x00,0x00,0x04,0x70,0x00,0x00,0x00,0x01,0x78,0xda,0xc4,0x54,
 0xc9,0x6e,0xdb,0x30,0x14,0xbc,0xe7,0x2b,0x08,0xdd,0x55,0xae,0xb6,0x45,0x83,0x56,
@@ -85,17 +85,17 @@ static void verify0(struct transform *a, struct transform_entry *ae)
 	size_t size;
 	int64_t offset;
 
-	assert(archive_entry_filetype(ae) == AE_IFREG);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0644);
-	assertEqualInt(archive_entry_uid(ae), UID);
-	assertEqualInt(archive_entry_gid(ae), GID);
-	assertEqualString(archive_entry_uname(ae), UNAME);
-	assertEqualString(archive_entry_gname(ae), GNAME);
-	assertEqualString(archive_entry_pathname(ae), "f1");
-	assert(archive_entry_hardlink(ae) == NULL);
-	assert(archive_entry_symlink(ae) == NULL);
-	assertEqualInt(archive_entry_mtime(ae), 86401);
-	assertEqualInt(archive_entry_size(ae), 16);
+	assert(transform_entry_filetype(ae) == AE_IFREG);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0644);
+	assertEqualInt(transform_entry_uid(ae), UID);
+	assertEqualInt(transform_entry_gid(ae), GID);
+	assertEqualString(transform_entry_uname(ae), UNAME);
+	assertEqualString(transform_entry_gname(ae), GNAME);
+	assertEqualString(transform_entry_pathname(ae), "f1");
+	assert(transform_entry_hardlink(ae) == NULL);
+	assert(transform_entry_symlink(ae) == NULL);
+	assertEqualInt(transform_entry_mtime(ae), 86401);
+	assertEqualInt(transform_entry_size(ae), 16);
 	assertEqualInt(transform_read_data_block(a, &p, &size, &offset), 0);
 	assertEqualInt((int)size, 16);
 	assertEqualInt((int)offset, 0);
@@ -106,19 +106,19 @@ static void verify1(struct transform *a, struct transform_entry *ae)
 {
 	(void)a; /* UNUSED */
 	/* A hardlink is not a symlink. */
-	assert(archive_entry_filetype(ae) != AE_IFLNK);
+	assert(transform_entry_filetype(ae) != AE_IFLNK);
 	/* Nor is it a directory. */
-	assert(archive_entry_filetype(ae) != AE_IFDIR);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0644);
-	assertEqualInt(archive_entry_uid(ae), UID);
-	assertEqualInt(archive_entry_gid(ae), GID);
-	assertEqualString(archive_entry_uname(ae), UNAME);
-	assertEqualString(archive_entry_gname(ae), GNAME);
-	assertEqualString(archive_entry_pathname(ae), "hardlink");
-	assertEqualString(archive_entry_hardlink(ae), "f1");
-	assert(archive_entry_symlink(ae) == NULL);
-	assertEqualInt(archive_entry_mtime(ae), 86401);
-	assertEqualInt(archive_entry_nlink(ae), 2);
+	assert(transform_entry_filetype(ae) != AE_IFDIR);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0644);
+	assertEqualInt(transform_entry_uid(ae), UID);
+	assertEqualInt(transform_entry_gid(ae), GID);
+	assertEqualString(transform_entry_uname(ae), UNAME);
+	assertEqualString(transform_entry_gname(ae), GNAME);
+	assertEqualString(transform_entry_pathname(ae), "hardlink");
+	assertEqualString(transform_entry_hardlink(ae), "f1");
+	assert(transform_entry_symlink(ae) == NULL);
+	assertEqualInt(transform_entry_mtime(ae), 86401);
+	assertEqualInt(transform_entry_nlink(ae), 2);
 }
 
 /* Verify that symlinks are read correctly.
@@ -130,10 +130,10 @@ ln -s f1 symlink
 chown $UNAME:$GNAME symlink
 chmod 0644 symlink
 env TZ=utc touch -afm -t 197001020000.01 f1 symlink
-xar -cf archive2.xar f1 symlink
-od -t x1 archive2.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  archive2.xar.txt
+xar -cf transform2.xar f1 symlink
+od -t x1 transform2.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  transform2.xar.txt
 */
-static unsigned char archive2[] = {
+static unsigned char transform2[] = {
 0x78,0x61,0x72,0x21,0x00,0x1c,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0xe8,
 0x00,0x00,0x00,0x00,0x00,0x00,0x04,0x84,0x00,0x00,0x00,0x01,0x78,0xda,0xb4,0x54,
 0xcb,0x6e,0xa3,0x30,0x14,0xdd,0xf7,0x2b,0x90,0xf7,0x8c,0x1f,0x40,0x82,0x23,0xe3,
@@ -174,15 +174,15 @@ static unsigned char archive2[] = {
 static void verify2(struct transform *a, struct transform_entry *ae)
 {
 	(void)a; /* UNUSED */
-	assertEqualInt(archive_entry_filetype(ae), AE_IFLNK);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0755);
-	assertEqualInt(archive_entry_uid(ae), UID);
-	assertEqualInt(archive_entry_gid(ae), GID);
-	assertEqualString(archive_entry_uname(ae), UNAME);
-	assertEqualString(archive_entry_gname(ae), GNAME);
-	assertEqualString(archive_entry_pathname(ae), "symlink");
-	assertEqualString(archive_entry_symlink(ae), "f1");
-	assert(archive_entry_hardlink(ae) == NULL);
+	assertEqualInt(transform_entry_filetype(ae), AE_IFLNK);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0755);
+	assertEqualInt(transform_entry_uid(ae), UID);
+	assertEqualInt(transform_entry_gid(ae), GID);
+	assertEqualString(transform_entry_uname(ae), UNAME);
+	assertEqualString(transform_entry_gname(ae), GNAME);
+	assertEqualString(transform_entry_pathname(ae), "symlink");
+	assertEqualString(transform_entry_symlink(ae), "f1");
+	assert(transform_entry_hardlink(ae) == NULL);
 }
 
 /* Character device node.
@@ -191,10 +191,10 @@ mknod devchar c 0 30
 chown $UNAME:$GNAME devchar
 chmod 0644 devchar
 env TZ=utc touch -afm -t 197001020000.01 devchar
-xar -cf archive3.xar devchar
-od -t x1 archive3.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  archive3.xar.txt
+xar -cf transform3.xar devchar
+od -t x1 transform3.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  transform3.xar.txt
 */
-static unsigned char archive3[] = {
+static unsigned char transform3[] = {
 0x78,0x61,0x72,0x21,0x00,0x1c,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x38,
 0x00,0x00,0x00,0x00,0x00,0x00,0x02,0x3b,0x00,0x00,0x00,0x01,0x78,0xda,0x7c,0x92,
 0x4d,0x6e,0xc3,0x20,0x10,0x85,0xf7,0x39,0x05,0xf2,0xde,0x05,0x9c,0x9f,0x36,0xd6,
@@ -223,16 +223,16 @@ static unsigned char archive3[] = {
 static void verify3(struct transform *a, struct transform_entry *ae)
 {
 	(void)a; /* UNUSED */
-	assertEqualInt(archive_entry_filetype(ae), AE_IFCHR);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0644);
-	assertEqualInt(archive_entry_uid(ae), UID);
-	assertEqualInt(archive_entry_gid(ae), GID);
-	assertEqualString(archive_entry_uname(ae), UNAME);
-	assertEqualString(archive_entry_gname(ae), GNAME);
-	assertEqualString(archive_entry_pathname(ae), "devchar");
-	assert(archive_entry_symlink(ae) == NULL);
-	assert(archive_entry_hardlink(ae) == NULL);
-	assertEqualInt(archive_entry_mtime(ae), 86401);
+	assertEqualInt(transform_entry_filetype(ae), AE_IFCHR);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0644);
+	assertEqualInt(transform_entry_uid(ae), UID);
+	assertEqualInt(transform_entry_gid(ae), GID);
+	assertEqualString(transform_entry_uname(ae), UNAME);
+	assertEqualString(transform_entry_gname(ae), GNAME);
+	assertEqualString(transform_entry_pathname(ae), "devchar");
+	assert(transform_entry_symlink(ae) == NULL);
+	assert(transform_entry_hardlink(ae) == NULL);
+	assertEqualInt(transform_entry_mtime(ae), 86401);
 }
 
 /* Block device node.
@@ -241,10 +241,10 @@ mknod devblock b 0 30
 chown $UNAME:$GNAME devblock
 chmod 0644 devblock
 env TZ=utc touch -afm -t 197001020000.01 devblock
-xar -cf archive4.xar devblock
-od -t x1 archive4.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  archive4.xar.txt
+xar -cf transform4.xar devblock
+od -t x1 transform4.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  transform4.xar.txt
 */
-static unsigned char archive4[] = {
+static unsigned char transform4[] = {
 0x78,0x61,0x72,0x21,0x00,0x1c,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x34,
 0x00,0x00,0x00,0x00,0x00,0x00,0x02,0x38,0x00,0x00,0x00,0x01,0x78,0xda,0x7c,0x92,
 0xc1,0x6e,0xc2,0x30,0x0c,0x86,0xef,0x3c,0x45,0xd4,0x7b,0x17,0x07,0xd0,0x0a,0x95,
@@ -273,16 +273,16 @@ static unsigned char archive4[] = {
 static void verify4(struct transform *a, struct transform_entry *ae)
 {
 	(void)a; /* UNUSED */
-	assertEqualInt(archive_entry_filetype(ae), AE_IFBLK);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0644);
-	assertEqualInt(archive_entry_uid(ae), UID);
-	assertEqualInt(archive_entry_gid(ae), GID);
-	assertEqualString(archive_entry_uname(ae), UNAME);
-	assertEqualString(archive_entry_gname(ae), GNAME);
-	assertEqualString(archive_entry_pathname(ae), "devblock");
-	assert(archive_entry_symlink(ae) == NULL);
-	assert(archive_entry_hardlink(ae) == NULL);
-	assertEqualInt(archive_entry_mtime(ae), 86401);
+	assertEqualInt(transform_entry_filetype(ae), AE_IFBLK);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0644);
+	assertEqualInt(transform_entry_uid(ae), UID);
+	assertEqualInt(transform_entry_gid(ae), GID);
+	assertEqualString(transform_entry_uname(ae), UNAME);
+	assertEqualString(transform_entry_gname(ae), GNAME);
+	assertEqualString(transform_entry_pathname(ae), "devblock");
+	assert(transform_entry_symlink(ae) == NULL);
+	assert(transform_entry_hardlink(ae) == NULL);
+	assertEqualInt(transform_entry_mtime(ae), 86401);
 }
 
 /* Directory.
@@ -291,10 +291,10 @@ mkdir dir1
 chown $UNAME:$GNAME dir1
 chmod 0755 dir1
 env TZ=utc touch -afm -t 197001020000.01 dir1
-xar -cf archive5.xar dir1
-od -t x1 archive5.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  archive5.xar.txt
+xar -cf transform5.xar dir1
+od -t x1 transform5.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  transform5.xar.txt
 */
-static unsigned char archive5[] = {
+static unsigned char transform5[] = {
 0x78,0x61,0x72,0x21,0x00,0x1c,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x16,
 0x00,0x00,0x00,0x00,0x00,0x00,0x01,0xec,0x00,0x00,0x00,0x01,0x78,0xda,0x74,0x91,
 0xc1,0x6e,0xc2,0x30,0x0c,0x86,0xef,0x3c,0x45,0xd4,0x7b,0x17,0xa7,0x83,0x31,0xaa,
@@ -321,13 +321,13 @@ static unsigned char archive5[] = {
 static void verify5(struct transform *a, struct transform_entry *ae)
 {
 	(void)a; /* UNUSED */
-	assertEqualInt(archive_entry_filetype(ae), AE_IFDIR);
-	assertEqualInt(archive_entry_mtime(ae), 86401);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0755);
-	assertEqualInt(archive_entry_uid(ae), UID);
-	assertEqualInt(archive_entry_gid(ae), GID);
-	assertEqualString(archive_entry_uname(ae), UNAME);
-	assertEqualString(archive_entry_gname(ae), GNAME);
+	assertEqualInt(transform_entry_filetype(ae), AE_IFDIR);
+	assertEqualInt(transform_entry_mtime(ae), 86401);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0755);
+	assertEqualInt(transform_entry_uid(ae), UID);
+	assertEqualInt(transform_entry_gid(ae), GID);
+	assertEqualString(transform_entry_uname(ae), UNAME);
+	assertEqualString(transform_entry_gname(ae), GNAME);
 }
 
 /* fifo
@@ -335,10 +335,10 @@ static void verify5(struct transform *a, struct transform_entry *ae)
 mkfifo -m 0755 fifo
 chown $UNAME:$GNAME fifo
 env TZ=utc touch -afm -t 197001020000.01 fifo
-xar -cf archive6.xar fifo
-od -t x1 archive6.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  archive6.xar.txt
+xar -cf transform6.xar fifo
+od -t x1 transform6.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  transform6.xar.txt
 */
-static unsigned char archive6[] = {
+static unsigned char transform6[] = {
 0x78,0x61,0x72,0x21,0x00,0x1c,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x0e,
 0x00,0x00,0x00,0x00,0x00,0x00,0x01,0xe7,0x00,0x00,0x00,0x01,0x78,0xda,0x7c,0x91,
 0xc1,0x6e,0xc3,0x20,0x0c,0x86,0xef,0x7d,0x0a,0xc4,0x3d,0xc3,0x64,0xab,0xda,0x46,
@@ -364,16 +364,16 @@ static unsigned char archive6[] = {
 static void verify6(struct transform *a, struct transform_entry *ae)
 {
 	(void)a; /* UNUSED */
-	assertEqualInt(archive_entry_filetype(ae), AE_IFIFO);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0755);
-	assertEqualInt(archive_entry_uid(ae), UID);
-	assertEqualInt(archive_entry_gid(ae), GID);
-	assertEqualString(archive_entry_uname(ae), UNAME);
-	assertEqualString(archive_entry_gname(ae), GNAME);
-	assertEqualString(archive_entry_pathname(ae), "fifo");
-	assert(archive_entry_symlink(ae) == NULL);
-	assert(archive_entry_hardlink(ae) == NULL);
-	assertEqualInt(archive_entry_mtime(ae), 86401);
+	assertEqualInt(transform_entry_filetype(ae), AE_IFIFO);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0755);
+	assertEqualInt(transform_entry_uid(ae), UID);
+	assertEqualInt(transform_entry_gid(ae), GID);
+	assertEqualString(transform_entry_uname(ae), UNAME);
+	assertEqualString(transform_entry_gname(ae), GNAME);
+	assertEqualString(transform_entry_pathname(ae), "fifo");
+	assert(transform_entry_symlink(ae) == NULL);
+	assert(transform_entry_hardlink(ae) == NULL);
+	assertEqualInt(transform_entry_mtime(ae), 86401);
 }
 
 /* Verify that a file records with directory name.
@@ -383,11 +383,11 @@ echo "hellohellohello" > dir1/f1
 chown $UNAME:$GNAME dir1/f1
 chmod 0644 dir1/f1
 env TZ=utc touch -afm -t 197001020000.01 dir1/f1
-xar -cf archive7.xar dir1/f1
-od -t x1 archive7.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  archive7.xar.txt
+xar -cf transform7.xar dir1/f1
+od -t x1 transform7.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  transform7.xar.txt
 */
 
-static unsigned char archive7[] = {
+static unsigned char transform7[] = {
 0x78,0x61,0x72,0x21,0x00,0x1c,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0xbb,
 0x00,0x00,0x00,0x00,0x00,0x00,0x03,0x8a,0x00,0x00,0x00,0x01,0x78,0xda,0x7c,0x53,
 0xc9,0x6e,0xdb,0x30,0x14,0xbc,0xe7,0x2b,0x04,0xdd,0x55,0x2e,0xa2,0x16,0x1a,0xb4,
@@ -426,16 +426,16 @@ static unsigned char archive7[] = {
 static void verify7(struct transform *a, struct transform_entry *ae)
 {
 	(void)a; /* UNUSED */
-	assert(archive_entry_filetype(ae) == AE_IFREG);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0644);
-	assertEqualInt(archive_entry_uid(ae), UID);
-	assertEqualInt(archive_entry_gid(ae), GID);
-	assertEqualString(archive_entry_uname(ae), UNAME);
-	assertEqualString(archive_entry_gname(ae), GNAME);
-	assertEqualString(archive_entry_pathname(ae), "dir1/f1");
-	assert(archive_entry_hardlink(ae) == NULL);
-	assert(archive_entry_symlink(ae) == NULL);
-	assertEqualInt(archive_entry_mtime(ae), 86401);
+	assert(transform_entry_filetype(ae) == AE_IFREG);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0644);
+	assertEqualInt(transform_entry_uid(ae), UID);
+	assertEqualInt(transform_entry_gid(ae), GID);
+	assertEqualString(transform_entry_uname(ae), UNAME);
+	assertEqualString(transform_entry_gname(ae), GNAME);
+	assertEqualString(transform_entry_pathname(ae), "dir1/f1");
+	assert(transform_entry_hardlink(ae) == NULL);
+	assert(transform_entry_symlink(ae) == NULL);
+	assertEqualInt(transform_entry_mtime(ae), 86401);
 }
 
 /* Verify that a file records with bzip2 compression
@@ -444,11 +444,11 @@ echo "hellohellohello" > f1
 chown $UNAME:$GNAME f1
 chmod 0644 f1
 env TZ=utc touch -afm -t 197001020000.01 f1
-xar --compression bzip2 -cf archive8.xar f1
-od -t x1 archive8.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  archive8.xar.txt
+xar --compression bzip2 -cf transform8.xar f1
+od -t x1 transform8.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  transform8.xar.txt
 */
 
-static unsigned char archive8[] = {
+static unsigned char transform8[] = {
 0x78,0x61,0x72,0x21,0x00,0x1c,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0xb1,
 0x00,0x00,0x00,0x00,0x00,0x00,0x03,0x42,0x00,0x00,0x00,0x01,0x78,0xda,0x7c,0x53,
 0xcb,0x6e,0xdc,0x20,0x14,0xdd,0xe7,0x2b,0x90,0xf7,0x0e,0x60,0xe3,0x07,0x23,0x86,
@@ -490,11 +490,11 @@ echo "hellohellohello" > f1
 chown $UNAME:$GNAME f1
 chmod 0644 f1
 env TZ=utc touch -afm -t 197001020000.01 f1
-xar --compression none -cf archive9.xar f1
-od -t x1 archive9.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  archive9.xar.txt
+xar --compression none -cf transform9.xar f1
+od -t x1 transform9.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  transform9.xar.txt
 */
 
-static unsigned char archive9[] = {
+static unsigned char transform9[] = {
 0x78,0x61,0x72,0x21,0x00,0x1c,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x98,
 0x00,0x00,0x00,0x00,0x00,0x00,0x03,0x47,0x00,0x00,0x00,0x01,0x78,0xda,0xa4,0x53,
 0x4d,0x6f,0xe3,0x20,0x14,0xbc,0xf7,0x57,0x20,0xee,0x5e,0xc0,0x25,0x89,0x1d,0x11,
@@ -533,11 +533,11 @@ echo "hellohellohello" > f1
 chown $UNAME:$GNAME f1
 chmod 0644 f1
 env TZ=utc touch -afm -t 197001020000.01 f1
-xar --toc-cksum md5 -cf archive10.xar f1
-od -t x1 archive10.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  archive10.xar.txt
+xar --toc-cksum md5 -cf transform10.xar f1
+od -t x1 transform10.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  transform10.xar.txt
 */
 
-static unsigned char archive10[] = {
+static unsigned char transform10[] = {
 0x78,0x61,0x72,0x21,0x00,0x1c,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0xaf,
 0x00,0x00,0x00,0x00,0x00,0x00,0x03,0x40,0x00,0x00,0x00,0x02,0x78,0xda,0x7c,0x53,
 0x4d,0x6f,0xdc,0x20,0x10,0xbd,0xe7,0x57,0x20,0xee,0x0e,0x60,0xb3,0xb6,0x59,0xb1,
@@ -578,11 +578,11 @@ echo "hellohellohello" > f1
 chown $UNAME:$GNAME f1
 chmod 0644 f1
 env TZ=utc touch -afm -t 197001020000.01 f1
-xar --toc-cksum none -cf archive11.xar f1
-od -t x1 archive11.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  archive11.xar.txt
+xar --toc-cksum none -cf transform11.xar f1
+od -t x1 transform11.xar | sed -E -e 's/^0[0-9]+//;s/^  //;s/(  )([0-9a-f]{2})/0x\2,/g;$ D' >  transform11.xar.txt
 */
 
-static unsigned char archive11[] = {
+static unsigned char transform11[] = {
 0x78,0x61,0x72,0x21,0x00,0x1c,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x98,
 0x00,0x00,0x00,0x00,0x00,0x00,0x02,0xef,0x00,0x00,0x00,0x00,0x78,0xda,0x7c,0x52,
 0xcb,0x6e,0xeb,0x20,0x14,0xdc,0xf7,0x2b,0x10,0x7b,0x17,0xb0,0x89,0x63,0x22,0x42,
@@ -634,9 +634,9 @@ static void verify(unsigned char *d, size_t s,
 	case BZIP2:
 		/* This is only check whether bzip is supported or not.
 		 * This filter won't be used this test.  */
-		if (ARCHIVE_OK != transform_read_support_compression_bzip2(a)) {
+		if (TRANSFORM_OK != transform_read_support_compression_bzip2(a)) {
 			skipping("Unsupported bzip2");
-			assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+			assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 			return;
 		}
 		break;
@@ -647,9 +647,9 @@ static void verify(unsigned char *d, size_t s,
 	}
 	assertA(0 == transform_read_support_compression_all(a));
 	r = transform_read_support_format_xar(a);
-	if (r == ARCHIVE_WARN) {
+	if (r == TRANSFORM_WARN) {
 		skipping("xar reading not fully supported on this platform");
-		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+		assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 		return;
 	}
 	assert((buff = malloc(100000)) != NULL);
@@ -661,37 +661,37 @@ static void verify(unsigned char *d, size_t s,
 	assertA(0 == transform_read_support_format_all(a));
 	assertA(0 == transform_read_open_memory(a, buff, s + 1024));
 	assertA(0 == transform_read_next_header(a, &ae));
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_NONE);
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_XAR);
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_NONE);
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_XAR);
 	/* Verify the only entry. */
 	f1(a, ae);
 	if (f2) {
 		assertA(0 == transform_read_next_header(a, &ae));
-		assertEqualInt(archive_compression(a), ARCHIVE_FILTER_NONE);
-		assertEqualInt(archive_format(a), ARCHIVE_FORMAT_XAR);
+		assertEqualInt(transform_compression(a), TRANSFORM_FILTER_NONE);
+		assertEqualInt(transform_format(a), TRANSFORM_FORMAT_XAR);
 		/* Verify the only entry. */
 		f2(a, ae);
 	}
-	/* End of archive. */
-	assertEqualInt(ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	/* End of transform. */
+	assertEqualInt(TRANSFORM_EOF, transform_read_next_header(a, &ae));
 
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 	free(buff);
 }
 
 DEFINE_TEST(test_read_format_xar)
 {
-	verify(archive1, sizeof(archive1), verify0, verify1, GZIP);
-	verify(archive2, sizeof(archive2), verify0, verify2, GZIP);
-	verify(archive3, sizeof(archive3), verify3, NULL, GZIP);
-	verify(archive4, sizeof(archive4), verify4, NULL, GZIP);
-	verify(archive5, sizeof(archive5), verify5, NULL, GZIP);
-	verify(archive6, sizeof(archive6), verify6, NULL, GZIP);
-	verify(archive7, sizeof(archive7), verify7, NULL, GZIP);
-	verify(archive8, sizeof(archive8), verify0, NULL, BZIP2);
-	verify(archive9, sizeof(archive9), verify0, NULL, GZIP);
-	verify(archive10, sizeof(archive10), verify0, NULL, GZIP);
-	verify(archive11, sizeof(archive11), verify0, NULL, GZIP);
+	verify(transform1, sizeof(transform1), verify0, verify1, GZIP);
+	verify(transform2, sizeof(transform2), verify0, verify2, GZIP);
+	verify(transform3, sizeof(transform3), verify3, NULL, GZIP);
+	verify(transform4, sizeof(transform4), verify4, NULL, GZIP);
+	verify(transform5, sizeof(transform5), verify5, NULL, GZIP);
+	verify(transform6, sizeof(transform6), verify6, NULL, GZIP);
+	verify(transform7, sizeof(transform7), verify7, NULL, GZIP);
+	verify(transform8, sizeof(transform8), verify0, NULL, BZIP2);
+	verify(transform9, sizeof(transform9), verify0, NULL, GZIP);
+	verify(transform10, sizeof(transform10), verify0, NULL, GZIP);
+	verify(transform11, sizeof(transform11), verify0, NULL, GZIP);
 }
 

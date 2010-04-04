@@ -32,18 +32,18 @@ add_entry(struct transform *a, const char *fname, const char *sym)
 {
 	struct transform_entry *ae;
 
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_set_birthtime(ae, 2, 20);
-	archive_entry_set_atime(ae, 3, 30);
-	archive_entry_set_ctime(ae, 4, 40);
-	archive_entry_set_mtime(ae, 5, 50);
-	archive_entry_copy_pathname(ae, fname);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_set_birthtime(ae, 2, 20);
+	transform_entry_set_atime(ae, 3, 30);
+	transform_entry_set_ctime(ae, 4, 40);
+	transform_entry_set_mtime(ae, 5, 50);
+	transform_entry_copy_pathname(ae, fname);
 	if (sym != NULL)
-		archive_entry_set_symlink(ae, sym);
-	archive_entry_set_mode(ae, S_IFREG | 0555);
-	archive_entry_set_size(ae, 0);
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
-	archive_entry_free(ae);
+		transform_entry_set_symlink(ae, sym);
+	transform_entry_set_mode(ae, S_IFREG | 0555);
+	transform_entry_set_size(ae, 0);
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_header(a, ae));
+	transform_entry_free(ae);
 }
 
 struct fns {
@@ -77,28 +77,28 @@ verify_file(struct transform *a, enum vtype type, struct fns *fns)
 
 	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
 	if (type == ROCKRIDGE) {
-		assertEqualInt(2, archive_entry_birthtime(ae));
-		assertEqualInt(3, archive_entry_atime(ae));
-		assertEqualInt(4, archive_entry_ctime(ae));
+		assertEqualInt(2, transform_entry_birthtime(ae));
+		assertEqualInt(3, transform_entry_atime(ae));
+		assertEqualInt(4, transform_entry_ctime(ae));
 	} else {
-		assertEqualInt(0, archive_entry_birthtime_is_set(ae));
-		assertEqualInt(5, archive_entry_atime(ae));
-		assertEqualInt(5, archive_entry_ctime(ae));
+		assertEqualInt(0, transform_entry_birthtime_is_set(ae));
+		assertEqualInt(5, transform_entry_atime(ae));
+		assertEqualInt(5, transform_entry_ctime(ae));
 	}
-	assertEqualInt(5, archive_entry_mtime(ae));
+	assertEqualInt(5, transform_entry_mtime(ae));
 	if (type == ROCKRIDGE)
-		assert((S_IFREG | 0555) == archive_entry_mode(ae));
+		assert((S_IFREG | 0555) == transform_entry_mode(ae));
 	else
-		assert((S_IFREG | 0400) == archive_entry_mode(ae));
-	assertEqualInt(0, archive_entry_size(ae));
+		assert((S_IFREG | 0400) == transform_entry_mode(ae));
+	assertEqualInt(0, transform_entry_size(ae));
 
 	/*
 	 * Check if the same filename does not appear.
 	 */
 	for (i = 0; i < fns->cnt; i++) {
 		const char *p;
-		const char *pathname = archive_entry_pathname(ae);
-		const char *symlink = archive_entry_symlink(ae);
+		const char *pathname = transform_entry_pathname(ae);
+		const char *symlink = transform_entry_symlink(ae);
 		size_t length;
 
 		if (symlink != NULL) {
@@ -133,7 +133,7 @@ verify_file(struct transform *a, enum vtype type, struct fns *fns)
 			assert(*pathname != '.');
 	}
 	/* Save the filename which is appeared to use above next time. */
-	fns->names[fns->cnt++] = strdup(archive_entry_pathname(ae));
+	fns->names[fns->cnt++] = strdup(transform_entry_pathname(ae));
 }
 
 static void
@@ -160,18 +160,18 @@ verify(unsigned char *buff, size_t used, enum vtype type, struct fns *fns)
 	 * Root Directory entry must be in ISO image.
 	 */
 	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
-	assertEqualInt(archive_entry_atime(ae), archive_entry_ctime(ae));
-	assertEqualInt(archive_entry_atime(ae), archive_entry_mtime(ae));
-	assertEqualString(".", archive_entry_pathname(ae));
+	assertEqualInt(transform_entry_atime(ae), transform_entry_ctime(ae));
+	assertEqualInt(transform_entry_atime(ae), transform_entry_mtime(ae));
+	assertEqualString(".", transform_entry_pathname(ae));
 	switch (type) {
 	case ROCKRIDGE:
-		assert((S_IFDIR | 0555) == archive_entry_mode(ae));
+		assert((S_IFDIR | 0555) == transform_entry_mode(ae));
 		break;
 	case JOLIET:
-		assert((S_IFDIR | 0700) == archive_entry_mode(ae));
+		assert((S_IFDIR | 0700) == transform_entry_mode(ae));
 		break;
 	case ISO9660:
-		assert((S_IFDIR | 0700) == archive_entry_mode(ae));
+		assert((S_IFDIR | 0700) == transform_entry_mode(ae));
 		break;
 	}
 
@@ -187,11 +187,11 @@ verify(unsigned char *buff, size_t used, enum vtype type, struct fns *fns)
 	assertEqualInt((int)fns->longest_len, (int)fns->maxlen);
 
 	/*
-	 * Verify the end of the archive.
+	 * Verify the end of the transform.
 	 */
-	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_free(a));
 }
 
 static int
@@ -212,7 +212,7 @@ create_iso_image(unsigned char *buff, size_t buffsize, size_t *used,
 	char sym128[129];
 	char sym255[256];
 
-	/* ISO9660 format: Create a new archive in memory. */
+	/* ISO9660 format: Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_iso9660(a));
 	assertA(0 == transform_write_set_compression_none(a));
@@ -292,9 +292,9 @@ create_iso_image(unsigned char *buff, size_t buffsize, size_t *used,
 		}
 	}
 
-	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_free(a));
 
 	return (fcnt);
 }

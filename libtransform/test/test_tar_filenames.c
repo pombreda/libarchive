@@ -23,10 +23,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_tar_filenames.c,v 1.10 2008/09/01 05:38:33 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libtransform/test/test_tar_filenames.c,v 1.10 2008/09/01 05:38:33 kientzle Exp $");
 
 /*
- * Exercise various lengths of filenames in tar archives,
+ * Exercise various lengths of filenames in tar transforms,
  * especially around the magic sizes where ustar breaks
  * filenames into prefix/suffix.
  */
@@ -59,7 +59,7 @@ test_filename(const char *prefix, int dlen, int flen)
 
 	strcpy(dirname, filename);
 
-	/* Create a new archive in memory. */
+	/* Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_pax_restricted(a));
 	assertA(0 == transform_write_set_compression_none(a));
@@ -69,22 +69,22 @@ test_filename(const char *prefix, int dlen, int flen)
 	/*
 	 * Write a file to it.
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, filename);
-	archive_entry_set_mode(ae, S_IFREG | 0755);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, filename);
+	transform_entry_set_mode(ae, S_IFREG | 0755);
 	failure("Pathname %d/%d", dlen, flen);
 	assertA(0 == transform_write_header(a, ae));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
 	/*
 	 * Write a dir to it (without trailing '/').
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, dirname);
-	archive_entry_set_mode(ae, S_IFDIR | 0755);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, dirname);
+	transform_entry_set_mode(ae, S_IFDIR | 0755);
 	failure("Dirname %d/%d", dlen, flen);
 	assertA(0 == transform_write_header(a, ae));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
 	/* Tar adds a '/' to directory names. */
 	strcat(dirname, "/");
@@ -92,16 +92,16 @@ test_filename(const char *prefix, int dlen, int flen)
 	/*
 	 * Write a dir to it (with trailing '/').
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, dirname);
-	archive_entry_set_mode(ae, S_IFDIR | 0755);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, dirname);
+	transform_entry_set_mode(ae, S_IFDIR | 0755);
 	failure("Dirname %d/%d", dlen, flen);
 	assertA(0 == transform_write_header(a, ae));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
-	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
 	/*
 	 * Now, read the data back.
@@ -113,8 +113,8 @@ test_filename(const char *prefix, int dlen, int flen)
 
 	/* Read the file and check the filename. */
 	assertA(0 == transform_read_next_header(a, &ae));
-	assertEqualString(filename, archive_entry_pathname(ae));
-	assertEqualInt((S_IFREG | 0755), archive_entry_mode(ae));
+	assertEqualString(filename, transform_entry_pathname(ae));
+	assertEqualInt((S_IFREG | 0755), transform_entry_mode(ae));
 
 	/*
 	 * Read the two dirs and check the names.
@@ -125,17 +125,17 @@ test_filename(const char *prefix, int dlen, int flen)
 	 * here.
 	 */
 	assertA(0 == transform_read_next_header(a, &ae));
-	assertEqualString(dirname, archive_entry_pathname(ae));
-	assert((S_IFDIR | 0755) == archive_entry_mode(ae));
+	assertEqualString(dirname, transform_entry_pathname(ae));
+	assert((S_IFDIR | 0755) == transform_entry_mode(ae));
 
 	assertA(0 == transform_read_next_header(a, &ae));
-	assertEqualString(dirname, archive_entry_pathname(ae));
-	assert((S_IFDIR | 0755) == archive_entry_mode(ae));
+	assertEqualString(dirname, transform_entry_pathname(ae));
+	assert((S_IFDIR | 0755) == transform_entry_mode(ae));
 
-	/* Verify the end of the archive. */
+	/* Verify the end of the transform. */
 	assert(1 == transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 DEFINE_TEST(test_tar_filenames)

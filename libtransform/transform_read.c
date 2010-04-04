@@ -26,13 +26,13 @@
 /*
  * This file contains the "essential" portions of the read API, that
  * is, stuff that will probably always be used by any client that
- * actually needs to read an archive.  Optional pieces have been, as
+ * actually needs to read an transform.  Optional pieces have been, as
  * far as possible, separated out into separate files to avoid
  * needlessly bloating statically-linked clients.
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/transform_read.c 201157 2009-12-29 05:30:23Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_read.c 201157 2009-12-29 05:30:23Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -58,9 +58,9 @@ static int	build_stream(struct transform_read *);
 static void	free_filters(struct transform_read *);
 static int	close_filters(struct transform_read *);
 static struct transform_vtable *transform_read_vtable(void);
-static int64_t	_archive_filter_bytes(struct transform *, int);
-static int	_archive_filter_code(struct transform *, int);
-static const char *_archive_filter_name(struct transform *, int);
+static int64_t	_transform_filter_bytes(struct transform *, int);
+static int	_transform_filter_code(struct transform *, int);
+static const char *_transform_filter_name(struct transform *, int);
 static int	_transform_read_close(struct transform *);
 static int	_transform_read_free(struct transform *);
 
@@ -71,11 +71,11 @@ transform_read_vtable(void)
 	static int inited = 0;
 
 	if (!inited) {
-		av.archive_filter_bytes = _archive_filter_bytes;
-		av.archive_filter_code = _archive_filter_code;
-		av.archive_filter_name = _archive_filter_name;
-		av.archive_free = _transform_read_free;
-		av.archive_close = _transform_read_close;
+		av.transform_filter_bytes = _transform_filter_bytes;
+		av.transform_filter_code = _transform_filter_code;
+		av.transform_filter_name = _transform_filter_name;
+		av.transform_free = _transform_read_free;
+		av.transform_close = _transform_read_close;
 	}
 	return (&av);
 }
@@ -92,12 +92,12 @@ transform_read_new(void)
 	if (a == NULL)
 		return (NULL);
 	memset(a, 0, sizeof(*a));
-	a->archive.magic = TRANSFORM_READ_MAGIC;
+	a->transform.magic = TRANSFORM_READ_MAGIC;
 
-	a->archive.state = TRANSFORM_STATE_NEW;
-	a->archive.vtable = transform_read_vtable();
+	a->transform.state = TRANSFORM_STATE_NEW;
+	a->transform.vtable = transform_read_vtable();
 
-	return (&a->archive);
+	return (&a->transform);
 }
 
 /*
@@ -116,7 +116,7 @@ transform_read_set_filter_options(struct transform *_a, const char *s)
 	    "transform_read_set_filter_options");
 
 	if (s == NULL || *s == '\0')
-		return (ARCHIVE_OK);
+		return (TRANSFORM_OK);
 	a = (struct transform_read *)_a;
 	len = 0;
 	for (filter = a->filter; filter != NULL; filter = filter->upstream) {
@@ -126,23 +126,23 @@ transform_read_set_filter_options(struct transform *_a, const char *s)
 		if (bidder->options == NULL)
 			/* This bidder does not support option */
 			continue;
-		while ((len = __archive_parse_options(s, filter->name,
+		while ((len = __transform_parse_options(s, filter->name,
 		    sizeof(key), key, sizeof(val), val)) > 0) {
 			if (val[0] == '\0')
 				r = bidder->options(bidder, key, NULL);
 			else
 				r = bidder->options(bidder, key, val);
-			if (r == ARCHIVE_FATAL)
+			if (r == TRANSFORM_FATAL)
 				return (r);
 			s += len;
 		}
 	}
 	if (len < 0) {
-		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+		transform_set_error(&a->transform, TRANSFORM_ERRNO_MISC,
 		    "Illegal format options.");
-		return (ARCHIVE_WARN);
+		return (TRANSFORM_WARN);
 	}
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 /*
@@ -155,21 +155,21 @@ transform_read_set_options(struct transform *_a, const char *s)
 
 	transform_check_magic(_a, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
 	    "transform_read_set_options");
-	archive_clear_error(_a);
+	transform_clear_error(_a);
 
 	r = transform_read_set_filter_options(_a, s);
-	if (r != ARCHIVE_OK)
+	if (r != TRANSFORM_OK)
 		return (r);
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 /*
- * Open the archive
+ * Open the transform
  */
 int
 transform_read_open(struct transform *a, void *client_data,
-    archive_open_callback *client_opener, transform_read_callback *client_reader,
-    archive_close_callback *client_closer)
+    transform_open_callback *client_opener, transform_read_callback *client_reader,
+    transform_close_callback *client_closer)
 {
 	/* Old transform_read_open() is just a thin shell around
 	 * transform_read_open2. */
@@ -181,7 +181,7 @@ static ssize_t
 client_read_proxy(struct transform_read_filter *self, const void **buff)
 {
 	ssize_t r;
-	r = (self->archive->client.reader)(&self->archive->archive,
+	r = (self->transform->client.reader)(&self->transform->transform,
 	    self->data, buff);
 	return (r);
 }
@@ -194,14 +194,14 @@ client_skip_proxy(struct transform_read_filter *self, int64_t request)
 	* with 32-bit off_t (such as Windows). */
 	int64_t skip_limit = ((int64_t)1) << (sizeof(off_t) * 8 - 2);
 
-	if (self->archive->client.skipper == NULL)
+	if (self->transform->client.skipper == NULL)
 		return (0);
 	total = 0;
 	for (;;) {
 		ask = request;
 		if (ask > skip_limit)
 			ask = skip_limit;
-		get = (self->archive->client.skipper)(&self->archive->archive,
+		get = (self->transform->client.skipper)(&self->transform->transform,
 			self->data, ask);
 		if (get == 0)
 			return (total);
@@ -213,10 +213,10 @@ client_skip_proxy(struct transform_read_filter *self, int64_t request)
 static int
 client_close_proxy(struct transform_read_filter *self)
 {
-	int r = ARCHIVE_OK;
+	int r = TRANSFORM_OK;
 
-	if (self->archive->client.closer != NULL)
-		r = (self->archive->client.closer)((struct transform *)self->archive,
+	if (self->transform->client.closer != NULL)
+		r = (self->transform->client.closer)((struct transform *)self->transform,
 		    self->data);
 	self->data = NULL;
 	return (r);
@@ -225,10 +225,10 @@ client_close_proxy(struct transform_read_filter *self)
 
 int
 transform_read_open2(struct transform *_a, void *client_data,
-    archive_open_callback *client_opener,
+    transform_open_callback *client_opener,
     transform_read_callback *client_reader,
-    archive_skip_callback *client_skipper,
-    archive_close_callback *client_closer)
+    transform_skip_callback *client_skipper,
+    transform_close_callback *client_closer)
 {
 	struct transform_read *a = (struct transform_read *)_a;
 	struct transform_read_filter *filter;
@@ -236,19 +236,19 @@ transform_read_open2(struct transform *_a, void *client_data,
 
 	transform_check_magic(_a, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
 	    "transform_read_open");
-	archive_clear_error(&a->archive);
+	transform_clear_error(&a->transform);
 
 	if (client_reader == NULL)
-		__archive_errx(1,
+		__transform_errx(1,
 		    "No reader function provided to transform_read_open");
 
 	/* Open data source. */
 	if (client_opener != NULL) {
-		e =(client_opener)(&a->archive, client_data);
+		e =(client_opener)(&a->transform, client_data);
 		if (e != 0) {
 			/* If the open failed, call the closer to clean up. */
 			if (client_closer)
-				(client_closer)(&a->archive, client_data);
+				(client_closer)(&a->transform, client_data);
 			return (e);
 		}
 	}
@@ -260,22 +260,22 @@ transform_read_open2(struct transform *_a, void *client_data,
 
 	filter = calloc(1, sizeof(*filter));
 	if (filter == NULL)
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	filter->bidder = NULL;
 	filter->upstream = NULL;
-	filter->archive = a;
+	filter->transform = a;
 	filter->data = client_data;
 	filter->read = client_read_proxy;
 	filter->skip = client_skip_proxy;
 	filter->close = client_close_proxy;
 	filter->name = "none";
-	filter->code = ARCHIVE_FILTER_NONE;
+	filter->code = TRANSFORM_FILTER_NONE;
 	a->filter = filter;
 
 	/* Build out the input pipeline. */
 	e = build_stream(a);
-	if (e == ARCHIVE_OK)
-		a->archive.state = TRANSFORM_STATE_HEADER;
+	if (e == TRANSFORM_OK)
+		a->transform.state = TRANSFORM_STATE_HEADER;
 
 	return (e);
 }
@@ -313,18 +313,18 @@ build_stream(struct transform_read *a)
 
 		/* If no bidder, we're done. */
 		if (best_bidder == NULL) {
-			return (ARCHIVE_OK);
+			return (TRANSFORM_OK);
 		}
 
 		filter
 		    = (struct transform_read_filter *)calloc(1, sizeof(*filter));
 		if (filter == NULL)
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		filter->bidder = best_bidder;
-		filter->archive = a;
+		filter->transform = a;
 		filter->upstream = a->filter;
 		r = (best_bidder->init)(filter);
-		if (r != ARCHIVE_OK) {
+		if (r != TRANSFORM_OK) {
 			free(filter);
 			return (r);
 		}
@@ -334,7 +334,7 @@ build_stream(struct transform_read *a)
 		if (avail < 0) {
 			close_filters(a);
 			free_filters(a);
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		}
 	}
 }
@@ -343,7 +343,7 @@ static int
 close_filters(struct transform_read *a)
 {
 	struct transform_read_filter *f = a->filter;
-	int r = ARCHIVE_OK;
+	int r = TRANSFORM_OK;
 	/* Close each filter in the pipeline. */
 	while (f != NULL) {
 		struct transform_read_filter *t = f->upstream;
@@ -376,13 +376,13 @@ static int
 _transform_read_close(struct transform *_a)
 {
 	struct transform_read *a = (struct transform_read *)_a;
-	int r = ARCHIVE_OK, r1 = ARCHIVE_OK;
+	int r = TRANSFORM_OK, r1 = TRANSFORM_OK;
 
-	transform_check_magic(&a->archive, TRANSFORM_READ_MAGIC,
+	transform_check_magic(&a->transform, TRANSFORM_READ_MAGIC,
 	    TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL, "transform_read_close");
-	archive_clear_error(&a->archive);
-	if (a->archive.state != TRANSFORM_STATE_FATAL)
-		a->archive.state = TRANSFORM_STATE_CLOSED;
+	transform_clear_error(&a->transform);
+	if (a->transform.state != TRANSFORM_STATE_FATAL)
+		a->transform.state = TRANSFORM_STATE_CLOSED;
 
 	/* TODO: Clean up the formatters. */
 
@@ -403,15 +403,15 @@ _transform_read_free(struct transform *_a)
 	struct transform_read *a = (struct transform_read *)_a;
 	int i, n;
 	int slots;
-	int r = ARCHIVE_OK;
+	int r = TRANSFORM_OK;
 
 	if (_a == NULL)
-		return (ARCHIVE_OK);
+		return (TRANSFORM_OK);
 	transform_check_magic(_a, TRANSFORM_READ_MAGIC,
 	    TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL, "transform_read_free");
-	if (a->archive.state != TRANSFORM_STATE_CLOSED
-	    && a->archive.state != TRANSFORM_STATE_FATAL)
-		r = transform_read_close(&a->archive);
+	if (a->transform.state != TRANSFORM_STATE_CLOSED
+	    && a->transform.state != TRANSFORM_STATE_FATAL)
+		r = transform_read_close(&a->transform);
 
 	/* Free the filters */
 	free_filters(a);
@@ -426,8 +426,8 @@ _transform_read_free(struct transform *_a)
 		}
 	}
 
-	archive_string_free(&a->archive.error_string);
-	a->archive.magic = 0;
+	transform_string_free(&a->transform.error_string);
+	a->transform.magic = 0;
 	free(a);
 	return (r);
 }
@@ -448,21 +448,21 @@ get_filter(struct transform *_a, int n)
 }
 
 static int
-_archive_filter_code(struct transform *_a, int n)
+_transform_filter_code(struct transform *_a, int n)
 {
 	struct transform_read_filter *f = get_filter(_a, n);
 	return f == NULL ? -1 : f->code;
 }
 
 static const char *
-_archive_filter_name(struct transform *_a, int n)
+_transform_filter_name(struct transform *_a, int n)
 {
 	struct transform_read_filter *f = get_filter(_a, n);
 	return f == NULL ? NULL : f->name;
 }
 
 static int64_t
-_archive_filter_bytes(struct transform *_a, int n)
+_transform_filter_bytes(struct transform *_a, int n)
 {
 	struct transform_read_filter *f = get_filter(_a, n);
 	return f == NULL ? -1 : f->bytes_consumed;
@@ -486,13 +486,13 @@ __transform_read_get_bidder(struct transform_read *a)
 		}
 	}
 
-	__archive_errx(1, "Not enough slots for compression registration");
+	__transform_errx(1, "Not enough slots for compression registration");
 	return (NULL); /* Never actually executed. */
 }
 
 /*
  * The next three functions comprise the peek/consume internal I/O
- * system used by archive format readers.  This system allows fairly
+ * system used by transform format readers.  This system allows fairly
  * flexible read-ahead and allows the I/O code to operate in a
  * zero-copy manner most of the time.
  *
@@ -573,7 +573,7 @@ __transform_read_filter_ahead(struct transform_read_filter *filter,
 
 	if (filter->fatal) {
 		if (avail)
-			*avail = ARCHIVE_FATAL;
+			*avail = TRANSFORM_FATAL;
 		return (NULL);
 	}
 
@@ -634,7 +634,7 @@ __transform_read_filter_ahead(struct transform_read_filter *filter,
 				filter->client_next = filter->client_buff = NULL;
 				filter->fatal = 1;
 				if (avail != NULL)
-					*avail = ARCHIVE_FATAL;
+					*avail = TRANSFORM_FATAL;
 				return (NULL);
 			}
 			if (bytes_read == 0) {	/* Premature end-of-file. */
@@ -672,13 +672,13 @@ __transform_read_filter_ahead(struct transform_read_filter *filter,
 				while (s < min) {
 					t *= 2;
 					if (t <= s) { /* Integer overflow! */
-						archive_set_error(
-							&filter->archive->archive,
+						transform_set_error(
+							&filter->transform->transform,
 							ENOMEM,
 						    "Unable to allocate copy buffer");
 						filter->fatal = 1;
 						if (avail != NULL)
-							*avail = ARCHIVE_FATAL;
+							*avail = TRANSFORM_FATAL;
 						return (NULL);
 					}
 					s = t;
@@ -686,13 +686,13 @@ __transform_read_filter_ahead(struct transform_read_filter *filter,
 				/* Now s >= min, so allocate a new buffer. */
 				p = (char *)malloc(s);
 				if (p == NULL) {
-					archive_set_error(
-						&filter->archive->archive,
+					transform_set_error(
+						&filter->transform->transform,
 						ENOMEM,
 					    "Unable to allocate copy buffer");
 					filter->fatal = 1;
 					if (avail != NULL)
-						*avail = ARCHIVE_FATAL;
+						*avail = TRANSFORM_FATAL;
 					return (NULL);
 				}
 				/* Move data into newly-enlarged buffer. */
@@ -775,11 +775,11 @@ __transform_read_skip(struct transform_read *a, int64_t request)
 	/* We hit EOF before we satisfied the skip request. */
 	if (skipped < 0)  // Map error code to 0 for error message below.
 		skipped = 0;
-	archive_set_error(&a->archive,
-	    ARCHIVE_ERRNO_MISC,
+	transform_set_error(&a->transform,
+	    TRANSFORM_ERRNO_MISC,
 	    "Truncated input file (needed %jd bytes, only %jd available)",
 	    (intmax_t)request, (intmax_t)skipped);
-	return (ARCHIVE_FATAL);
+	return (TRANSFORM_FATAL);
 }
 
 int64_t

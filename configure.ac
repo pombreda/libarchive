@@ -29,11 +29,11 @@ AM_INIT_AUTOMAKE()
 # platforms.  At least on FreeBSD, libtool uses an overly complex
 # convention that attempts to solve problems that most people just
 # don't have and which just causes confusion for most end users.
-ARCHIVE_MAJOR=$(( LIBTRANSFORM_VERSION_N() / 1000000 ))
-ARCHIVE_MINOR=$(( (LIBTRANSFORM_VERSION_N() / 1000) % 1000 ))
-ARCHIVE_REVISION=$(( LIBTRANSFORM_VERSION_N() % 1000 ))
-ARCHIVE_LIBTOOL_MAJOR=`echo $((${ARCHIVE_MAJOR} + ${ARCHIVE_MINOR}))`
-ARCHIVE_LIBTOOL_VERSION=$ARCHIVE_LIBTOOL_MAJOR:$ARCHIVE_REVISION:$ARCHIVE_MINOR
+TRANSFORM_MAJOR=$(( LIBTRANSFORM_VERSION_N() / 1000000 ))
+TRANSFORM_MINOR=$(( (LIBTRANSFORM_VERSION_N() / 1000) % 1000 ))
+TRANSFORM_REVISION=$(( LIBTRANSFORM_VERSION_N() % 1000 ))
+TRANSFORM_LIBTOOL_MAJOR=`echo $((${TRANSFORM_MAJOR} + ${TRANSFORM_MINOR}))`
+TRANSFORM_LIBTOOL_VERSION=$TRANSFORM_LIBTOOL_MAJOR:$TRANSFORM_REVISION:$TRANSFORM_MINOR
 
 # Stick the version numbers into config.h
 AC_DEFINE([LIBTRANSFORM_VERSION_STRING],"LIBTRANSFORM_VERSION_S()",
@@ -56,7 +56,7 @@ LIBTRANSFORM_VERSION_NUMBER=LIBTRANSFORM_VERSION_N()
 # Substitute the above version numbers into the various files below.
 # Yes, I believe this is the fourth time we define what are essentially
 # the same symbols.  Why? Ask autoconf.
-AC_SUBST(ARCHIVE_LIBTOOL_VERSION)
+AC_SUBST(TRANSFORM_LIBTOOL_VERSION)
 AC_SUBST(BSDCPIO_VERSION_STRING)
 AC_SUBST(BSDTAR_VERSION_STRING)
 AC_SUBST(LIBTRANSFORM_VERSION_STRING)
@@ -316,8 +316,8 @@ fi
 # libtransform.  This will define HAVE_LIBTRANSFORM which will cause
 # bsdtar_platform.h to use #include <...> for the libtransform headers.
 # Need to include Makefile.am magic to link against system
-# -larchive in that case.
-#AC_CHECK_LIB(archive,archive_version)
+# -ltransform in that case.
+#AC_CHECK_LIB(transform,transform_version)
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST

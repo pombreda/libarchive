@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_read_truncated.c,v 1.4 2008/09/01 05:38:33 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libtransform/test/test_read_truncated.c,v 1.4 2008/09/01 05:38:33 kientzle Exp $");
 
 char buff[1000000];
 char buff2[100000];
@@ -35,7 +35,7 @@ DEFINE_TEST(test_read_truncated)
 	unsigned int i;
 	size_t used;
 
-	/* Create a new archive in memory. */
+	/* Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_ustar(a));
 	assertA(0 == transform_write_set_compression_none(a));
@@ -44,21 +44,21 @@ DEFINE_TEST(test_read_truncated)
 	/*
 	 * Write a file to it.
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "file");
-	archive_entry_set_mode(ae, S_IFREG | 0755);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "file");
+	transform_entry_set_mode(ae, S_IFREG | 0755);
 	for (i = 0; i < sizeof(buff2); i++)
 		buff2[i] = (unsigned char)rand();
-	archive_entry_set_size(ae, sizeof(buff2));
+	transform_entry_set_size(ae, sizeof(buff2));
 	assertA(0 == transform_write_header(a, ae));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 	assertA((int)sizeof(buff2) == transform_write_data(a, buff2, sizeof(buff2)));
 
-	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
-	/* Now, read back a truncated version of the archive and
+	/* Now, read back a truncated version of the transform and
 	 * verify that we get an appropriate error. */
 	for (i = 1; i < used + 100; i += 100) {
 		assert((a = transform_read_new()) != NULL);
@@ -67,33 +67,33 @@ DEFINE_TEST(test_read_truncated)
 		assertA(0 == transform_read_open_memory(a, buff, i));
 
 		if (i < 512) {
-			assertA(ARCHIVE_FATAL == transform_read_next_header(a, &ae));
+			assertA(TRANSFORM_FATAL == transform_read_next_header(a, &ae));
 			goto wrap_up;
 		} else {
 			assertA(0 == transform_read_next_header(a, &ae));
 		}
 
 		if (i < 512 + sizeof(buff2)) {
-			assertA(ARCHIVE_FATAL == transform_read_data(a, buff2, sizeof(buff2)));
+			assertA(TRANSFORM_FATAL == transform_read_data(a, buff2, sizeof(buff2)));
 			goto wrap_up;
 		} else {
 			assertA((int)sizeof(buff2) == transform_read_data(a, buff2, sizeof(buff2)));
 		}
 
-		/* Verify the end of the archive. */
+		/* Verify the end of the transform. */
 		/* Archive must be long enough to capture a 512-byte
 		 * block of zeroes after the entry.  (POSIX requires a
-		 * second block of zeros to be written but libarchive
+		 * second block of zeros to be written but libtransform
 		 * does not return an error if it can't consume
 		 * it.) */
 		if (i < 512 + 512*((sizeof(buff2) + 511)/512) + 512) {
-			assertA(ARCHIVE_FATAL == transform_read_next_header(a, &ae));
+			assertA(TRANSFORM_FATAL == transform_read_next_header(a, &ae));
 		} else {
-			assertA(ARCHIVE_EOF == transform_read_next_header(a, &ae));
+			assertA(TRANSFORM_EOF == transform_read_next_header(a, &ae));
 		}
 	wrap_up:
-		assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+		assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+		assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 	}
 
 
@@ -106,32 +106,32 @@ DEFINE_TEST(test_read_truncated)
 		assertA(0 == transform_read_open_memory(a, buff, i));
 
 		if (i < 512) {
-			assertA(ARCHIVE_FATAL == transform_read_next_header(a, &ae));
+			assertA(TRANSFORM_FATAL == transform_read_next_header(a, &ae));
 			goto wrap_up2;
 		} else {
 			assertA(0 == transform_read_next_header(a, &ae));
 		}
 
 		if (i < 512 + 512*((sizeof(buff2)+511)/512)) {
-			assertA(ARCHIVE_FATAL == transform_read_data_skip(a));
+			assertA(TRANSFORM_FATAL == transform_read_data_skip(a));
 			goto wrap_up2;
 		} else {
-			assertA(ARCHIVE_OK == transform_read_data_skip(a));
+			assertA(TRANSFORM_OK == transform_read_data_skip(a));
 		}
 
-		/* Verify the end of the archive. */
+		/* Verify the end of the transform. */
 		/* Archive must be long enough to capture a 512-byte
 		 * block of zeroes after the entry.  (POSIX requires a
-		 * second block of zeros to be written but libarchive
+		 * second block of zeros to be written but libtransform
 		 * does not return an error if it can't consume
 		 * it.) */
 		if (i < 512 + 512*((sizeof(buff2) + 511)/512) + 512) {
-			assertA(ARCHIVE_FATAL == transform_read_next_header(a, &ae));
+			assertA(TRANSFORM_FATAL == transform_read_next_header(a, &ae));
 		} else {
-			assertA(ARCHIVE_EOF == transform_read_next_header(a, &ae));
+			assertA(TRANSFORM_EOF == transform_read_next_header(a, &ae));
 		}
 	wrap_up2:
-		assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+		assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+		assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 	}
 }

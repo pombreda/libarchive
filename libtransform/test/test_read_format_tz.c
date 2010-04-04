@@ -23,9 +23,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_tz.c 189381 2009-03-05 00:31:48Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_tz.c 189381 2009-03-05 00:31:48Z kientzle $");
 
-static unsigned char archive[] = {
+static unsigned char transform[] = {
 31,157,144,'.',0,8,28,'H',176,160,193,131,8,19,'*','\\',200,176,'!','B',24,
 16,'o',212,168,1,2,0,196,24,18,'a','T',188,152,'q','#',196,143,' ','5',198,
 128,'1','c',6,13,24,'4','0',206,176,1,2,198,200,26,'6','b',0,0,'Q',195,161,
@@ -39,19 +39,19 @@ DEFINE_TEST(test_read_format_tz)
 	struct transform_entry *ae;
 	struct transform *a;
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK,
-	    transform_read_open_memory(a, archive, sizeof(archive)));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	failure("archive_compression_name(a)=\"%s\"",
-	    archive_compression_name(a));
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_COMPRESS);
-	failure("archive_format_name(a)=\"%s\"", archive_format_name(a));
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK,
+	    transform_read_open_memory(a, transform, sizeof(transform)));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	failure("transform_compression_name(a)=\"%s\"",
+	    transform_compression_name(a));
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_COMPRESS);
+	failure("transform_format_name(a)=\"%s\"", transform_format_name(a));
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 

@@ -26,7 +26,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_raw.c 191594 2009-04-27 20:09:05Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_raw.c 191594 2009-04-27 20:09:05Z kientzle $");
 
 DEFINE_TEST(test_read_format_raw)
 {
@@ -39,51 +39,51 @@ DEFINE_TEST(test_read_format_raw)
 	/* First, try pulling data out of an uninterpretable file. */
 	extract_reference_file(reffile1);
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_raw(a));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_raw(a));
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_open_filename(a, reffile1, 512));
 
 	/* First (and only!) Entry */
 	assertA(0 == transform_read_next_header(a, &ae));
-	assertEqualString("data", archive_entry_pathname(ae));
+	assertEqualString("data", transform_entry_pathname(ae));
 	/* Most fields should be unset (unknown) */
-	assert(!archive_entry_size_is_set(ae));
-	assert(!archive_entry_atime_is_set(ae));
-	assert(!archive_entry_ctime_is_set(ae));
-	assert(!archive_entry_mtime_is_set(ae));
+	assert(!transform_entry_size_is_set(ae));
+	assert(!transform_entry_atime_is_set(ae));
+	assert(!transform_entry_ctime_is_set(ae));
+	assert(!transform_entry_mtime_is_set(ae));
 	assertEqualInt(4, transform_read_data(a, buff, 32));
 	assertEqualMem(buff, "foo\n", 4);
 
 	/* Test EOF */
-	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 
 
 	/* Second, try the same with a compressed file. */
 	extract_reference_file(reffile2);
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_raw(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_raw(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_open_filename(a, reffile2, 1));
 
 	/* First (and only!) Entry */
 	assertA(0 == transform_read_next_header(a, &ae));
-	assertEqualString("data", archive_entry_pathname(ae));
+	assertEqualString("data", transform_entry_pathname(ae));
 	/* Most fields should be unset (unknown) */
-	assert(!archive_entry_size_is_set(ae));
-	assert(!archive_entry_atime_is_set(ae));
-	assert(!archive_entry_ctime_is_set(ae));
-	assert(!archive_entry_mtime_is_set(ae));
+	assert(!transform_entry_size_is_set(ae));
+	assert(!transform_entry_atime_is_set(ae));
+	assert(!transform_entry_ctime_is_set(ae));
+	assert(!transform_entry_mtime_is_set(ae));
 	assertEqualInt(4, transform_read_data(a, buff, 32));
 	assertEqualMem(buff, "foo\n", 4);
 
 	/* Test EOF */
-	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }

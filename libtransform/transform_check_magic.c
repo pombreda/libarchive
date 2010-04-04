@@ -24,7 +24,7 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/transform_check_magic.c 201089 2009-12-28 02:20:23Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_check_magic.c 201089 2009-12-28 02:20:23Z kientzle $");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -107,11 +107,11 @@ write_all_states(char *buff, unsigned int states)
 /*
  * Check magic value and current state.
  *   Magic value mismatches are fatal and result in calls to abort().
- *   State mismatches return ARCHIVE_FATAL.
- *   Otherwise, returns ARCHIVE_OK.
+ *   State mismatches return TRANSFORM_FATAL.
+ *   Otherwise, returns TRANSFORM_OK.
  *
  * This is designed to catch serious programming errors that violate
- * the libarchive API.
+ * the libtransform API.
  */
 int
 __transform_check_magic(struct transform *a, unsigned int magic,
@@ -123,23 +123,23 @@ __transform_check_magic(struct transform *a, unsigned int magic,
 	if (a->magic != magic) {
 		errmsg("PROGRAMMER ERROR: Function ");
 		errmsg(function);
-		errmsg(" invoked with invalid archive handle.\n");
+		errmsg(" invoked with invalid transform handle.\n");
 		diediedie();
 	}
 
 	if ((a->state & state) == 0) {
 		/* If we're already FATAL, don't overwrite the error. */
 		if (a->state != TRANSFORM_STATE_FATAL)
-			archive_set_error(a, -1,
+			transform_set_error(a, -1,
 			    "INTERNAL ERROR: Function '%s' invoked with"
-			    " archive structure in state '%s',"
+			    " transform structure in state '%s',"
 			    " should be in state '%s'",
 			    function,
 			    write_all_states(states1, a->state),
 			    write_all_states(states2, state));
 		a->state = TRANSFORM_STATE_FATAL;
 		// XXXX This is the proposed new behavior.
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	}
-	return ARCHIVE_OK;
+	return TRANSFORM_OK;
 }

@@ -59,7 +59,7 @@ DEFINE_TEST(test_write_format_iso9660_empty)
 	buff = malloc(buffsize);
 	assert(buff != NULL);
 
-	/* ISO9660 format: Create a new archive in memory. */
+	/* ISO9660 format: Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_iso9660(a));
 	assertA(0 == transform_write_set_compression_none(a));
@@ -67,9 +67,9 @@ DEFINE_TEST(test_write_format_iso9660_empty)
 	assertA(0 == transform_write_set_bytes_in_last_block(a, 1));
 	assertA(0 == transform_write_open_memory(a, buff, buffsize, &used));
 
-	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_free(a));
 
 	assert(used == 2048 * 181);
 	/* Check System Area. */
@@ -125,18 +125,18 @@ DEFINE_TEST(test_write_format_iso9660_empty)
 	 * Root Directory entry must be in ISO image.
 	 */
 	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
-	assertEqualInt(archive_entry_atime(ae), archive_entry_ctime(ae));
-	assertEqualInt(archive_entry_atime(ae), archive_entry_mtime(ae));
-	assertEqualString(".", archive_entry_pathname(ae));
-	assert((S_IFDIR | 0555) == archive_entry_mode(ae));
-	assertEqualInt(2048, archive_entry_size(ae));
+	assertEqualInt(transform_entry_atime(ae), transform_entry_ctime(ae));
+	assertEqualInt(transform_entry_atime(ae), transform_entry_mtime(ae));
+	assertEqualString(".", transform_entry_pathname(ae));
+	assert((S_IFDIR | 0555) == transform_entry_mode(ae));
+	assertEqualInt(2048, transform_entry_size(ae));
 
 	/*
-	 * Verify the end of the archive.
+	 * Verify the end of the transform.
 	 */
-	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_free(a));
 
 	free(buff);
 }

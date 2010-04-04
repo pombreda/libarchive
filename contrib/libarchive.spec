@@ -1,14 +1,14 @@
 # $LastChangedRevision$, $LastChangedDate$
-Summary:        Library to create and read several different archive formats
+Summary:        Library to create and read several different transform formats
 Summary(pl):    Biblioteka do tworzenia i odczytu ró¿nych formatów archiwów
-Name:           libarchive
+Name:           libtransform
 Version:        2.0a3
 Release:        1
 License:        BSD
 Group:          Libraries
-Source0: http://people.freebsd.org/~kientzle/libarchive/src/%{name}-%{version}.tar.gz
+Source0: http://people.freebsd.org/~kientzle/libtransform/src/%{name}-%{version}.tar.gz
 Patch:          %{name}-0123457890.patch
-URL:            http://people.freebsd.org/~kientzle/libarchive/
+URL:            http://people.freebsd.org/~kientzle/libtransform/
 Requires:       glibc
 Requires:       zlib
 Requires:       bzip2
@@ -20,51 +20,51 @@ BuildRequires:  bzip2
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
-Libarchive is a programming library that can create and read several
-different streaming archive formats, including most popular TAR
-variants and several CPIO formats. It can also write SHAR archives.
+Libtransform is a programming library that can create and read several
+different streaming transform formats, including most popular TAR
+variants and several CPIO formats. It can also write SHAR transforms.
 
 %description -l pl
-Libarchive jest bibliotek± s³u¿ac± to tworzenia i odczytu wielu
+Libtransform jest bibliotek± s³u¿ac± to tworzenia i odczytu wielu
 ró¿nych strumieniowych formatów archiwów, w³±czaj±c w to popularne
 odmiany TAR oraz wiele formatów CPIO. Biblioteka ta potrafi tak¿e
 zapisywaæ archiwa SHAR.
 
 %package devel
-Summary:        Header files for libarchive library
-Summary(pl):    Pliki nag³ówkowe biblioteki libarchive
+Summary:        Header files for libtransform library
+Summary(pl):    Pliki nag³ówkowe biblioteki libtransform
 Group:          Development/Libraries
 Requires:       %{name} = %{version}-%{release}
 
 %description devel
-Header files for libarchive library.
+Header files for libtransform library.
 
 %description devel -l pl
-Pliki nag³ówkowe biblioteki libarchive.
+Pliki nag³ówkowe biblioteki libtransform.
 
 %package static
-Summary:        Static libarchive library
-Summary(pl):    Statyczna biblioteka libarchive
+Summary:        Static libtransform library
+Summary(pl):    Statyczna biblioteka libtransform
 Group:          Development/Libraries
 Requires:       %{name}-devel = %{version}-%{release}
 
 %description static
-Static libarchive library.
+Static libtransform library.
 
 %description static -l pl
-Statyczna biblioteka libarchive.
+Statyczna biblioteka libtransform.
 
 %package -n bsdtar
-Summary:        bsdtar - tar(1) implementation based on libarchive
-Summary(pl):    bsdtar - implementacja programu tar(1) oparta na libarchive
+Summary:        bsdtar - tar(1) implementation based on libtransform
+Summary(pl):    bsdtar - implementacja programu tar(1) oparta na libtransform
 Group:          Applications/Archiving
 Requires:       %{name} = %{version}-%{release}
 
 %description -n bsdtar
-bsdtar - tar(1) implementation based on libarchive.
+bsdtar - tar(1) implementation based on libtransform.
 
 %description -n bsdtar -l pl
-bsdtar - implementacja programu tar(1), oparta na libarchive.
+bsdtar - implementacja programu tar(1), oparta na libtransform.
 
 %prep
 %setup -q
@@ -95,11 +95,11 @@ rm -fr %buildroot
 
 %files
 %defattr(644,root,root,755)
-%{_libdir}/libarchive.a
+%{_libdir}/libtransform.a
 
 %files devel
 %defattr(644,root,root,755)
-%{_libdir}/libarchive.la
+%{_libdir}/libtransform.la
 %{_includedir}/*.h
 %doc %{_mandir}/man3/*
 %doc %{_mandir}/man5/*
@@ -114,10 +114,10 @@ rm -fr %buildroot
 * %{date} PLD Team <feedback@pld-linux.org>
 All persons listed below can be reached at <cvs_login>@pld-linux.org
 
-$Log: libarchive.spec,v $
+$Log: libtransform.spec,v $
 Release 1  2006/12/12 rm1023@dcx.com
-- added libarchive-0123457890.patch for "0123457890" error
-- replaced libarchive-1.3.1.tar.gz with libarchive-2.0a3.tar.gz
+- added libtransform-0123457890.patch for "0123457890" error
+- replaced libtransform-1.3.1.tar.gz with libtransform-2.0a3.tar.gz
 - removed obsolete -CVE-2006-5680.patch and -man_progname.patch
 
 Revision 1.6  2006/11/15 10:41:28  qboosh
@@ -128,8 +128,8 @@ Revision 1.5  2006/11/08 22:22:25  twittner
 - up to 1.3.1
 - added BR: e2fsprogs-devel
 - added -CVE-2006-5680.patch agains entering in infinite
-loop in corrupt archives
-- added bsdtar package (bsdtar is included now in libarchive
+loop in corrupt transforms
+- added bsdtar package (bsdtar is included now in libtransform
 sources)
 - rel. 0.1 for testing
 

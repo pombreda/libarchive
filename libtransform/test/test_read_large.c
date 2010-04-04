@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_large.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_large.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 static unsigned char testdata[10 * 1024 * 1024];
 static unsigned char testdatacopy[10 * 1024 * 1024];
@@ -51,14 +51,14 @@ DEFINE_TEST(test_read_large)
 	assert(NULL != (a = transform_write_new()));
 	assertA(0 == transform_write_set_format_ustar(a));
 	assertA(0 == transform_write_open_memory(a, buff, sizeof(buff), &used));
-	assert(NULL != (entry = archive_entry_new()));
-	archive_entry_set_size(entry, sizeof(testdata));
-	archive_entry_set_mode(entry, S_IFREG | 0777);
-	archive_entry_set_pathname(entry, "test");
+	assert(NULL != (entry = transform_entry_new()));
+	transform_entry_set_size(entry, sizeof(testdata));
+	transform_entry_set_mode(entry, S_IFREG | 0777);
+	transform_entry_set_pathname(entry, "test");
 	assertA(0 == transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_free(entry);
 	assertA((int)sizeof(testdata) == transform_write_data(a, testdata, sizeof(testdata)));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
 	assert(NULL != (a = transform_read_new()));
 	assertA(0 == transform_read_support_format_all(a));
@@ -66,7 +66,7 @@ DEFINE_TEST(test_read_large)
 	assertA(0 == transform_read_open_memory(a, buff, sizeof(buff)));
 	assertA(0 == transform_read_next_header(a, &entry));
 	assertA(0 == transform_read_data_into_buffer(a, testdatacopy, sizeof(testdatacopy)));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 	assert(0 == memcmp(testdata, testdatacopy, sizeof(testdata)));
 
 
@@ -83,7 +83,7 @@ DEFINE_TEST(test_read_large)
 	assert(0 < tmpfilefd);
 	assertA(0 == transform_read_data_into_fd(a, tmpfilefd));
 	close(tmpfilefd);
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 
 	f = fopen(tmpfilename, "rb");
 	assertEqualInt(sizeof(testdatacopy),

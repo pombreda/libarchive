@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_compat_xz.c 191183 2009-04-17 01:06:31Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_compat_xz.c 191183 2009-04-17 01:06:31Z kientzle $");
 
 /*
  * Verify our ability to read sample files compatibly with unxz.
@@ -46,35 +46,35 @@ compat_xz(const char *name)
 	int i, r;
 
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_compression_all(a));
 	r = transform_read_support_compression_xz(a);
-	if (r == ARCHIVE_WARN) {
+	if (r == TRANSFORM_WARN) {
 		skipping("xz reading not fully supported on this platform");
-		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+		assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 		return;
 	}
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
 	extract_reference_file(name);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_filename(a, name, 2));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_open_filename(a, name, 2));
 
 	/* Read entries, match up names with list above. */
 	for (i = 0; i < 6; ++i) {
 		failure("Could not read file %d (%s) from %s", i, n[i], name);
-		assertEqualIntA(a, ARCHIVE_OK,
+		assertEqualIntA(a, TRANSFORM_OK,
 		    transform_read_next_header(a, &ae));
-		assertEqualString(n[i], archive_entry_pathname(ae));
+		assertEqualString(n[i], transform_entry_pathname(ae));
 	}
 
-	/* Verify the end-of-archive. */
-	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	/* Verify the end-of-transform. */
+	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
 
 	/* Verify that the format detection worked. */
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_XZ);
-	assertEqualString(archive_compression_name(a), "xz");
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_XZ);
+	assertEqualString(transform_compression_name(a), "xz");
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
 
-	assertEqualInt(ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 

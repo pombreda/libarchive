@@ -23,28 +23,28 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_archive_api_feature.c,v 1.5 2008/05/26 17:00:24 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libtransform/test/test_transform_api_feature.c,v 1.5 2008/05/26 17:00:24 kientzle Exp $");
 
-DEFINE_TEST(test_archive_api_feature)
+DEFINE_TEST(test_transform_api_feature)
 {
 	char buff[128];
 	const char *p;
 
 	/* This is the (hopefully) final versioning API. */
-	assertEqualInt(ARCHIVE_VERSION_NUMBER, archive_version_number());
-	sprintf(buff, "libarchive %d.%d.%d",
-	    archive_version_number() / 1000000,
-	    (archive_version_number() / 1000) % 1000,
-	    archive_version_number() % 1000);
+	assertEqualInt(TRANSFORM_VERSION_NUMBER, transform_version_number());
+	sprintf(buff, "libtransform %d.%d.%d",
+	    transform_version_number() / 1000000,
+	    (transform_version_number() / 1000) % 1000,
+	    transform_version_number() % 1000);
 	failure("Version string is: %s, computed is: %s",
-	    archive_version_string(), buff);
-	assert(memcmp(buff, archive_version_string(), strlen(buff)) == 0);
-	if (strlen(buff) < strlen(archive_version_string())) {
-		p = archive_version_string() + strlen(buff);
-		failure("Version string is: %s", archive_version_string());
+	    transform_version_string(), buff);
+	assert(memcmp(buff, transform_version_string(), strlen(buff)) == 0);
+	if (strlen(buff) < strlen(transform_version_string())) {
+		p = transform_version_string() + strlen(buff);
+		failure("Version string is: %s", transform_version_string());
 		assert(*p == 'a' || *p == 'b' || *p == 'c' || *p == 'd');
 		++p;
-		failure("Version string is: %s", archive_version_string());
+		failure("Version string is: %s", transform_version_string());
 		assert(*p == '\0');
 	}
 

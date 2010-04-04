@@ -23,9 +23,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_empty.c 189308 2009-03-03 17:02:51Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_empty.c 189308 2009-03-03 17:02:51Z kientzle $");
 
-static unsigned char archive[] = { 0 };
+static unsigned char transform[] = { 0 };
 
 DEFINE_TEST(test_read_format_empty)
 {
@@ -34,10 +34,10 @@ DEFINE_TEST(test_read_format_empty)
 	assert((a = transform_read_new()) != NULL);
 	assertA(0 == transform_read_support_compression_all(a));
 	assertA(0 == transform_read_support_format_all(a));
-	assertA(0 == transform_read_open_memory(a, archive, 0));
-	assertA(ARCHIVE_EOF == transform_read_next_header(a, &ae));
-	assertA(archive_compression(a) == ARCHIVE_FILTER_NONE);
-	assertA(archive_format(a) == ARCHIVE_FORMAT_EMPTY);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertA(0 == transform_read_open_memory(a, transform, 0));
+	assertA(TRANSFORM_EOF == transform_read_next_header(a, &ae));
+	assertA(transform_compression(a) == TRANSFORM_FILTER_NONE);
+	assertA(transform_format(a) == TRANSFORM_FORMAT_EMPTY);
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }

@@ -27,18 +27,18 @@
  */
 
 /*
- * A set of compatibility glue for building libarchive on Windows platforms.
+ * A set of compatibility glue for building libtransform on Windows platforms.
  *
- * Originally created as "libarchive-nonposix.c" by Kees Zeelenberg
+ * Originally created as "libtransform-nonposix.c" by Kees Zeelenberg
  * for the GnuWin32 project, trimmed significantly by Tim Kientzle.
  *
- * Much of the original file was unnecessary for libarchive, because
+ * Much of the original file was unnecessary for libtransform, because
  * many of the features it emulated were not strictly necessary for
- * libarchive.  I hope for this to shrink further as libarchive
+ * libtransform.  I hope for this to shrink further as libtransform
  * internals are gradually reworked to sit more naturally on both
  * POSIX and Windows.  Any ideas for this are greatly appreciated.
  *
- * The biggest remaining issue is the dev/ino emulation; libarchive
+ * The biggest remaining issue is the dev/ino emulation; libtransform
  * has a couple of public APIs that rely on dev/ino uniquely
  * identifying a file.  This doesn't match well with Windows.  I'm
  * considering alternative APIs.
@@ -61,7 +61,7 @@
 #include <windows.h>
 #include <share.h>
 
-#define EPOC_TIME ARCHIVE_LITERAL_ULL(116444736000000000)
+#define EPOC_TIME TRANSFORM_LITERAL_ULL(116444736000000000)
 
 #if defined(_MSC_VER) && _MSC_VER < 1300
 /* VS 6 does not provide SetFilePointerEx, so define it here.  */
@@ -1289,7 +1289,7 @@ DIGEST_FINAL(SHA512, SHA384_DIGEST_LENGTH)
  * are not secure.
  */
 int
-__archive_mktemp(const char *tmpdir)
+__transform_mktemp(const char *tmpdir)
 {
 	static const char num[] = {
 		'0', '1', '2', '3', '4', '5', '6', '7',
@@ -1311,7 +1311,7 @@ __archive_mktemp(const char *tmpdir)
 	hProv = (HCRYPTPROV)NULL;
 	fd = -1;
 	ws = NULL;
-	archive_string_init(&temp_name);
+	transform_string_init(&temp_name);
 
 	/* Get a temporary directory. */
 	if (tmpdir == NULL) {
@@ -1329,12 +1329,12 @@ __archive_mktemp(const char *tmpdir)
 			goto exit_tmpfile;
 		}
 		GetTempPathA(l, tmp);
-		archive_strcpy(&temp_name, tmp);
+		transform_strcpy(&temp_name, tmp);
 		free(tmp);
 	} else {
-		archive_strcpy(&temp_name, tmpdir);
+		transform_strcpy(&temp_name, tmpdir);
 		if (temp_name.s[temp_name.length-1] != '/')
-			archive_strappend_char(&temp_name, '/');
+			transform_strappend_char(&temp_name, '/');
 	}
 
 	/* Check if temp_name is a directory. */
@@ -1363,10 +1363,10 @@ __archive_mktemp(const char *tmpdir)
 	/*
 	 * Create a temporary file.
 	 */
-	archive_strcat(&temp_name, "libarchive_");
-	xp = temp_name.s + archive_strlen(&temp_name);
-	archive_strcat(&temp_name, "XXXXXXXXXX");
-	ep = temp_name.s + archive_strlen(&temp_name);
+	transform_strcat(&temp_name, "libtransform_");
+	xp = temp_name.s + transform_strlen(&temp_name);
+	transform_strcat(&temp_name, "XXXXXXXXXX");
+	ep = temp_name.s + transform_strlen(&temp_name);
 
 	if (!CryptAcquireContext(&hProv, NULL, NULL, PROV_RSA_FULL,
 		CRYPT_VERIFYCONTEXT)) {
@@ -1423,7 +1423,7 @@ exit_tmpfile:
 	if (hProv != (HCRYPTPROV)NULL)
 		CryptReleaseContext(hProv, 0);
 	free(ws);
-	archive_string_free(&temp_name);
+	transform_string_free(&temp_name);
 	return (fd);
 }
 

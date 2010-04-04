@@ -24,7 +24,7 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_string_sprintf.c 189435 2009-03-06 05:14:55Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_string_sprintf.c 189435 2009-03-06 05:14:55Z kientzle $");
 
 /*
  * The use of printf()-family functions can be troublesome
@@ -46,7 +46,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_string_sprintf.c 189435 2009-03-
 
 /*
  * Utility functions to format signed/unsigned integers and append
- * them to an archive_string.
+ * them to an transform_string.
  */
 static void
 append_uint(struct transform_string *as, uintmax_t d, unsigned base)
@@ -54,14 +54,14 @@ append_uint(struct transform_string *as, uintmax_t d, unsigned base)
 	static const char *digits = "0123456789abcdef";
 	if (d >= base)
 		append_uint(as, d/base, base);
-	archive_strappend_char(as, digits[d % base]);
+	transform_strappend_char(as, digits[d % base]);
 }
 
 static void
 append_int(struct transform_string *as, intmax_t d, unsigned base)
 {
 	if (d < 0) {
-		archive_strappend_char(as, '-');
+		transform_strappend_char(as, '-');
 		d = -d;
 	}
 	append_uint(as, d, base);
@@ -69,12 +69,12 @@ append_int(struct transform_string *as, intmax_t d, unsigned base)
 
 
 void
-__archive_string_sprintf(struct transform_string *as, const char *fmt, ...)
+__transform_string_sprintf(struct transform_string *as, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	archive_string_vsprintf(as, fmt, ap);
+	transform_string_vsprintf(as, fmt, ap);
 	va_end(ap);
 }
 
@@ -83,7 +83,7 @@ __archive_string_sprintf(struct transform_string *as, const char *fmt, ...)
  * necessary.
  */
 void
-__archive_string_vsprintf(struct transform_string *as, const char *fmt,
+__transform_string_vsprintf(struct transform_string *as, const char *fmt,
     va_list ap)
 {
 	char long_flag;
@@ -91,8 +91,8 @@ __archive_string_vsprintf(struct transform_string *as, const char *fmt,
 	uintmax_t u; /* Unsigned integer temp. */
 	const char *p, *p2;
 
-	if (__archive_string_ensure(as, 64) == NULL)
-		__archive_errx(1, "Out of memory");
+	if (__transform_string_ensure(as, 64) == NULL)
+		__transform_errx(1, "Out of memory");
 
 	if (fmt == NULL) {
 		as->s[0] = 0;
@@ -103,7 +103,7 @@ __archive_string_vsprintf(struct transform_string *as, const char *fmt,
 		const char *saved_p = p;
 
 		if (*p != '%') {
-			archive_strappend_char(as, *p);
+			transform_strappend_char(as, *p);
 			continue;
 		}
 
@@ -121,11 +121,11 @@ __archive_string_vsprintf(struct transform_string *as, const char *fmt,
 
 		switch (*p) {
 		case '%':
-			__archive_strappend_char(as, '%');
+			__transform_strappend_char(as, '%');
 			break;
 		case 'c':
 			s = va_arg(ap, int);
-			__archive_strappend_char(as, s);
+			__transform_strappend_char(as, s);
 			break;
 		case 'd':
 			switch(long_flag) {
@@ -138,7 +138,7 @@ __archive_string_vsprintf(struct transform_string *as, const char *fmt,
 			break;
 		case 's':
 			p2 = va_arg(ap, char *);
-			archive_strcat(as, p2);
+			transform_strcat(as, p2);
 			break;
 		case 'o': case 'u': case 'x': case 'X':
 			/* Common handling for unsigned integer formats. */
@@ -158,7 +158,7 @@ __archive_string_vsprintf(struct transform_string *as, const char *fmt,
 		default:
 			/* Rewind and print the initial '%' literally. */
 			p = saved_p;
-			archive_strappend_char(as, *p);
+			transform_strappend_char(as, *p);
 		}
 	}
 }

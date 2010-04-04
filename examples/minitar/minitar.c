@@ -7,10 +7,10 @@
  * This is a compact "tar" program whose primary goal is small size.
  * Statically linked, it can be very small indeed.  This serves a number
  * of goals:
- *   o a testbed for libarchive (to check for link pollution),
+ *   o a testbed for libtransform (to check for link pollution),
  *   o a useful tool for space-constrained systems (boot floppies, etc),
  *   o a place to experiment with new implementation ideas for bsdtar,
- *   o a small program to demonstrate libarchive usage.
+ *   o a small program to demonstrate libtransform usage.
  *
  * Use the following macros to suppress features:
  *   NO_BZIP2 - Implies NO_BZIP2_CREATE and NO_BZIP2_EXTRACT
@@ -19,8 +19,8 @@
  *   NO_COMPRESS - Implies NO_COMPRESS_CREATE and NO_COMPRESS_EXTRACT
  *   NO_COMPRESS_CREATE - Suppress compress(1) compression support
  *   NO_COMPRESS_EXTRACT - Suppress compress(1) auto-detect and decompression.
- *   NO_CREATE - Suppress all archive creation support.
- *   NO_CPIO_EXTRACT - Suppress auto-detect and dearchiving of cpio archives.
+ *   NO_CREATE - Suppress all transform creation support.
+ *   NO_CPIO_EXTRACT - Suppress auto-detect and dearchiving of cpio transforms.
  *   NO_GZIP - Implies NO_GZIP_CREATE and NO_GZIP_EXTRACT
  *   NO_GZIP_CREATE - Suppress gzip compression support.
  *   NO_GZIP_EXTRACT - Suppress gzip auto-detection and decompression.
@@ -29,7 +29,7 @@
  *
  * With all of the above macros defined (except NO_TAR_EXTRACT), you
  * get a very small program that can recognize and extract essentially
- * any uncompressed tar archive.  On FreeBSD 5.1, this minimal program
+ * any uncompressed tar transform.  On FreeBSD 5.1, this minimal program
  * is under 64k, statically linked, which compares rather favorably to
  *         main(){printf("hello, world");}
  * which is over 60k statically linked on the same operating system.
@@ -44,8 +44,8 @@ __FBSDID("$FreeBSD$");
 
 #include <sys/stat.h>
 
-#include <archive.h>
-#include <archive_entry.h>
+#include <transform.h>
+#include <transform_entry.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -143,7 +143,7 @@ main(int argc, const char **argv)
 	mode = 'x';
 	verbose = 0;
 	compress = '\0';
-	flags = ARCHIVE_EXTRACT_TIME;
+	flags = TRANSFORM_EXTRACT_TIME;
 
 	/* Among other sins, getopt(3) pulls in printf(3). */
 	while (*++argv != NULL && **argv == '-') {
@@ -169,9 +169,9 @@ main(int argc, const char **argv)
 				break;
 #endif
 			case 'p':
-				flags |= ARCHIVE_EXTRACT_PERM;
-				flags |= ARCHIVE_EXTRACT_ACL;
-				flags |= ARCHIVE_EXTRACT_FFLAGS;
+				flags |= TRANSFORM_EXTRACT_PERM;
+				flags |= TRANSFORM_EXTRACT_ACL;
+				flags |= TRANSFORM_EXTRACT_FFLAGS;
 				break;
 			case 't':
 				mode = opt;
@@ -266,8 +266,8 @@ create(const char *filename, int compress, const char **argv)
 	while (*argv != NULL) {
 		struct tree *t = tree_open(*argv);
 		while (tree_next(t)) {
-			entry = archive_entry_new();
-			archive_entry_set_pathname(entry, tree_current_path(t));
+			entry = transform_entry_new();
+			transform_entry_set_pathname(entry, tree_current_path(t));
 			transform_read_disk_entry_from_file(disk, entry, -1,
 			    tree_current_stat(t));
 			if (verbose) {
@@ -282,7 +282,7 @@ create(const char *filename, int compress, const char **argv)
 				len = read(fd, buff, sizeof(buff));
 			}
 			close(fd);
-			archive_entry_free(entry);
+			transform_entry_free(entry);
 			if (verbose)
 				msg("\n");
 		}
@@ -325,27 +325,27 @@ extract(const char *filename, int do_extract, int flags)
 	if (filename != NULL && strcmp(filename, "-") == 0)
 		filename = NULL;
 	if ((r = transform_read_open_file(a, filename, 10240))) {
-		errmsg(archive_error_string(a));
+		errmsg(transform_error_string(a));
 		errmsg("\n");
 		exit(r);
 	}
 	for (;;) {
 		r = transform_read_next_header(a, &entry);
-		if (r == ARCHIVE_EOF)
+		if (r == TRANSFORM_EOF)
 			break;
-		if (r != ARCHIVE_OK) {
-			errmsg(archive_error_string(a));
+		if (r != TRANSFORM_OK) {
+			errmsg(transform_error_string(a));
 			errmsg("\n");
 			exit(1);
 		}
 		if (verbose && do_extract)
 			msg("x ");
 		if (verbose || !do_extract)
-			msg(archive_entry_pathname(entry));
+			msg(transform_entry_pathname(entry));
 		if (do_extract) {
 			r = transform_write_header(ext, entry);
-			if (r != ARCHIVE_OK)
-				errmsg(archive_error_string(a));
+			if (r != TRANSFORM_OK)
+				errmsg(transform_error_string(a));
 			else
 				copy_data(a, ext);
 		}
@@ -367,15 +367,15 @@ copy_data(struct transform *ar, struct transform *aw)
 
 	for (;;) {
 		r = transform_read_data_block(ar, &buff, &size, &offset);
-		if (r == ARCHIVE_EOF) {
-			errmsg(archive_error_string(ar));
-			return (ARCHIVE_OK);
+		if (r == TRANSFORM_EOF) {
+			errmsg(transform_error_string(ar));
+			return (TRANSFORM_OK);
 		}
-		if (r != ARCHIVE_OK)
+		if (r != TRANSFORM_OK)
 			return (r);
 		r = transform_write_data_block(aw, buff, size, offset);
-		if (r != ARCHIVE_OK) {
-			errmsg(archive_error_string(ar));
+		if (r != TRANSFORM_OK) {
+			errmsg(transform_error_string(ar));
 			return (r);
 		}
 	}

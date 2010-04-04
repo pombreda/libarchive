@@ -23,9 +23,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_read_format_cpio_bin.c,v 1.2 2008/09/01 05:38:33 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libtransform/test/test_read_format_cpio_bin.c,v 1.2 2008/09/01 05:38:33 kientzle Exp $");
 
-static unsigned char archive[] = {
+static unsigned char transform[] = {
 199,'q',21,4,177,'y',237,'A',232,3,232,3,2,0,0,0,'p','C',244,'M',2,0,0,0,
 0,0,'.',0,199,'q',0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,11,0,0,0,0,0,'T','R',
 'A','I','L','E','R','!','!','!',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -49,12 +49,12 @@ DEFINE_TEST(test_read_format_cpio_bin)
 	assert((a = transform_read_new()) != NULL);
 	assertA(0 == transform_read_support_compression_all(a));
 	assertA(0 == transform_read_support_format_all(a));
-	assertA(0 == transform_read_open_memory(a, archive, sizeof(archive)));
+	assertA(0 == transform_read_open_memory(a, transform, sizeof(transform)));
 	assertA(0 == transform_read_next_header(a, &ae));
-	assertA(archive_compression(a) == ARCHIVE_FILTER_NONE);
-	assertA(archive_format(a) == ARCHIVE_FORMAT_CPIO_BIN_LE);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertA(transform_compression(a) == TRANSFORM_FILTER_NONE);
+	assertA(transform_format(a) == TRANSFORM_FORMAT_CPIO_BIN_LE);
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 

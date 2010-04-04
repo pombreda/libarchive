@@ -23,9 +23,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_cpio_bin_bz2.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_cpio_bin_bz2.c 201247 2009-12-30 05:59:21Z kientzle $");
 
-static unsigned char archive[] = {
+static unsigned char transform[] = {
 'B','Z','h','9','1','A','Y','&','S','Y',134,'J',208,'4',0,0,30,246,141,253,
 8,2,0,' ',1,'*','&',20,0,'`',' ',' ',2,0,128,0,'B',4,8,' ',0,'T','P',0,'4',
 0,13,6,137,168,245,27,'Q',160,'a',25,169,5,'I',187,'(',10,'d','E',177,177,
@@ -40,19 +40,19 @@ DEFINE_TEST(test_read_format_cpio_bin_bz2)
 
 	assert((a = transform_read_new()) != NULL);
 	r = transform_read_support_compression_bzip2(a);
-	if (r != ARCHIVE_OK) {
+	if (r != TRANSFORM_OK) {
 		skipping("bzip2 support unavailable");
 		transform_read_close(a);
 		return;
 	}
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK,
-	    transform_read_open_memory(a, archive, sizeof(archive)));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	assert(archive_compression(a) == ARCHIVE_FILTER_BZIP2);
-	assert(archive_format(a) == ARCHIVE_FORMAT_CPIO_BIN_LE);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK,
+	    transform_read_open_memory(a, transform, sizeof(transform)));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	assert(transform_compression(a) == TRANSFORM_FILTER_BZIP2);
+	assert(transform_format(a) == TRANSFORM_FORMAT_CPIO_BIN_LE);
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 

@@ -23,21 +23,21 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_tar.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_tar.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
- * Each of these archives is a short archive with a single entry.  The
+ * Each of these transforms is a short transform with a single entry.  The
  * corresponding verify function verifies the entry structure returned
- * from libarchive is what it should be.  The support functions pad with
+ * from libtransform is what it should be.  The support functions pad with
  * lots of zeros, so we can trim trailing zero bytes from each hardcoded
- * archive to save space.
+ * transform to save space.
  *
  * The naming here follows the tar file type flags.  E.g. '1' is a hardlink,
  * '2' is a symlink, '5' is a dir, etc.
  */
 
-/* Empty archive. */
-static unsigned char archiveEmpty[] = {
+/* Empty transform. */
+static unsigned char transformEmpty[] = {
 	/* 512 zero bytes */
 	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
@@ -68,19 +68,19 @@ static void verifyEmpty(void)
 	assert((a = transform_read_new()) != NULL);
 	assertA(0 == transform_read_support_compression_all(a));
 	assertA(0 == transform_read_support_format_all(a));
-	assertA(0 == transform_read_open_memory(a, archiveEmpty, 512));
-	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_NONE);
-	assertEqualString(archive_compression_name(a), "none");
-	failure("512 zero bytes should be recognized as a tar archive.");
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR);
+	assertA(0 == transform_read_open_memory(a, transformEmpty, 512));
+	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_NONE);
+	assertEqualString(transform_compression_name(a), "none");
+	failure("512 zero bytes should be recognized as a tar transform.");
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR);
 
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 /* Single entry with a hardlink. */
-static unsigned char archive1[] = {
+static unsigned char transform1[] = {
 'h','a','r','d','l','i','n','k',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'0','0',
@@ -97,22 +97,22 @@ static unsigned char archive1[] = {
 static void verify1(struct transform_entry *ae)
 {
 	/* A hardlink is not a symlink. */
-	assert(archive_entry_filetype(ae) != AE_IFLNK);
+	assert(transform_entry_filetype(ae) != AE_IFLNK);
 	/* Nor is it a directory. */
-	assert(archive_entry_filetype(ae) != AE_IFDIR);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0644);
-	assertEqualInt(archive_entry_uid(ae), 1000);
-	assertEqualInt(archive_entry_gid(ae), 1000);
-	assertEqualString(archive_entry_uname(ae), "tim");
-	assertEqualString(archive_entry_gname(ae), "tim");
-	assertEqualString(archive_entry_pathname(ae), "hardlink");
-	assertEqualString(archive_entry_hardlink(ae), "file");
-	assert(archive_entry_symlink(ae) == NULL);
-	assertEqualInt(archive_entry_mtime(ae), 1184388530);
+	assert(transform_entry_filetype(ae) != AE_IFDIR);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0644);
+	assertEqualInt(transform_entry_uid(ae), 1000);
+	assertEqualInt(transform_entry_gid(ae), 1000);
+	assertEqualString(transform_entry_uname(ae), "tim");
+	assertEqualString(transform_entry_gname(ae), "tim");
+	assertEqualString(transform_entry_pathname(ae), "hardlink");
+	assertEqualString(transform_entry_hardlink(ae), "file");
+	assert(transform_entry_symlink(ae) == NULL);
+	assertEqualInt(transform_entry_mtime(ae), 1184388530);
 }
 
 /* Verify that symlinks are read correctly. */
-static unsigned char archive2[] = {
+static unsigned char transform2[] = {
 's','y','m','l','i','n','k',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'0','0',
@@ -128,20 +128,20 @@ static unsigned char archive2[] = {
 
 static void verify2(struct transform_entry *ae)
 {
-	assertEqualInt(archive_entry_filetype(ae), AE_IFLNK);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0755);
-	assertEqualInt(archive_entry_uid(ae), 1000);
-	assertEqualInt(archive_entry_gid(ae), 1000);
-	assertEqualString(archive_entry_uname(ae), "tim");
-	assertEqualString(archive_entry_gname(ae), "tim");
-	assertEqualString(archive_entry_pathname(ae), "symlink");
-	assertEqualString(archive_entry_symlink(ae), "file");
-	assert(archive_entry_hardlink(ae) == NULL);
-	assertEqualInt(archive_entry_mtime(ae), 1184389185);
+	assertEqualInt(transform_entry_filetype(ae), AE_IFLNK);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0755);
+	assertEqualInt(transform_entry_uid(ae), 1000);
+	assertEqualInt(transform_entry_gid(ae), 1000);
+	assertEqualString(transform_entry_uname(ae), "tim");
+	assertEqualString(transform_entry_gname(ae), "tim");
+	assertEqualString(transform_entry_pathname(ae), "symlink");
+	assertEqualString(transform_entry_symlink(ae), "file");
+	assert(transform_entry_hardlink(ae) == NULL);
+	assertEqualInt(transform_entry_mtime(ae), 1184389185);
 }
 
 /* Character device node. */
-static unsigned char archive3[] = {
+static unsigned char transform3[] = {
 'd','e','v','c','h','a','r',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'0','0',
@@ -157,20 +157,20 @@ static unsigned char archive3[] = {
 
 static void verify3(struct transform_entry *ae)
 {
-	assertEqualInt(archive_entry_filetype(ae), AE_IFCHR);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0755);
-	assertEqualInt(archive_entry_uid(ae), 1000);
-	assertEqualInt(archive_entry_gid(ae), 1000);
-	assertEqualString(archive_entry_uname(ae), "tim");
-	assertEqualString(archive_entry_gname(ae), "tim");
-	assertEqualString(archive_entry_pathname(ae), "devchar");
-	assert(archive_entry_symlink(ae) == NULL);
-	assert(archive_entry_hardlink(ae) == NULL);
-	assertEqualInt(archive_entry_mtime(ae), 1184389185);
+	assertEqualInt(transform_entry_filetype(ae), AE_IFCHR);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0755);
+	assertEqualInt(transform_entry_uid(ae), 1000);
+	assertEqualInt(transform_entry_gid(ae), 1000);
+	assertEqualString(transform_entry_uname(ae), "tim");
+	assertEqualString(transform_entry_gname(ae), "tim");
+	assertEqualString(transform_entry_pathname(ae), "devchar");
+	assert(transform_entry_symlink(ae) == NULL);
+	assert(transform_entry_hardlink(ae) == NULL);
+	assertEqualInt(transform_entry_mtime(ae), 1184389185);
 }
 
 /* Block device node. */
-static unsigned char archive4[] = {
+static unsigned char transform4[] = {
 'd','e','v','b','l','o','c','k',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'0','0',
@@ -186,20 +186,20 @@ static unsigned char archive4[] = {
 
 static void verify4(struct transform_entry *ae)
 {
-	assertEqualInt(archive_entry_filetype(ae), AE_IFBLK);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0755);
-	assertEqualInt(archive_entry_uid(ae), 1000);
-	assertEqualInt(archive_entry_gid(ae), 1000);
-	assertEqualString(archive_entry_uname(ae), "tim");
-	assertEqualString(archive_entry_gname(ae), "tim");
-	assertEqualString(archive_entry_pathname(ae), "devblock");
-	assert(archive_entry_symlink(ae) == NULL);
-	assert(archive_entry_hardlink(ae) == NULL);
-	assertEqualInt(archive_entry_mtime(ae), 1184389185);
+	assertEqualInt(transform_entry_filetype(ae), AE_IFBLK);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0755);
+	assertEqualInt(transform_entry_uid(ae), 1000);
+	assertEqualInt(transform_entry_gid(ae), 1000);
+	assertEqualString(transform_entry_uname(ae), "tim");
+	assertEqualString(transform_entry_gname(ae), "tim");
+	assertEqualString(transform_entry_pathname(ae), "devblock");
+	assert(transform_entry_symlink(ae) == NULL);
+	assert(transform_entry_hardlink(ae) == NULL);
+	assertEqualInt(transform_entry_mtime(ae), 1184389185);
 }
 
 /* Directory. */
-static unsigned char archive5[] = {
+static unsigned char transform5[] = {
 '.',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'0','0','0',
@@ -215,17 +215,17 @@ static unsigned char archive5[] = {
 
 static void verify5(struct transform_entry *ae)
 {
-	assertEqualInt(archive_entry_filetype(ae), AE_IFDIR);
-	assertEqualInt(archive_entry_mtime(ae), 1131430878);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0755);
-	assertEqualInt(archive_entry_uid(ae), 1000);
-	assertEqualInt(archive_entry_gid(ae), 1000);
-	assertEqualString(archive_entry_uname(ae), "tim");
-	assertEqualString(archive_entry_gname(ae), "tim");
+	assertEqualInt(transform_entry_filetype(ae), AE_IFDIR);
+	assertEqualInt(transform_entry_mtime(ae), 1131430878);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0755);
+	assertEqualInt(transform_entry_uid(ae), 1000);
+	assertEqualInt(transform_entry_gid(ae), 1000);
+	assertEqualString(transform_entry_uname(ae), "tim");
+	assertEqualString(transform_entry_gname(ae), "tim");
 }
 
 /* fifo */
-static unsigned char archive6[] = {
+static unsigned char transform6[] = {
 'f','i','f','o',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'0','0',
@@ -241,20 +241,20 @@ static unsigned char archive6[] = {
 
 static void verify6(struct transform_entry *ae)
 {
-	assertEqualInt(archive_entry_filetype(ae), AE_IFIFO);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0755);
-	assertEqualInt(archive_entry_uid(ae), 1000);
-	assertEqualInt(archive_entry_gid(ae), 1000);
-	assertEqualString(archive_entry_uname(ae), "tim");
-	assertEqualString(archive_entry_gname(ae), "tim");
-	assertEqualString(archive_entry_pathname(ae), "fifo");
-	assert(archive_entry_symlink(ae) == NULL);
-	assert(archive_entry_hardlink(ae) == NULL);
-	assertEqualInt(archive_entry_mtime(ae), 1184389185);
+	assertEqualInt(transform_entry_filetype(ae), AE_IFIFO);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0755);
+	assertEqualInt(transform_entry_uid(ae), 1000);
+	assertEqualInt(transform_entry_gid(ae), 1000);
+	assertEqualString(transform_entry_uname(ae), "tim");
+	assertEqualString(transform_entry_gname(ae), "tim");
+	assertEqualString(transform_entry_pathname(ae), "fifo");
+	assert(transform_entry_symlink(ae) == NULL);
+	assert(transform_entry_hardlink(ae) == NULL);
+	assertEqualInt(transform_entry_mtime(ae), 1184389185);
 }
 
 /* GNU long link name */
-static unsigned char archiveK[] = {
+static unsigned char transformK[] = {
 '.','/','.','/','@','L','o','n','g','L','i','n','k',0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -312,14 +312,14 @@ static unsigned char archiveK[] = {
 
 static void verifyK(struct transform_entry *ae)
 {
-	assertEqualInt(archive_entry_filetype(ae), AE_IFLNK);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0755);
-	assertEqualInt(archive_entry_uid(ae), 1000);
-	assertEqualInt(archive_entry_gid(ae), 1000);
-	assertEqualString(archive_entry_uname(ae), "tim");
-	assertEqualString(archive_entry_gname(ae), "tim");
-	assertEqualString(archive_entry_pathname(ae), "symlink");
-	assertEqualString(archive_entry_symlink(ae),
+	assertEqualInt(transform_entry_filetype(ae), AE_IFLNK);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0755);
+	assertEqualInt(transform_entry_uid(ae), 1000);
+	assertEqualInt(transform_entry_gid(ae), 1000);
+	assertEqualString(transform_entry_uname(ae), "tim");
+	assertEqualString(transform_entry_gname(ae), "tim");
+	assertEqualString(transform_entry_pathname(ae), "symlink");
+	assertEqualString(transform_entry_symlink(ae),
 	    "this_is_a_very_long_symlink_body_abcdefghijklmnopqrstuvwxyz_"
 	    "abcdefghijklmnopqrstuvwxyz_abcdefghijklmnopqrstuvwxyz_"
 	    "abcdefghijklmnopqrstuvwxyz_abcdefghijklmnopqrstuvwxyz_"
@@ -328,8 +328,8 @@ static void verifyK(struct transform_entry *ae)
 	    "abcdefghijklmnopqrstuvwxyz_abcdefghijklmnopqrstuvwxyz_"
 	    "abcdefghijklmnopqrstuvwxyz_abcdefghijklmnopqrstuvwxyz_"
 	    "abcdefghijklmnopqrstuvwxyz_abcdefghijklmnopqrstuvwxyz");
-	assert(archive_entry_hardlink(ae) == NULL);
-	assertEqualInt(archive_entry_mtime(ae), 1184390648);
+	assert(transform_entry_hardlink(ae) == NULL);
+	assertEqualInt(transform_entry_mtime(ae), 1184390648);
 }
 
 /* TODO: GNU long name */
@@ -337,7 +337,7 @@ static void verifyK(struct transform_entry *ae)
 /* TODO: Solaris ACL */
 
 /* Pax extended long link name */
-static unsigned char archivexL[] = {
+static unsigned char transformxL[] = {
 '.','/','P','a','x','H','e','a','d','e','r','s','.','8','6','9','7','5','/',
 's','y','m','l','i','n','k',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -398,14 +398,14 @@ static unsigned char archivexL[] = {
 
 static void verifyxL(struct transform_entry *ae)
 {
-	assertEqualInt(archive_entry_filetype(ae), AE_IFLNK);
-	assertEqualInt(archive_entry_mode(ae) & 0777, 0755);
-	assertEqualInt(archive_entry_uid(ae), 1000);
-	assertEqualInt(archive_entry_gid(ae), 1000);
-	assertEqualString(archive_entry_uname(ae), "tim");
-	assertEqualString(archive_entry_gname(ae), "tim");
-	assertEqualString(archive_entry_pathname(ae), "symlink");
-	assertEqualString(archive_entry_symlink(ae),
+	assertEqualInt(transform_entry_filetype(ae), AE_IFLNK);
+	assertEqualInt(transform_entry_mode(ae) & 0777, 0755);
+	assertEqualInt(transform_entry_uid(ae), 1000);
+	assertEqualInt(transform_entry_gid(ae), 1000);
+	assertEqualString(transform_entry_uname(ae), "tim");
+	assertEqualString(transform_entry_gname(ae), "tim");
+	assertEqualString(transform_entry_pathname(ae), "symlink");
+	assertEqualString(transform_entry_symlink(ae),
 	    "this_is_a_very_long_symlink_body_abcdefghijklmnopqrstuvwxyz_"
 	    "abcdefghijklmnopqrstuvwxyz_abcdefghijklmnopqrstuvwxyz_"
 	    "abcdefghijklmnopqrstuvwxyz_abcdefghijklmnopqrstuvwxyz_"
@@ -414,8 +414,8 @@ static void verifyxL(struct transform_entry *ae)
 	    "abcdefghijklmnopqrstuvwxyz_abcdefghijklmnopqrstuvwxyz_"
 	    "abcdefghijklmnopqrstuvwxyz_abcdefghijklmnopqrstuvwxyz_"
 	    "abcdefghijklmnopqrstuvwxyz_abcdefghijklmnopqrstuvwxyz");
-	assert(archive_entry_hardlink(ae) == NULL);
-	assertEqualInt(archive_entry_mtime(ae), 1184390648);
+	assert(transform_entry_hardlink(ae) == NULL);
+	assertEqualInt(transform_entry_mtime(ae), 1184390648);
 }
 
 
@@ -437,36 +437,36 @@ static void verify(unsigned char *d, size_t s,
 	assertA(0 == transform_read_support_format_all(a));
 	assertA(0 == transform_read_open_memory(a, buff, s + 1024));
 	assertA(0 == transform_read_next_header(a, &ae));
-	assertEqualInt(archive_compression(a), compression);
-	assertEqualInt(archive_format(a), format);
+	assertEqualInt(transform_compression(a), compression);
+	assertEqualInt(transform_format(a), format);
 
 	/* Verify the only entry. */
 	f(ae);
 
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 	free(buff);
 }
 
 DEFINE_TEST(test_read_format_tar)
 {
 	verifyEmpty();
-	verify(archive1, sizeof(archive1), verify1,
-	    ARCHIVE_FILTER_NONE, ARCHIVE_FORMAT_TAR_USTAR);
-	verify(archive2, sizeof(archive2), verify2,
-	    ARCHIVE_FILTER_NONE, ARCHIVE_FORMAT_TAR_USTAR);
-	verify(archive3, sizeof(archive3), verify3,
-	    ARCHIVE_FILTER_NONE, ARCHIVE_FORMAT_TAR_USTAR);
-	verify(archive4, sizeof(archive4), verify4,
-	    ARCHIVE_FILTER_NONE, ARCHIVE_FORMAT_TAR_USTAR);
-	verify(archive5, sizeof(archive5), verify5,
-	    ARCHIVE_FILTER_NONE, ARCHIVE_FORMAT_TAR_USTAR);
-	verify(archive6, sizeof(archive6), verify6,
-	    ARCHIVE_FILTER_NONE, ARCHIVE_FORMAT_TAR_USTAR);
-	verify(archiveK, sizeof(archiveK), verifyK,
-	    ARCHIVE_FILTER_NONE, ARCHIVE_FORMAT_TAR_GNUTAR);
-	verify(archivexL, sizeof(archivexL), verifyxL,
-	    ARCHIVE_FILTER_NONE, ARCHIVE_FORMAT_TAR_PAX_INTERCHANGE);
+	verify(transform1, sizeof(transform1), verify1,
+	    TRANSFORM_FILTER_NONE, TRANSFORM_FORMAT_TAR_USTAR);
+	verify(transform2, sizeof(transform2), verify2,
+	    TRANSFORM_FILTER_NONE, TRANSFORM_FORMAT_TAR_USTAR);
+	verify(transform3, sizeof(transform3), verify3,
+	    TRANSFORM_FILTER_NONE, TRANSFORM_FORMAT_TAR_USTAR);
+	verify(transform4, sizeof(transform4), verify4,
+	    TRANSFORM_FILTER_NONE, TRANSFORM_FORMAT_TAR_USTAR);
+	verify(transform5, sizeof(transform5), verify5,
+	    TRANSFORM_FILTER_NONE, TRANSFORM_FORMAT_TAR_USTAR);
+	verify(transform6, sizeof(transform6), verify6,
+	    TRANSFORM_FILTER_NONE, TRANSFORM_FORMAT_TAR_USTAR);
+	verify(transformK, sizeof(transformK), verifyK,
+	    TRANSFORM_FILTER_NONE, TRANSFORM_FORMAT_TAR_GNUTAR);
+	verify(transformxL, sizeof(transformxL), verifyxL,
+	    TRANSFORM_FILTER_NONE, TRANSFORM_FORMAT_TAR_PAX_INTERCHANGE);
 }
 
 

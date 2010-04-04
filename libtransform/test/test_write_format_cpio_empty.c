@@ -23,13 +23,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_cpio_empty.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_write_format_cpio_empty.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
- * Check that an "empty" cpio archive is correctly created.
+ * Check that an "empty" cpio transform is correctly created.
  */
 
-/* Here's what an empty cpio archive should look like. */
+/* Here's what an empty cpio transform should look like. */
 static char ref[] =
 "070707"  /* Magic number */
 "000000"  /* Dev = 0 */
@@ -50,7 +50,7 @@ DEFINE_TEST(test_write_format_cpio_empty)
 	char buff[2048];
 	size_t used;
 
-	/* Create a new archive in memory. */
+	/* Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_cpio(a));
 	assertA(0 == transform_write_set_compression_none(a));
@@ -60,12 +60,12 @@ DEFINE_TEST(test_write_format_cpio_empty)
 	assertA(0 == transform_write_set_bytes_in_last_block(a, 1));
 	assertA(0 == transform_write_open_memory(a, buff, sizeof(buff), &used));
 
-	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
-	failure("Empty cpio archive should be exactly 87 bytes, was %d.", used);
+	failure("Empty cpio transform should be exactly 87 bytes, was %d.", used);
 	assert(used == 87);
-	failure("Empty cpio archive is incorrectly formatted.");
+	failure("Empty cpio transform is incorrectly formatted.");
 	assertEqualMem(buff, ref, 87);
 }

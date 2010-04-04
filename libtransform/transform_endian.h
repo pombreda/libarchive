@@ -23,20 +23,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/transform_endian.h 201085 2009-12-28 02:17:15Z kientzle $
+ * $FreeBSD: head/lib/libtransform/transform_endian.h 201085 2009-12-28 02:17:15Z kientzle $
  *
  * Borrowed from FreeBSD's <sys/endian.h>
  */
 
-#ifndef __LIBARCHIVE_BUILD
-#error This header is only to be used internally to libarchive.
+#ifndef __LIBTRANSFORM_BUILD
+#error This header is only to be used internally to libtransform.
 #endif
 
 /* Note:  This is a purely internal header! */
-/* Do not use this outside of libarchive internal code! */
+/* Do not use this outside of libtransform internal code! */
 
-#ifndef ARCHIVE_ENDIAN_H_INCLUDED
-#define ARCHIVE_ENDIAN_H_INCLUDED
+#ifndef TRANSFORM_ENDIAN_H_INCLUDED
+#define TRANSFORM_ENDIAN_H_INCLUDED
 
 
 /*
@@ -54,7 +54,7 @@
 /* Alignment-agnostic encode/decode bytestream to/from little/big endian. */
 
 static inline uint16_t
-archive_be16dec(const void *pp)
+transform_be16dec(const void *pp)
 {
 	unsigned char const *p = (unsigned char const *)pp;
 
@@ -62,7 +62,7 @@ archive_be16dec(const void *pp)
 }
 
 static inline uint32_t
-archive_be32dec(const void *pp)
+transform_be32dec(const void *pp)
 {
 	unsigned char const *p = (unsigned char const *)pp;
 
@@ -70,15 +70,15 @@ archive_be32dec(const void *pp)
 }
 
 static inline uint64_t
-archive_be64dec(const void *pp)
+transform_be64dec(const void *pp)
 {
 	unsigned char const *p = (unsigned char const *)pp;
 
-	return (((uint64_t)archive_be32dec(p) << 32) | archive_be32dec(p + 4));
+	return (((uint64_t)transform_be32dec(p) << 32) | transform_be32dec(p + 4));
 }
 
 static inline uint16_t
-archive_le16dec(const void *pp)
+transform_le16dec(const void *pp)
 {
 	unsigned char const *p = (unsigned char const *)pp;
 
@@ -86,7 +86,7 @@ archive_le16dec(const void *pp)
 }
 
 static inline uint32_t
-archive_le32dec(const void *pp)
+transform_le32dec(const void *pp)
 {
 	unsigned char const *p = (unsigned char const *)pp;
 
@@ -94,15 +94,15 @@ archive_le32dec(const void *pp)
 }
 
 static inline uint64_t
-archive_le64dec(const void *pp)
+transform_le64dec(const void *pp)
 {
 	unsigned char const *p = (unsigned char const *)pp;
 
-	return (((uint64_t)archive_le32dec(p + 4) << 32) | archive_le32dec(p));
+	return (((uint64_t)transform_le32dec(p + 4) << 32) | transform_le32dec(p));
 }
 
 static inline void
-archive_be16enc(void *pp, uint16_t u)
+transform_be16enc(void *pp, uint16_t u)
 {
 	unsigned char *p = (unsigned char *)pp;
 
@@ -111,7 +111,7 @@ archive_be16enc(void *pp, uint16_t u)
 }
 
 static inline void
-archive_be32enc(void *pp, uint32_t u)
+transform_be32enc(void *pp, uint32_t u)
 {
 	unsigned char *p = (unsigned char *)pp;
 
@@ -122,16 +122,16 @@ archive_be32enc(void *pp, uint32_t u)
 }
 
 static inline void
-archive_be64enc(void *pp, uint64_t u)
+transform_be64enc(void *pp, uint64_t u)
 {
 	unsigned char *p = (unsigned char *)pp;
 
-	archive_be32enc(p, u >> 32);
-	archive_be32enc(p + 4, u & 0xffffffff);
+	transform_be32enc(p, u >> 32);
+	transform_be32enc(p + 4, u & 0xffffffff);
 }
 
 static inline void
-archive_le16enc(void *pp, uint16_t u)
+transform_le16enc(void *pp, uint16_t u)
 {
 	unsigned char *p = (unsigned char *)pp;
 
@@ -140,7 +140,7 @@ archive_le16enc(void *pp, uint16_t u)
 }
 
 static inline void
-archive_le32enc(void *pp, uint32_t u)
+transform_le32enc(void *pp, uint32_t u)
 {
 	unsigned char *p = (unsigned char *)pp;
 
@@ -151,12 +151,12 @@ archive_le32enc(void *pp, uint32_t u)
 }
 
 static inline void
-archive_le64enc(void *pp, uint64_t u)
+transform_le64enc(void *pp, uint64_t u)
 {
 	unsigned char *p = (unsigned char *)pp;
 
-	archive_le32enc(p, u & 0xffffffff);
-	archive_le32enc(p + 4, u >> 32);
+	transform_le32enc(p, u & 0xffffffff);
+	transform_le32enc(p + 4, u >> 32);
 }
 
 #endif

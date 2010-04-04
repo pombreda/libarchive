@@ -22,18 +22,18 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/filter_fork.h 201087 2009-12-28 02:18:26Z kientzle $
+ * $FreeBSD: head/lib/libtransform/filter_fork.h 201087 2009-12-28 02:18:26Z kientzle $
  */
 
-#ifndef __LIBARCHIVE_BUILD
-#error This header is only to be used internally to libarchive.
+#ifndef __LIBTRANSFORM_BUILD
+#error This header is only to be used internally to libtransform.
 #endif
 
 #ifndef FILTER_FORK_H
 #define FILTER_FORK_H
 
 pid_t
-__archive_create_child(const char *path, int *child_stdin, int *child_stdout);
+__transform_create_child(const char *path, int *child_stdin, int *child_stdout);
 
 void
 __transform_check_child(int in, int out);

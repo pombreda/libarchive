@@ -41,7 +41,7 @@ rm -f file1 file2 sample
 exit1
 */
 
-static unsigned char archive[] = {
+static unsigned char transform[] = {
 '0','7','0','7','0','7','0','0','0','1','4','3','1','2','5','3',
 '2','1','1','0','0','6','4','4','0','0','1','7','5','1','0','0',
 '1','7','5','1','0','0','0','0','0','1','0','0','0','0','0','0',
@@ -83,33 +83,33 @@ DEFINE_TEST(test_read_format_cpio_afio)
 	struct transform *a;
 
 	/* The default block size of afio is 5120. we simulate it */
-	size = (sizeof(archive) + 5120 -1 / 5120) * 5120;
+	size = (sizeof(transform) + 5120 -1 / 5120) * 5120;
 	if (!assert((p = malloc(size)) != NULL))
 		return;
 	memset(p, 0, size);
-	memcpy(p, archive, sizeof(archive));
+	memcpy(p, transform, sizeof(transform));
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_memory(a, p, size));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_open_memory(a, p, size));
 	/*
 	 * First entry is odc format.
 	 */
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	assertEqualInt(17, archive_entry_size(ae));
-	assertA(archive_compression(a) == ARCHIVE_FILTER_NONE);
-	assertA(archive_format(a) == ARCHIVE_FORMAT_CPIO_POSIX);
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	assertEqualInt(17, transform_entry_size(ae));
+	assertA(transform_compression(a) == TRANSFORM_FILTER_NONE);
+	assertA(transform_format(a) == TRANSFORM_FORMAT_CPIO_POSIX);
 	/*
 	 * Second entry is afio large ASCII format.
 	 */
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	assertEqualInt(17, archive_entry_size(ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	assertEqualInt(17, transform_entry_size(ae));
 	if (uid_size() > 4)
-		assertEqualInt(65536, archive_entry_uid(ae));
-	assertA(archive_compression(a) == ARCHIVE_FILTER_NONE);
-	assertA(archive_format(a) == ARCHIVE_FORMAT_CPIO_AFIO_LARGE);
-	assertEqualInt(ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+		assertEqualInt(65536, transform_entry_uid(ae));
+	assertA(transform_compression(a) == TRANSFORM_FILTER_NONE);
+	assertA(transform_format(a) == TRANSFORM_FORMAT_CPIO_AFIO_LARGE);
+	assertEqualInt(TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 
 	free(p);
 }

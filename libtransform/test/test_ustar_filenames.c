@@ -23,10 +23,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_ustar_filenames.c 189308 2009-03-03 17:02:51Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_ustar_filenames.c 189308 2009-03-03 17:02:51Z kientzle $");
 
 /*
- * Exercise various lengths of filenames in ustar archives.
+ * Exercise various lengths of filenames in ustar transforms.
  */
 
 static void
@@ -57,7 +57,7 @@ test_filename(const char *prefix, int dlen, int flen)
 
 	strcpy(dirname, filename);
 
-	/* Create a new archive in memory. */
+	/* Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_ustar(a));
 	assertA(0 == transform_write_set_compression_none(a));
@@ -67,30 +67,30 @@ test_filename(const char *prefix, int dlen, int flen)
 	/*
 	 * Write a file to it.
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, filename);
-	archive_entry_set_mode(ae, S_IFREG | 0755);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, filename);
+	transform_entry_set_mode(ae, S_IFREG | 0755);
 	failure("dlen=%d, flen=%d", dlen, flen);
 	if (flen > 100) {
-		assertEqualIntA(a, ARCHIVE_FAILED, transform_write_header(a, ae));
+		assertEqualIntA(a, TRANSFORM_FAILED, transform_write_header(a, ae));
 	} else {
 		assertEqualIntA(a, 0, transform_write_header(a, ae));
 	}
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
 	/*
 	 * Write a dir to it (without trailing '/').
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, dirname);
-	archive_entry_set_mode(ae, S_IFDIR | 0755);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, dirname);
+	transform_entry_set_mode(ae, S_IFDIR | 0755);
 	failure("dlen=%d, flen=%d", dlen, flen);
 	if (flen >= 100) {
-		assertEqualIntA(a, ARCHIVE_FAILED, transform_write_header(a, ae));
+		assertEqualIntA(a, TRANSFORM_FAILED, transform_write_header(a, ae));
 	} else {
 		assertEqualIntA(a, 0, transform_write_header(a, ae));
 	}
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
 	/* Tar adds a '/' to directory names. */
 	strcat(dirname, "/");
@@ -98,20 +98,20 @@ test_filename(const char *prefix, int dlen, int flen)
 	/*
 	 * Write a dir to it (with trailing '/').
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, dirname);
-	archive_entry_set_mode(ae, S_IFDIR | 0755);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, dirname);
+	transform_entry_set_mode(ae, S_IFDIR | 0755);
 	failure("dlen=%d, flen=%d", dlen, flen);
 	if (flen >= 100) {
-		assertEqualIntA(a, ARCHIVE_FAILED, transform_write_header(a, ae));
+		assertEqualIntA(a, TRANSFORM_FAILED, transform_write_header(a, ae));
 	} else {
 		assertEqualIntA(a, 0, transform_write_header(a, ae));
 	}
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 
-	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
 	/*
 	 * Now, read the data back.
@@ -125,8 +125,8 @@ test_filename(const char *prefix, int dlen, int flen)
 		/* Read the file and check the filename. */
 		assertA(0 == transform_read_next_header(a, &ae));
 		failure("dlen=%d, flen=%d", dlen, flen);
-		assertEqualString(filename, archive_entry_pathname(ae));
-		assertEqualInt((S_IFREG | 0755), archive_entry_mode(ae));
+		assertEqualString(filename, transform_entry_pathname(ae));
+		assertEqualInt((S_IFREG | 0755), transform_entry_mode(ae));
 	}
 
 	/*
@@ -138,22 +138,22 @@ test_filename(const char *prefix, int dlen, int flen)
 	 */
 	if (flen <= 99) {
 		assertA(0 == transform_read_next_header(a, &ae));
-		assert((S_IFDIR | 0755) == archive_entry_mode(ae));
+		assert((S_IFDIR | 0755) == transform_entry_mode(ae));
 		failure("dlen=%d, flen=%d", dlen, flen);
-		assertEqualString(dirname, archive_entry_pathname(ae));
+		assertEqualString(dirname, transform_entry_pathname(ae));
 	}
 
 	if (flen <= 99) {
 		assertA(0 == transform_read_next_header(a, &ae));
-		assert((S_IFDIR | 0755) == archive_entry_mode(ae));
-		assertEqualString(dirname, archive_entry_pathname(ae));
+		assert((S_IFDIR | 0755) == transform_entry_mode(ae));
+		assertEqualString(dirname, transform_entry_pathname(ae));
 	}
 
-	/* Verify the end of the archive. */
+	/* Verify the end of the transform. */
 	failure("This fails if entries were written that should not have been written.  dlen=%d, flen=%d", dlen, flen);
 	assertEqualInt(1, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 DEFINE_TEST(test_ustar_filenames)

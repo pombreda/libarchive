@@ -22,15 +22,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/transform_private.h 201098 2009-12-28 02:58:14Z kientzle $
+ * $FreeBSD: head/lib/libtransform/transform_private.h 201098 2009-12-28 02:58:14Z kientzle $
  */
 
-#ifndef __LIBARCHIVE_BUILD
-#error This header is only to be used internally to libarchive.
+#ifndef __LIBTRANSFORM_BUILD
+#error This header is only to be used internally to libtransform.
 #endif
 
-#ifndef ARCHIVE_PRIVATE_H_INCLUDED
-#define	ARCHIVE_PRIVATE_H_INCLUDED
+#ifndef TRANSFORM_PRIVATE_H_INCLUDED
+#define	TRANSFORM_PRIVATE_H_INCLUDED
 
 #include "transform.h"
 #include "transform_string.h"
@@ -56,18 +56,18 @@
 #define	TRANSFORM_STATE_ANY	(0xFFFFU & ~TRANSFORM_STATE_FATAL)
 
 struct transform_vtable {
-	int	(*archive_close)(struct transform *);
-	int	(*archive_free)(struct transform *);
+	int	(*transform_close)(struct transform *);
+	int	(*transform_free)(struct transform *);
 	int	(*transform_write_finish_entry)(struct transform *);
 	ssize_t	(*transform_write_data)(struct transform *,
 	    const void *, size_t);
 	ssize_t	(*transform_write_data_block)(struct transform *,
 	    const void *, size_t, int64_t);
 
-	int	(*archive_filter_count)(struct transform *);
-	int64_t (*archive_filter_bytes)(struct transform *, int);
-	int	(*archive_filter_code)(struct transform *, int);
-	const char * (*archive_filter_name)(struct transform *, int);
+	int	(*transform_filter_count)(struct transform *);
+	int64_t (*transform_filter_bytes)(struct transform *, int);
+	int	(*transform_filter_code)(struct transform *, int);
+	const char * (*transform_filter_name)(struct transform *, int);
 };
 
 struct transform {
@@ -82,42 +82,42 @@ struct transform {
 
 	/*
 	 * Some public API functions depend on the "real" type of the
-	 * archive object.
+	 * transform object.
 	 */
 	struct transform_vtable *vtable;
 
-	int		  archive_error_number;
+	int		  transform_error_number;
 	const char	 *error;
 	struct transform_string	error_string;
 };
 
-/* Check magic value and state; return(ARCHIVE_FATAL) if it isn't valid. */
+/* Check magic value and state; return(TRANSFORM_FATAL) if it isn't valid. */
 int	__transform_check_magic(struct transform *, unsigned int magic,
 	    unsigned int state, const char *func);
 #define	transform_check_magic(a, expected_magic, allowed_states, function_name) \
 	do { \
 		int magic_test = __transform_check_magic((a), (expected_magic), \
 			(allowed_states), (function_name)); \
-		if (magic_test == ARCHIVE_FATAL) \
-			return ARCHIVE_FATAL; \
+		if (magic_test == TRANSFORM_FATAL) \
+			return TRANSFORM_FATAL; \
 	} while (0)
 
-void	__archive_errx(int retvalue, const char *msg) __LA_DEAD;
+void	__transform_errx(int retvalue, const char *msg) __LA_DEAD;
 
-int	__archive_parse_options(const char *p, const char *fn,
+int	__transform_parse_options(const char *p, const char *fn,
 	    int keysize, char *key, int valsize, char *val);
 
-int	__archive_mktemp(const char *tmpdir);
+int	__transform_mktemp(const char *tmpdir);
 
 
 #define	err_combine(a,b)	((a) < (b) ? (a) : (b))
 
 #if defined(__BORLANDC__) || (defined(_MSC_VER) &&  _MSC_VER <= 1300)
-# define	ARCHIVE_LITERAL_LL(x)	x##i64
-# define	ARCHIVE_LITERAL_ULL(x)	x##ui64
+# define	TRANSFORM_LITERAL_LL(x)	x##i64
+# define	TRANSFORM_LITERAL_ULL(x)	x##ui64
 #else
-# define	ARCHIVE_LITERAL_LL(x)	x##ll
-# define	ARCHIVE_LITERAL_ULL(x)	x##ull
+# define	TRANSFORM_LITERAL_LL(x)	x##ll
+# define	TRANSFORM_LITERAL_ULL(x)	x##ull
 #endif
 
 #endif

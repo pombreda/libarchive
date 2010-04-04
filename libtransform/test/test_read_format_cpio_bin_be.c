@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_cpio_bin_be.c 191592 2009-04-27 19:30:09Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_cpio_bin_be.c 191592 2009-04-27 19:30:09Z kientzle $");
 
 DEFINE_TEST(test_read_format_cpio_bin_be)
 {
@@ -33,23 +33,23 @@ DEFINE_TEST(test_read_format_cpio_bin_be)
 
 	extract_reference_file(reference);
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_open_filename(a, reference, 10));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	assertEqualString(archive_entry_pathname(ae), "file1111222233334444");
-	assertEqualInt(archive_entry_size(ae), 5);
-	assertEqualInt(archive_entry_mtime(ae), 1240664175);
-	assertEqualInt(archive_entry_mode(ae), AE_IFREG | 0644);
-	assertEqualInt(archive_entry_uid(ae), 1000);
-	assertEqualInt(archive_entry_gid(ae), 0);
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	assertEqualString(transform_entry_pathname(ae), "file1111222233334444");
+	assertEqualInt(transform_entry_size(ae), 5);
+	assertEqualInt(transform_entry_mtime(ae), 1240664175);
+	assertEqualInt(transform_entry_mode(ae), AE_IFREG | 0644);
+	assertEqualInt(transform_entry_uid(ae), 1000);
+	assertEqualInt(transform_entry_gid(ae), 0);
 
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_NONE);
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_CPIO_BIN_BE);
-	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_NONE);
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_CPIO_BIN_BE);
+	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 

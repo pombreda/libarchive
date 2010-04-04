@@ -2,7 +2,7 @@
  * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
- * Based on libarchive/test/test_read_format_isorr_bz2.c with
+ * Based on libtransform/test/test_read_format_isorr_bz2.c with
  * bugs introduced by Andreas Henriksson <andreas@fatal.se> for
  * testing ISO9660 image with Joliet extension.
  *
@@ -27,7 +27,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_isojoliet_rr.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_isojoliet_rr.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
 Execute the following to rebuild the data for this program:
@@ -68,92 +68,92 @@ DEFINE_TEST(test_read_format_isojoliet_rr)
 	assert((a = transform_read_new()) != NULL);
 	assertEqualInt(0, transform_read_support_compression_all(a));
 	assertEqualInt(0, transform_read_support_format_all(a));
-	assertEqualInt(ARCHIVE_OK,
+	assertEqualInt(TRANSFORM_OK,
 	    transform_read_open_filename(a, refname, 10240));
 
 	/* First entry is '.' root directory. */
 	assertEqualInt(0, transform_read_next_header(a, &ae));
-	assertEqualString(".", archive_entry_pathname(ae));
-	assertEqualInt(AE_IFDIR, archive_entry_filetype(ae));
-	assertEqualInt(2048, archive_entry_size(ae));
-	assertEqualInt(86401, archive_entry_mtime(ae));
-	assertEqualInt(0, archive_entry_mtime_nsec(ae));
-	assertEqualInt(3, archive_entry_stat(ae)->st_nlink);
-	assertEqualInt(1, archive_entry_uid(ae));
-	assertEqualIntA(a, ARCHIVE_EOF,
+	assertEqualString(".", transform_entry_pathname(ae));
+	assertEqualInt(AE_IFDIR, transform_entry_filetype(ae));
+	assertEqualInt(2048, transform_entry_size(ae));
+	assertEqualInt(86401, transform_entry_mtime(ae));
+	assertEqualInt(0, transform_entry_mtime_nsec(ae));
+	assertEqualInt(3, transform_entry_stat(ae)->st_nlink);
+	assertEqualInt(1, transform_entry_uid(ae));
+	assertEqualIntA(a, TRANSFORM_EOF,
 	    transform_read_data_block(a, &p, &size, &offset));
 	assertEqualInt((int)size, 0);
 
 	/* A directory. */
 	assertEqualInt(0, transform_read_next_header(a, &ae));
-	assertEqualString("dir", archive_entry_pathname(ae));
-	assertEqualInt(AE_IFDIR, archive_entry_filetype(ae));
-	assertEqualInt(2048, archive_entry_size(ae));
-	assertEqualInt(86401, archive_entry_mtime(ae));
-	assertEqualInt(86401, archive_entry_atime(ae));
-	assertEqualInt(2, archive_entry_stat(ae)->st_nlink);
-	assertEqualInt(1, archive_entry_uid(ae));
-	assertEqualInt(2, archive_entry_gid(ae));
+	assertEqualString("dir", transform_entry_pathname(ae));
+	assertEqualInt(AE_IFDIR, transform_entry_filetype(ae));
+	assertEqualInt(2048, transform_entry_size(ae));
+	assertEqualInt(86401, transform_entry_mtime(ae));
+	assertEqualInt(86401, transform_entry_atime(ae));
+	assertEqualInt(2, transform_entry_stat(ae)->st_nlink);
+	assertEqualInt(1, transform_entry_uid(ae));
+	assertEqualInt(2, transform_entry_gid(ae));
 
 	/* A regular file with two names ("hardlink" gets returned
 	 * first, so it's not marked as a hardlink). */
 	assertEqualInt(0, transform_read_next_header(a, &ae));
 	assertEqualString("long-joliet-file-name.textfile",
-	    archive_entry_pathname(ae));
-	assertEqualInt(AE_IFREG, archive_entry_filetype(ae));
-	assert(archive_entry_hardlink(ae) == NULL);
-	assertEqualInt(6, archive_entry_size(ae));
+	    transform_entry_pathname(ae));
+	assertEqualInt(AE_IFREG, transform_entry_filetype(ae));
+	assert(transform_entry_hardlink(ae) == NULL);
+	assertEqualInt(6, transform_entry_size(ae));
 	assertEqualInt(0, transform_read_data_block(a, &p, &size, &offset));
 	assertEqualInt(6, (int)size);
 	assertEqualInt(0, offset);
 	assertEqualInt(0, memcmp(p, "hello\n", 6));
-	assertEqualInt(86401, archive_entry_mtime(ae));
+	assertEqualInt(86401, transform_entry_mtime(ae));
 	/* mkisofs records their access time. */
-	/*assertEqualInt(86401, archive_entry_atime(ae));*/
-	/* TODO: Actually, libarchive should be able to
+	/*assertEqualInt(86401, transform_entry_atime(ae));*/
+	/* TODO: Actually, libtransform should be able to
 	 * compute nlinks correctly even without RR
-	 * extensions. See comments in libarchive source. */
-	assertEqualInt(2, archive_entry_nlink(ae));
-	assertEqualInt(1, archive_entry_uid(ae));
-	assertEqualInt(2, archive_entry_gid(ae));
+	 * extensions. See comments in libtransform source. */
+	assertEqualInt(2, transform_entry_nlink(ae));
+	assertEqualInt(1, transform_entry_uid(ae));
+	assertEqualInt(2, transform_entry_gid(ae));
 
 	/* Second name for the same regular file (this happens to be
 	 * returned second, so does get marked as a hardlink). */
 	assertEqualInt(0, transform_read_next_header(a, &ae));
-	assertEqualString("hardlink", archive_entry_pathname(ae));
-	assertEqualInt(AE_IFREG, archive_entry_filetype(ae));
+	assertEqualString("hardlink", transform_entry_pathname(ae));
+	assertEqualInt(AE_IFREG, transform_entry_filetype(ae));
 	assertEqualString("long-joliet-file-name.textfile",
-	    archive_entry_hardlink(ae));
-	assert(!archive_entry_size_is_set(ae));
-	assertEqualInt(86401, archive_entry_mtime(ae));
-	assertEqualInt(86401, archive_entry_atime(ae));
+	    transform_entry_hardlink(ae));
+	assert(!transform_entry_size_is_set(ae));
+	assertEqualInt(86401, transform_entry_mtime(ae));
+	assertEqualInt(86401, transform_entry_atime(ae));
 	/* TODO: See above. */
-	assertEqualInt(2, archive_entry_nlink(ae));
-	assertEqualInt(1, archive_entry_uid(ae));
-	assertEqualInt(2, archive_entry_gid(ae));
+	assertEqualInt(2, transform_entry_nlink(ae));
+	assertEqualInt(1, transform_entry_uid(ae));
+	assertEqualInt(2, transform_entry_gid(ae));
 
 	/* A symlink to the regular file. */
 	assertEqualInt(0, transform_read_next_header(a, &ae));
-	assertEqualString("symlink", archive_entry_pathname(ae));
-	assertEqualInt(AE_IFLNK, archive_entry_filetype(ae));
+	assertEqualString("symlink", transform_entry_pathname(ae));
+	assertEqualInt(AE_IFLNK, transform_entry_filetype(ae));
 	assertEqualString("long-joliet-file-name.textfile",
-	    archive_entry_symlink(ae));
-	assertEqualInt(0, archive_entry_size(ae));
-	assertEqualInt(172802, archive_entry_mtime(ae));
-	assertEqualInt(172802, archive_entry_atime(ae));
-	assertEqualInt(1, archive_entry_nlink(ae));
-	assertEqualInt(1, archive_entry_uid(ae));
-	assertEqualInt(2, archive_entry_gid(ae));
+	    transform_entry_symlink(ae));
+	assertEqualInt(0, transform_entry_size(ae));
+	assertEqualInt(172802, transform_entry_mtime(ae));
+	assertEqualInt(172802, transform_entry_atime(ae));
+	assertEqualInt(1, transform_entry_nlink(ae));
+	assertEqualInt(1, transform_entry_uid(ae));
+	assertEqualInt(2, transform_entry_gid(ae));
 
-	/* End of archive. */
-	assertEqualInt(ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	/* End of transform. */
+	assertEqualInt(TRANSFORM_EOF, transform_read_next_header(a, &ae));
 
-	/* Verify archive format. */
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_COMPRESS);
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_ISO9660_ROCKRIDGE);
+	/* Verify transform format. */
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_COMPRESS);
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_ISO9660_ROCKRIDGE);
 
-	/* Close the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	/* Close the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 

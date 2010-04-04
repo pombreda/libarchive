@@ -23,11 +23,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_compat_solaris_tar_acl.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_compat_solaris_tar_acl.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
  * Exercise support for reading Solaris-style ACL data
- * from tar archives.
+ * from tar transforms.
  *
  * This should work on all systems, regardless of whether local
  * filesystems support ACLs or not.
@@ -51,78 +51,78 @@ DEFINE_TEST(test_compat_solaris_tar_acl)
 	/* Archive has 1 entry with some ACLs set on it. */
 	assertA(0 == transform_read_next_header(a, &ae));
 	failure("Basic ACLs should set mode to 0644, not %04o",
-	    archive_entry_mode(ae)&0777);
-	assertEqualInt((archive_entry_mode(ae) & 0777), 0644);
-	assertEqualInt(7, archive_entry_acl_reset(ae,
-		ARCHIVE_ENTRY_ACL_TYPE_ACCESS));
-	assertEqualInt(ARCHIVE_OK, archive_entry_acl_next(ae,
-		ARCHIVE_ENTRY_ACL_TYPE_ACCESS,
+	    transform_entry_mode(ae)&0777);
+	assertEqualInt((transform_entry_mode(ae) & 0777), 0644);
+	assertEqualInt(7, transform_entry_acl_reset(ae,
+		TRANSFORM_ENTRY_ACL_TYPE_ACCESS));
+	assertEqualInt(TRANSFORM_OK, transform_entry_acl_next(ae,
+		TRANSFORM_ENTRY_ACL_TYPE_ACCESS,
 		&type, &permset, &tag, &qual, &name));
-	assertEqualInt(ARCHIVE_ENTRY_ACL_TYPE_ACCESS, type);
+	assertEqualInt(TRANSFORM_ENTRY_ACL_TYPE_ACCESS, type);
 	assertEqualInt(006, permset);
-	assertEqualInt(ARCHIVE_ENTRY_ACL_USER_OBJ, tag);
+	assertEqualInt(TRANSFORM_ENTRY_ACL_USER_OBJ, tag);
 	assertEqualInt(-1, qual);
 	assert(name == NULL);
 
-	assertEqualInt(ARCHIVE_OK, archive_entry_acl_next(ae,
-		ARCHIVE_ENTRY_ACL_TYPE_ACCESS,
+	assertEqualInt(TRANSFORM_OK, transform_entry_acl_next(ae,
+		TRANSFORM_ENTRY_ACL_TYPE_ACCESS,
 		&type, &permset, &tag, &qual, &name));
-	assertEqualInt(ARCHIVE_ENTRY_ACL_TYPE_ACCESS, type);
+	assertEqualInt(TRANSFORM_ENTRY_ACL_TYPE_ACCESS, type);
 	assertEqualInt(004, permset);
-	assertEqualInt(ARCHIVE_ENTRY_ACL_GROUP_OBJ, tag);
+	assertEqualInt(TRANSFORM_ENTRY_ACL_GROUP_OBJ, tag);
 	assertEqualInt(-1, qual);
 	assert(name == NULL);
 
-	assertEqualInt(ARCHIVE_OK, archive_entry_acl_next(ae,
-		ARCHIVE_ENTRY_ACL_TYPE_ACCESS,
+	assertEqualInt(TRANSFORM_OK, transform_entry_acl_next(ae,
+		TRANSFORM_ENTRY_ACL_TYPE_ACCESS,
 		&type, &permset, &tag, &qual, &name));
-	assertEqualInt(ARCHIVE_ENTRY_ACL_TYPE_ACCESS, type);
+	assertEqualInt(TRANSFORM_ENTRY_ACL_TYPE_ACCESS, type);
 	assertEqualInt(004, permset);
-	assertEqualInt(ARCHIVE_ENTRY_ACL_OTHER, tag);
+	assertEqualInt(TRANSFORM_ENTRY_ACL_OTHER, tag);
 	assertEqualInt(-1, qual);
 	assert(name == NULL);
 
-	assertEqualInt(ARCHIVE_OK, archive_entry_acl_next(ae,
-		ARCHIVE_ENTRY_ACL_TYPE_ACCESS,
+	assertEqualInt(TRANSFORM_OK, transform_entry_acl_next(ae,
+		TRANSFORM_ENTRY_ACL_TYPE_ACCESS,
 		&type, &permset, &tag, &qual, &name));
-	assertEqualInt(ARCHIVE_ENTRY_ACL_TYPE_ACCESS, type);
+	assertEqualInt(TRANSFORM_ENTRY_ACL_TYPE_ACCESS, type);
 	assertEqualInt(001, permset);
-	assertEqualInt(ARCHIVE_ENTRY_ACL_USER, tag);
+	assertEqualInt(TRANSFORM_ENTRY_ACL_USER, tag);
 	assertEqualInt(71, qual);
 	assertEqualString(name, "lp");
 
-	assertEqualInt(ARCHIVE_OK, archive_entry_acl_next(ae,
-		ARCHIVE_ENTRY_ACL_TYPE_ACCESS,
+	assertEqualInt(TRANSFORM_OK, transform_entry_acl_next(ae,
+		TRANSFORM_ENTRY_ACL_TYPE_ACCESS,
 		&type, &permset, &tag, &qual, &name));
-	assertEqualInt(ARCHIVE_ENTRY_ACL_TYPE_ACCESS, type);
+	assertEqualInt(TRANSFORM_ENTRY_ACL_TYPE_ACCESS, type);
 	assertEqualInt(004, permset);
-	assertEqualInt(ARCHIVE_ENTRY_ACL_USER, tag);
+	assertEqualInt(TRANSFORM_ENTRY_ACL_USER, tag);
 	assertEqualInt(666, qual);
 	assertEqualString(name, "666");
 
-	assertEqualInt(ARCHIVE_OK, archive_entry_acl_next(ae,
-		ARCHIVE_ENTRY_ACL_TYPE_ACCESS,
+	assertEqualInt(TRANSFORM_OK, transform_entry_acl_next(ae,
+		TRANSFORM_ENTRY_ACL_TYPE_ACCESS,
 		&type, &permset, &tag, &qual, &name));
-	assertEqualInt(ARCHIVE_ENTRY_ACL_TYPE_ACCESS, type);
+	assertEqualInt(TRANSFORM_ENTRY_ACL_TYPE_ACCESS, type);
 	assertEqualInt(007, permset);
-	assertEqualInt(ARCHIVE_ENTRY_ACL_USER, tag);
+	assertEqualInt(TRANSFORM_ENTRY_ACL_USER, tag);
 	assertEqualInt(1000, qual);
 	assertEqualString(name, "trasz");
 
-	assertEqualInt(ARCHIVE_OK, archive_entry_acl_next(ae,
-		ARCHIVE_ENTRY_ACL_TYPE_ACCESS,
+	assertEqualInt(TRANSFORM_OK, transform_entry_acl_next(ae,
+		TRANSFORM_ENTRY_ACL_TYPE_ACCESS,
 		&type, &permset, &tag, &qual, &name));
-	assertEqualInt(ARCHIVE_ENTRY_ACL_TYPE_ACCESS, type);
+	assertEqualInt(TRANSFORM_ENTRY_ACL_TYPE_ACCESS, type);
 	assertEqualInt(004, permset);
-	assertEqualInt(ARCHIVE_ENTRY_ACL_MASK, tag);
+	assertEqualInt(TRANSFORM_ENTRY_ACL_MASK, tag);
 	assertEqualInt(-1, qual);
 	assertEqualString(name, NULL);
 
-	assertEqualInt(ARCHIVE_EOF, archive_entry_acl_next(ae,
-		ARCHIVE_ENTRY_ACL_TYPE_ACCESS,
+	assertEqualInt(TRANSFORM_EOF, transform_entry_acl_next(ae,
+		TRANSFORM_ENTRY_ACL_TYPE_ACCESS,
 		&type, &permset, &tag, &qual, &name));
 
-	/* Close the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	/* Close the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }

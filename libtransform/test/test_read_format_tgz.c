@@ -23,9 +23,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_tgz.c 191183 2009-04-17 01:06:31Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_tgz.c 191183 2009-04-17 01:06:31Z kientzle $");
 
-static unsigned char archive[] = {
+static unsigned char transform[] = {
 31,139,8,0,222,'C','p','C',0,3,211,'c',160,'=','0','0','0','0','7','5','U',
 0,210,134,230,166,6,200,'4',28,'(',24,26,24,27,155,24,152,24,154,27,155,')',
 24,24,26,152,154,25,'2','(',152,210,193,'m',12,165,197,'%',137,'E','@',167,
@@ -39,22 +39,22 @@ DEFINE_TEST(test_read_format_tgz)
 	int r;
 
 	assert((a = transform_read_new()) != NULL);
-	assertEqualInt(ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_support_compression_all(a));
 	r = transform_read_support_compression_gzip(a);
-	if (r == ARCHIVE_WARN) {
+	if (r == TRANSFORM_WARN) {
 		skipping("gzip reading not fully supported on this platform");
-		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+		assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 		return;
 	}
-	assertEqualInt(ARCHIVE_OK, transform_read_support_format_all(a));
-	assertEqualInt(ARCHIVE_OK,
-	    transform_read_open_memory(a, archive, sizeof(archive)));
-	assertEqualInt(ARCHIVE_OK, transform_read_next_header(a, &ae));
-	assertEqualInt(archive_compression(a),
-	    ARCHIVE_FILTER_GZIP);
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
-	assertEqualInt(ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK,transform_read_free(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_support_format_all(a));
+	assertEqualInt(TRANSFORM_OK,
+	    transform_read_open_memory(a, transform, sizeof(transform)));
+	assertEqualInt(TRANSFORM_OK, transform_read_next_header(a, &ae));
+	assertEqualInt(transform_compression(a),
+	    TRANSFORM_FILTER_GZIP);
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
+	assertEqualInt(TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK,transform_read_free(a));
 }
 
 

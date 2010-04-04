@@ -24,57 +24,57 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_virtual.c 201098 2009-12-28 02:58:14Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_virtual.c 201098 2009-12-28 02:58:14Z kientzle $");
 
 #include "transform.h"
 #include "transform_private.h"
 
 int
-archive_filter_code(struct transform *a, int n)
+transform_filter_code(struct transform *a, int n)
 {
-	return ((a->vtable->archive_filter_code)(a, n));
+	return ((a->vtable->transform_filter_code)(a, n));
 }
 
 int
-archive_filter_count(struct transform *a)
+transform_filter_count(struct transform *a)
 {
-	return ((a->vtable->archive_filter_count)(a));
+	return ((a->vtable->transform_filter_count)(a));
 }
 
 const char *
-archive_filter_name(struct transform *a, int n)
+transform_filter_name(struct transform *a, int n)
 {
-	return ((a->vtable->archive_filter_name)(a, n));
+	return ((a->vtable->transform_filter_name)(a, n));
 }
 
 int64_t
-archive_filter_bytes(struct transform *a, int n)
+transform_filter_bytes(struct transform *a, int n)
 {
-	return ((a->vtable->archive_filter_bytes)(a, n));
+	return ((a->vtable->transform_filter_bytes)(a, n));
 }
 
 int
 transform_write_close(struct transform *a)
 {
-	return ((a->vtable->archive_close)(a));
+	return ((a->vtable->transform_close)(a));
 }
 
 int
 transform_read_close(struct transform *a)
 {
-	return ((a->vtable->archive_close)(a));
+	return ((a->vtable->transform_close)(a));
 }
 
 int
 transform_write_free(struct transform *a)
 {
-	return ((a->vtable->archive_free)(a));
+	return ((a->vtable->transform_free)(a));
 }
 
 int
 transform_read_free(struct transform *a)
 {
-	return ((a->vtable->archive_free)(a));
+	return ((a->vtable->transform_free)(a));
 }
 
 int

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_zip.c 189482 2009-03-07 03:30:35Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_zip.c 189482 2009-03-07 03:30:35Z kientzle $");
 
 /*
  * The reference file for this has been manually tweaked so that:
@@ -48,41 +48,41 @@ DEFINE_TEST(test_read_format_zip)
 	assertA(0 == transform_read_support_format_all(a));
 	assertA(0 == transform_read_open_filename(a, refname, 10240));
 	assertA(0 == transform_read_next_header(a, &ae));
-	assertEqualString("dir/", archive_entry_pathname(ae));
-	assertEqualInt(1179604249, archive_entry_mtime(ae));
-	assertEqualInt(0, archive_entry_size(ae));
-	assertEqualIntA(a, ARCHIVE_EOF,
+	assertEqualString("dir/", transform_entry_pathname(ae));
+	assertEqualInt(1179604249, transform_entry_mtime(ae));
+	assertEqualInt(0, transform_entry_size(ae));
+	assertEqualIntA(a, TRANSFORM_EOF,
 	    transform_read_data_block(a, &pv, &s, &o));
 	assertEqualInt((int)s, 0);
 	assertA(0 == transform_read_next_header(a, &ae));
-	assertEqualString("file1", archive_entry_pathname(ae));
-	assertEqualInt(1179604289, archive_entry_mtime(ae));
-	assertEqualInt(18, archive_entry_size(ae));
+	assertEqualString("file1", transform_entry_pathname(ae));
+	assertEqualInt(1179604289, transform_entry_mtime(ae));
+	assertEqualInt(18, transform_entry_size(ae));
 	failure("transform_read_data() returns number of bytes read");
 	r = transform_read_data(a, buff, 19);
-	if (r < ARCHIVE_OK) {
-		if (strcmp(archive_error_string(a),
-		    "libarchive compiled without deflate support (no libz)") == 0) {
+	if (r < TRANSFORM_OK) {
+		if (strcmp(transform_error_string(a),
+		    "libtransform compiled without deflate support (no libz)") == 0) {
 			skipping("Skipping ZIP compression check: %s",
-			    archive_error_string(a));
+			    transform_error_string(a));
 			goto finish;
 		}
 	}
 	assertEqualInt(18, r);
 	assert(0 == memcmp(buff, "hello\nhello\nhello\n", 18));
 	assertA(0 == transform_read_next_header(a, &ae));
-	assertEqualString("file2", archive_entry_pathname(ae));
-	assertEqualInt(1179605932, archive_entry_mtime(ae));
+	assertEqualString("file2", transform_entry_pathname(ae));
+	assertEqualInt(1179605932, transform_entry_mtime(ae));
 	failure("file2 has length-at-end, so we shouldn't see a valid size");
-	assertEqualInt(0, archive_entry_size_is_set(ae));
+	assertEqualInt(0, transform_entry_size_is_set(ae));
 	failure("file2 has a bad CRC, so reading to end should fail");
-	assertEqualInt(ARCHIVE_WARN, transform_read_data(a, buff, 19));
+	assertEqualInt(TRANSFORM_WARN, transform_read_data(a, buff, 19));
 	assert(0 == memcmp(buff, "hello\nhello\nhello\n", 18));
-	assertA(archive_compression(a) == ARCHIVE_FILTER_NONE);
-	assertA(archive_format(a) == ARCHIVE_FORMAT_ZIP);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertA(transform_compression(a) == TRANSFORM_FILTER_NONE);
+	assertA(transform_format(a) == TRANSFORM_FORMAT_ZIP);
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
 finish:
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 

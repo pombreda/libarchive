@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_pax_truncated.c 189483 2009-03-07 03:34:34Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_pax_truncated.c 189483 2009-03-07 03:34:34Z kientzle $");
 
 DEFINE_TEST(test_read_pax_truncated)
 {
@@ -35,35 +35,35 @@ DEFINE_TEST(test_read_pax_truncated)
 	char *buff2 = malloc(buff_size);
 	char *filedata = malloc(filedata_size);
 
-	/* Create a new archive in memory. */
+	/* Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_pax(a));
 	assertA(0 == transform_write_set_compression_none(a));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 			transform_write_open_memory(a, buff, buff_size, &used));
 
 	/*
 	 * Write a file to it.
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_copy_pathname(ae, "file");
-	archive_entry_set_mode(ae, S_IFREG | 0755);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_copy_pathname(ae, "file");
+	transform_entry_set_mode(ae, S_IFREG | 0755);
 	for (i = 0; i < filedata_size; i++)
 		filedata[i] = (unsigned char)rand();
-	archive_entry_set_atime(ae, 1, 2);
-	archive_entry_set_ctime(ae, 3, 4);
-	archive_entry_set_mtime(ae, 5, 6);
-	archive_entry_set_size(ae, filedata_size);
+	transform_entry_set_atime(ae, 1, 2);
+	transform_entry_set_ctime(ae, 3, 4);
+	transform_entry_set_mtime(ae, 5, 6);
+	transform_entry_set_size(ae, filedata_size);
 	assertA(0 == transform_write_header(a, ae));
-	archive_entry_free(ae);
+	transform_entry_free(ae);
 	assertA((ssize_t)filedata_size
 	    == transform_write_data(a, filedata, filedata_size));
 
-	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
-	/* Now, read back a truncated version of the archive and
+	/* Now, read back a truncated version of the transform and
 	 * verify that we get an appropriate error. */
 	for (i = 1; i < used + 100; i += 100) {
 		assert((a = transform_read_new()) != NULL);
@@ -72,7 +72,7 @@ DEFINE_TEST(test_read_pax_truncated)
 		assertA(0 == read_open_memory2(a, buff, i, 13));
 
 		if (i < 1536) {
-			assertEqualIntA(a, ARCHIVE_FATAL, transform_read_next_header(a, &ae));
+			assertEqualIntA(a, TRANSFORM_FATAL, transform_read_next_header(a, &ae));
 			goto wrap_up;
 		} else {
 			failure("Archive truncated to %d bytes", i);
@@ -80,7 +80,7 @@ DEFINE_TEST(test_read_pax_truncated)
 		}
 
 		if (i < 1536 + filedata_size) {
-			assertA(ARCHIVE_FATAL == transform_read_data(a, filedata, filedata_size));
+			assertA(TRANSFORM_FATAL == transform_read_data(a, filedata, filedata_size));
 			goto wrap_up;
 		} else {
 			failure("Archive truncated to %d bytes", i);
@@ -88,24 +88,24 @@ DEFINE_TEST(test_read_pax_truncated)
 			    transform_read_data(a, filedata, filedata_size));
 		}
 
-		/* Verify the end of the archive. */
+		/* Verify the end of the transform. */
 		/* Archive must be long enough to capture a 512-byte
 		 * block of zeroes after the entry.  (POSIX requires a
-		 * second block of zeros to be written but libarchive
+		 * second block of zeros to be written but libtransform
 		 * does not return an error if it can't consume
 		 * it.) */
 		if (i < 1536 + 512*((filedata_size + 511)/512) + 512) {
 			failure("i=%d minsize=%d", i,
 			    1536 + 512*((filedata_size + 511)/512) + 512);
-			assertEqualIntA(a, ARCHIVE_FATAL,
+			assertEqualIntA(a, TRANSFORM_FATAL,
 			    transform_read_next_header(a, &ae));
 		} else {
-			assertEqualIntA(a, ARCHIVE_EOF,
+			assertEqualIntA(a, TRANSFORM_EOF,
 			    transform_read_next_header(a, &ae));
 		}
 	wrap_up:
-		assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+		assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+		assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 	}
 
 
@@ -118,38 +118,38 @@ DEFINE_TEST(test_read_pax_truncated)
 		assertA(0 == read_open_memory(a, buff, i, 7));
 
 		if (i < 1536) {
-			assertA(ARCHIVE_FATAL == transform_read_next_header(a, &ae));
+			assertA(TRANSFORM_FATAL == transform_read_next_header(a, &ae));
 			goto wrap_up2;
 		} else {
 			assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
 		}
 
 		if (i < 1536 + 512*((filedata_size+511)/512)) {
-			assertA(ARCHIVE_FATAL == transform_read_data_skip(a));
+			assertA(TRANSFORM_FATAL == transform_read_data_skip(a));
 			goto wrap_up2;
 		} else {
-			assertA(ARCHIVE_OK == transform_read_data_skip(a));
+			assertA(TRANSFORM_OK == transform_read_data_skip(a));
 		}
 
-		/* Verify the end of the archive. */
+		/* Verify the end of the transform. */
 		/* Archive must be long enough to capture a 512-byte
 		 * block of zeroes after the entry.  (POSIX requires a
-		 * second block of zeros to be written but libarchive
+		 * second block of zeros to be written but libtransform
 		 * does not return an error if it can't consume
 		 * it.) */
 		if (i < 1536 + 512*((filedata_size + 511)/512) + 512) {
-			assertEqualIntA(a, ARCHIVE_FATAL,
+			assertEqualIntA(a, TRANSFORM_FATAL,
 			    transform_read_next_header(a, &ae));
 		} else {
-			assertEqualIntA(a, ARCHIVE_EOF,
+			assertEqualIntA(a, TRANSFORM_EOF,
 			    transform_read_next_header(a, &ae));
 		}
 	wrap_up2:
-		assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+		assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+		assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 	}
 
-	/* Now, damage the archive in various ways and test the responses. */
+	/* Now, damage the transform in various ways and test the responses. */
 
 	/* Damage the first size field in the pax attributes. */
 	memcpy(buff2, buff, buff_size);
@@ -160,9 +160,9 @@ DEFINE_TEST(test_read_pax_truncated)
 	assertA(0 == transform_read_support_format_all(a));
 	assertA(0 == transform_read_support_compression_all(a));
 	assertA(0 == transform_read_open_memory(a, buff2, used));
-	assertEqualIntA(a, ARCHIVE_WARN, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_WARN, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 
 	/* Damage the size field in the pax attributes. */
 	memcpy(buff2, buff, buff_size);
@@ -171,9 +171,9 @@ DEFINE_TEST(test_read_pax_truncated)
 	assertA(0 == transform_read_support_format_all(a));
 	assertA(0 == transform_read_support_compression_all(a));
 	assertA(0 == transform_read_open_memory(a, buff2, used));
-	assertEqualIntA(a, ARCHIVE_WARN, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_WARN, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 
 	/* Damage the size field in the pax attributes. */
 	memcpy(buff2, buff, buff_size);
@@ -184,9 +184,9 @@ DEFINE_TEST(test_read_pax_truncated)
 	assertA(0 == transform_read_support_format_all(a));
 	assertA(0 == transform_read_support_compression_all(a));
 	assertA(0 == transform_read_open_memory(a, buff2, used));
-	assertEqualIntA(a, ARCHIVE_WARN, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_WARN, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 
 	/* Damage the size field in the pax attributes. */
 	memcpy(buff2, buff, buff_size);
@@ -198,9 +198,9 @@ DEFINE_TEST(test_read_pax_truncated)
 	assertA(0 == transform_read_support_format_all(a));
 	assertA(0 == transform_read_support_compression_all(a));
 	assertA(0 == transform_read_open_memory(a, buff2, used));
-	assertEqualIntA(a, ARCHIVE_WARN, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_WARN, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 
 	/* Damage the size field in the pax attributes. */
 	memcpy(buff2, buff, buff_size);
@@ -210,9 +210,9 @@ DEFINE_TEST(test_read_pax_truncated)
 	assertA(0 == transform_read_support_format_all(a));
 	assertA(0 == transform_read_support_compression_all(a));
 	assertA(0 == transform_read_open_memory(a, buff2, used));
-	assertEqualIntA(a, ARCHIVE_WARN, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_WARN, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 
 	/* Damage the size field in the pax attributes. */
 	memcpy(buff2, buff, buff_size);
@@ -221,9 +221,9 @@ DEFINE_TEST(test_read_pax_truncated)
 	assertA(0 == transform_read_support_format_all(a));
 	assertA(0 == transform_read_support_compression_all(a));
 	assertA(0 == transform_read_open_memory(a, buff2, used));
-	assertEqualIntA(a, ARCHIVE_WARN, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_WARN, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 
 	/* Damage the ustar header. */
 	memcpy(buff2, buff, buff_size);
@@ -232,9 +232,9 @@ DEFINE_TEST(test_read_pax_truncated)
 	assertA(0 == transform_read_support_format_all(a));
 	assertA(0 == transform_read_support_compression_all(a));
 	assertA(0 == transform_read_open_memory(a, buff2, used));
-	assertEqualIntA(a, ARCHIVE_FATAL, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_FATAL, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 
 	/*
 	 * TODO: Damage the ustar header in various ways and fixup the

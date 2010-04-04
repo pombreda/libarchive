@@ -23,9 +23,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_gtar_lzma.c 191183 2009-04-17 01:06:31Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_gtar_lzma.c 191183 2009-04-17 01:06:31Z kientzle $");
 
-static unsigned char archive[] = {
+static unsigned char transform[] = {
 0x5d, 0x0, 0x0, 0x80, 0x0, 0x0, 0x28, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 0x17, 0xb, 0xbc, 0x1c, 0x7d, 0x1, 0x95, 0xc0, 0x1d, 0x4a, 0x46, 0x9c,
 0x1c, 0xc5, 0x8, 0x82, 0x10, 0xed, 0x84, 0xf6, 0xea, 0x7a, 0xfe, 0x63,
@@ -44,31 +44,31 @@ DEFINE_TEST(test_read_format_gtar_lzma)
 	struct transform_entry *ae;
 	struct transform *a;
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_support_compression_all(a));
 	r = transform_read_support_compression_lzma(a);
-	if (r == ARCHIVE_WARN) {
+	if (r == TRANSFORM_WARN) {
 		skipping("lzma reading not fully supported on this platform");
-		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+		assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 		return;
 	}
 
-	assertEqualIntA(a, ARCHIVE_OK, r);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK, r);
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_support_format_all(a));
-	r = transform_read_open_memory2(a, archive, sizeof(archive), 3);
-	if (r != ARCHIVE_OK) {
+	r = transform_read_open_memory2(a, transform, sizeof(transform), 3);
+	if (r != TRANSFORM_OK) {
 		skipping("Skipping LZMA compression check: %s",
-		    archive_error_string(a));
+		    transform_error_string(a));
 		goto finish;
 	}
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_next_header(a, &ae));
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_LZMA);
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_GNUTAR);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_LZMA);
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_GNUTAR);
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
 finish:
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 

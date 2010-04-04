@@ -46,12 +46,12 @@ cat > ${TMPRPM}/SPECS/${NAME}.spec <<END
 %define _topdir ${TMPRPM}
 %define _binary_payload w9.bzdio
 
-Summary: Sample data of RPM filter of libarchive
+Summary: Sample data of RPM filter of libtransform
 Name: ${NAME}
 Version: 1.0.0
 Release: 1
 License: BSD
-URL: http://code.google.com/p/libarchive
+URL: http://code.google.com/p/libtransform
 BuildArch: noarch
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 
@@ -91,37 +91,37 @@ DEFINE_TEST(test_read_format_cpio_svr4_bzip2_rpm)
 
 	assert((a = transform_read_new()) != NULL);
         r = transform_read_support_compression_bzip2(a);
-	if (r == ARCHIVE_WARN) {
+	if (r == TRANSFORM_WARN) {
 		skipping("bzip2 reading not fully supported on this platform");
-		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+		assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 		return;
         }
-	assertEqualIntA(a, ARCHIVE_OK, r);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK, r);
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_support_compression_rpm(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
 	extract_reference_file(name);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_filename(a, name, 2));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_open_filename(a, name, 2));
 
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	assertEqualString("./etc/file1", archive_entry_pathname(ae));
-	assertEqualInt(86401, archive_entry_mtime(ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	assertEqualString("./etc/file2", archive_entry_pathname(ae));
-	assertEqualInt(86401, archive_entry_mtime(ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	assertEqualString("./etc/file3", archive_entry_pathname(ae));
-	assertEqualInt(86401, archive_entry_mtime(ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	assertEqualString("./etc/file1", transform_entry_pathname(ae));
+	assertEqualInt(86401, transform_entry_mtime(ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	assertEqualString("./etc/file2", transform_entry_pathname(ae));
+	assertEqualInt(86401, transform_entry_mtime(ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	assertEqualString("./etc/file3", transform_entry_pathname(ae));
+	assertEqualInt(86401, transform_entry_mtime(ae));
 
-	/* Verify the end-of-archive. */
-	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	/* Verify the end-of-transform. */
+	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
   
 	/* Verify that the format detection worked. */
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_BZIP2);
-	assertEqualString(archive_compression_name(a), "bzip2");
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_CPIO_SVR4_NOCRC);
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_BZIP2);
+	assertEqualString(transform_compression_name(a), "bzip2");
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_CPIO_SVR4_NOCRC);
  
-	assertEqualInt(ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 

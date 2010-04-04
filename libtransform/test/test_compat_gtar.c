@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_compat_gtar.c 189308 2009-03-03 17:02:51Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_compat_gtar.c 189308 2009-03-03 17:02:51Z kientzle $");
 
 /*
  * Verify our ability to read sample files created by GNU tar.
@@ -46,14 +46,14 @@ test_compat_gtar_1(void)
 	int r;
 
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
 	extract_reference_file(name);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_filename(a, name, 10240));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_open_filename(a, name, 10240));
 
 	/* Read first entry. */
-	assertEqualIntA(a, ARCHIVE_OK, r = transform_read_next_header(a, &ae));
-	if (r != ARCHIVE_OK) {
+	assertEqualIntA(a, TRANSFORM_OK, r = transform_read_next_header(a, &ae));
+	if (r != TRANSFORM_OK) {
 		transform_read_free(a);
 		return;
 	}
@@ -62,17 +62,17 @@ test_compat_gtar_1(void)
 		"12345678901234567890123456789012345678901234567890"
 		"12345678901234567890123456789012345678901234567890"
 		"12345678901234567890123456789012345678901234567890",
-		archive_entry_pathname(ae));
-	assertEqualInt(1197179003, archive_entry_mtime(ae));
-	assertEqualInt(1000, archive_entry_uid(ae));
-	assertEqualString("tim", archive_entry_uname(ae));
-	assertEqualInt(1000, archive_entry_gid(ae));
-	assertEqualString("tim", archive_entry_gname(ae));
-	assertEqualInt(0100644, archive_entry_mode(ae));
+		transform_entry_pathname(ae));
+	assertEqualInt(1197179003, transform_entry_mtime(ae));
+	assertEqualInt(1000, transform_entry_uid(ae));
+	assertEqualString("tim", transform_entry_uname(ae));
+	assertEqualInt(1000, transform_entry_gid(ae));
+	assertEqualString("tim", transform_entry_gname(ae));
+	assertEqualInt(0100644, transform_entry_mode(ae));
 
 	/* Read second entry. */
-	assertEqualIntA(a, ARCHIVE_OK, r = transform_read_next_header(a, &ae));
-	if (r != ARCHIVE_OK) {
+	assertEqualIntA(a, TRANSFORM_OK, r = transform_read_next_header(a, &ae));
+	if (r != TRANSFORM_OK) {
 		transform_read_free(a);
 		return;
 	}
@@ -81,29 +81,29 @@ test_compat_gtar_1(void)
 		"abcdefghijabcdefghijabcdefghijabcdefghijabcdefghij"
 		"abcdefghijabcdefghijabcdefghijabcdefghijabcdefghij"
 		"abcdefghijabcdefghijabcdefghijabcdefghijabcdefghij",
-		archive_entry_pathname(ae));
+		transform_entry_pathname(ae));
 	assertEqualString(
 		"12345678901234567890123456789012345678901234567890"
 		"12345678901234567890123456789012345678901234567890"
 		"12345678901234567890123456789012345678901234567890"
 		"12345678901234567890123456789012345678901234567890",
-		archive_entry_symlink(ae));
-	assertEqualInt(1197179043, archive_entry_mtime(ae));
-	assertEqualInt(1000, archive_entry_uid(ae));
-	assertEqualString("tim", archive_entry_uname(ae));
-	assertEqualInt(1000, archive_entry_gid(ae));
-	assertEqualString("tim", archive_entry_gname(ae));
-	assertEqualInt(0120755, archive_entry_mode(ae));
+		transform_entry_symlink(ae));
+	assertEqualInt(1197179043, transform_entry_mtime(ae));
+	assertEqualInt(1000, transform_entry_uid(ae));
+	assertEqualString("tim", transform_entry_uname(ae));
+	assertEqualInt(1000, transform_entry_gid(ae));
+	assertEqualString("tim", transform_entry_gname(ae));
+	assertEqualInt(0120755, transform_entry_mode(ae));
 
-	/* Verify the end-of-archive. */
-	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	/* Verify the end-of-transform. */
+	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
 
 	/* Verify that the format detection worked. */
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_NONE);
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_GNUTAR);
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_NONE);
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_GNUTAR);
 
-	assertEqualInt(ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_compat_bzip2.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_compat_bzip2.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
  * Verify our ability to read sample files compatibly with bunzip2.
@@ -47,36 +47,36 @@ compat_bzip2(const char *name)
 	int i;
 
 	assert((a = transform_read_new()) != NULL);
-	if (ARCHIVE_OK != transform_read_support_compression_bzip2(a)) {
+	if (TRANSFORM_OK != transform_read_support_compression_bzip2(a)) {
 		skipping("Unsupported bzip2");
 		return;
 	}
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
 	extract_reference_file(name);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_filename(a, name, 2));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_open_filename(a, name, 2));
 
 	/* Read entries, match up names with list above. */
 	for (i = 0; i < 6; ++i) {
 		failure("Could not read file %d (%s) from %s", i, n[i], name);
-		assertEqualIntA(a, ARCHIVE_OK,
+		assertEqualIntA(a, TRANSFORM_OK,
 		    transform_read_next_header(a, &ae));
-		assertEqualString(n[i], archive_entry_pathname(ae));
+		assertEqualString(n[i], transform_entry_pathname(ae));
 	}
 
-	/* Verify the end-of-archive. */
-	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	/* Verify the end-of-transform. */
+	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
 
 	/* Verify that the format detection worked. */
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_BZIP2);
-	assertEqualString(archive_compression_name(a), "bzip2");
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_BZIP2);
+	assertEqualString(transform_compression_name(a), "bzip2");
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
 
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_BZIP2);
-	assertEqualString(archive_compression_name(a), "bzip2");
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_BZIP2);
+	assertEqualString(transform_compression_name(a), "bzip2");
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
 
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 

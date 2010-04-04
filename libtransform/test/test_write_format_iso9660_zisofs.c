@@ -73,14 +73,14 @@ DEFINE_TEST(test_write_format_iso9660_zisofs)
 	buff = malloc(buffsize);
 	assert(buff != NULL);
 
-	/* ISO9660 format: Create a new archive in memory. */
+	/* ISO9660 format: Create a new transform in memory. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_iso9660(a));
 	assertA(0 == transform_write_set_compression_none(a));
 	r = transform_write_set_options(a, "zisofs=direct");
-	if (r == ARCHIVE_FATAL) {
+	if (r == TRANSFORM_FATAL) {
 		skipping("zisofs option not supported on this platform");
-		assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+		assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 		return;
 	}
 	assertA(0 == transform_write_set_options(a, "!pad"));
@@ -89,67 +89,67 @@ DEFINE_TEST(test_write_format_iso9660_zisofs)
 	/*
 	 * "file1" has a bunch of attributes and 256K bytes of null data.
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_set_atime(ae, 2, 20);
-	archive_entry_set_birthtime(ae, 3, 30);
-	archive_entry_set_ctime(ae, 4, 40);
-	archive_entry_set_mtime(ae, 5, 50);
-	archive_entry_copy_pathname(ae, "file1");
-	archive_entry_set_mode(ae, S_IFREG | 0755);
-	archive_entry_set_size(ae, 256*1024);
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
-	archive_entry_free(ae);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_set_atime(ae, 2, 20);
+	transform_entry_set_birthtime(ae, 3, 30);
+	transform_entry_set_ctime(ae, 4, 40);
+	transform_entry_set_mtime(ae, 5, 50);
+	transform_entry_copy_pathname(ae, "file1");
+	transform_entry_set_mode(ae, S_IFREG | 0755);
+	transform_entry_set_size(ae, 256*1024);
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_header(a, ae));
+	transform_entry_free(ae);
 	assertEqualIntA(a, 1024, transform_write_data(a, nullb, 1024));
 
 	/*
 	 * "file2" has a bunch of attributes and 2048 bytes of null data.
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_set_atime(ae, 2, 20);
-	archive_entry_set_birthtime(ae, 3, 30);
-	archive_entry_set_ctime(ae, 4, 40);
-	archive_entry_set_mtime(ae, 5, 50);
-	archive_entry_copy_pathname(ae, "file2");
-	archive_entry_set_mode(ae, S_IFREG | 0755);
-	archive_entry_set_size(ae, 2048);
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
-	archive_entry_free(ae);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_set_atime(ae, 2, 20);
+	transform_entry_set_birthtime(ae, 3, 30);
+	transform_entry_set_ctime(ae, 4, 40);
+	transform_entry_set_mtime(ae, 5, 50);
+	transform_entry_copy_pathname(ae, "file2");
+	transform_entry_set_mode(ae, S_IFREG | 0755);
+	transform_entry_set_size(ae, 2048);
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_header(a, ae));
+	transform_entry_free(ae);
 	assertEqualIntA(a, 1024, transform_write_data(a, nullb, 1024));
 
 	/*
 	 * "file3" has a bunch of attributes and 2049 bytes of null data.
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_set_atime(ae, 2, 20);
-	archive_entry_set_birthtime(ae, 3, 30);
-	archive_entry_set_ctime(ae, 4, 40);
-	archive_entry_set_mtime(ae, 5, 50);
-	archive_entry_copy_pathname(ae, "file3");
-	archive_entry_set_mode(ae, S_IFREG | 0755);
-	archive_entry_set_size(ae, 2049);
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
-	archive_entry_free(ae);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_set_atime(ae, 2, 20);
+	transform_entry_set_birthtime(ae, 3, 30);
+	transform_entry_set_ctime(ae, 4, 40);
+	transform_entry_set_mtime(ae, 5, 50);
+	transform_entry_copy_pathname(ae, "file3");
+	transform_entry_set_mode(ae, S_IFREG | 0755);
+	transform_entry_set_size(ae, 2049);
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_header(a, ae));
+	transform_entry_free(ae);
 	assertEqualIntA(a, 1024, transform_write_data(a, nullb, 1024));
 
 	/*
 	 * "file4" has a bunch of attributes and 24 bytes of zisofs data
 	 * which is compressed from 32K bytes null data.
 	 */
-	assert((ae = archive_entry_new()) != NULL);
-	archive_entry_set_atime(ae, 2, 20);
-	archive_entry_set_birthtime(ae, 3, 30);
-	archive_entry_set_ctime(ae, 4, 40);
-	archive_entry_set_mtime(ae, 5, 50);
-	archive_entry_copy_pathname(ae, "file4");
-	archive_entry_set_mode(ae, S_IFREG | 0755);
-	archive_entry_set_size(ae, 24);
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
-	archive_entry_free(ae);
+	assert((ae = transform_entry_new()) != NULL);
+	transform_entry_set_atime(ae, 2, 20);
+	transform_entry_set_birthtime(ae, 3, 30);
+	transform_entry_set_ctime(ae, 4, 40);
+	transform_entry_set_mtime(ae, 5, 50);
+	transform_entry_copy_pathname(ae, "file4");
+	transform_entry_set_mode(ae, S_IFREG | 0755);
+	transform_entry_set_size(ae, 24);
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_header(a, ae));
+	transform_entry_free(ae);
 	assertEqualIntA(a, 24, transform_write_data(a, zisofs_data, 24));
 
-	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_free(a));
+	/* Close out the transform. */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_free(a));
 
 	assert(used == 2048 * 35);
 	/* Check System Area. */
@@ -208,23 +208,23 @@ DEFINE_TEST(test_write_format_iso9660_zisofs)
 	 * Root Directory entry must be in ISO image.
 	 */
 	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
-	assertEqualInt(archive_entry_atime(ae), archive_entry_ctime(ae));
-	assertEqualInt(archive_entry_atime(ae), archive_entry_mtime(ae));
-	assertEqualString(".", archive_entry_pathname(ae));
-	assert((S_IFDIR | 0555) == archive_entry_mode(ae));
-	assertEqualInt(2048, archive_entry_size(ae));
+	assertEqualInt(transform_entry_atime(ae), transform_entry_ctime(ae));
+	assertEqualInt(transform_entry_atime(ae), transform_entry_mtime(ae));
+	assertEqualString(".", transform_entry_pathname(ae));
+	assert((S_IFDIR | 0555) == transform_entry_mode(ae));
+	assertEqualInt(2048, transform_entry_size(ae));
 
 	/*
 	 * Read "file1" which has 256K bytes null data.
 	 */
 	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
-	assertEqualInt(2, archive_entry_atime(ae));
-	//assertEqualInt(3, archive_entry_birthtime(ae));
-	assertEqualInt(4, archive_entry_ctime(ae));
-	assertEqualInt(5, archive_entry_mtime(ae));
-	assertEqualString("file1", archive_entry_pathname(ae));
-	assert((S_IFREG | 0555) == archive_entry_mode(ae));
-	assertEqualInt(256*1024, archive_entry_size(ae));
+	assertEqualInt(2, transform_entry_atime(ae));
+	//assertEqualInt(3, transform_entry_birthtime(ae));
+	assertEqualInt(4, transform_entry_ctime(ae));
+	assertEqualInt(5, transform_entry_mtime(ae));
+	assertEqualString("file1", transform_entry_pathname(ae));
+	assert((S_IFREG | 0555) == transform_entry_mode(ae));
+	assertEqualInt(256*1024, transform_entry_size(ae));
 	assertEqualIntA(a, 1024, transform_read_data(a, buff2, 1024));
 	assertEqualMem(buff2, nullb, 1024);
 
@@ -232,13 +232,13 @@ DEFINE_TEST(test_write_format_iso9660_zisofs)
 	 * Read "file2" which has 2048 bytes null data.
 	 */
 	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
-	assertEqualInt(2, archive_entry_atime(ae));
-	//assertEqualInt(3, archive_entry_birthtime(ae));
-	assertEqualInt(4, archive_entry_ctime(ae));
-	assertEqualInt(5, archive_entry_mtime(ae));
-	assertEqualString("file2", archive_entry_pathname(ae));
-	assert((S_IFREG | 0555) == archive_entry_mode(ae));
-	assertEqualInt(2048, archive_entry_size(ae));
+	assertEqualInt(2, transform_entry_atime(ae));
+	//assertEqualInt(3, transform_entry_birthtime(ae));
+	assertEqualInt(4, transform_entry_ctime(ae));
+	assertEqualInt(5, transform_entry_mtime(ae));
+	assertEqualString("file2", transform_entry_pathname(ae));
+	assert((S_IFREG | 0555) == transform_entry_mode(ae));
+	assertEqualInt(2048, transform_entry_size(ae));
 	assertEqualIntA(a, 1024, transform_read_data(a, buff2, 1024));
 	assertEqualMem(buff2, nullb, 1024);
 
@@ -246,13 +246,13 @@ DEFINE_TEST(test_write_format_iso9660_zisofs)
 	 * Read "file3" which has 2049 bytes null data.
 	 */
 	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
-	assertEqualInt(2, archive_entry_atime(ae));
-	//assertEqualInt(3, archive_entry_birthtime(ae));
-	assertEqualInt(4, archive_entry_ctime(ae));
-	assertEqualInt(5, archive_entry_mtime(ae));
-	assertEqualString("file3", archive_entry_pathname(ae));
-	assert((S_IFREG | 0555) == archive_entry_mode(ae));
-	assertEqualInt(2049, archive_entry_size(ae));
+	assertEqualInt(2, transform_entry_atime(ae));
+	//assertEqualInt(3, transform_entry_birthtime(ae));
+	assertEqualInt(4, transform_entry_ctime(ae));
+	assertEqualInt(5, transform_entry_mtime(ae));
+	assertEqualString("file3", transform_entry_pathname(ae));
+	assert((S_IFREG | 0555) == transform_entry_mode(ae));
+	assertEqualInt(2049, transform_entry_size(ae));
 	assertEqualIntA(a, 1024, transform_read_data(a, buff2, 1024));
 	assertEqualMem(buff2, nullb, 1024);
 
@@ -260,22 +260,22 @@ DEFINE_TEST(test_write_format_iso9660_zisofs)
 	 * Read "file4" which has 32K bytes null data.
 	 */
 	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
-	assertEqualInt(2, archive_entry_atime(ae));
-	//assertEqualInt(3, archive_entry_birthtime(ae));
-	assertEqualInt(4, archive_entry_ctime(ae));
-	assertEqualInt(5, archive_entry_mtime(ae));
-	assertEqualString("file4", archive_entry_pathname(ae));
-	assert((S_IFREG | 0555) == archive_entry_mode(ae));
-	assertEqualInt(32768, archive_entry_size(ae));
+	assertEqualInt(2, transform_entry_atime(ae));
+	//assertEqualInt(3, transform_entry_birthtime(ae));
+	assertEqualInt(4, transform_entry_ctime(ae));
+	assertEqualInt(5, transform_entry_mtime(ae));
+	assertEqualString("file4", transform_entry_pathname(ae));
+	assert((S_IFREG | 0555) == transform_entry_mode(ae));
+	assertEqualInt(32768, transform_entry_size(ae));
 	assertEqualIntA(a, 1024, transform_read_data(a, buff2, 1024));
 	assertEqualMem(buff2, nullb, 1024);
 
 	/*
-	 * Verify the end of the archive.
+	 * Verify the end of the transform.
 	 */
-	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_free(a));
 
 	free(buff);
 }

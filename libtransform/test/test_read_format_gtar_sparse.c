@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_gtar_sparse.c 189308 2009-03-03 17:02:51Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_gtar_sparse.c 189308 2009-03-03 17:02:51Z kientzle $");
 
 
 struct contents {
@@ -32,13 +32,13 @@ struct contents {
 	const char *d;
 };
 
-struct contents archive_contents_sparse[] = {
+struct contents transform_contents_sparse[] = {
 	{ 1000000, 1, "a" },
 	{ 2000000, 1, "a" },
 	{ 3145728, 0, NULL }
 };
 
-struct contents archive_contents_sparse2[] = {
+struct contents transform_contents_sparse2[] = {
 	{ 1000000, 1, "a" },
 	{ 2000000, 1, "a" },
 	{ 3000000, 1, "a" },
@@ -141,13 +141,13 @@ struct contents archive_contents_sparse2[] = {
 	{ 99000001, 0, NULL }
 };
 
-struct contents archive_contents_nonsparse[] = {
+struct contents transform_contents_nonsparse[] = {
 	{ 0, 1, "a" },
 	{ 1, 0, NULL }
 };
 
 /*
- * Describe an archive with three entries:
+ * Describe an transform with three entries:
  *
  * File 1: named "sparse"
  *   * a length of 3145728 bytes (3MiB)
@@ -165,20 +165,20 @@ struct transform_contents {
 	const char *filename;
 	struct contents *contents;
 } files[] = {
-	{ "sparse", archive_contents_sparse },
-	{ "sparse2", archive_contents_sparse2 },
-	{ "non-sparse", archive_contents_nonsparse },
+	{ "sparse", transform_contents_sparse },
+	{ "sparse2", transform_contents_sparse2 },
+	{ "non-sparse", transform_contents_nonsparse },
 	{ NULL, NULL }
 };
 
 static void
-verify_archive_file(const char *name, struct transform_contents *ac)
+verify_transform_file(const char *name, struct transform_contents *ac)
 {
 	struct transform_entry *ae;
 	int err;
 	/* data, size, offset of next expected block. */
 	struct contents expect;
-	/* data, size, offset of block read from archive. */
+	/* data, size, offset of block read from transform. */
 	struct contents actual;
 	const void *p;
 	struct transform *a;
@@ -195,11 +195,11 @@ verify_archive_file(const char *name, struct transform_contents *ac)
 		struct contents *cts = ac->contents;
 
 		if (!assertEqualIntA(a, 0, transform_read_next_header(a, &ae))) {
-			assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+			assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 			return;
 		}
-		failure("Name mismatch in archive %s", name);
-		assertEqualString(ac->filename, archive_entry_pathname(ae));
+		failure("Name mismatch in transform %s", name);
+		assertEqualString(ac->filename, transform_entry_pathname(ae));
 
 		expect = *cts++;
 		while (0 == (err = transform_read_data_block(a,
@@ -242,7 +242,7 @@ verify_archive_file(const char *name, struct transform_contents *ac)
 			}
 		}
 		failure("%s: should be end of entry", name);
-		assertEqualIntA(a, err, ARCHIVE_EOF);
+		assertEqualIntA(a, err, TRANSFORM_EOF);
 		failure("%s: Size returned at EOF must be zero", name);
 		assertEqualInt((int)actual.s, 0);
 		failure("%s: Offset of final empty chunk must be same as file size", name);
@@ -252,53 +252,53 @@ verify_archive_file(const char *name, struct transform_contents *ac)
 	}
 
 	err = transform_read_next_header(a, &ae);
-	assertEqualIntA(a, ARCHIVE_EOF, err);
+	assertEqualIntA(a, TRANSFORM_EOF, err);
 
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 
 DEFINE_TEST(test_read_format_gtar_sparse)
 {
-	/* Two archives that use the "GNU tar sparse format". */
-	verify_archive_file("test_read_format_gtar_sparse_1_13.tar", files);
-	verify_archive_file("test_read_format_gtar_sparse_1_17.tar", files);
+	/* Two transforms that use the "GNU tar sparse format". */
+	verify_transform_file("test_read_format_gtar_sparse_1_13.tar", files);
+	verify_transform_file("test_read_format_gtar_sparse_1_17.tar", files);
 
 	/*
-	 * libarchive < 1.9 doesn't support the newer --posix sparse formats
+	 * libtransform < 1.9 doesn't support the newer --posix sparse formats
 	 * from GNU tar 1.15 and later.
 	 */
 
 	/*
-	 * An archive created by GNU tar 1.17 using --posix --sparse-format=0.1
+	 * An transform created by GNU tar 1.17 using --posix --sparse-format=0.1
 	 */
-	verify_archive_file(
+	verify_transform_file(
 		"test_read_format_gtar_sparse_1_17_posix00.tar",
 		files);
 	/*
-	 * An archive created by GNU tar 1.17 using --posix --sparse-format=0.1
+	 * An transform created by GNU tar 1.17 using --posix --sparse-format=0.1
 	 */
-	verify_archive_file(
+	verify_transform_file(
 		"test_read_format_gtar_sparse_1_17_posix01.tar",
 		files);
 	/*
-	 * An archive created by GNU tar 1.17 using --posix --sparse-format=1.0
+	 * An transform created by GNU tar 1.17 using --posix --sparse-format=1.0
 	 */
-	verify_archive_file(
+	verify_transform_file(
 		"test_read_format_gtar_sparse_1_17_posix10.tar",
 		files);
 	/*
-	 * The last test archive here is a little odd.  First, it's
+	 * The last test transform here is a little odd.  First, it's
 	 * uncompressed, because that exercises some of the block
 	 * reassembly code a little harder.  Second, it includes some
 	 * leading comments prior to the sparse block description.
 	 * GNU tar doesn't do this, but I think it should, so I want
-	 * to ensure that libarchive correctly ignores such comments.
+	 * to ensure that libtransform correctly ignores such comments.
 	 * Dump the file, looking for "#!gnu-sparse-format" starting
 	 * at byte 0x600.
 	 */
-	verify_archive_file(
+	verify_transform_file(
 		"test_read_format_gtar_sparse_1_17_posix10_modified.tar",
 		files);
 }

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_disk_entry_from_file.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_disk_entry_from_file.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 static const char *
 gname_lookup(void *d, int64_t g)
@@ -49,9 +49,9 @@ DEFINE_TEST(test_read_disk_entry_from_file)
 
 	assert((a = transform_read_disk_new()) != NULL);
 
-	assertEqualInt(ARCHIVE_OK, transform_read_disk_set_uname_lookup(a,
+	assertEqualInt(TRANSFORM_OK, transform_read_disk_set_uname_lookup(a,
 			   NULL, &uname_lookup, NULL));
-	assertEqualInt(ARCHIVE_OK, transform_read_disk_set_gname_lookup(a,
+	assertEqualInt(TRANSFORM_OK, transform_read_disk_set_gname_lookup(a,
 			   NULL, &gname_lookup, NULL));
 	assertEqualString(transform_read_disk_uname(a, 0), "FOO");
 	assertEqualString(transform_read_disk_gname(a, 0), "FOOGROUP");
@@ -63,18 +63,18 @@ DEFINE_TEST(test_read_disk_entry_from_file)
 	fclose(f);
 
 	/* Use transform_read_disk_entry_from_file to get information about it. */
-	entry = archive_entry_new();
+	entry = transform_entry_new();
 	assert(entry != NULL);
-	archive_entry_copy_pathname(entry, "foo");
-	assertEqualIntA(a, ARCHIVE_OK,
+	transform_entry_copy_pathname(entry, "foo");
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_disk_entry_from_file(a, entry, -1, NULL));
 
 	/* Verify the information we got back. */
-	assertEqualString(archive_entry_uname(entry), "FOO");
-	assertEqualString(archive_entry_gname(entry), "FOOGROUP");
-	assertEqualInt(archive_entry_size(entry), 4);
+	assertEqualString(transform_entry_uname(entry), "FOO");
+	assertEqualString(transform_entry_gname(entry), "FOOGROUP");
+	assertEqualInt(transform_entry_size(entry), 4);
 
-	/* Destroy the archive. */
-	archive_entry_free(entry);
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	/* Destroy the transform. */
+	transform_entry_free(entry);
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }

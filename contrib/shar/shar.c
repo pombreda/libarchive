@@ -32,8 +32,8 @@ __FBSDID("$FreeBSD$");
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <archive.h>
-#include <archive_entry.h>
+#include <transform.h>
+#include <transform_entry.h>
 #include <assert.h>
 #include <err.h>
 #include <errno.h>
@@ -60,7 +60,7 @@ usage(void)
 }
 
 /*
- * Initialize archive structure and create a shar archive.
+ * Initialize transform structure and create a shar transform.
  */
 static struct transform *
 shar_create(void)
@@ -68,7 +68,7 @@ shar_create(void)
 	struct transform *a;
 
 	if ((a = transform_write_new()) == NULL)
-		errx(EXIT_FAILURE, "%s", archive_error_string(a));
+		errx(EXIT_FAILURE, "%s", transform_error_string(a));
 
 	if (b_opt)
 		transform_write_set_format_shar_dump(a);
@@ -76,8 +76,8 @@ shar_create(void)
 		transform_write_set_format_shar(a);
 	transform_write_set_compression_none(a);
 
-	if (transform_write_open_filename(a, o_arg) != ARCHIVE_OK)
-		errx(EX_CANTCREAT, "%s", archive_error_string(a));
+	if (transform_write_open_filename(a, o_arg) != TRANSFORM_OK)
+		errx(EX_CANTCREAT, "%s", transform_error_string(a));
 
 	return (a);
 }
@@ -86,7 +86,7 @@ shar_create(void)
 static char buffer[32768];
 
 /*
- * Write file data to an archive entry.
+ * Write file data to an transform entry.
  */
 static int
 shar_write_entry_data(struct transform *a, const int fd)
@@ -99,20 +99,20 @@ shar_write_entry_data(struct transform *a, const int fd)
 	bytes_read = read(fd, buffer, sizeof(buffer));
 	while (bytes_read != 0) {
 		if (bytes_read < 0) {
-			archive_set_error(a, errno, "Read failed");
-			return (ARCHIVE_WARN);
+			transform_set_error(a, errno, "Read failed");
+			return (TRANSFORM_WARN);
 		}
 		bytes_written = transform_write_data(a, buffer, bytes_read);
 		if (bytes_written < 0)
-			return (ARCHIVE_WARN);
+			return (TRANSFORM_WARN);
 		bytes_read = read(fd, buffer, sizeof(buffer));
 	}
 
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 /*
- * Write a file to the archive. We have special handling for symbolic links.
+ * Write a file to the transform. We have special handling for symbolic links.
  */
 static int
 shar_write_entry(struct transform *a, const char *pathname, const char *accpath,
@@ -120,20 +120,20 @@ shar_write_entry(struct transform *a, const char *pathname, const char *accpath,
 {
 	struct transform_entry *entry;
 	int fd = -1;
-	int ret = ARCHIVE_OK;
+	int ret = TRANSFORM_OK;
 
 	assert(a != NULL);
 	assert(pathname != NULL);
 	assert(accpath != NULL);
 	assert(st != NULL);
 
-	entry = archive_entry_new();
+	entry = transform_entry_new();
 
 	if (S_ISREG(st->st_mode) && st->st_size > 0) {
 		/* regular file */
 		if ((fd = open(accpath, O_RDONLY)) == -1) {
 			warn("%s", accpath);
-			ret = ARCHIVE_WARN;
+			ret = TRANSFORM_WARN;
 			goto out;
 		}
 	} else if (S_ISLNK(st->st_mode)) {
@@ -142,27 +142,27 @@ shar_write_entry(struct transform *a, const char *pathname, const char *accpath,
 		int lnklen;
 		if ((lnklen = readlink(accpath, lnkbuff, PATH_MAX)) == -1) {
 			warn("%s", accpath);
-			ret = ARCHIVE_WARN;
+			ret = TRANSFORM_WARN;
 			goto out;
 		}
 		lnkbuff[lnklen] = '\0';
-		archive_entry_set_symlink(entry, lnkbuff);
+		transform_entry_set_symlink(entry, lnkbuff);
 	}
-	archive_entry_copy_stat(entry, st);
-	archive_entry_set_pathname(entry, pathname);
+	transform_entry_copy_stat(entry, st);
+	transform_entry_set_pathname(entry, pathname);
 	if (!S_ISREG(st->st_mode) || st->st_size == 0)
-		archive_entry_set_size(entry, 0);
-	if (transform_write_header(a, entry) != ARCHIVE_OK) {
-		warnx("%s: %s", pathname, archive_error_string(a));
-		ret = ARCHIVE_WARN;
+		transform_entry_set_size(entry, 0);
+	if (transform_write_header(a, entry) != TRANSFORM_OK) {
+		warnx("%s: %s", pathname, transform_error_string(a));
+		ret = TRANSFORM_WARN;
 		goto out;
 	}
 	if (fd >= 0) {
-		if ((ret = shar_write_entry_data(a, fd)) != ARCHIVE_OK)
-			warnx("%s: %s", accpath, archive_error_string(a));
+		if ((ret = shar_write_entry_data(a, fd)) != TRANSFORM_OK)
+			warnx("%s: %s", accpath, transform_error_string(a));
 	}
 out:
-	archive_entry_free(entry);
+	transform_entry_free(entry);
 	if (fd >= 0)
 		close(fd);
 
@@ -170,7 +170,7 @@ out:
 }
 
 /*
- * Write singe path to the archive. The path can be a regular file, directory
+ * Write singe path to the transform. The path can be a regular file, directory
  * or device. Symbolic links are followed.
  */
 static int
@@ -183,15 +183,15 @@ shar_write_path(struct transform *a, const char *pathname)
 
 	if ((stat(pathname, &st)) == -1) {
 		warn("%s", pathname);
-		return (ARCHIVE_WARN);
+		return (TRANSFORM_WARN);
 	}
 
 	return (shar_write_entry(a, pathname, pathname, &st));
 }
 
 /*
- * Write tree to the archive. If pathname is a symbolic link it will be
- * followed. Other symbolic links are stored as such to the archive.
+ * Write tree to the transform. If pathname is a symbolic link it will be
+ * followed. Other symbolic links are stored as such to the transform.
  */
 static int
 shar_write_tree(struct transform *a, const char *pathname)
@@ -233,7 +233,7 @@ shar_write_tree(struct transform *a, const char *pathname)
 			st = lst;
 
 		if (shar_write_entry(a, tree_current_path(t),
-		    tree_current_access_path(t), st) != ARCHIVE_OK)
+		    tree_current_access_path(t), st) != TRANSFORM_OK)
 			error = 1;
 
 		tree_descend(t);
@@ -241,11 +241,11 @@ shar_write_tree(struct transform *a, const char *pathname)
 
 	tree_close(t);
 
-	return ((error != 0) ? ARCHIVE_WARN : ARCHIVE_OK);
+	return ((error != 0) ? TRANSFORM_WARN : TRANSFORM_OK);
 }
 
 /*
- * Create a shar archive and write files/trees into it.
+ * Create a shar transform and write files/trees into it.
  */
 static int
 shar_write(char **fn, size_t nfn)
@@ -261,16 +261,16 @@ shar_write(char **fn, size_t nfn)
 
 	for (i = 0; i < nfn; i++) {
 		if (r_opt) {
-			if (shar_write_tree(a, fn[i]) !=  ARCHIVE_OK)
+			if (shar_write_tree(a, fn[i]) !=  TRANSFORM_OK)
 				error = 1;
 		} else {
-			if (shar_write_path(a, fn[i]) != ARCHIVE_OK)
+			if (shar_write_path(a, fn[i]) != TRANSFORM_OK)
 				error = 1;
 		}
 	}
 
-	if (transform_write_free(a) != ARCHIVE_OK)
-		errx(EXIT_FAILURE, "%s", archive_error_string(a));
+	if (transform_write_free(a) != TRANSFORM_OK)
+		errx(EXIT_FAILURE, "%s", transform_error_string(a));
 
 	if (error != 0)
 		warnx("Error exit delayed from previous errors.");

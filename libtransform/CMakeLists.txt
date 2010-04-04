@@ -1,7 +1,7 @@
 
 ############################################
 #
-# How to build libarchive
+# How to build libtransform
 #
 ############################################
 
@@ -109,39 +109,39 @@ SET(libtransform_MANS
   transform_write_disk.3
   transform_write_set_options.3
   cpio.5
-  libarchive.3
+  libtransform.3
   libtransform_internals.3
-  libarchive-formats.5
+  libtransform-formats.5
   mtree.5
   tar.5
 )
 
 IF(WIN32 AND NOT CYGWIN)
-  LIST(APPEND libtransform_SOURCES archive_entry_copy_bhfi.c)
-  LIST(APPEND libtransform_SOURCES archive_windows.c)
+  LIST(APPEND libtransform_SOURCES transform_entry_copy_bhfi.c)
+  LIST(APPEND libtransform_SOURCES transform_windows.c)
   LIST(APPEND libtransform_SOURCES transform_windows.h)
   LIST(APPEND libtransform_SOURCES filter_fork_windows.c)
 ENDIF(WIN32 AND NOT CYGWIN)
 
-# Libarchive is a shared library
-ADD_LIBRARY(archive SHARED ${libtransform_SOURCES} ${include_HEADERS})
-TARGET_LINK_LIBRARIES(archive ${ADDITIONAL_LIBS})
-SET_TARGET_PROPERTIES(archive PROPERTIES SOVERSION ${SOVERSION})
+# Libtransform is a shared library
+ADD_LIBRARY(transform SHARED ${libtransform_SOURCES} ${include_HEADERS})
+TARGET_LINK_LIBRARIES(transform ${ADDITIONAL_LIBS})
+SET_TARGET_PROPERTIES(transform PROPERTIES SOVERSION ${SOVERSION})
 
 # transform_static is a static library
-ADD_LIBRARY(transform_static STATIC ${libarchive_SOURCES} ${include_HEADERS})
+ADD_LIBRARY(transform_static STATIC ${libtransform_SOURCES} ${include_HEADERS})
 SET_TARGET_PROPERTIES(transform_static PROPERTIES COMPILE_DEFINITIONS
-  LIBARCHIVE_STATIC)
-# On Posix systems, libarchive.so and libarchive.a can co-exist.
+  LIBTRANSFORM_STATIC)
+# On Posix systems, libtransform.so and libtransform.a can co-exist.
 IF(NOT WIN32 OR CYGWIN)
-  SET_TARGET_PROPERTIES(transform_static PROPERTIES OUTPUT_NAME archive)
+  SET_TARGET_PROPERTIES(transform_static PROPERTIES OUTPUT_NAME transform)
 ENDIF(NOT WIN32 OR CYGWIN)
 
 # How to install the libraries
-INSTALL(TARGETS archive transform_static
+INSTALL(TARGETS transform transform_static
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib)
+        TRANSFORM DESTINATION lib)
 INSTALL_MAN(${libtransform_MANS})
 INSTALL(FILES ${include_HEADERS} DESTINATION include)
 

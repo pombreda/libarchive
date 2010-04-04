@@ -25,7 +25,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_compress.c 189308 2009-03-03 17:02:51Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_write_compress.c 189308 2009-03-03 17:02:51Z kientzle $");
 
 /*
  * A basic exercise of compress reading and writing.
@@ -51,46 +51,46 @@ DEFINE_TEST(test_write_compress)
 	memset(data, 0, datasize);
 
 	assert((a = transform_write_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_set_format_ustar(a));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_set_compression_compress(a));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_open_memory(a, buff, buffsize, &used));
 
 	for (i = 0; i < 100; i++) {
 		sprintf(path, "file%03d", i);
-		assert((ae = archive_entry_new()) != NULL);
-		archive_entry_copy_pathname(ae, path);
-		archive_entry_set_size(ae, datasize);
-		archive_entry_set_filetype(ae, AE_IFREG);
-		assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
+		assert((ae = transform_entry_new()) != NULL);
+		transform_entry_copy_pathname(ae, path);
+		transform_entry_set_size(ae, datasize);
+		transform_entry_set_filetype(ae, AE_IFREG);
+		assertEqualIntA(a, TRANSFORM_OK, transform_write_header(a, ae));
 		assertEqualInt(datasize,
 		    transform_write_data(a, data, datasize));
-		archive_entry_free(ae);
+		transform_entry_free(ae);
 	}
 
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
 	/*
 	 * Now, read the data back.
 	 */
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_memory(a, buff, used));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_open_memory(a, buff, used));
 
 
 	for (i = 0; i < 100; i++) {
 		sprintf(path, "file%03d", i);
 		if (!assertEqualInt(0, transform_read_next_header(a, &ae)))
 			break;
-		assertEqualString(path, archive_entry_pathname(ae));
-		assertEqualInt((int)datasize, archive_entry_size(ae));
+		assertEqualString(path, transform_entry_pathname(ae));
+		assertEqualInt((int)datasize, transform_entry_size(ae));
 	}
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 
 	free(data);
 	free(buff);

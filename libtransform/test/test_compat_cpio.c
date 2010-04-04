@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_compat_cpio.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_compat_cpio.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
  * Verify our ability to read various sample files.
@@ -48,53 +48,53 @@ test_compat_cpio_1(void)
 	struct transform *a;
 
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
 	extract_reference_file(name);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_filename(a, name, 17));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_open_filename(a, name, 17));
 
 	/* Read first entry. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	assertEqualString("foo1", archive_entry_pathname(ae));
-	assertEqualString(NULL, archive_entry_hardlink(ae));
-	assertEqualInt(1260250228, archive_entry_mtime(ae));
-	assertEqualInt(1000, archive_entry_uid(ae));
-	assertEqualInt(1000, archive_entry_gid(ae));
-	assertEqualInt(0100644, archive_entry_mode(ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	assertEqualString("foo1", transform_entry_pathname(ae));
+	assertEqualString(NULL, transform_entry_hardlink(ae));
+	assertEqualInt(1260250228, transform_entry_mtime(ae));
+	assertEqualInt(1000, transform_entry_uid(ae));
+	assertEqualInt(1000, transform_entry_gid(ae));
+	assertEqualInt(0100644, transform_entry_mode(ae));
 
 	/* Read second entry. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	assertEqualString("foo2", archive_entry_pathname(ae));
-	assertEqualString(NULL, archive_entry_hardlink(ae));
-	assertEqualInt(1260250228, archive_entry_mtime(ae));
-	assertEqualInt(1000, archive_entry_uid(ae));
-	assertEqualInt(1000, archive_entry_gid(ae));
-	assertEqualInt(0100644, archive_entry_mode(ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	assertEqualString("foo2", transform_entry_pathname(ae));
+	assertEqualString(NULL, transform_entry_hardlink(ae));
+	assertEqualInt(1260250228, transform_entry_mtime(ae));
+	assertEqualInt(1000, transform_entry_uid(ae));
+	assertEqualInt(1000, transform_entry_gid(ae));
+	assertEqualInt(0100644, transform_entry_mode(ae));
 
 	/* Read third entry. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	assertEqualString("bar1", archive_entry_pathname(ae));
-	assertEqualString(NULL, archive_entry_hardlink(ae));
-	assertEqualInt(1260250228, archive_entry_mtime(ae));
-	assertEqualInt(1000, archive_entry_uid(ae));
-	assertEqualInt(1000, archive_entry_gid(ae));
-	assertEqualInt(0100644, archive_entry_mode(ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	assertEqualString("bar1", transform_entry_pathname(ae));
+	assertEqualString(NULL, transform_entry_hardlink(ae));
+	assertEqualInt(1260250228, transform_entry_mtime(ae));
+	assertEqualInt(1000, transform_entry_uid(ae));
+	assertEqualInt(1000, transform_entry_gid(ae));
+	assertEqualInt(0100644, transform_entry_mode(ae));
 
 	/* Read fourth entry. */
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	assertEqualString("bar2", archive_entry_pathname(ae));
-	assertEqualString("bar1", archive_entry_hardlink(ae));
-	assertEqualInt(1260250228, archive_entry_mtime(ae));
-	assertEqualInt(1000, archive_entry_uid(ae));
-	assertEqualInt(1000, archive_entry_gid(ae));
-	assertEqualInt(0100644, archive_entry_mode(ae));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	assertEqualString("bar2", transform_entry_pathname(ae));
+	assertEqualString("bar1", transform_entry_hardlink(ae));
+	assertEqualInt(1260250228, transform_entry_mtime(ae));
+	assertEqualInt(1000, transform_entry_uid(ae));
+	assertEqualInt(1000, transform_entry_gid(ae));
+	assertEqualInt(0100644, transform_entry_mode(ae));
 
 	/* Verify that the format detection worked. */
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_NONE);
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_CPIO_SVR4_NOCRC);
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_NONE);
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_CPIO_SVR4_NOCRC);
 
-	assertEqualInt(ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 

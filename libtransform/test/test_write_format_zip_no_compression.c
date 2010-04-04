@@ -28,18 +28,18 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_zip_no_compression.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_write_format_zip_no_compression.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 static unsigned long
 bitcrc32(unsigned long c, void *_p, size_t s)
 {
 	/* This is a drop-in replacement for crc32() from zlib.
-	 * Libarchive should be able to correctly generate
-	 * uncompressed zip archives (including correct CRCs) even
+	 * Libtransform should be able to correctly generate
+	 * uncompressed zip transforms (including correct CRCs) even
 	 * when zlib is unavailable, and this function helps us verify
 	 * that.  Yes, this is very, very slow and unsuitable for
 	 * production use, but it's correct, compact, and works well
-	 * enough for this particular usage.  Libarchive internally
+	 * enough for this particular usage.  Libtransform internally
 	 * uses a much more efficient implementation.  */
 	const unsigned char *p = _p;
 	int bitctr;
@@ -95,7 +95,7 @@ DEFINE_TEST(test_write_format_zip_no_compression)
 	/* Misc variables */
 	unsigned long crc;
 
-	/* Create new ZIP archive in memory without padding. */
+	/* Create new ZIP transform in memory without padding. */
 	assert((a = transform_write_new()) != NULL);
 	assertA(0 == transform_write_set_format_zip(a));
 	assertA(0 == transform_write_set_format_options(a, "zip:compression=store"));
@@ -107,38 +107,38 @@ DEFINE_TEST(test_write_format_zip_no_compression)
 	/* Write entries. */
 
 	/* Regular file */
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_set_pathname(entry, file_name);
-	archive_entry_set_mode(entry, S_IFREG | 0644);
-	archive_entry_set_size(entry, sizeof(file_data1) + sizeof(file_data2));
-	archive_entry_set_uid(entry, file_uid);
-	archive_entry_set_gid(entry, file_gid);
-	archive_entry_set_mtime(entry, t, 0);
-	archive_entry_set_atime(entry, t, 0);
-	archive_entry_set_ctime(entry, t, 0);
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_set_pathname(entry, file_name);
+	transform_entry_set_mode(entry, S_IFREG | 0644);
+	transform_entry_set_size(entry, sizeof(file_data1) + sizeof(file_data2));
+	transform_entry_set_uid(entry, file_uid);
+	transform_entry_set_gid(entry, file_gid);
+	transform_entry_set_mtime(entry, t, 0);
+	transform_entry_set_atime(entry, t, 0);
+	transform_entry_set_ctime(entry, t, 0);
 	assertEqualIntA(a, 0, transform_write_header(a, entry));
 	assertEqualIntA(a, sizeof(file_data1), transform_write_data(a, file_data1, sizeof(file_data1)));
 	assertEqualIntA(a, sizeof(file_data2), transform_write_data(a, file_data2, sizeof(file_data2)));
-	archive_entry_free(entry);
+	transform_entry_free(entry);
 
 	/* Folder */
-	assert((entry = archive_entry_new()) != NULL);
-	archive_entry_set_pathname(entry, folder_name);
-	archive_entry_set_mode(entry, S_IFDIR | folder_perm);
-	archive_entry_set_size(entry, 0);
-	archive_entry_set_uid(entry, folder_uid);
-	archive_entry_set_gid(entry, folder_gid);
-	archive_entry_set_mtime(entry, t, 0);
-	archive_entry_set_atime(entry, t, 0);
-	archive_entry_set_ctime(entry, t, 0);
+	assert((entry = transform_entry_new()) != NULL);
+	transform_entry_set_pathname(entry, folder_name);
+	transform_entry_set_mode(entry, S_IFDIR | folder_perm);
+	transform_entry_set_size(entry, 0);
+	transform_entry_set_uid(entry, folder_uid);
+	transform_entry_set_gid(entry, folder_gid);
+	transform_entry_set_mtime(entry, t, 0);
+	transform_entry_set_atime(entry, t, 0);
+	transform_entry_set_ctime(entry, t, 0);
 	assertEqualIntA(a, 0, transform_write_header(a, entry));
-	archive_entry_free(entry);
+	transform_entry_free(entry);
 
-	/* Close the archive . */
-	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
+	/* Close the transform . */
+	assertEqualIntA(a, TRANSFORM_OK, transform_write_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_write_free(a));
 
-	/* Remember the end of the archive in memory. */
+	/* Remember the end of the transform in memory. */
 	buffend = buff + used;
 
 	/* Verify "End of Central Directory" record. */
@@ -152,7 +152,7 @@ DEFINE_TEST(test_write_format_zip_no_compression)
 	assertEqualInt(i2(p + 6), 0);
 	failure("All central dir entries are on this disk");
 	assertEqualInt(i2(p + 8), i2(p + 10));
-	failure("CD start (%d) + CD length (%d) should == archive size - 22",
+	failure("CD start (%d) + CD length (%d) should == transform size - 22",
 	    i4(p + 12), i4(p + 16));
 	assertEqualInt(i4(p + 12) + i4(p + 16), used - 22);
 	failure("no zip comment");

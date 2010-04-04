@@ -27,13 +27,13 @@
  * $FreeBSD$
  */
 
-#ifndef __LIBARCHIVE_BUILD
-#error This header is only to be used internally to libarchive.
+#ifndef __LIBTRANSFORM_BUILD
+#error This header is only to be used internally to libtransform.
 #endif
 
 /*
- * TODO: A lot of stuff in here isn't actually used by libarchive and
- * can be trimmed out.  Note that this file is used by libarchive and
+ * TODO: A lot of stuff in here isn't actually used by libtransform and
+ * can be trimmed out.  Note that this file is used by libtransform and
  * libtransform_test but nowhere else.  (But note that it gets compiled
  * with many different Windows environments, including MinGW, Visual
  * Studio, and Cygwin.  Significant changes should be tested in all three.)
@@ -45,8 +45,8 @@
  * more modern file handling APIs all use __int64 instead of off_t.
  */
 
-#ifndef LIBARCHIVE_ARCHIVE_WINDOWS_H_INCLUDED
-#define	LIBARCHIVE_ARCHIVE_WINDOWS_H_INCLUDED
+#ifndef LIBTRANSFORM_TRANSFORM_WINDOWS_H_INCLUDED
+#define	LIBTRANSFORM_TRANSFORM_WINDOWS_H_INCLUDED
 
 /* Start of configuration for native Win32  */
 
@@ -342,7 +342,7 @@ typedef struct {
 
 /* End of Win32 definitions. */
 
-/* Tell libarchive code that we have simulations for these. */
+/* Tell libtransform code that we have simulations for these. */
 #ifndef HAVE_FTRUNCATE
 #define HAVE_FTRUNCATE 1
 #endif
@@ -417,4 +417,4 @@ extern void	 SHA512_Final(unsigned char *buf, Digest_CTX *ctx);
 #endif
 #endif
 
-#endif /* LIBARCHIVE_ARCHIVE_WINDOWS_H_INCLUDED */
+#endif /* LIBTRANSFORM_TRANSFORM_WINDOWS_H_INCLUDED */

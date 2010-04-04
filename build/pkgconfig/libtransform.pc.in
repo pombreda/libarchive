@@ -4,7 +4,7 @@ libdir=@libdir@
 includedir=@includedir@
 
 Name: libtransform
-Description: library that can create and read several streaming archive formats
+Description: library that can create and read several streaming transform formats
 Version: @VERSION@
-Libs: -larchive
+Libs: -ltransform
 Libs.private: @LIBS@

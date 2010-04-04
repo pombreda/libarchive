@@ -72,7 +72,7 @@ distclean-local:
 	-[ -f libtransform/test/Makefile ] && cd libtransform/test && make clean
 
 #
-# Libarchive headers, source, etc.
+# Libtransform headers, source, etc.
 #
 #
 

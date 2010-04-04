@@ -62,9 +62,9 @@ NT_LIB_OPTS=
       $(NT_C) $(NT_C_OPTS) -zp1 -fo=$*.obn $<
 
 OBJS = &
-  $(OBJ_DIR)\archive_check_magic.obn      $(OBJ_DIR)\archive_entry.obn &
-  $(OBJ_DIR)\archive_entry_copy_stat.obn  $(OBJ_DIR)\archive_entry_link_resolver.obn &
-  $(OBJ_DIR)\archive_entry_stat.obn       $(OBJ_DIR)\archive_entry_strmode.obn &
+  $(OBJ_DIR)\transform_check_magic.obn      $(OBJ_DIR)\transform_entry.obn &
+  $(OBJ_DIR)\transform_entry_copy_stat.obn  $(OBJ_DIR)\transform_entry_link_resolver.obn &
+  $(OBJ_DIR)\transform_entry_stat.obn       $(OBJ_DIR)\transform_entry_strmode.obn &
   $(OBJ_DIR)\transform_read.obn             $(OBJ_DIR)\transform_read_data_into_fd.obn &
   $(OBJ_DIR)\transform_read_extract.obn     $(OBJ_DIR)\transform_read_open_fd.obn &
   $(OBJ_DIR)\transform_read_open_file.obn   $(OBJ_DIR)\transform_read_open_filename.obn &
@@ -82,8 +82,8 @@ OBJS = &
   $(OBJ_DIR)\transform_read_support_format_mtree.obn &
   $(OBJ_DIR)\transform_read_support_format_tar.obn &
   $(OBJ_DIR)\transform_read_support_format_zip.obn &
-  $(OBJ_DIR)\archive_string.obn                        $(OBJ_DIR)\archive_string_sprintf.obn &
-  $(OBJ_DIR)\archive_util.obn                          $(OBJ_DIR)\archive_virtual.obn &
+  $(OBJ_DIR)\transform_string.obn                        $(OBJ_DIR)\transform_string_sprintf.obn &
+  $(OBJ_DIR)\transform_util.obn                          $(OBJ_DIR)\transform_virtual.obn &
   $(OBJ_DIR)\transform_write.obn                         $(OBJ_DIR)\transform_write_disk.obn &
   $(OBJ_DIR)\transform_write_disk_set_standard_lookup.obn &
   $(OBJ_DIR)\transform_write_open_fd.obn                 $(OBJ_DIR)\transform_write_open_file.obn &

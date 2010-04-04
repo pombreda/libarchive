@@ -26,7 +26,7 @@
 
 #include "transform_platform.h"
 
-__FBSDID("$FreeBSD: head/lib/libarchive/transform_read_support_compression_xz.c 201167 2009-12-29 06:06:20Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_read_support_compression_xz.c 201167 2009-12-29 06:06:20Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -101,9 +101,9 @@ transform_read_support_compression_xz(struct transform *_a)
 	struct transform_read *a = (struct transform_read *)_a;
 	struct transform_read_filter_bidder *bidder = __transform_read_get_bidder(a);
 
-	archive_clear_error(_a);
+	transform_clear_error(_a);
 	if (bidder == NULL)
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 
 	bidder->data = NULL;
 	bidder->bid = xz_bidder_bid;
@@ -111,11 +111,11 @@ transform_read_support_compression_xz(struct transform *_a)
 	bidder->options = NULL;
 	bidder->free = NULL;
 #if HAVE_LZMA_H && HAVE_LIBLZMA
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 #else
-	archive_set_error(_a, ARCHIVE_ERRNO_MISC,
+	transform_set_error(_a, TRANSFORM_ERRNO_MISC,
 	    "Using external unxz program for xz decompression");
-	return (ARCHIVE_WARN);
+	return (TRANSFORM_WARN);
 #endif
 }
 
@@ -125,9 +125,9 @@ transform_read_support_compression_lzma(struct transform *_a)
 	struct transform_read *a = (struct transform_read *)_a;
 	struct transform_read_filter_bidder *bidder = __transform_read_get_bidder(a);
 
-	archive_clear_error(_a);
+	transform_clear_error(_a);
 	if (bidder == NULL)
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 
 	bidder->data = NULL;
 	bidder->bid = lzma_bidder_bid;
@@ -135,13 +135,13 @@ transform_read_support_compression_lzma(struct transform *_a)
 	bidder->options = NULL;
 	bidder->free = NULL;
 #if HAVE_LZMA_H && HAVE_LIBLZMA
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 #elif HAVE_LZMADEC_H && HAVE_LIBLZMADEC
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 #else
-	archive_set_error(_a, ARCHIVE_ERRNO_MISC,
+	transform_set_error(_a, TRANSFORM_ERRNO_MISC,
 	    "Using external unlzma program for lzma decompression");
-	return (ARCHIVE_WARN);
+	return (TRANSFORM_WARN);
 #endif
 }
 
@@ -194,9 +194,9 @@ xz_bidder_bid(struct transform_read_filter_bidder *self,
  * <sigh> LZMA has a rather poor file signature.  Zeros do not
  * make good signature bytes as a rule, and the only non-zero byte
  * here is an ASCII character.  For example, an uncompressed tar
- * archive whose first file is ']' would satisfy this check.  It may
+ * transform whose first file is ']' would satisfy this check.  It may
  * be necessary to exclude LZMA from compression_all() because of
- * this.  Clients of libarchive would then have to explicitly enable
+ * this.  Clients of libtransform would then have to explicitly enable
  * LZMA checking instead of (or in addition to) compression_all() when
  * they have other evidence (file name, command-line option) to go on.
  */
@@ -243,8 +243,8 @@ lzma_bidder_bid(struct transform_read_filter_bidder *self,
 	 * stored in little-endian order. `-1' means uncompressed
 	 * size is unknown and lzma of XZ Utils always records `-1'
 	 * in this field. */
-	uncompressed_size = archive_le64dec(buffer+5);
-	if (uncompressed_size == (uint64_t)ARCHIVE_LITERAL_LL(-1))
+	uncompressed_size = transform_le64dec(buffer+5);
+	if (uncompressed_size == (uint64_t)TRANSFORM_LITERAL_LL(-1))
 		bits_checked += 64;
 
 	/* Second through fifth bytes are dictionary size, stored in
@@ -254,7 +254,7 @@ lzma_bidder_bid(struct transform_read_filter_bidder *self,
 	 * which the one uses with option -d27.
 	 * NOTE: A comment of LZMA SDK source code says this dictionary
 	 * range is from 1 << 12 to 1 << 30. */
-	dicsize = archive_le32dec(buffer+1);
+	dicsize = transform_le32dec(buffer+1);
 	switch (dicsize) {
 	case 0x00001000:/* lzma of LZMA SDK option -d12. */
 	case 0x00002000:/* lzma of LZMA SDK option -d13. */
@@ -315,7 +315,7 @@ lzma_bidder_bid(struct transform_read_filter_bidder *self,
 static int
 xz_bidder_init(struct transform_read_filter *self)
 {
-	self->code = ARCHIVE_FILTER_XZ;
+	self->code = TRANSFORM_FILTER_XZ;
 	self->name = "xz";
 	return (xz_lzma_bidder_init(self));
 }
@@ -323,7 +323,7 @@ xz_bidder_init(struct transform_read_filter *self)
 static int
 lzma_bidder_init(struct transform_read_filter *self)
 {
-	self->code = ARCHIVE_FILTER_LZMA;
+	self->code = TRANSFORM_FILTER_LZMA;
 	self->name = "lzma";
 	return (xz_lzma_bidder_init(self));
 }
@@ -342,11 +342,11 @@ xz_lzma_bidder_init(struct transform_read_filter *self)
 	state = (struct private_data *)calloc(sizeof(*state), 1);
 	out_block = (unsigned char *)malloc(out_block_size);
 	if (state == NULL || out_block == NULL) {
-		archive_set_error(&self->archive->archive, ENOMEM,
+		transform_set_error(&self->transform->transform, ENOMEM,
 		    "Can't allocate data for xz decompression");
 		free(out_block);
 		free(state);
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	}
 
 	self->data = state;
@@ -366,7 +366,7 @@ xz_lzma_bidder_init(struct transform_read_filter *self)
 	 *       maybe, it needs to check memory size which
 	 *       running system has.
 	 */
-	if (self->code == ARCHIVE_FILTER_XZ)
+	if (self->code == TRANSFORM_FILTER_XZ)
 		ret = lzma_stream_decoder(&(state->stream),
 		    (1U << 30),/* memlimit */
 		    LZMA_CONCATENATED);
@@ -375,23 +375,23 @@ xz_lzma_bidder_init(struct transform_read_filter *self)
 		    (1U << 30));/* memlimit */
 
 	if (ret == LZMA_OK)
-		return (ARCHIVE_OK);
+		return (TRANSFORM_OK);
 
 	/* Library setup failed: Choose an error message and clean up. */
 	switch (ret) {
 	case LZMA_MEM_ERROR:
-		archive_set_error(&self->archive->archive, ENOMEM,
+		transform_set_error(&self->transform->transform, ENOMEM,
 		    "Internal error initializing compression library: "
 		    "Cannot allocate memory");
 		break;
 	case LZMA_OPTIONS_ERROR:
-		archive_set_error(&self->archive->archive,
-		    ARCHIVE_ERRNO_MISC,
+		transform_set_error(&self->transform->transform,
+		    TRANSFORM_ERRNO_MISC,
 		    "Internal error initializing compression library: "
 		    "Invalid or unsupported options");
 		break;
 	default:
-		archive_set_error(&self->archive->archive, ARCHIVE_ERRNO_MISC,
+		transform_set_error(&self->transform->transform, TRANSFORM_ERRNO_MISC,
 		    "Internal error initializing lzma library");
 		break;
 	}
@@ -399,7 +399,7 @@ xz_lzma_bidder_init(struct transform_read_filter *self)
 	free(state->out_block);
 	free(state);
 	self->data = NULL;
-	return (ARCHIVE_FATAL);
+	return (TRANSFORM_FATAL);
 }
 
 /*
@@ -424,7 +424,7 @@ xz_filter_read(struct transform_read_filter *self, const void **p)
 		state->stream.next_in =
 		    __transform_read_filter_ahead(self->upstream, 1, &avail_in);
 		if (state->stream.next_in == NULL && avail_in < 0)
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		state->stream.avail_in = avail_in;
 
 		/* Decompress as much as we can in one pass. */
@@ -439,39 +439,39 @@ xz_filter_read(struct transform_read_filter *self, const void **p)
 			    avail_in - state->stream.avail_in);
 			break;
 		case LZMA_MEM_ERROR:
-			archive_set_error(&self->archive->archive, ENOMEM,
+			transform_set_error(&self->transform->transform, ENOMEM,
 			    "Lzma library error: Cannot allocate memory");
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		case LZMA_MEMLIMIT_ERROR:
-			archive_set_error(&self->archive->archive, ENOMEM,
+			transform_set_error(&self->transform->transform, ENOMEM,
 			    "Lzma library error: Out of memory");
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		case LZMA_FORMAT_ERROR:
-			archive_set_error(&self->archive->archive,
-			    ARCHIVE_ERRNO_MISC,
+			transform_set_error(&self->transform->transform,
+			    TRANSFORM_ERRNO_MISC,
 			    "Lzma library error: format not recognized");
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		case LZMA_OPTIONS_ERROR:
-			archive_set_error(&self->archive->archive,
-			    ARCHIVE_ERRNO_MISC,
+			transform_set_error(&self->transform->transform,
+			    TRANSFORM_ERRNO_MISC,
 			    "Lzma library error: Invalid options");
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		case LZMA_DATA_ERROR:
-			archive_set_error(&self->archive->archive,
-			    ARCHIVE_ERRNO_MISC,
+			transform_set_error(&self->transform->transform,
+			    TRANSFORM_ERRNO_MISC,
 			    "Lzma library error: Corrupted input data");
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		case LZMA_BUF_ERROR:
-			archive_set_error(&self->archive->archive,
-			    ARCHIVE_ERRNO_MISC,
+			transform_set_error(&self->transform->transform,
+			    TRANSFORM_ERRNO_MISC,
 			    "Lzma library error:  No progress is possible");
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		default:
 			/* Return an error. */
-			archive_set_error(&self->archive->archive,
-			    ARCHIVE_ERRNO_MISC,
+			transform_set_error(&self->transform->transform,
+			    TRANSFORM_ERRNO_MISC,
 			    "Lzma decompression failed:  Unknown error");
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		}
 	}
 
@@ -496,7 +496,7 @@ xz_filter_close(struct transform_read_filter *self)
 	lzma_end(&(state->stream));
 	free(state->out_block);
 	free(state);
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 #else
@@ -519,17 +519,17 @@ lzma_bidder_init(struct transform_read_filter *self)
 	struct private_data *state;
 	ssize_t ret, avail_in;
 
-	self->code = ARCHIVE_FILTER_LZMA;
+	self->code = TRANSFORM_FILTER_LZMA;
 	self->name = "lzma";
 
 	state = (struct private_data *)calloc(sizeof(*state), 1);
 	out_block = (unsigned char *)malloc(out_block_size);
 	if (state == NULL || out_block == NULL) {
-		archive_set_error(&self->archive->archive, ENOMEM,
+		transform_set_error(&self->transform->transform, ENOMEM,
 		    "Can't allocate data for lzma decompression");
 		free(out_block);
 		free(state);
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	}
 
 	self->data = state;
@@ -543,7 +543,7 @@ lzma_bidder_init(struct transform_read_filter *self)
 	state->stream.next_in = (unsigned char *)(uintptr_t)
 	    __transform_read_filter_ahead(self->upstream, 18, &avail_in);
 	if (state->stream.next_in == NULL)
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	state->stream.avail_in = avail_in;
 	state->stream.next_out = state->out_block;
 	state->stream.avail_out = state->out_block_size;
@@ -553,22 +553,22 @@ lzma_bidder_init(struct transform_read_filter *self)
 	__transform_read_filter_consume(self->upstream,
 	    avail_in - state->stream.avail_in);
 	if (ret == LZMADEC_OK)
-		return (ARCHIVE_OK);
+		return (TRANSFORM_OK);
 
 	/* Library setup failed: Clean up. */
-	archive_set_error(&self->archive->archive, ARCHIVE_ERRNO_MISC,
+	transform_set_error(&self->transform->transform, TRANSFORM_ERRNO_MISC,
 	    "Internal error initializing lzma library");
 
 	/* Override the error message if we know what really went wrong. */
 	switch (ret) {
 	case LZMADEC_HEADER_ERROR:
-		archive_set_error(&self->archive->archive,
-		    ARCHIVE_ERRNO_MISC,
+		transform_set_error(&self->transform->transform,
+		    TRANSFORM_ERRNO_MISC,
 		    "Internal error initializing compression library: "
 		    "invalid header");
 		break;
 	case LZMADEC_MEM_ERROR:
-		archive_set_error(&self->archive->archive, ENOMEM,
+		transform_set_error(&self->transform->transform, ENOMEM,
 		    "Internal error initializing compression library: "
 		    "out of memory");
 		break;
@@ -577,7 +577,7 @@ lzma_bidder_init(struct transform_read_filter *self)
 	free(state->out_block);
 	free(state);
 	self->data = NULL;
-	return (ARCHIVE_FATAL);
+	return (TRANSFORM_FATAL);
 }
 
 /*
@@ -601,7 +601,7 @@ lzma_filter_read(struct transform_read_filter *self, const void **p)
 		state->stream.next_in = (unsigned char *)(uintptr_t)
 		    __transform_read_filter_ahead(self->upstream, 1, &avail_in);
 		if (state->stream.next_in == NULL && avail_in < 0)
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		state->stream.avail_in = avail_in;
 
 		/* Decompress as much as we can in one pass. */
@@ -615,16 +615,16 @@ lzma_filter_read(struct transform_read_filter *self, const void **p)
 			    avail_in - state->stream.avail_in);
 			break;
 		case LZMADEC_BUF_ERROR: /* Insufficient input data? */
-			archive_set_error(&self->archive->archive,
-			    ARCHIVE_ERRNO_MISC,
+			transform_set_error(&self->transform->transform,
+			    TRANSFORM_ERRNO_MISC,
 			    "Insufficient compressed data");
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		default:
 			/* Return an error. */
-			archive_set_error(&self->archive->archive,
-			    ARCHIVE_ERRNO_MISC,
+			transform_set_error(&self->transform->transform,
+			    TRANSFORM_ERRNO_MISC,
 			    "Lzma decompression failed");
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		}
 	}
 
@@ -647,16 +647,16 @@ lzma_filter_close(struct transform_read_filter *self)
 	int ret;
 
 	state = (struct private_data *)self->data;
-	ret = ARCHIVE_OK;
+	ret = TRANSFORM_OK;
 	switch (lzmadec_end(&(state->stream))) {
 	case LZMADEC_OK:
 		break;
 	default:
-		archive_set_error(&(self->archive->archive),
-		    ARCHIVE_ERRNO_MISC,
+		transform_set_error(&(self->transform->transform),
+		    TRANSFORM_ERRNO_MISC,
 		    "Failed to clean up %s compressor",
-		    self->archive->archive.compression_name);
-		ret = ARCHIVE_FATAL;
+		    self->transform->transform.compression_name);
+		ret = TRANSFORM_FATAL;
 	}
 
 	free(state->out_block);
@@ -670,7 +670,7 @@ lzma_filter_close(struct transform_read_filter *self)
  *
  * If we have no suitable library on this system, we can't actually do
  * the decompression.  We can, however, still detect compressed
- * archives and emit a useful message.
+ * transforms and emit a useful message.
  *
  */
 static int
@@ -682,7 +682,7 @@ lzma_bidder_init(struct transform_read_filter *self)
 	/* Note: We set the format here even if __transform_read_program()
 	 * above fails.  We do, after all, know what the format is
 	 * even if we weren't able to read it. */
-	self->code = ARCHIVE_FILTER_LZMA;
+	self->code = TRANSFORM_FILTER_LZMA;
 	self->name = "lzma";
 	return (r);
 }
@@ -699,7 +699,7 @@ xz_bidder_init(struct transform_read_filter *self)
 	/* Note: We set the format here even if __transform_read_program()
 	 * above fails.  We do, after all, know what the format is
 	 * even if we weren't able to read it. */
-	self->code = ARCHIVE_FILTER_XZ;
+	self->code = TRANSFORM_FILTER_XZ;
 	self->name = "xz";
 	return (r);
 }

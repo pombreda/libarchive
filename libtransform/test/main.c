@@ -36,14 +36,14 @@
  * TODO: Move this into a separate configuration header, have all test
  * suites share one copy of this file.
  */
-__FBSDID("$FreeBSD: head/lib/libarchive/test/main.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/main.c 201247 2009-12-30 05:59:21Z kientzle $");
 #define KNOWNREF	"test_compat_gtar_1.tar.uu"
-#define	ENVBASE "LIBARCHIVE" /* Prefix for environment variables. */
+#define	ENVBASE "LIBTRANSFORM" /* Prefix for environment variables. */
 #undef	PROGRAM              /* Testing a library, not a program. */
-#define	LIBRARY	"libarchive"
-#define	EXTRA_ERRNO(x)	archive_errno((struct transform *)(x))
-#define	EXTRA_DUMP(x)	archive_error_string((struct transform *)(x))
-#define	EXTRA_VERSION	archive_version_string()
+#define	LIBRARY	"libtransform"
+#define	EXTRA_ERRNO(x)	transform_errno((struct transform *)(x))
+#define	EXTRA_DUMP(x)	transform_error_string((struct transform *)(x))
+#define	EXTRA_VERSION	transform_version_string()
 
 /*
  *
@@ -52,7 +52,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/main.c 201247 2009-12-30 05:59:21Z 
  * Note: Configuration is a tricky issue.  Using HAVE_* feature macros
  * in the test harness is dangerous because they cover up
  * configuration errors.  The classic example of this is omitting a
- * configure check.  If libarchive and libtransform_test both look for
+ * configure check.  If libtransform and libtransform_test both look for
  * the same feature macro, such errors are hard to detect.  Platform
  * macros (e.g., _WIN32 or __GNUC__) are a little better, but can
  * easily lead to very messy code.  It's best to limit yourself
@@ -62,7 +62,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/main.c 201247 2009-12-30 05:59:21Z 
  * one place (e.g., test_acl_freebsd) or by adding new assert()
  * functions (e.g., assertMakeHardlink()) to cover up platform
  * differences.  Platform-specific coding in libtransform_test is often
- * a symptom that some capability is missing from libarchive itself.
+ * a symptom that some capability is missing from libtransform itself.
  */
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #include <io.h>
@@ -330,7 +330,7 @@ failure_start(const char *filename, int line, const char *fmt, ...)
 
 /* Complete reporting of failed tests. */
 /*
- * The 'extra' hook here is used by libarchive to include libarchive
+ * The 'extra' hook here is used by libtransform to include libtransform
  * error messages with assertion failures.  It could also be used
  * to add strerror() output, for example.  Just define the EXTRA_DUMP()
  * macro appropriately.

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_disk.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_disk.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 static void
 gname_cleanup(void *d)
@@ -86,29 +86,29 @@ DEFINE_TEST(test_read_disk)
 	assert(transform_read_disk_uname(a, 0) == NULL);
 
 	/* Register some weird lookup functions. */
-	assertEqualInt(ARCHIVE_OK, transform_read_disk_set_gname_lookup(a,
+	assertEqualInt(TRANSFORM_OK, transform_read_disk_set_gname_lookup(a,
 			   &gmagic, &gname_lookup, &gname_cleanup));
 	/* Verify that our new function got called. */
 	assertEqualString(transform_read_disk_gname(a, 0), "NOTFOOGROUP");
 	assertEqualString(transform_read_disk_gname(a, 1), "FOOGROUP");
 
 	/* De-register. */
-	assertEqualInt(ARCHIVE_OK,
+	assertEqualInt(TRANSFORM_OK,
 	    transform_read_disk_set_gname_lookup(a, NULL, NULL, NULL));
 	/* Ensure our cleanup function got called. */
 	assertEqualInt(gmagic, 0x2468);
 
 	/* Same thing with uname lookup.... */
-	assertEqualInt(ARCHIVE_OK, transform_read_disk_set_uname_lookup(a,
+	assertEqualInt(TRANSFORM_OK, transform_read_disk_set_uname_lookup(a,
 			   &umagic, &uname_lookup, &uname_cleanup));
 	assertEqualString(transform_read_disk_uname(a, 0), "NOTFOO");
 	assertEqualString(transform_read_disk_uname(a, 1), "FOO");
-	assertEqualInt(ARCHIVE_OK,
+	assertEqualInt(TRANSFORM_OK,
 	    transform_read_disk_set_uname_lookup(a, NULL, NULL, NULL));
 	assertEqualInt(umagic, 0x2345);
 
 	/* Try the standard lookup functions. */
-	if (transform_read_disk_set_standard_lookup(a) != ARCHIVE_OK) {
+	if (transform_read_disk_set_standard_lookup(a) != TRANSFORM_OK) {
 		skipping("standard uname/gname lookup");
 	} else {
 #if defined(__CYGWIN__) || defined(__HAIKU__)
@@ -148,9 +148,9 @@ DEFINE_TEST(test_read_disk)
 	}
 
 	/* Deregister again and verify the default lookups again. */
-	assertEqualInt(ARCHIVE_OK,
+	assertEqualInt(TRANSFORM_OK,
 	    transform_read_disk_set_gname_lookup(a, NULL, NULL, NULL));
-	assertEqualInt(ARCHIVE_OK,
+	assertEqualInt(TRANSFORM_OK,
 	    transform_read_disk_set_uname_lookup(a, NULL, NULL, NULL));
 	assert(transform_read_disk_gname(a, 0) == NULL);
 	assert(transform_read_disk_uname(a, 0) == NULL);
@@ -158,13 +158,13 @@ DEFINE_TEST(test_read_disk)
 	/* Re-register our custom handlers. */
 	gmagic = 0x13579;
 	umagic = 0x1234;
-	assertEqualInt(ARCHIVE_OK, transform_read_disk_set_gname_lookup(a,
+	assertEqualInt(TRANSFORM_OK, transform_read_disk_set_gname_lookup(a,
 			   &gmagic, &gname_lookup, &gname_cleanup));
-	assertEqualInt(ARCHIVE_OK, transform_read_disk_set_uname_lookup(a,
+	assertEqualInt(TRANSFORM_OK, transform_read_disk_set_uname_lookup(a,
 			   &umagic, &uname_lookup, &uname_cleanup));
 
-	/* Destroy the archive. */
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	/* Destroy the transform. */
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 
 	/* Verify our cleanup functions got called. */
 	assertEqualInt(gmagic, 0x2468);

@@ -5,6 +5,6 @@
 .depend
 .deps
 .dirstamp
-archive.h
+transform.h
 libtransform_test
 list.h

@@ -23,9 +23,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_cpio_bin_Z.c 189464 2009-03-07 00:25:33Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_format_cpio_bin_Z.c 189464 2009-03-07 00:25:33Z kientzle $");
 
-static unsigned char archive[] = {
+static unsigned char transform[] = {
 31,157,144,199,226,'T',' ',16,'+','O',187,' ',232,6,'$',20,0,160,'!',156,
 '!',244,154,'0','l',216,208,5,128,128,20,'3','R',12,160,177,225,2,141,'T',
 164,4,'I',194,164,136,148,16,'(',';',170,'\\',201,178,165,203,151,'0','c',
@@ -36,22 +36,22 @@ DEFINE_TEST(test_read_format_cpio_bin_Z)
 	struct transform_entry *ae;
 	struct transform *a;
 	assert((a = transform_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK,
+	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK,
-	    transform_read_open_memory(a, archive, sizeof(archive)));
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
-	failure("archive_compression_name(a)=\"%s\"",
-	    archive_compression_name(a));
-	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_COMPRESS);
-	assertEqualString(archive_compression_name(a), "compress (.Z)");
-	failure("archive_format_name(a)=\"%s\"",
-	    archive_format_name(a));
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_CPIO_BIN_LE);
-	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
-	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
+	assertEqualIntA(a, TRANSFORM_OK,
+	    transform_read_open_memory(a, transform, sizeof(transform)));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_next_header(a, &ae));
+	failure("transform_compression_name(a)=\"%s\"",
+	    transform_compression_name(a));
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_COMPRESS);
+	assertEqualString(transform_compression_name(a), "compress (.Z)");
+	failure("transform_format_name(a)=\"%s\"",
+	    transform_format_name(a));
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_CPIO_BIN_LE);
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 
