@@ -272,6 +272,18 @@ PyArchive_Entry_get_rdevminor(PyArchiveEntry *self, void *closure)
     return PyInt_FromLong(archive_entry_rdevminor(self->archive_entry));
 }
 
+static PyObject *
+PyArchive_Entry_get_inode(PyArchiveEntry *self, void *closure)
+{
+    return PyInt_FromLong(archive_entry_ino(self->archive_entry));
+}
+
+static PyObject *
+PyArchive_Entry_get_mode(PyArchiveEntry *self, void *closure)
+{
+    return PyInt_FromLong(archive_entry_mode(self->archive_entry));
+}
+
 
 static PyGetSetDef PyArchiveEntry_getsetters[] = {
     GETSET_HELPER(PyArchiveEntry, "name", name),
@@ -322,6 +334,10 @@ static PyGetSetDef PyArchiveEntry_getsetters[] = {
     {"rdevmajor", (getter)PyArchive_Entry_get_rdevmajor,
         (setter)PyArchive_Entry_generic_immutable, NULL},
     {"rdevminor", (getter)PyArchive_Entry_get_rdevminor,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"inode", (getter)PyArchive_Entry_get_inode,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"mode", (getter)PyArchive_Entry_get_mode,
         (setter)PyArchive_Entry_generic_immutable, NULL},
     {NULL}
 };
