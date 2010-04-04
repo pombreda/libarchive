@@ -265,6 +265,10 @@ __LA_DECL int transform_read_open_fd(struct transform *, int _fd,
 /* Note: DO NOT use this with tape drives. */
 __LA_DECL int transform_read_open_FILE(struct transform *, FILE *_file);
 
+__LA_DECL const void *transform_read_ahead(struct transform *, size_t, ssize_t *);
+__LA_DECL int64_t transform_read_consume(struct transform *, int64_t);
+__LA_DECL int64_t transform_read_bytes_consumed(struct transform *);
+
 /*
  * Retrieve the byte offset in UNCOMPRESSED data where last-read
  * header started.

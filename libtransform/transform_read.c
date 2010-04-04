@@ -503,7 +503,7 @@ __transform_read_get_bidder(struct transform_read *a)
  *  * The consume function advances the file pointer.
  *
  * In the ideal case, filters generate blocks of data
- * and __transform_read_ahead() just returns pointers directly into
+ * and transform_read_ahead() just returns pointers directly into
  * those blocks.  Then __transform_read_consume() just bumps those
  * pointers.  Only if your request would span blocks does the I/O
  * layer use a copy buffer to provide you with a contiguous block of
@@ -511,7 +511,7 @@ __transform_read_get_bidder(struct transform_read *a)
  *
  * A couple of useful idioms:
  *  * "I just want some data."  Ask for 1 byte and pay attention to
- *    the "number of bytes available" from __transform_read_ahead().
+ *    the "number of bytes available" from transform_read_ahead().
  *    Consume whatever you actually use.
  *  * "I want to output a large block of data."  As above, ask for 1 byte,
  *    emit all that's available (up to whatever limit you have), consume
@@ -552,8 +552,12 @@ __transform_read_get_bidder(struct transform_read *a)
  */
 
 const void *
-__transform_read_ahead(struct transform_read *a, size_t min, ssize_t *avail)
+transform_read_ahead(struct transform *_a, size_t min, ssize_t *avail)
 {
+	struct transform_read *a = (struct transform_read *)_a;
+	if (TRANSFORM_OK != __transform_check_magic(_a, TRANSFORM_READ_MAGIC,
+		TRANSFORM_STATE_DATA, "transform_read_ahead"))
+		return (NULL);
 	return (__transform_read_filter_ahead(a->filter, min, avail));
 }
 
@@ -720,18 +724,23 @@ __transform_read_filter_ahead(struct transform_read_filter *filter,
 
 /*
  * Move the file pointer forward.  This should be called after
- * __transform_read_ahead() returns data to you.  Don't try to move
+ * transform_read_ahead() returns data to you.  Don't try to move
  * ahead by more than the amount of data available according to
- * __transform_read_ahead().
+ * transform_read_ahead().
  */
 /*
  * Mark the appropriate data as used.  Note that the request here will
  * often be much smaller than the size of the previous read_ahead
  * request.
  */
+
 int64_t
-__transform_read_consume(struct transform_read *a, int64_t request)
+transform_read_consume(struct transform *_a, int64_t request)
 {
+	struct transform_read *a = (struct transform_read *)_a;
+	transform_check_magic(_a, TRANSFORM_READ_MAGIC,
+		TRANSFORM_STATE_DATA, "transform_read_consume");
+
 	return (__transform_read_filter_consume(a->filter, request));
 }
 
@@ -834,3 +843,11 @@ advance_file_pointer(struct transform_read_filter *filter, int64_t request)
 		request -= bytes_read;
 	}
 }
+
+int64_t
+transform_read_bytes_consumed(struct transform *_a)
+{
+	struct transform_read *a = (struct transform_read *)_a;
+	return a->filter->bytes_consumed;
+}
+
