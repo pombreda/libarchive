@@ -66,7 +66,6 @@ static const char *_transform_filter_name(struct transform *, int);
 static int64_t	_transform_filter_bytes(struct transform *, int);
 static int	_transform_write_close(struct transform *);
 static int	_transform_write_free(struct transform *);
-static int	_transform_write_finish_entry(struct transform *);
 static ssize_t	_transform_write_data(struct transform *, const void *, size_t);
 
 struct transform_none {
@@ -88,7 +87,6 @@ transform_write_vtable(void)
 		av.transform_filter_code = _transform_filter_code;
 		av.transform_filter_name = _transform_filter_name;
 		av.transform_free = _transform_write_free;
-		av.transform_write_finish_entry = _transform_write_finish_entry;
 		av.transform_write_data = _transform_write_data;
 	}
 	return (&av);
@@ -445,10 +443,6 @@ _transform_write_close(struct transform *_a)
 
 	transform_clear_error(&a->transform);
 
-	/* Finish the last entry. */
-	if (a->transform.state == TRANSFORM_STATE_DATA)
-		r = ((a->format_finish_entry)(a));
-
 	/* Finish off the transform. */
 	/* TODO: have format closers invoke compression close. */
 	if (a->format_close != NULL) {
@@ -523,21 +517,6 @@ _transform_write_free(struct transform *_a)
 	a->transform.magic = 0;
 	free(a);
 	return (r);
-}
-
-static int
-_transform_write_finish_entry(struct transform *_a)
-{
-	struct transform_write *a = (struct transform_write *)_a;
-	int ret = TRANSFORM_OK;
-
-	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_HEADER | TRANSFORM_STATE_DATA,
-	    "transform_write_finish_entry");
-	if (a->transform.state & TRANSFORM_STATE_DATA)
-		ret = (a->format_finish_entry)(a);
-	a->transform.state = TRANSFORM_STATE_HEADER;
-	return (ret);
 }
 
 /*

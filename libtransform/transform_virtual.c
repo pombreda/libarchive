@@ -77,12 +77,6 @@ transform_read_free(struct transform *a)
 	return ((a->vtable->transform_free)(a));
 }
 
-int
-transform_write_finish_entry(struct transform *a)
-{
-	return ((a->vtable->transform_write_finish_entry)(a));
-}
-
 ssize_t
 transform_write_data(struct transform *a, const void *buff, size_t s)
 {

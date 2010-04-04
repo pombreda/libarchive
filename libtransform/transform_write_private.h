@@ -107,7 +107,6 @@ struct transform_write {
 	int	(*format_init)(struct transform_write *);
 	int	(*format_options)(struct transform_write *,
 		    const char *key, const char *value);
-	int	(*format_finish_entry)(struct transform_write *);
 	ssize_t	(*format_write_data)(struct transform_write *,
 		    const void *buff, size_t);
 	int	(*format_close)(struct transform_write *);

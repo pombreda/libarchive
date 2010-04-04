@@ -413,7 +413,6 @@ __LA_DECL __LA_SSIZE_T	transform_write_data(struct transform *,
 /* Libtransform 3.0 uses explicit int64_t to ensure consistent 64-bit support. */
 __LA_DECL __LA_SSIZE_T	 transform_write_data_block(struct transform *,
 				    const void *, size_t, __LA_INT64_T);
-__LA_DECL int		 transform_write_finish_entry(struct transform *);
 __LA_DECL int		 transform_write_close(struct transform *);
 /* This can fail if the transform wasn't already closed, in which case
  * transform_write_free() will implicitly call transform_write_close(). */
