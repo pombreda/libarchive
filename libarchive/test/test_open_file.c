@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_open_file.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 DEFINE_TEST(test_open_file)
 {
@@ -67,7 +67,7 @@ DEFINE_TEST(test_open_file)
 
 	/* Close out the archive. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 	fclose(f);
 
 	/*
@@ -102,7 +102,7 @@ DEFINE_TEST(test_open_file)
 	/* Verify the end of the archive. */
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 
 	fclose(f);
 }

@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_format_iso9660.c,v 1.30 2008/12/06 06:57:45 kientzle Exp $");
+__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_iso9660.c 201246 2009-12-30 05:30:35Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -258,9 +258,9 @@ struct content {
 
 /* In-memory storage for a directory record. */
 struct file_info {
+	struct file_info	*use_next;
 	struct file_info	*parent;
 	struct file_info	*next;
-	int		 refcount;
 	int		 subdirs;
 	uint64_t	 key;		/* Heap Key.			*/
 	uint64_t	 offset;	/* Offset on disk.		*/
@@ -331,6 +331,7 @@ struct iso9660 {
 	int64_t		previous_number;
 	struct archive_string previous_pathname;
 
+	struct file_info		*use_files;
 	struct heap_queue		 pending_files;
 	struct {
 		struct file_info	*first;
@@ -357,8 +358,13 @@ static int	archive_read_format_iso9660_bid(struct archive_read *);
 static int	archive_read_format_iso9660_options(struct archive_read *,
 		    const char *, const char *);
 static int	archive_read_format_iso9660_cleanup(struct archive_read *);
+#if ARCHIVE_VERSION_NUMBER < 3000000
 static int	archive_read_format_iso9660_read_data(struct archive_read *,
 		    const void **, size_t *, off_t *);
+#else
+static int	archive_read_format_iso9660_read_data(struct archive_read *,
+		    const void **, size_t *, int64_t *);
+#endif
 static int	archive_read_format_iso9660_read_data_skip(struct archive_read *);
 static int	archive_read_format_iso9660_read_header(struct archive_read *,
 		    struct archive_entry *);
@@ -396,7 +402,8 @@ static void	parse_rockridge_TF1(struct file_info *,
 		    const unsigned char *, int);
 static void	parse_rockridge_ZF1(struct file_info *,
 		    const unsigned char *, int);
-static void	release_file(struct iso9660 *, struct file_info *);
+static void	register_file(struct iso9660 *, struct file_info *);
+static void	release_files(struct iso9660 *);
 static unsigned	toi(const void *p, int n);
 static inline void cache_add_entry(struct iso9660 *iso9660,
 		    struct file_info *file);
@@ -418,6 +425,9 @@ archive_read_support_format_iso9660(struct archive *_a)
 	struct archive_read *a = (struct archive_read *)_a;
 	struct iso9660 *iso9660;
 	int r;
+
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
+	    ARCHIVE_STATE_NEW, "archive_read_support_format_iso9660");
 
 	iso9660 = (struct iso9660 *)malloc(sizeof(*iso9660));
 	if (iso9660 == NULL) {
@@ -917,7 +927,7 @@ read_children(struct archive_read *a, struct file_info *parent)
 	if (parent->offset + parent->size > iso9660->volume_size) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
 		    "Directory is beyond end-of-media: %s",
-		    parent->name);
+		    parent->name.s);
 		return (ARCHIVE_WARN);
 	}
 	if (iso9660->current_position < parent->offset) {
@@ -980,7 +990,6 @@ read_children(struct archive_read *a, struct file_info *parent)
 					}
 					con = malloc(sizeof(struct content));
 					if (con == NULL) {
-						release_file(iso9660, child);
 						archive_set_error(
 						    &a->archive, ENOMEM,
 						    "No memory for "
@@ -998,7 +1007,6 @@ read_children(struct archive_read *a, struct file_info *parent)
 						multi->size += child->size;
 						if (!child->multi_extent)
 							multi = NULL;
-						release_file(iso9660, child);
 					}
 				} else
 					add_entry(iso9660, child);
@@ -1029,10 +1037,8 @@ relocate_dir(struct iso9660 *iso9660, struct file_info *file)
 		/* This case is wrong pattern. */
 		return (0);
 	if (re->offset == file->cl_offset) {
-		re->parent->refcount--;
 		re->parent->subdirs--;
 		re->parent = file->parent;
-		re->parent->refcount++;
 		re->parent->subdirs++;
 		cache_add_to_next_of_parent(iso9660, re);
 		return (1);
@@ -1077,10 +1083,8 @@ read_entries(struct archive_read *a)
 		/*
 		 * Relocate directory which rr_moved has.
 		 */
-		while ((file = heap_get_entry(&(iso9660->cl_files))) != NULL) {
+		while ((file = heap_get_entry(&(iso9660->cl_files))) != NULL)
 			relocate_dir(iso9660, file);
-			release_file(iso9660, file);
-		}
 
 		/* If rr_moved directory still has children,
 		 * Add rr_moved into pending_files to show
@@ -1092,10 +1096,8 @@ read_entries(struct archive_read *a)
 			 * is broken), the entries won't be exposed. */
 			while ((file = heap_get_entry(&(iso9660->re_dirs))) != NULL)
 				cache_add_entry(iso9660, file);
-		} else {
+		} else
 			iso9660->rr_moved->parent->subdirs--;
-			release_file(iso9660, iso9660->rr_moved);
-		}
 	} else {
 		/*
 		 * In case ISO image is broken. If the name of rr_moved
@@ -1174,7 +1176,6 @@ archive_read_format_iso9660_read_header(struct archive_read *a,
 		if (vd == &(iso9660->primary) && !iso9660->seenRockridge
 		    && iso9660->seenJoliet) {
 			/* Switch reading data from primary to joliet. */ 
-			release_file(iso9660, file);
 			vd = &(iso9660->joliet);
 			skipsize = LOGICAL_BLOCK_SIZE * vd->location;
 			skipsize -= iso9660->current_position;
@@ -1214,20 +1215,17 @@ archive_read_format_iso9660_read_header(struct archive_read *a,
 
 	/* Get the next entry that appears after the current offset. */
 	r = next_entry_seek(a, iso9660, &file);
-	if (r != ARCHIVE_OK) {
-		release_file(iso9660, file);
+	if (r != ARCHIVE_OK)
 		return (r);
-	}
 
 	iso9660->entry_bytes_remaining = file->size;
 	iso9660->entry_sparse_offset = 0; /* Offset for sparse-file-aware clients. */
 
 	if (file->offset + file->size > iso9660->volume_size) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-		    "File is beyond end-of-media: %s", file->name);
+		    "File is beyond end-of-media: %s", file->name.s);
 		iso9660->entry_bytes_remaining = 0;
 		iso9660->entry_sparse_offset = 0;
-		release_file(iso9660, file);
 		return (ARCHIVE_WARN);
 	}
 
@@ -1263,7 +1261,6 @@ archive_read_format_iso9660_read_header(struct archive_read *a,
 		archive_entry_unset_size(entry);
 		iso9660->entry_bytes_remaining = 0;
 		iso9660->entry_sparse_offset = 0;
-		release_file(iso9660, file);
 		return (ARCHIVE_OK);
 	}
 
@@ -1285,13 +1282,12 @@ archive_read_format_iso9660_read_header(struct archive_read *a,
 	if ((file->mode & AE_IFMT) != AE_IFDIR &&
 	    file->offset < iso9660->current_position) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-		    "Ignoring out-of-order file @%x (%s) %jd < %jd",
-		    file,
+		    "Ignoring out-of-order file @%jx (%s) %jd < %jd",
+		    (intmax_t)file->number,
 		    iso9660->pathname.s,
 		    file->offset, iso9660->current_position);
 		iso9660->entry_bytes_remaining = 0;
 		iso9660->entry_sparse_offset = 0;
-		release_file(iso9660, file);
 		return (ARCHIVE_WARN);
 	}
 
@@ -1331,8 +1327,6 @@ archive_read_format_iso9660_read_header(struct archive_read *a,
 		file->exposed = 1;
 	}
 
-	release_file(iso9660, file);
-
 	if (rd_r != ARCHIVE_OK)
 		return (rd_r);
 	return (ARCHIVE_OK);
@@ -1349,9 +1343,15 @@ archive_read_format_iso9660_read_data_skip(struct archive_read *a)
 
 #ifdef HAVE_ZLIB_H
 
+#if ARCHIVE_VERSION_NUMBER < 3000000
 static int
 zisofs_read_data(struct archive_read *a,
     const void **buff, size_t *size, off_t *offset)
+#else
+static int
+zisofs_read_data(struct archive_read *a,
+    const void **buff, size_t *size, int64_t *offset)
+#endif
 {
 	struct iso9660 *iso9660;
 	struct zisofs  *zisofs;
@@ -1567,9 +1567,15 @@ next_data:
 
 #else /* HAVE_ZLIB_H */
 
+#if ARCHIVE_VERSION_NUMBER < 3000000
 static int
 zisofs_read_data(struct archive_read *a,
     const void **buff, size_t *size, off_t *offset)
+#else
+static int
+zisofs_read_data(struct archive_read *a,
+    const void **buff, size_t *size, int64_t *offset)
+#endif
 {
 
 	(void)buff;/* UNUSED */
@@ -1582,9 +1588,15 @@ zisofs_read_data(struct archive_read *a,
 
 #endif /* HAVE_ZLIB_H */
 
+#if ARCHIVE_VERSION_NUMBER < 3000000
 static int
 archive_read_format_iso9660_read_data(struct archive_read *a,
     const void **buff, size_t *size, off_t *offset)
+#else
+static int
+archive_read_format_iso9660_read_data(struct archive_read *a,
+    const void **buff, size_t *size, int64_t *offset)
+#endif
 {
 	ssize_t bytes_read;
 	struct iso9660 *iso9660;
@@ -1648,14 +1660,10 @@ static int
 archive_read_format_iso9660_cleanup(struct archive_read *a)
 {
 	struct iso9660 *iso9660;
-	struct file_info *file;
 	int r = ARCHIVE_OK;
 
 	iso9660 = (struct iso9660 *)(a->format->data);
-	while ((file = cache_get_entry(iso9660)) != NULL)
-		release_file(iso9660, file);
-	while ((file = next_entry(iso9660)) != NULL)
-		release_file(iso9660, file);
+	release_files(iso9660);
 	free(iso9660->read_ce_req.reqs);
 	archive_string_free(&iso9660->pathname);
 	archive_string_free(&iso9660->previous_pathname);
@@ -1736,8 +1744,6 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 	}
 	memset(file, 0, sizeof(*file));
 	file->parent = parent;
-	if (parent != NULL)
-		parent->refcount++;
 	file->offset = iso9660->logical_block_size * (uint64_t)location;
 	file->size = toi(isodirrec + DR_size_offset, DR_size_size);
 	file->mtime = isodate7(isodirrec + DR_date_offset);
@@ -1869,8 +1875,6 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 			rr_start += iso9660->suspOffset;
 			r = parse_rockridge(a, file, rr_start, rr_end);
 			if (r != ARCHIVE_OK) {
-				if (parent != NULL)
-					parent->refcount--;
 				free(file);
 				return (NULL);
 			}
@@ -1880,6 +1884,7 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 			iso9660->opt_support_rockridge = 0;
 	}
 
+	file->nlinks = 1;/* Reset nlink. we'll calculate it later. */
 	/* Tell file's parent how many children that parent has. */
 	if (parent != NULL && (flags & 0x02) && file->cl_offset == 0)
 		parent->subdirs++;
@@ -1908,6 +1913,7 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 		fprintf(stderr, "\n");
 	}
 #endif
+	register_file(iso9660, file);
 	return (file);
 }
 
@@ -2460,18 +2466,24 @@ parse_rockridge_ZF1(struct file_info *file, const unsigned char *data,
 	}
 }
 
+static void
+register_file(struct iso9660 *iso9660, struct file_info *file)
+{
+
+	file->use_next = iso9660->use_files;
+	iso9660->use_files = file;
+}
 
 static void
-release_file(struct iso9660 *iso9660, struct file_info *file)
+release_files(struct iso9660 *iso9660)
 {
-	struct file_info *parent;
 	struct content *con, *connext;
+	struct file_info *file;
 
-	if (file == NULL)
-		return;
+	file = iso9660->use_files;
+	while (file != NULL) {
+		struct file_info *next = file->use_next;
 
-	if (file->refcount == 0) {
-		parent = file->parent;
 		archive_string_free(&file->name);
 		archive_string_free(&file->symlink);
 		con = file->contents.first;
@@ -2481,10 +2493,7 @@ release_file(struct iso9660 *iso9660, struct file_info *file)
 			con = connext;
 		}
 		free(file);
-		if (parent != NULL) {
-			parent->refcount--;
-			release_file(iso9660, parent);
-		}
+		file = next;
 	}
 }
 
@@ -2568,7 +2577,6 @@ next_cache_entry(struct iso9660 *iso9660)
 			 * happen.
 			 */
 			file->next = NULL;
-			file->refcount++;
 			*empty_files.last = file;
 			empty_files.last = &(file->next);
 		} else {
@@ -2611,7 +2619,6 @@ static inline void
 cache_add_entry(struct iso9660 *iso9660, struct file_info *file)
 {
 	file->next = NULL;
-	file->refcount++;
 	*iso9660->cache_files.last = file;
 	iso9660->cache_files.last = &(file->next);
 }
@@ -2621,7 +2628,6 @@ cache_add_to_next_of_parent(struct iso9660 *iso9660, struct file_info *file)
 {
 	file->next = file->parent->next;
 	file->parent->next = file;
-	file->refcount++;
 	if (iso9660->cache_files.last == &(file->parent->next))
 		iso9660->cache_files.last = &(file->next);
 }
@@ -2633,7 +2639,6 @@ cache_get_entry(struct iso9660 *iso9660)
 
 	if ((file = iso9660->cache_files.first) != NULL) {
 		iso9660->cache_files.first = file->next;
-		file->refcount--;
 		if (iso9660->cache_files.first == NULL)
 			iso9660->cache_files.last = &(iso9660->cache_files.first);
 	}
@@ -2669,7 +2674,6 @@ heap_add_entry(struct heap_queue *heap, struct file_info *file, uint64_t key)
 	}
 
 	file_key = file->key = key;
-	file->refcount++;
 
 	/*
 	 * Start with hole at end, walk it up tree to find insertion point.
@@ -2703,7 +2707,6 @@ heap_get_entry(struct heap_queue *heap)
 	 * The first file in the list is the earliest; we'll return this.
 	 */
 	r = heap->files[0];
-	r->refcount--;
 
 	/*
 	 * Move the last item in the heap to the root of the tree
@@ -2798,6 +2801,8 @@ time_from_tm(struct tm *t)
 #if HAVE_TIMEGM
 	/* Use platform timegm() if available. */
 	return (timegm(t));
+#elif HAVE__MKGMTIME64
+	return (_mkgmtime64(t));
 #else
 	/* Else use direct calculation using POSIX assumptions. */
 	/* First, fix up tm_yday based on the year/month/day. */

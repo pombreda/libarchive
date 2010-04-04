@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libarchive/archive_read.3,v 1.37 2008/05/26 17:00:22 kientzle Exp $
+.\" $FreeBSD: head/lib/libarchive/archive_read.3 191595 2009-04-27 20:13:13Z kientzle $
 .\"
 .Dd April 13, 2009
 .Dt archive_read 3
@@ -69,7 +69,7 @@
 .Nm archive_read_extract2 ,
 .Nm archive_read_extract_set_progress_callback ,
 .Nm archive_read_close ,
-.Nm archive_read_finish
+.Nm archive_read_free
 .Nd functions for reading streaming archives
 .Sh SYNOPSIS
 .In archive.h
@@ -196,7 +196,7 @@
 .Ft int
 .Fn archive_read_close "struct archive *"
 .Ft int
-.Fn archive_read_finish "struct archive *"
+.Fn archive_read_free "struct archive *"
 .Sh DESCRIPTION
 These functions provide a complete API for reading streaming archives.
 The general process is to first create the
@@ -457,7 +457,7 @@ object and the archive_entry object so that various statistics
 can be retrieved for the progress display.
 .It Fn archive_read_close
 Complete the archive and invoke the close callback.
-.It Fn archive_read_finish
+.It Fn archive_read_free
 Invokes
 .Fn archive_read_close
 if it was not invoked manually, then release all resources.
@@ -495,21 +495,12 @@ The callback functions must match the following prototypes:
 .Fa "const void **buffer"
 .Fc
 .It
-.\" #if ARCHIVE_API_VERSION < 2
-.Ft typedef int
+.Ft typedef off_t
 .Fo archive_skip_callback
 .Fa "struct archive *"
 .Fa "void *client_data"
-.Fa "size_t request"
+.Fa "off_t request"
 .Fc
-.\" #else
-.\" .Ft typedef off_t
-.\" .Fo archive_skip_callback
-.\" .Fa "struct archive *"
-.\" .Fa "void *client_data"
-.\" .Fa "off_t request"
-.\" .Fc
-.\" #endif
 .It
 .Ft typedef int
 .Fn archive_open_callback "struct archive *" "void *client_data"
@@ -600,7 +591,7 @@ list_archive(const char *name)
     printf("%s\\n",archive_entry_pathname(entry));
     archive_read_data_skip(a);
   }
-  archive_read_finish(a);
+  archive_read_free(a);
   free(mydata);
 }
 

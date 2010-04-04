@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_pax_filename_encoding.c,v 1.3 2008/08/11 01:19:36 kientzle Exp $");
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_pax_filename_encoding.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 #include <locale.h>
 
@@ -77,7 +77,7 @@ test_pax_filename_encoding_1(void)
 	    " characters in it without generating a warning");
 	assertEqualInt(ARCHIVE_OK, archive_read_next_header(a, &entry));
 	assertEqualString(filename, archive_entry_pathname(entry));
-	archive_read_finish(a);
+	archive_read_free(a);
 }
 
 /*
@@ -151,8 +151,8 @@ test_pax_filename_encoding_2(void)
 	assertEqualInt(ARCHIVE_WARN, archive_write_header(a, entry));
 	archive_entry_free(entry);
 
-	assertEqualInt(0, archive_write_close(a));
-	assertEqualInt(0, archive_write_finish(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/*
 	 * Now read the entries back.
@@ -177,8 +177,8 @@ test_pax_filename_encoding_2(void)
 	assertEqualInt(0, archive_read_next_header(a, &entry));
 	assertEqualString(longname, archive_entry_pathname(entry));
 
-	assertEqualInt(0, archive_read_close(a));
-	assertEqualInt(0, archive_read_finish(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 
 /*
@@ -225,9 +225,11 @@ test_pax_filename_encoding_3(void)
 	 * setlocale() does not set the default encoding for CP_ACP. */
 	entry = archive_entry_new();
 	if (archive_entry_update_pathname_utf8(entry, badname_utf8)) {
+		archive_entry_free(entry);
 		skipping("Cannot test conversion failures.");
 		return;
 	}
+	archive_entry_free(entry);
 
 	assert((a = archive_write_new()) != NULL);
 	assertEqualIntA(a, 0, archive_write_set_format_pax(a));
@@ -275,8 +277,8 @@ test_pax_filename_encoding_3(void)
 	assertEqualInt(ARCHIVE_OK, archive_write_header(a, entry));
 	archive_entry_free(entry);
 
-	assertEqualInt(0, archive_write_close(a));
-	assertEqualInt(0, archive_write_finish(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/*
 	 * Now read the entries back.
@@ -319,8 +321,8 @@ test_pax_filename_encoding_3(void)
 
 	assertEqualInt(ARCHIVE_EOF, archive_read_next_header(a, &entry));
 
-	assertEqualInt(0, archive_read_close(a));
-	assertEqualInt(0, archive_read_finish(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 
 DEFINE_TEST(test_pax_filename_encoding)

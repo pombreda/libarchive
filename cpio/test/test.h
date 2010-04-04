@@ -53,7 +53,8 @@
 #endif
 #if HAVE_DIRENT_H
 #include <dirent.h>
-#else
+#endif
+#ifdef HAVE_DIRECT_H
 #include <direct.h>
 #define dirent direct
 #endif
@@ -83,7 +84,9 @@
 /* Windows (including Visual Studio and MinGW but not Cygwin) */
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #include "../cpio_windows.h"
+#if !defined(__BORLANDC__)
 #define strdup _strdup
+#endif
 #define LOCALE_DE	"deu"
 #else
 #define LOCALE_DE	"de_DE.UTF-8"

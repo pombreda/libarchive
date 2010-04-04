@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_read_format_zip.c,v 1.8 2008/10/21 05:08:35 kientzle Exp $");
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_zip.c 189482 2009-03-07 03:30:35Z kientzle $");
 
 /*
  * The reference file for this has been manually tweaked so that:
@@ -39,7 +39,11 @@ DEFINE_TEST(test_read_format_zip)
 	char *buff[128];
 	const void *pv;
 	size_t s;
+#if ARCHIVE_VERSION_NUMBER < 3000000
 	off_t o;
+#else
+	int64_t o;
+#endif
 	int r;
 
 	extract_reference_file(refname);
@@ -80,13 +84,9 @@ DEFINE_TEST(test_read_format_zip)
 	assert(0 == memcmp(buff, "hello\nhello\nhello\n", 18));
 	assertA(archive_compression(a) == ARCHIVE_COMPRESSION_NONE);
 	assertA(archive_format(a) == ARCHIVE_FORMAT_ZIP);
-	assert(0 == archive_read_close(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
 finish:
-#if ARCHIVE_VERSION_NUMBER < 2000000
-	archive_read_finish(a);
-#else
-	assert(0 == archive_read_finish(a));
-#endif
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 
 

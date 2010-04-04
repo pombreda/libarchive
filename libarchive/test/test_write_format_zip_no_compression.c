@@ -28,7 +28,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_zip_no_compression.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 static unsigned long
 bitcrc32(unsigned long c, void *_p, size_t s)
@@ -135,8 +135,8 @@ DEFINE_TEST(test_write_format_zip_no_compression)
 	archive_entry_free(entry);
 
 	/* Close the archive . */
-	assertA(0 == archive_write_close(a));
-	assertA(0 == archive_write_finish(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/* Remember the end of the archive in memory. */
 	buffend = buff + used;

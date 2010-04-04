@@ -33,7 +33,9 @@
 #include <fcntl.h>
 #include <io.h>
 #include <stddef.h>
+#ifdef HAVE_SYS_UTIME_H
 #include <sys/utime.h>
+#endif
 #include <sys/stat.h>
 #include <process.h>
 #include <stdlib.h>
@@ -59,10 +61,10 @@ permissive_name(const char *name)
 {
 	wchar_t *wn, *wnp;
 	wchar_t *ws, *wsp;
-	size_t l, len, slen, alloclen;
+	DWORD l, len, slen, alloclen;
 	int unc;
 
-	len = strlen(name);
+	len = (DWORD)strlen(name);
 	wn = malloc((len + 1) * sizeof(wchar_t));
 	if (wn == NULL)
 		return (NULL);

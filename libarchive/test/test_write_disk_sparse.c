@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk_sparse.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
  * Write a file using archive_write_data call, read the file
@@ -269,12 +269,12 @@ DEFINE_TEST(test_write_disk_sparse)
         archive_write_disk_set_options(ad, 0);
 	verify_write_data(ad, 0);
 	verify_write_data_block(ad, 0);
-	assertEqualInt(0, archive_write_finish(ad));
+	assertEqualInt(0, archive_write_free(ad));
 
 	assert((ad = archive_write_disk_new()) != NULL);
         archive_write_disk_set_options(ad, ARCHIVE_EXTRACT_SPARSE);
 	verify_write_data(ad, 1);
 	verify_write_data_block(ad, 1);
-	assertEqualInt(0, archive_write_finish(ad));
+	assertEqualInt(0, archive_write_free(ad));
 
 }

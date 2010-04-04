@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libarchive/archive_entry_private.h,v 1.6 2008/09/30 03:53:03 kientzle Exp $
+ * $FreeBSD: head/lib/libarchive/archive_entry_private.h 201096 2009-12-28 02:41:27Z kientzle $
  */
 
 #ifndef __LIBARCHIVE_BUILD
@@ -68,6 +68,13 @@ struct ae_xattr {
 	char	*name;
 	void	*value;
 	size_t	size;
+};
+
+struct ae_sparse {
+	struct ae_sparse *next;
+
+	int64_t	 offset;
+	int64_t	 length;
 };
 
 /*
@@ -175,6 +182,11 @@ struct archive_entry {
 	/* extattr support. */
 	struct ae_xattr *xattr_head;
 	struct ae_xattr *xattr_p;
+
+	/* sparse support. */
+	struct ae_sparse *sparse_head;
+	struct ae_sparse *sparse_tail;
+	struct ae_sparse *sparse_p;
 
 	/* Miscellaneous. */
 	char		 strmode[12];

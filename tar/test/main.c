@@ -76,20 +76,26 @@ __FBSDID("$FreeBSD: src/usr.bin/tar/test/main.c,v 1.6 2008/11/05 06:40:53 kientz
 #ifndef S_ISREG
 #define S_ISREG(m)  ((m) & _S_IFREG)
 #endif
+#if !defined(__BORLANDC__)
 #define access _access
 #undef chdir
 #define chdir _chdir
+#endif
 #ifndef fileno
 #define fileno _fileno
 #endif
 /*#define fstat _fstat64*/
+#if !defined(__BORLANDC__)
 #define getcwd _getcwd
+#endif
 #define lstat stat
 /*#define lstat _stat64*/
 /*#define stat _stat64*/
 #define rmdir _rmdir
+#if !defined(__BORLANDC__)
 #define strdup _strdup
 #define umask _umask
+#endif
 #define int64_t __int64
 #endif
 
@@ -154,7 +160,7 @@ my_GetFileInformationByName(const char *path, BY_HANDLE_FILE_INFORMATION *bhfi)
 }
 #endif
 
-#if defined(_WIN32) && !defined(__CYGWIN__) && !defined(__GNUC__)
+#if defined(HAVE__CrtSetReportMode)
 static void
 invalid_parameter_handler(const wchar_t * expression,
     const wchar_t * function, const wchar_t * file,
@@ -200,10 +206,19 @@ static FILE *logfile;
 static void
 vlogprintf(const char *fmt, va_list ap)
 {
+#ifdef va_copy
+	va_list lfap;
+	va_copy(lfap, ap);
+#endif
 	if (log_console)
 		vfprintf(stdout, fmt, ap);
 	if (logfile != NULL)
+#ifdef va_copy
+		vfprintf(logfile, fmt, lfap);
+	va_end(lfap);
+#else
 		vfprintf(logfile, fmt, ap);
+#endif
 }
 
 static void
@@ -819,6 +834,107 @@ assertion_text_file_contents(const char *buff, const char *fn)
 	return (0);
 }
 
+/* Verify that a text file contains the specified lines, regardless of order */
+/* This could be more efficient if we sorted both sets of lines, etc, but
+ * since this is used only for testing and only ever deals with a dozen or so
+ * lines at a time, this relatively crude approach is just fine. */
+int
+assertion_file_contains_lines_any_order(const char *file, int line,
+    const char *pathname, const char *lines[])
+{
+	char *buff;
+	size_t buff_size;
+	size_t expected_count, actual_count, i, j;
+	char **expected;
+	char *p, **actual;
+	char c;
+	int expected_failure = 0, actual_failure = 0;
+
+	assertion_count(file, line);
+
+	buff = slurpfile(&buff_size, "%s", pathname);
+	if (buff == NULL) {
+		failure_start(pathname, line, "Can't read file: %s", pathname);
+		failure_finish(NULL);
+		return (0);
+	}
+
+	// Make a copy of the provided lines and count up the expected file size.
+	expected_count = 0;
+	for (i = 0; lines[i] != NULL; ++i) {
+	}
+	expected_count = i;
+	expected = malloc(sizeof(char *) * expected_count);
+	for (i = 0; lines[i] != NULL; ++i) {
+		expected[i] = strdup(lines[i]);
+	}
+
+	// Break the file into lines
+	actual_count = 0;
+	for (c = '\0', p = buff; p < buff + buff_size; ++p) {
+		if (*p == '\x0d' || *p == '\x0a')
+			*p = '\0';
+		if (c == '\0' && *p != '\0')
+			++actual_count;
+		c = *p;
+	}
+	actual = malloc(sizeof(char *) * actual_count);
+	for (j = 0, p = buff; p < buff + buff_size; p += 1 + strlen(p)) {
+		if (*p != '\0') {
+			actual[j] = p;
+			++j;
+		}
+	}
+
+	// Erase matching lines from both lists
+	for (i = 0; i < expected_count; ++i) {
+		if (expected[i] == NULL)
+			continue;
+		for (j = 0; j < actual_count; ++j) {
+			if (actual[j] == NULL)
+				continue;
+			if (strcmp(expected[i], actual[j]) == 0) {
+				free(expected[i]);
+				expected[i] = NULL;
+				actual[j] = NULL;
+				break;
+			}
+		}
+	}
+
+	// If there's anything left, it's a failure
+	for (i = 0; i < expected_count; ++i) {
+		if (expected[i] != NULL)
+			++expected_failure;
+	}
+	for (j = 0; j < actual_count; ++j) {
+		if (actual[j] != NULL)
+			++actual_failure;
+	}
+	if (expected_failure == 0 && actual_failure == 0) {
+		free(buff);
+		free(expected);
+		free(actual);
+		return (1);
+	}
+	failure_start(file, line, "File doesn't match: %s", pathname);
+	for (i = 0; i < expected_count; ++i) {
+		if (expected[i] != NULL) {
+			logprintf("  Expected but not present: %s\n", expected[i]);
+			free(expected[i]);
+		}
+	}
+	for (j = 0; j < actual_count; ++j) {
+		if (actual[j] != NULL)
+			logprintf("  Present but not expected: %s\n", actual[j]);
+	}
+	failure_finish(NULL);
+	free(buff);
+	free(expected);
+	free(actual);
+	return (0);
+}
+
 /* Test that two paths point to the same file. */
 /* As a side-effect, asserts that both files exist. */
 static int
@@ -1046,7 +1162,7 @@ assertion_file_nlinks(const char *file, int line,
 
 	assertion_count(file, line);
 	r = my_GetFileInformationByName(pathname, &bhfi);
-	if (r != 0 && bhfi.nNumberOfLinks == nlinks)
+	if (r != 0 && bhfi.nNumberOfLinks == (DWORD)nlinks)
 		return (1);
 	failure_start(file, line, "File %s has %d links, expected %d",
 	    pathname, bhfi.nNumberOfLinks, nlinks);
@@ -1103,6 +1219,9 @@ assertion_is_dir(const char *file, int line, const char *pathname, int mode)
 	struct stat st;
 	int r;
 
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	(void)mode; /* UNUSED */
+#endif
 	assertion_count(file, line);
 	r = lstat(pathname, &st);
 	if (r != 0) {
@@ -1138,6 +1257,9 @@ assertion_is_reg(const char *file, int line, const char *pathname, int mode)
 	struct stat st;
 	int r;
 
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	(void)mode; /* UNUSED */
+#endif
 	assertion_count(file, line);
 	r = lstat(pathname, &st);
 	if (r != 0 || !S_ISREG(st.st_mode)) {
@@ -1167,6 +1289,8 @@ is_symlink(const char *file, int line,
     const char *pathname, const char *contents)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__)
+	(void)pathname; /* UNUSED */
+	(void)contents; /* UNUSED */
 	assertion_count(file, line);
 	/* Windows sort-of has real symlinks, but they're only usable
 	 * by privileged users and are crippled even then, so there's
@@ -1226,6 +1350,7 @@ assertion_make_dir(const char *file, int line, const char *dirname, int mode)
 {
 	assertion_count(file, line);
 #if defined(_WIN32) && !defined(__CYGWIN__)
+	(void)mode; /* UNUSED */
 	if (0 == _mkdir(dirname))
 		return (1);
 #else
@@ -1245,6 +1370,7 @@ assertion_make_file(const char *file, int line,
 #if defined(_WIN32) && !defined(__CYGWIN__)
 	/* TODO: Rework this to set file mode as well. */
 	FILE *f;
+	(void)mode; /* UNUSED */
 	assertion_count(file, line);
 	f = fopen(path, "wb");
 	if (f == NULL) {
@@ -1693,7 +1819,19 @@ test_run(int i, const char *tmpdir)
 	if (tests[i].failures == 0) {
 		if (!keep_temp_files && assertChdir(tmpdir)) {
 #if defined(_WIN32) && !defined(__CYGWIN__)
-			systemf("rmdir /S /Q %s", tests[i].name);
+			/* Make sure not to leave empty directories.
+			 * Sometimes a processing of closing files used by tests
+			 * is not done, then rmdir will be failed and it will
+			 * leave a empty test directory. So we should wait a few
+			 * seconds and retry rmdir. */
+			int r, t;
+			for (t = 0; t < 10; t++) {
+				if (t > 0)
+					Sleep(1000);
+				r = systemf("rmdir /S /Q %s", tests[i].name);
+				if (r == 0)
+					break;
+			}
 			systemf("del %s", logfilename);
 #else
 			systemf("rm -rf %s", tests[i].name);
@@ -1909,6 +2047,7 @@ main(int argc, char **argv)
 #ifdef PROGRAM
 				testprogfile = option_arg;
 #else
+				fprintf(stderr, "-p option not permitted\n");
 				usage(progname);
 #endif
 				break;
@@ -1922,6 +2061,8 @@ main(int argc, char **argv)
 				verbosity++;
 				break;
 			default:
+				fprintf(stderr, "Unrecognized option '%c'\n",
+				    option);
 				usage(progname);
 			}
 		}
@@ -1931,8 +2072,11 @@ main(int argc, char **argv)
 	 * Sanity-check that our options make sense.
 	 */
 #ifdef PROGRAM
-	if (testprogfile == NULL)
+	if (testprogfile == NULL) {
+		fprintf(stderr, "Program executable required\n");
 		usage(progname);
+	}
+
 	{
 		char *testprg;
 #if defined(_WIN32) && !defined(__CYGWIN__)

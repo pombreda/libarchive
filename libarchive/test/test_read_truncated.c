@@ -52,15 +52,11 @@ DEFINE_TEST(test_read_truncated)
 	archive_entry_set_size(ae, sizeof(buff2));
 	assertA(0 == archive_write_header(a, ae));
 	archive_entry_free(ae);
-	assertA(sizeof(buff2) == archive_write_data(a, buff2, sizeof(buff2)));
+	assertA((int)sizeof(buff2) == archive_write_data(a, buff2, sizeof(buff2)));
 
 	/* Close out the archive. */
-	assertA(0 == archive_write_close(a));
-#if ARCHIVE_VERSION_NUMBER < 2000000
-	archive_write_finish(a);
-#else
-	assertA(0 == archive_write_finish(a));
-#endif
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/* Now, read back a truncated version of the archive and
 	 * verify that we get an appropriate error. */
@@ -81,7 +77,7 @@ DEFINE_TEST(test_read_truncated)
 			assertA(ARCHIVE_FATAL == archive_read_data(a, buff2, sizeof(buff2)));
 			goto wrap_up;
 		} else {
-			assertA(sizeof(buff2) == archive_read_data(a, buff2, sizeof(buff2)));
+			assertA((int)sizeof(buff2) == archive_read_data(a, buff2, sizeof(buff2)));
 		}
 
 		/* Verify the end of the archive. */
@@ -96,12 +92,8 @@ DEFINE_TEST(test_read_truncated)
 			assertA(ARCHIVE_EOF == archive_read_next_header(a, &ae));
 		}
 	wrap_up:
-		assert(0 == archive_read_close(a));
-#if ARCHIVE_VERSION_NUMBER < 2000000
-		archive_read_finish(a);
-#else
-		assert(0 == archive_read_finish(a));
-#endif
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 	}
 
 
@@ -139,11 +131,7 @@ DEFINE_TEST(test_read_truncated)
 			assertA(ARCHIVE_EOF == archive_read_next_header(a, &ae));
 		}
 	wrap_up2:
-		assert(0 == archive_read_close(a));
-#if ARCHIVE_VERSION_NUMBER < 2000000
-		archive_read_finish(a);
-#else
-		assert(0 == archive_read_finish(a));
-#endif
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 	}
 }

@@ -4,8 +4,8 @@ dnl First, define all of the version numbers up front.
 dnl In particular, this allows the version macro to be used in AC_INIT
 
 dnl These first two version numbers are updated automatically on each release.
-m4_define([LIBARCHIVE_VERSION_S],[2.7.900a])
-m4_define([LIBARCHIVE_VERSION_N],[2007900])
+m4_define([LIBARCHIVE_VERSION_S],[2.8.900a])
+m4_define([LIBARCHIVE_VERSION_N],[2008900])
 
 dnl bsdtar and bsdcpio versioning tracks libarchive
 m4_define([BSDTAR_VERSION_S],LIBARCHIVE_VERSION_S())
@@ -89,6 +89,7 @@ AC_SUBST(PLATFORMCPPFLAGS)
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
+AC_USE_SYSTEM_EXTENSIONS
 AC_LIBTOOL_WIN32_DLL
 AC_PROG_LIBTOOL
 AC_CHECK_TOOL([STRIP],[strip])
@@ -191,14 +192,16 @@ esac
 # Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([acl/libacl.h attr/xattr.h ctype.h errno.h])
+AC_CHECK_HEADERS([acl/libacl.h attr/xattr.h copyfile.h ctype.h errno.h])
 AC_CHECK_HEADERS([ext2fs/ext2_fs.h fcntl.h grp.h])
-AC_CHECK_HEADERS([inttypes.h io.h langinfo.h limits.h linux/fs.h])
+AC_CHECK_HEADERS([inttypes.h io.h langinfo.h limits.h])
+AC_CHECK_HEADERS([linux/fiemap.h linux/fs.h])
 AC_CHECK_HEADERS([locale.h paths.h poll.h pwd.h regex.h signal.h stdarg.h])
 AC_CHECK_HEADERS([stdint.h stdlib.h string.h])
 AC_CHECK_HEADERS([sys/acl.h sys/cdefs.h sys/extattr.h sys/ioctl.h sys/mkdev.h])
 AC_CHECK_HEADERS([sys/param.h sys/poll.h sys/select.h sys/time.h sys/utime.h])
-AC_CHECK_HEADERS([time.h unistd.h utime.h wchar.h wctype.h windows.h])
+AC_CHECK_HEADERS([sys/utsname.h time.h unistd.h utime.h wchar.h wctype.h])
+AC_CHECK_HEADERS([windows.h winioctl])
 
 # Checks for libraries.
 AC_ARG_WITH([zlib],
@@ -234,7 +237,28 @@ if test "x$with_lzma" != "xno"; then
 fi
 
 AC_ARG_WITH([openssl],
-  AS_HELP_STRING([--without-openssl], [Don't build support for mtree hashes through openssl]))
+  AS_HELP_STRING([--without-openssl], [Don't build support for mtree and xar hashes through openssl]))
+
+AC_ARG_WITH([xml2],
+  AS_HELP_STRING([--without-xml2], [Don't build support for xar through libxml2]))
+AC_ARG_WITH([expat],
+  AS_HELP_STRING([--without-expat], [Don't build support for xar through expat]))
+
+if test "x$with_xml2" != "xno"; then
+  AC_PATH_PROG([XML2_CONFIG], [xml2-config],, [${PATH}])
+  if test "x$XML2_CONFIG" != "x"; then
+    CPPFLAGS="${CPPFLAGS} `${XML2_CONFIG} --cflags`"
+    LIBS="${LIBS} `${XML2_CONFIG} --libs`"
+  fi
+  AC_CHECK_HEADERS([libxml/xmlreader.h])
+  AC_CHECK_LIB(xml2,xmlInitParser)
+fi
+if test "x$ac_cv_header_libxml_xmlreader_h" != "xyes"; then
+  if test "x$with_expat" != "xno"; then
+    AC_CHECK_HEADERS([expat.h])
+    AC_CHECK_LIB(expat,XML_ParserCreate)
+  fi
+fi
 
 AC_CHECK_HEADERS([md5.h ripemd.h rmd160.h sha.h sha1.h sha2.h sha256.h])
 # Common names for libc implementation on NetBSD and OpenBSD
@@ -251,33 +275,40 @@ if test "x$with_openssl" != "xno"; then
   fi
   if test "$ac_cv_func_RMD160Init" != "yes"; then
     AC_CHECK_HEADERS([openssl/ripemd.h])
-    AC_SEARCH_LIBS([RIMEMD160_Init], [crypto])
+    AC_SEARCH_LIBS([RIPEMD160_Init], [crypto])
   fi
   if test "$ac_cv_func_SHA1Init" != "yes"; then
     AC_CHECK_HEADERS([openssl/sha.h])
     AC_SEARCH_LIBS([SHA1_Init], [crypto])
   fi
-  if test "$ac_cv_func_SHA256Init" != "yes" ||
-     test "$ac_cv_func_SHA384Init" != "yes" ||
-     test "$ac_cv_func_SHA512Init" != "yes"; then
-    if test "$ac_cv_func_SHA256_Init" != "yes" ||
-       test "$ac_cv_func_SHA384_Init" != "yes" ||
-       test "$ac_cv_func_SHA512_Init" != "yes"; then
-      AC_CHECK_HEADERS([openssl/sha.h])
-      # TODO: Does AC_SEARCH_LIBS support more than one function at once?
-      #       This appears to always fail.
-      AC_SEARCH_LIBS([SHA256_Init SHA384_Init SHA512_Init], [crypto])
 
-      # TODO: Actually test for these.  Previously our C code did not
-      # test for these at all and just assumed availability.  Now that
-      # the C code tests these macros we preserve previous behavior
-      # for the autotools build by hard-coding availability.
-      if test "$ac_cv_header_openssl_sha_h" = "yes"; then
-        AC_DEFINE(HAVE_OPENSSL_SHA256_INIT, 1, [Define to 1 if your openssl has the `SHA256_Init' function.])
-        AC_DEFINE(HAVE_OPENSSL_SHA384_INIT, 1, [Define to 1 if your openssl has the `SHA384_Init' function.])
-        AC_DEFINE(HAVE_OPENSSL_SHA512_INIT, 1, [Define to 1 if your openssl has the `SHA512_Init' function.])
+  AC_CHECK_HEADERS([openssl/sha.h])
+  if test "$ac_cv_func_SHA256Init" != "yes" &&
+    test "$ac_cv_func_SHA256_Init" != "yes"; then
+      AC_SEARCH_LIBS([SHA256_Init], [crypto])
+      if test "$ac_cv_func_SHA256_Init" = "yes" &&
+        test "$ac_cv_header_openssl_sha_h" = "yes"; then
+        AC_DEFINE(HAVE_OPENSSL_SHA256_INIT, 1,
+	  [Define to 1 if your openssl has the `SHA256_Init' function.])
       fi
-    fi
+  fi
+  if test "$ac_cv_func_SHA384Init" != "yes" &&
+    test "$ac_cv_func_SHA384_Init" != "yes"; then
+      AC_SEARCH_LIBS([SHA384_Init], [crypto])
+      if test "$ac_cv_func_SHA384_Init" = "yes" &&
+        test "$ac_cv_header_openssl_sha_h" = "yes"; then
+        AC_DEFINE(HAVE_OPENSSL_SHA384_INIT, 1,
+	  [Define to 1 if your openssl has the `SHA384_Init' function.])
+      fi
+  fi
+  if test "$ac_cv_func_SHA512Init" != "yes" &&
+    test "$ac_cv_func_SHA512_Init" != "yes"; then
+      AC_SEARCH_LIBS([SHA512_Init], [crypto])
+      if test "$ac_cv_func_SHA512_Init" = "yes" &&
+        test "$ac_cv_header_openssl_sha_h" = "yes"; then
+        AC_DEFINE(HAVE_OPENSSL_SHA512_INIT, 1,
+	  [Define to 1 if your openssl has the `SHA512_Init' function.])
+      fi
   fi
 fi
 
@@ -300,6 +331,12 @@ AC_CHECK_TYPE(off_t, [long long])
 AC_TYPE_SIZE_T
 AC_CHECK_TYPE(id_t, [unsigned long])
 AC_CHECK_TYPE(uintptr_t, [unsigned int])
+
+# Check for tm_gmtoff in struct tm
+AC_CHECK_MEMBERS([struct tm.tm_gmtoff, struct tm.__tm_gmtoff],,,
+[
+#include <time.h>
+])
 
 # Check for birthtime in struct stat
 AC_CHECK_MEMBERS([struct stat.st_birthtime])
@@ -360,12 +397,13 @@ AC_FUNC_VPRINTF
 # To avoid necessity for including windows.h or special forward declaration
 # workarounds, we use 'void *' for 'struct SECURITY_ATTRIBUTES *'
 AC_CHECK_STDCALL_FUNC([CreateHardLinkA],[const char *, const char *, void *])
-AC_CHECK_FUNCS([chflags chown chroot])
+AC_CHECK_FUNCS([chflags chown chroot ctime_r])
 AC_CHECK_FUNCS([fchdir fchflags fchmod fchown fcntl fork])
 AC_CHECK_FUNCS([fstat ftruncate futimens futimes geteuid getpid])
-AC_CHECK_FUNCS([lchflags lchmod lchown link lstat])
-AC_CHECK_FUNCS([lutimes memmove memset mkdir mkfifo mknod])
-AC_CHECK_FUNCS([nl_langinfo pipe poll readlink select setenv setlocale])
+AC_CHECK_FUNCS([lchflags lchmod lchown link localtime_r lstat])
+AC_CHECK_FUNCS([lutimes mbrtowc memmove memset mkdir mkfifo mknod mkstemp])
+AC_CHECK_FUNCS([nl_langinfo pipe poll readlink])
+AC_CHECK_FUNCS([select setenv setlocale sigaction])
 AC_CHECK_FUNCS([strchr strdup strerror strncpy_s strrchr symlink timegm])
 AC_CHECK_FUNCS([tzset unsetenv utime utimensat utimes vfork])
 AC_CHECK_FUNCS([wcrtomb wcscpy wcslen wctomb wmemcmp wmemcpy])

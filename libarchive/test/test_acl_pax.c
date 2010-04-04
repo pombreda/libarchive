@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_acl_pax.c,v 1.6 2008/09/01 05:38:33 kientzle Exp $");
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_acl_pax.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
  * Exercise the system-independent portion of the ACL support.
@@ -386,12 +386,7 @@ compare_acls(struct archive_entry *ae, struct acl_t *acls, int n, int mode)
 			assert(matched == 1);
 		}
 	}
-#if ARCHIVE_VERSION_NUMBER < 1009000
-	/* Known broken before 1.9.0. */
-	skipping("archive_entry_acl_next() exits with ARCHIVE_EOF");
-#else
 	assertEqualInt(ARCHIVE_EOF, r);
-#endif
 	assert((mode & 0777) == (archive_entry_mode(ae) & 0777));
 	failure("Could not find match for ACL "
 	    "(type=%d,permset=%d,tag=%d,qual=%d,name=``%s'')",
@@ -445,12 +440,8 @@ DEFINE_TEST(test_acl_pax)
 	archive_entry_free(ae);
 
 	/* Close out the archive. */
-	assertA(0 == archive_write_close(a));
-#if ARCHIVE_VERSION_NUMBER < 2000000
-	archive_write_finish(a);
-#else
-	assertA(0 == archive_write_finish(a));
-#endif
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/* Write out the data we generated to a file for manual inspection. */
 	assert(NULL != (f = fopen("testout", "wb")));
@@ -508,10 +499,6 @@ DEFINE_TEST(test_acl_pax)
 	assert((archive_entry_mode(ae) & 0777) == 0142);
 
 	/* Close the archive. */
-	assertA(0 == archive_read_close(a));
-#if ARCHIVE_VERSION_NUMBER < 2000000
-	archive_read_finish(a);
-#else
-	assertA(0 == archive_read_finish(a));
-#endif
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }

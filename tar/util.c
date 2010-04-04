@@ -42,6 +42,9 @@ __FBSDID("$FreeBSD: src/usr.bin/tar/util.c,v 1.23 2008/12/15 06:00:25 kientzle E
 #ifdef HAVE_STDARG_H
 #include <stdarg.h>
 #endif
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
 #include <stdio.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
@@ -61,6 +64,10 @@ __FBSDID("$FreeBSD: src/usr.bin/tar/util.c,v 1.23 2008/12/15 06:00:25 kientzle E
 
 static size_t	bsdtar_expand_char(char *, size_t, char);
 static const char *strip_components(const char *path, int elements);
+
+#if defined(_WIN32) && !defined(__CYGWIN__)
+#define read _read
+#endif
 
 /* TODO:  Hack up a version of mbtowc for platforms with no wide
  * character support at all.  I think the following might suffice,
@@ -146,13 +153,13 @@ safe_fprintf(FILE *f, const char *fmt, ...)
 			} else {
 				/* Not printable, format the bytes. */
 				while (n-- > 0)
-					i += bsdtar_expand_char(
+					i += (unsigned)bsdtar_expand_char(
 					    outbuff, i, *p++);
 			}
 		} else {
 			/* After any conversion failure, don't bother
 			 * trying to convert the rest. */
-			i += bsdtar_expand_char(outbuff, i, *p++);
+			i += (unsigned)bsdtar_expand_char(outbuff, i, *p++);
 			try_wc = 0;
 		}
 
@@ -501,7 +508,7 @@ tar_i64toa(int64_t n0)
 
 	*--p = '\0';
 	do {
-		*--p = '0' + (n % 10);
+		*--p = '0' + (int)(n % 10);
 		n /= 10;
 	} while (n > 0);
 	if (n0 < 0)

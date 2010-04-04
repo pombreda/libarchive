@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "archive_platform.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_raw.c 201107 2009-12-28 03:25:33Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -45,8 +45,13 @@ struct raw_info {
 
 static int	archive_read_format_raw_bid(struct archive_read *);
 static int	archive_read_format_raw_cleanup(struct archive_read *);
+#if ARCHIVE_VERSION_NUMBER < 3000000
 static int	archive_read_format_raw_read_data(struct archive_read *,
 		    const void **, size_t *, off_t *);
+#else
+static int	archive_read_format_raw_read_data(struct archive_read *,
+		    const void **, size_t *, int64_t *);
+#endif
 static int	archive_read_format_raw_read_data_skip(struct archive_read *);
 static int	archive_read_format_raw_read_header(struct archive_read *,
 		    struct archive_entry *);
@@ -57,6 +62,9 @@ archive_read_support_format_raw(struct archive *_a)
 	struct raw_info *info;
 	struct archive_read *a = (struct archive_read *)_a;
 	int r;
+
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
+	    ARCHIVE_STATE_NEW, "archive_read_support_format_raw");
 
 	info = (struct raw_info *)calloc(1, sizeof(*info));
 	if (info == NULL) {
@@ -109,16 +117,23 @@ archive_read_format_raw_read_header(struct archive_read *a,
 		return (ARCHIVE_EOF);
 
 	a->archive.archive_format = ARCHIVE_FORMAT_RAW;
-	a->archive.archive_format_name = "Raw data";
+	a->archive.archive_format_name = "raw";
 	archive_entry_set_pathname(entry, "data");
-	/* XXX should we set mode to mimic a regular file? XXX */
+	archive_entry_set_filetype(entry, AE_IFREG);
+	archive_entry_set_perm(entry, 0644);
 	/* I'm deliberately leaving most fields unset here. */
 	return (ARCHIVE_OK);
 }
 
+#if ARCHIVE_VERSION_NUMBER < 3000000
 static int
 archive_read_format_raw_read_data(struct archive_read *a,
     const void **buff, size_t *size, off_t *offset)
+#else
+static int
+archive_read_format_raw_read_data(struct archive_read *a,
+    const void **buff, size_t *size, int64_t *offset)
+#endif
 {
 	struct raw_info *info;
 	ssize_t avail;
@@ -148,7 +163,6 @@ archive_read_format_raw_read_data(struct archive_read *a,
 		*offset = info->offset;
 		return (avail);
 	}
-	return (ARCHIVE_OK);
 }
 
 static int

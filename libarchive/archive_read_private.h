@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libarchive/archive_read_private.h,v 1.7 2008/12/06 06:45:15 kientzle Exp $
+ * $FreeBSD: head/lib/libarchive/archive_read_private.h 201088 2009-12-28 02:18:55Z kientzle $
  */
 
 #ifndef __LIBARCHIVE_BUILD
@@ -42,13 +42,18 @@ struct archive_read_filter;
 
 /*
  * How bidding works for filters:
- *   * The bid manager reads the first block from the current source.
- *   * It shows that block to each registered bidder.
+ *   * The bid manager initializes the client-provided reader as the
+ *     first filter.
+ *   * It invokes the bidder for each registered filter with the
+ *     current head filter.
+ *   * The bidders can use archive_read_filter_ahead() to peek ahead
+ *     at the incoming data to compose their bids.
  *   * The bid manager creates a new filter structure for the winning
  *     bidder and gives the winning bidder a chance to initialize it.
- *   * The new filter becomes the top filter in the archive_read structure
- *     and we repeat the process.
- * This ends only when no bidder provides a non-zero bid.
+ *   * The new filter becomes the new top filter and we repeat the
+ *     process.
+ * This ends only when no bidder provides a non-zero bid.  Then
+ * we perform a similar dance with the registered format handlers.
  */
 struct archive_read_filter_bidder {
 	/* Configuration data for the bidder. */
@@ -71,6 +76,7 @@ struct archive_read_filter_bidder {
  * corresponding bidder above.
  */
 struct archive_read_filter {
+	int64_t bytes_consumed;
 	/* Essentially all filters will need these values, so
 	 * just declare them here. */
 	struct archive_read_filter_bidder *bidder; /* My bidder. */
@@ -130,7 +136,11 @@ struct archive_read {
 	 * data to client buffers, filling gaps with zero bytes.
 	 */
 	const char	 *read_data_block;
+#if ARCHIVE_VERSION_NUMBER < 3000000
 	off_t		  read_data_offset;
+#else
+	int64_t		  read_data_offset;
+#endif
 	off_t		  read_data_output_offset;
 	size_t		  read_data_remaining;
 
@@ -161,10 +171,14 @@ struct archive_read {
 		int	(*options)(struct archive_read *, const char *key,
 		    const char *value);
 		int	(*read_header)(struct archive_read *, struct archive_entry *);
+#if ARCHIVE_VERSION_NUMBER < 3000000
 		int	(*read_data)(struct archive_read *, const void **, size_t *, off_t *);
+#else
+		int	(*read_data)(struct archive_read *, const void **, size_t *, int64_t *);
+#endif
 		int	(*read_data_skip)(struct archive_read *);
 		int	(*cleanup)(struct archive_read *);
-	}	formats[8];
+	}	formats[9];
 	struct archive_format_descriptor	*format; /* Active format. */
 
 	/*
@@ -180,7 +194,11 @@ int	__archive_read_register_format(struct archive_read *a,
 	    int (*bid)(struct archive_read *),
 	    int (*options)(struct archive_read *, const char *, const char *),
 	    int (*read_header)(struct archive_read *, struct archive_entry *),
+#if ARCHIVE_VERSION_NUMBER < 3000000
 	    int (*read_data)(struct archive_read *, const void **, size_t *, off_t *),
+#else
+	    int (*read_data)(struct archive_read *, const void **, size_t *, int64_t *),
+#endif
 	    int (*read_data_skip)(struct archive_read *),
 	    int (*cleanup)(struct archive_read *));
 

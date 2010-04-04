@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_acl_freebsd.c,v 1.2 2008/11/17 21:06:17 kientzle Exp $");
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_acl_freebsd.c 189427 2009-03-06 04:21:23Z kientzle $");
 
 #if defined(__FreeBSD__) && __FreeBSD__ > 4
 #include <sys/acl.h>
@@ -242,7 +242,7 @@ DEFINE_TEST(test_acl_freebsd)
 
 	/* Close the archive. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/* Verify the data on disk. */
 	assertEqualInt(0, stat("test0", &st));

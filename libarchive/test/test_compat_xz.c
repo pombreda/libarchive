@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_compat_xz.c 191183 2009-04-17 01:06:31Z kientzle $");
 
 /*
  * Verify our ability to read sample files compatibly with unxz.
@@ -50,7 +50,7 @@ compat_xz(const char *name)
 	r = archive_read_support_compression_xz(a);
 	if (r == ARCHIVE_WARN) {
 		skipping("xz reading not fully supported on this platform");
-		assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 		return;
 	}
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
@@ -74,7 +74,7 @@ compat_xz(const char *name)
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
 
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 
 

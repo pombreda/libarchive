@@ -24,12 +24,13 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_entry_copy_stat.c,v 1.2 2008/09/30 03:53:03 kientzle Exp $");
+__FBSDID("$FreeBSD: head/lib/libarchive/archive_entry_copy_stat.c 189466 2009-03-07 00:52:02Z kientzle $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
 
+#include "archive.h"
 #include "archive_entry.h"
 
 void
@@ -59,12 +60,13 @@ archive_entry_copy_stat(struct archive_entry *entry, const struct stat *st)
 	archive_entry_set_atime(entry, st->st_atime, 0);
 	archive_entry_set_ctime(entry, st->st_ctime, 0);
 	archive_entry_set_mtime(entry, st->st_mtime, 0);
-#if HAVE_STRUCT_STAT_ST_BIRTHTIME
-	archive_entry_set_birthtime(entry, st->st_birthtime, 0);
-#endif
 #endif
 #if HAVE_STRUCT_STAT_ST_BIRTHTIMESPEC_TV_NSEC
 	archive_entry_set_birthtime(entry, st->st_birthtime, st->st_birthtimespec.tv_nsec);
+#elif HAVE_STRUCT_STAT_ST_BIRTHTIME
+	archive_entry_set_birthtime(entry, st->st_birthtime, 0);
+#else
+	archive_entry_unset_birthtime(entry);
 #endif
 	archive_entry_set_dev(entry, st->st_dev);
 	archive_entry_set_gid(entry, st->st_gid);

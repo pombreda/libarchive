@@ -53,7 +53,8 @@
 #endif
 #if HAVE_DIRENT_H
 #include <dirent.h>
-#else
+#endif
+#ifdef HAVE_DIRECT_H
 #include <direct.h>
 #define dirent direct
 #endif
@@ -83,7 +84,9 @@
 /* Windows (including Visual Studio and MinGW but not Cygwin) */
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #include "../bsdtar_windows.h"
+#if !defined(__BORLANDC__)
 #define strdup _strdup
+#endif
 #define LOCALE_DE	"deu"
 #else
 #define LOCALE_DE	"de_DE.UTF-8"
@@ -182,6 +185,8 @@
   assertion_file_size(__FILE__, __LINE__, pathname, size)
 #define assertTextFileContents         \
   assertion_setup(__FILE__, __LINE__);assertion_text_file_contents
+#define assertFileContainsLinesAnyOrder(pathname, lines)	\
+	assertion_file_contains_lines_any_order(__FILE__, __LINE__, pathname, lines)
 #define assertIsDir(pathname, mode)		\
   assertion_is_dir(__FILE__, __LINE__, pathname, mode)
 #define assertIsHardlink(path1, path2)	\
@@ -227,6 +232,7 @@ int assertion_file_atime(const char *, int, const char *, long, long);
 int assertion_file_atime_recent(const char *, int, const char *);
 int assertion_file_birthtime(const char *, int, const char *, long, long);
 int assertion_file_birthtime_recent(const char *, int, const char *);
+int assertion_file_contains_lines_any_order(const char *, int, const char *, const char **);
 int assertion_file_contents(const void *, int, const char *, ...);
 int assertion_file_exists(const char *, ...);
 int assertion_file_mtime(const char *, int, const char *, long, long);

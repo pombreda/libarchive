@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_format_tar.c,v 1.72 2008/12/06 06:45:15 kientzle Exp $");
+__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_tar.c 201161 2009-12-29 05:44:39Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -206,8 +206,13 @@ static int	header_gnutar(struct archive_read *, struct tar *,
 		    struct archive_entry *, const void *h);
 static int	archive_read_format_tar_bid(struct archive_read *);
 static int	archive_read_format_tar_cleanup(struct archive_read *);
+#if ARCHIVE_VERSION_NUMBER < 3000000
 static int	archive_read_format_tar_read_data(struct archive_read *a,
 		    const void **buff, size_t *size, off_t *offset);
+#else
+static int	archive_read_format_tar_read_data(struct archive_read *a,
+		    const void **buff, size_t *size, int64_t *offset);
+#endif
 static int	archive_read_format_tar_skip(struct archive_read *a);
 static int	archive_read_format_tar_read_header(struct archive_read *,
 		    struct archive_entry *);
@@ -234,6 +239,8 @@ static wchar_t	*utf8_decode(struct tar *, const char *, size_t length);
 int
 archive_read_support_format_gnutar(struct archive *a)
 {
+	archive_check_magic(a, ARCHIVE_READ_MAGIC,
+	    ARCHIVE_STATE_NEW, "archive_read_support_format_gnutar");
 	return (archive_read_support_format_tar(a));
 }
 
@@ -244,6 +251,9 @@ archive_read_support_format_tar(struct archive *_a)
 	struct archive_read *a = (struct archive_read *)_a;
 	struct tar *tar;
 	int r;
+
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
+	    ARCHIVE_STATE_NEW, "archive_read_support_format_tar");
 
 	tar = (struct tar *)malloc(sizeof(*tar));
 	if (tar == NULL) {
@@ -420,6 +430,14 @@ archive_read_format_tar_read_header(struct archive_read *a,
 	 */
 	if (tar->sparse_list == NULL)
 		gnu_add_sparse_entry(tar, 0, tar->entry_bytes_remaining);
+	else {
+		struct sparse_block *sb;
+
+		for (sb = tar->sparse_list; sb != NULL; sb = sb->next) {
+			archive_entry_sparse_add_entry(entry,
+			    sb->offset, sb->remaining);
+		}
+	}
 
 	if (r == ARCHIVE_OK) {
 		/*
@@ -436,33 +454,21 @@ archive_read_format_tar_read_header(struct archive_read *a,
 	return (r);
 }
 
+#if ARCHIVE_VERSION_NUMBER < 3000000
 static int
 archive_read_format_tar_read_data(struct archive_read *a,
     const void **buff, size_t *size, off_t *offset)
+#else
+static int
+archive_read_format_tar_read_data(struct archive_read *a,
+    const void **buff, size_t *size, int64_t *offset)
+#endif
 {
 	ssize_t bytes_read;
 	struct tar *tar;
 	struct sparse_block *p;
 
 	tar = (struct tar *)(a->format->data);
-
-	if (tar->sparse_gnu_pending) {
-		if (tar->sparse_gnu_major == 1 && tar->sparse_gnu_minor == 0) {
-			tar->sparse_gnu_pending = 0;
-			/* Read initial sparse map. */
-			bytes_read = gnu_sparse_10_read(a, tar);
-			tar->entry_bytes_remaining -= bytes_read;
-			if (bytes_read < 0)
-				return (bytes_read);
-		} else {
-			*size = 0;
-			*offset = 0;
-			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-			    "Unrecognized GNU sparse file format");
-			return (ARCHIVE_WARN);
-		}
-		tar->sparse_gnu_pending = 0;
-	}
 
 	/* Remove exhausted entries from sparse list. */
 	while (tar->sparse_list != NULL &&
@@ -576,7 +582,7 @@ tar_read_header(struct archive_read *a, struct tar *tar,
 		h = __archive_read_ahead(a, 512, NULL);
 		if (h != NULL)
 			__archive_read_consume(a, 512);
-		archive_set_error(&a->archive, 0, NULL);
+		archive_clear_error(&a->archive);
 		if (a->archive.archive_format_name == NULL) {
 			a->archive.archive_format = ARCHIVE_FORMAT_TAR;
 			a->archive.archive_format_name = "tar";
@@ -653,8 +659,28 @@ tar_read_header(struct archive_read *a, struct tar *tar,
 	}
 	--tar->header_recursion_depth;
 	/* We return warnings or success as-is.  Anything else is fatal. */
-	if (err == ARCHIVE_WARN || err == ARCHIVE_OK)
+	if (err == ARCHIVE_WARN || err == ARCHIVE_OK) {
+		if (tar->sparse_gnu_pending) {
+			if (tar->sparse_gnu_major == 1 &&
+			    tar->sparse_gnu_minor == 0) {
+				ssize_t bytes_read;
+
+				tar->sparse_gnu_pending = 0;
+				/* Read initial sparse map. */
+				bytes_read = gnu_sparse_10_read(a, tar);
+				tar->entry_bytes_remaining -= bytes_read;
+				if (bytes_read < 0)
+					return (bytes_read);
+			} else {
+				archive_set_error(&a->archive,
+				    ARCHIVE_ERRNO_MISC,
+				    "Unrecognized GNU sparse file format");
+				return (ARCHIVE_WARN);
+			}
+			tar->sparse_gnu_pending = 0;
+		}
 		return (err);
+	}
 	if (err == ARCHIVE_EOF)
 		/* EOF when recursively reading a header is bad. */
 		archive_set_error(&a->archive, EINVAL, "Damaged tar archive");
@@ -2318,7 +2344,7 @@ base64_decode(const char *s, size_t len, size_t *out_len)
 
 	/* If the decode table is not yet initialized, prepare it. */
 	if (decode_table[digits[1]] != 1) {
-		size_t i;
+		unsigned i;
 		memset(decode_table, 0xff, sizeof(decode_table));
 		for (i = 0; i < sizeof(digits); i++)
 			decode_table[digits[i]] = i;

@@ -27,6 +27,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_isojoliet_rr.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
 Execute the following to rebuild the data for this program:
@@ -61,7 +62,11 @@ DEFINE_TEST(test_read_format_isojoliet_rr)
 	struct archive *a;
 	const void *p;
 	size_t size;
+#if ARCHIVE_VERSION_NUMBER < 3000000
 	off_t offset;
+#else
+	int64_t offset;
+#endif
 
 	extract_reference_file(refname);
 	assert((a = archive_read_new()) != NULL);
@@ -152,7 +157,7 @@ DEFINE_TEST(test_read_format_isojoliet_rr)
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_ISO9660_ROCKRIDGE);
 
 	/* Close the archive. */
-	assertEqualInt(0, archive_read_close(a));
-	assertEqualInt(0, archive_read_finish(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 

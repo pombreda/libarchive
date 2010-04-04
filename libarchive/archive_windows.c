@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2009 Michihiro NAKAJIMA
+ * Copyright (c) 2009,2010 Michihiro NAKAJIMA
  * Copyright (c) 2003-2007 Kees Zeelenberg
  * All rights reserved.
  *
@@ -51,7 +51,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <stddef.h>
-#ifndef __BORLANDC__
+#ifdef HAVE_SYS_UTIME_H
 #include <sys/utime.h>
 #endif
 #include <sys/stat.h>
@@ -59,6 +59,7 @@
 #include <stdlib.h>
 #include <wchar.h>
 #include <windows.h>
+#include <share.h>
 
 #define EPOC_TIME ARCHIVE_LITERAL_ULL(116444736000000000)
 
@@ -125,14 +126,14 @@ permissive_name(const char *name)
 {
 	wchar_t *wn, *wnp;
 	wchar_t *ws, *wsp;
-	size_t l, len, slen;
+	DWORD l, len, slen;
 	int unc;
 
-	len = strlen(name);
+	len = (DWORD)strlen(name);
 	wn = malloc((len + 1) * sizeof(wchar_t));
 	if (wn == NULL)
 		return (NULL);
-	l = MultiByteToWideChar(CP_ACP, 0, name, len, wn, len);
+	l = MultiByteToWideChar(CP_ACP, 0, name, (int)len, wn, (int)len);
 	if (l == 0) {
 		free(wn);
 		return (NULL);
@@ -269,7 +270,7 @@ la_CreateHardLinkW(wchar_t *linkname, wchar_t *target)
 
 /* Make a link to src called dst.  */
 static int
-__link(const char *src, const char *dst, int sym)
+__link(const char *src, const char *dst)
 {
 	wchar_t *wsrc, *wdst;
 	int res, retval;
@@ -289,7 +290,7 @@ __link(const char *src, const char *dst, int sym)
 		return -1;
 	}
 
-	if ((attr = GetFileAttributesW(wsrc)) != -1) {
+	if ((attr = GetFileAttributesW(wsrc)) != (DWORD)-1) {
 		res = la_CreateHardLinkW(wdst, wsrc);
 	} else {
 		/* wsrc does not exist; try src prepend it with the dirname of wdst */
@@ -323,9 +324,9 @@ __link(const char *src, const char *dst, int sym)
 		else
 			wcscat(wnewsrc, L"\\");
 		/* Converting multi-byte src to wide-char src */
-		wlen = wcslen(wsrc);
-		slen = strlen(src);
-		n = MultiByteToWideChar(CP_ACP, 0, src, slen, wsrc, slen);
+		wlen = (int)wcslen(wsrc);
+		slen = (int)strlen(src);
+		n = MultiByteToWideChar(CP_ACP, 0, src, slen, wsrc, wlen);
 		if (n == 0) {
 			free (wnewsrc);
 			retval = -1;
@@ -337,8 +338,8 @@ __link(const char *src, const char *dst, int sym)
 		wcsncat(wnewsrc, wsrc, n);
 		/* Check again */
 		attr = GetFileAttributesW(wnewsrc);
-		if (attr == -1 || (attr & FILE_ATTRIBUTE_DIRECTORY) != 0) {
-			if (attr == -1)
+		if (attr == (DWORD)-1 || (attr & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+			if (attr == (DWORD)-1)
 				la_dosmaperr(GetLastError());
 			else
 				errno = EPERM;
@@ -364,7 +365,7 @@ exit:
 int
 __la_link(const char *src, const char *dst)
 {
-	return __link (src, dst, 0);
+	return __link(src, dst);
 }
 
 int
@@ -471,19 +472,43 @@ int
 __la_chmod(const char *path, mode_t mode)
 {
 	wchar_t *ws;
-	int r;
+	DWORD attr;
+	BOOL r;
 
-	r = _chmod(path, mode);
-	if (r >= 0 || errno != ENOENT)
-		return (r);
-	ws = permissive_name(path);
-	if (ws == NULL) {
-		errno = EINVAL;
+	ws = NULL;
+	attr = GetFileAttributesA(path);
+	if (attr == (DWORD)-1) {
+		if (GetLastError() != ERROR_FILE_NOT_FOUND) {
+			la_dosmaperr(GetLastError());
+			return (-1);
+		}
+		ws = permissive_name(path);
+		if (ws == NULL) {
+			errno = EINVAL;
+			return (-1);
+		}
+		attr = GetFileAttributesW(ws);
+		if (attr == (DWORD)-1) {
+			free(ws);
+			la_dosmaperr(GetLastError());
+			return (-1);
+		}
+	}
+	if (mode & _S_IWRITE)
+		attr &= ~FILE_ATTRIBUTE_READONLY;
+	else
+		attr |= FILE_ATTRIBUTE_READONLY;
+	if (ws == NULL)
+		r = SetFileAttributesA(path, attr);
+	else {
+		r = SetFileAttributesW(ws, attr);
+		free(ws);
+	}
+	if (r == 0) {
+		la_dosmaperr(GetLastError());
 		return (-1);
 	}
-	r = _wchmod(ws, mode);
-	free(ws);
-	return (r);
+	return (0);
 }
 
 /*
@@ -602,7 +627,7 @@ __la_open(const char *path, int flags, ...)
 		 * "Permission denied" error.
 		 */
 		attr = GetFileAttributesA(path);
-		if (attr == -1 && GetLastError() == ERROR_PATH_NOT_FOUND) {
+		if (attr == (DWORD)-1 && GetLastError() == ERROR_PATH_NOT_FOUND) {
 			ws = permissive_name(path);
 			if (ws == NULL) {
 				errno = EINVAL;
@@ -610,7 +635,7 @@ __la_open(const char *path, int flags, ...)
 			}
 			attr = GetFileAttributesW(ws);
 		}
-		if (attr == -1) {
+		if (attr == (DWORD)-1) {
 			la_dosmaperr(GetLastError());
 			free(ws);
 			return (-1);
@@ -650,7 +675,7 @@ __la_open(const char *path, int flags, ...)
 		if (r < 0 && errno == EACCES && (flags & O_CREAT) != 0) {
 			/* simular other POSIX system action to pass a test */
 			attr = GetFileAttributesA(path);
-			if (attr == -1)
+			if (attr == (DWORD)-1)
 				la_dosmaperr(GetLastError());
 			else if (attr & FILE_ATTRIBUTE_DIRECTORY)
 				errno = EISDIR;
@@ -670,7 +695,7 @@ __la_open(const char *path, int flags, ...)
 	if (r < 0 && errno == EACCES && (flags & O_CREAT) != 0) {
 		/* simular other POSIX system action to pass a test */
 		attr = GetFileAttributesW(ws);
-		if (attr == -1)
+		if (attr == (DWORD)-1)
 			la_dosmaperr(GetLastError());
 		else if (attr & FILE_ATTRIBUTE_DIRECTORY)
 			errno = EISDIR;
@@ -981,7 +1006,7 @@ __la_waitpid(pid_t wpid, int *status, int option)
 	DWORD cs, ret;
 
 	(void)option;/* UNUSED */
-	child = OpenProcess(PROCESS_ALL_ACCESS, FALSE, wpid);
+	child = OpenProcess(PROCESS_QUERY_INFORMATION | SYNCHRONIZE, FALSE, wpid);
 	if (child == NULL) {
 		la_dosmaperr(GetLastError());
 		return (-1);
@@ -1162,8 +1187,8 @@ Digest_Init(Digest_CTX *ctx, ALG_ID algId)
 
 	ctx->valid = 0;
 	if (!CryptAcquireContext(&ctx->cryptProv, NULL, NULL,
-	    PROV_RSA_FULL, 0)) {
-		if (GetLastError() != NTE_BAD_KEYSET)
+	    PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
+		if (GetLastError() != (DWORD)NTE_BAD_KEYSET)
 			return;
 		if (!CryptAcquireContext(&ctx->cryptProv, NULL, NULL,
 		    PROV_RSA_FULL, CRYPT_NEWKEYSET))
@@ -1217,7 +1242,7 @@ void name ## _Update(Digest_CTX *ctx, const unsigned char *buf, size_t len)\
 }
 
 #define DIGEST_FINAL(name, size) \
-void name ## _Final(unsigned char buf[size], Digest_CTX *ctx)\
+void name ## _Final(unsigned char *buf, Digest_CTX *ctx)\
 {\
 	Digest_Final(buf, size, ctx);\
 }
@@ -1233,24 +1258,173 @@ DIGEST_FINAL(SHA1, SHA1_DIGEST_LENGTH)
 /*
  * SHA256 nor SHA384 nor SHA512 are not supported on Windows XP and Windows 2000.
  */
-#ifdef CALG_SHA256
-DIGEST_INIT(SHA256, CALG_SHA256)
+#ifdef CALG_SHA_256
+DIGEST_INIT(SHA256, CALG_SHA_256)
 DIGEST_UPDATE(SHA256)
 DIGEST_FINAL(SHA256, SHA256_DIGEST_LENGTH)
 #endif
 
-#ifdef CALG_SHA384
-DIGEST_INIT(SHA384, CALG_SHA384)
+#ifdef CALG_SHA_384
+DIGEST_INIT(SHA384, CALG_SHA_384)
 DIGEST_UPDATE(SHA384)
 DIGEST_FINAL(SHA384, SHA384_DIGEST_LENGTH)
 #endif
 
-#ifdef CALG_SHA512
-DIGEST_INIT(SHA512, CALG_SHA512)
+#ifdef CALG_SHA_512
+DIGEST_INIT(SHA512, CALG_SHA_512)
 DIGEST_UPDATE(SHA512)
 DIGEST_FINAL(SHA512, SHA384_DIGEST_LENGTH)
 #endif
 
 #endif /* !HAVE_OPENSSL_MD5_H && !HAVE_OPENSSL_SHA_H */
+
+/*
+ * Create a temporary file.
+ *
+ * Do not use Windows tmpfile() function.
+ * It will make a temporary file under the root directory
+ * and it'll cause permission error if a user who is
+ * non-Administrator creates temporary files.
+ * Also Windows version of mktemp family including _mktemp_s
+ * are not secure.
+ */
+int
+__archive_mktemp(const char *tmpdir)
+{
+	static const char num[] = {
+		'0', '1', '2', '3', '4', '5', '6', '7',
+		'8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+		'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+		'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
+		'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd',
+		'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+		'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+		'u', 'v', 'w', 'x', 'y', 'z'
+	};
+	HCRYPTPROV hProv;
+	struct archive_string temp_name;
+	wchar_t *ws;
+	DWORD attr;
+	BYTE *xp, *ep;
+	int fd;
+
+	hProv = (HCRYPTPROV)NULL;
+	fd = -1;
+	ws = NULL;
+	archive_string_init(&temp_name);
+
+	/* Get a temporary directory. */
+	if (tmpdir == NULL) {
+		size_t l;
+		char *tmp;
+
+		l = GetTempPathA(0, NULL);
+		if (l == 0) {
+			la_dosmaperr(GetLastError());
+			goto exit_tmpfile;
+		}
+		tmp = malloc(l);
+		if (tmp == NULL) {
+			errno = ENOMEM;
+			goto exit_tmpfile;
+		}
+		GetTempPathA(l, tmp);
+		archive_strcpy(&temp_name, tmp);
+		free(tmp);
+	} else {
+		archive_strcpy(&temp_name, tmpdir);
+		if (temp_name.s[temp_name.length-1] != '/')
+			archive_strappend_char(&temp_name, '/');
+	}
+
+	/* Check if temp_name is a directory. */
+	attr = GetFileAttributesA(temp_name.s);
+	if (attr == (DWORD)-1) {
+		if (GetLastError() != ERROR_FILE_NOT_FOUND) {
+			la_dosmaperr(GetLastError());
+			goto exit_tmpfile;
+		}
+		ws = permissive_name(temp_name.s);
+		if (ws == NULL) {
+			errno = EINVAL;
+			goto exit_tmpfile;
+		}
+		attr = GetFileAttributesW(ws);
+		if (attr == (DWORD)-1) {
+			la_dosmaperr(GetLastError());
+			goto exit_tmpfile;
+		}
+	}
+	if (!(attr & FILE_ATTRIBUTE_DIRECTORY)) {
+		errno = ENOTDIR;
+		goto exit_tmpfile;
+	}
+
+	/*
+	 * Create a temporary file.
+	 */
+	archive_strcat(&temp_name, "libarchive_");
+	xp = temp_name.s + archive_strlen(&temp_name);
+	archive_strcat(&temp_name, "XXXXXXXXXX");
+	ep = temp_name.s + archive_strlen(&temp_name);
+
+	if (!CryptAcquireContext(&hProv, NULL, NULL, PROV_RSA_FULL,
+		CRYPT_VERIFYCONTEXT)) {
+		la_dosmaperr(GetLastError());
+		goto exit_tmpfile;
+	}
+
+	for (;;) {
+		BYTE *p;
+		HANDLE h;
+
+		/* Generate a random file name through CryptGenRandom(). */
+		p = xp;
+		if (!CryptGenRandom(hProv, ep - p, p)) {
+			la_dosmaperr(GetLastError());
+			goto exit_tmpfile;
+		}
+		for (; p < ep; p++)
+			*p = num[*p % sizeof(num)];
+
+		free(ws);
+		ws = permissive_name(temp_name.s);
+		if (ws == NULL) {
+			errno = EINVAL;
+			goto exit_tmpfile;
+		}
+		/* Specifies FILE_FLAG_DELETE_ON_CLOSE flag is to
+		 * delete this temporary file immediately when this
+		 * file closed. */
+		h = CreateFileW(ws,
+		    GENERIC_READ | GENERIC_WRITE | DELETE,
+		    0,/* Not share */
+		    NULL,
+		    CREATE_NEW,/* Create a new file only */
+		    FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE,
+		    NULL);
+		if (h == INVALID_HANDLE_VALUE) {
+			/* The same file already exists. retry with
+			 * a new filename. */
+			if (GetLastError() == ERROR_FILE_EXISTS)
+				continue;
+			/* Otherwise, fail creation temporary file. */
+			la_dosmaperr(GetLastError());
+			goto exit_tmpfile;
+		}
+		fd = _open_osfhandle((intptr_t)h, _O_BINARY | _O_RDWR);
+		if (fd == -1) {
+			CloseHandle(h);
+			goto exit_tmpfile;
+		} else
+			break;/* success! */
+	}
+exit_tmpfile:
+	if (hProv != (HCRYPTPROV)NULL)
+		CryptReleaseContext(hProv, 0);
+	free(ws);
+	archive_string_free(&temp_name);
+	return (fd);
+}
 
 #endif /* _WIN32 && !__CYGWIN__ */

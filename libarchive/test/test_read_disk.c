@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_disk.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 static void
 gname_cleanup(void *d)
@@ -33,8 +33,13 @@ gname_cleanup(void *d)
 	*mp = 0x2468;
 }
 
+#if ARCHIVE_VERSION_NUMBER < 3000000
 static const char *
 gname_lookup(void *d, gid_t g)
+#else
+static const char *
+gname_lookup(void *d, int64_t g)
+#endif
 {
 	int *mp = d;
 	assertEqualInt(*mp, 0x13579);
@@ -51,8 +56,13 @@ uname_cleanup(void *d)
 	*mp = 0x2345;
 }
 
+#if ARCHIVE_VERSION_NUMBER < 3000000
 static const char *
 uname_lookup(void *d, uid_t u)
+#else
+static const char *
+uname_lookup(void *d, int64_t u)
+#endif
 {
 	int *mp = d;
 	assertEqualInt(*mp, 0x1234);
@@ -164,7 +174,7 @@ DEFINE_TEST(test_read_disk)
 			   &umagic, &uname_lookup, &uname_cleanup));
 
 	/* Destroy the archive. */
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 
 	/* Verify our cleanup functions got called. */
 	assertEqualInt(gmagic, 0x2468);

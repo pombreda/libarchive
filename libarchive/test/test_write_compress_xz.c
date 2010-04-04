@@ -25,7 +25,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_compress_xz.c 191183 2009-04-17 01:06:31Z kientzle $");
 
 /*
  * A basic exercise of xz reading and writing.
@@ -54,18 +54,18 @@ DEFINE_TEST(test_write_compress_xz)
 	 * Write a 100 files and read them all back.
 	 */
 	assert((a = archive_write_new()) != NULL);
-	assertA(0 == archive_write_set_format_ustar(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_format_ustar(a));
 	r = archive_write_set_compression_xz(a);
 	if (r == ARCHIVE_FATAL) {
 		skipping("xz writing not supported on this platform");
-		assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
+		assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 		return;
 	}
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_write_set_bytes_per_block(a, 10));
 	assertEqualInt(ARCHIVE_COMPRESSION_XZ, archive_compression(a));
 	assertEqualString("xz", archive_compression_name(a));
-	assertA(0 == archive_write_open_memory(a, buff, buffsize, &used1));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_open_memory(a, buff, buffsize, &used1));
 	assertEqualInt(ARCHIVE_COMPRESSION_XZ, archive_compression(a));
 	assertEqualString("xz", archive_compression_name(a));
 	assert((ae = archive_entry_new()) != NULL);
@@ -74,16 +74,16 @@ DEFINE_TEST(test_write_compress_xz)
 	for (i = 0; i < 100; i++) {
 		sprintf(path, "file%03d", i);
 		archive_entry_copy_pathname(ae, path);
-		assertA(0 == archive_write_header(a, ae));
+		assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
 		assertA(datasize
 		    == (size_t)archive_write_data(a, data, datasize));
 	}
 	archive_entry_free(ae);
-	archive_write_close(a);
-	assert(0 == archive_write_finish(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	assert((a = archive_read_new()) != NULL);
-	assertA(0 == archive_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
 	r = archive_read_support_compression_xz(a);
 	if (r == ARCHIVE_WARN) {
 		skipping("Can't verify xz writing by reading back;"
@@ -103,17 +103,17 @@ DEFINE_TEST(test_write_compress_xz)
 		}
 		assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
 	}
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 
 	/*
 	 * Repeat the cycle again, this time setting some compression
 	 * options.
 	 */
 	assert((a = archive_write_new()) != NULL);
-	assertA(0 == archive_write_set_format_ustar(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_format_ustar(a));
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_write_set_bytes_per_block(a, 10));
-	assertA(0 == archive_write_set_compression_xz(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_compression_xz(a));
 	assertEqualIntA(a, ARCHIVE_WARN,
 	    archive_write_set_compressor_options(a, "nonexistent-option=0"));
 	assertEqualIntA(a, ARCHIVE_WARN,
@@ -122,19 +122,19 @@ DEFINE_TEST(test_write_compress_xz)
 	    archive_write_set_compressor_options(a, "compression-level=99"));
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_write_set_compressor_options(a, "compression-level=9"));
-	assertA(0 == archive_write_open_memory(a, buff, buffsize, &used2));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_open_memory(a, buff, buffsize, &used2));
 	for (i = 0; i < 100; i++) {
 		sprintf(path, "file%03d", i);
 		assert((ae = archive_entry_new()) != NULL);
 		archive_entry_copy_pathname(ae, path);
 		archive_entry_set_size(ae, datasize);
 		archive_entry_set_filetype(ae, AE_IFREG);
-		assertA(0 == archive_write_header(a, ae));
+		assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
 		assertA(datasize == (size_t)archive_write_data(a, data, datasize));
 		archive_entry_free(ae);
 	}
-	archive_write_close(a);
-	assert(0 == archive_write_finish(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/* Curiously, this test fails; the test data above compresses
 	 * better at default compression than at level 9. */
@@ -165,33 +165,33 @@ DEFINE_TEST(test_write_compress_xz)
 		}
 		assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
 	}
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 
 	/*
 	 * Repeat again, with much lower compression.
 	 */
 	assert((a = archive_write_new()) != NULL);
-	assertA(0 == archive_write_set_format_ustar(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_format_ustar(a));
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_write_set_bytes_per_block(a, 10));
-	assertA(0 == archive_write_set_compression_xz(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_compression_xz(a));
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_write_set_compressor_options(a, "compression-level=0"));
-	assertA(0 == archive_write_open_memory(a, buff, buffsize, &used2));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_open_memory(a, buff, buffsize, &used2));
 	for (i = 0; i < 100; i++) {
 		sprintf(path, "file%03d", i);
 		assert((ae = archive_entry_new()) != NULL);
 		archive_entry_copy_pathname(ae, path);
 		archive_entry_set_size(ae, datasize);
 		archive_entry_set_filetype(ae, AE_IFREG);
-		assertA(0 == archive_write_header(a, ae));
+		assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
 		failure("Writing file %s", path);
 		assertEqualIntA(a, datasize,
 		    (size_t)archive_write_data(a, data, datasize));
 		archive_entry_free(ae);
 	}
-	archive_write_close(a);
-	assert(0 == archive_write_finish(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/* Level 0 really does result in larger data. */
 	failure("Compression-level=0 wrote %d bytes; default wrote %d bytes",
@@ -199,8 +199,8 @@ DEFINE_TEST(test_write_compress_xz)
 	assert(used2 > used1);
 
 	assert((a = archive_read_new()) != NULL);
-	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
 	r = archive_read_support_compression_xz(a);
 	if (r == ARCHIVE_WARN) {
 		skipping("xz reading not fully supported on this platform");
@@ -217,7 +217,7 @@ DEFINE_TEST(test_write_compress_xz)
 		}
 		assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
 	}
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 
 	/*
 	 * Test various premature shutdown scenarios to make sure we
@@ -225,25 +225,25 @@ DEFINE_TEST(test_write_compress_xz)
 	 */
 	assert((a = archive_write_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_compression_xz(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	assert((a = archive_write_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_compression_xz(a));
 	assertEqualInt(ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
-
-	assert((a = archive_write_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_format_ustar(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_compression_xz(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	assert((a = archive_write_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_format_ustar(a));
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_compression_xz(a));
-	assertA(0 == archive_write_open_memory(a, buff, buffsize, &used2));
 	assertEqualInt(ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+
+	assert((a = archive_write_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_format_ustar(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_compression_xz(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_open_memory(a, buff, buffsize, &used2));
+	assertEqualInt(ARCHIVE_OK, archive_write_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/*
 	 * Clean up.

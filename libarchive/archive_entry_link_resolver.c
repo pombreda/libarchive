@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_entry_link_resolver.c,v 1.4 2008/09/05 06:15:25 kientzle Exp $");
+__FBSDID("$FreeBSD: head/lib/libarchive/archive_entry_link_resolver.c 201100 2009-12-28 03:05:31Z kientzle $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -120,6 +120,10 @@ archive_entry_linkresolver_set_strategy(struct archive_entry_linkresolver *res,
 	int fmtbase = fmt & ARCHIVE_FORMAT_BASE_MASK;
 
 	switch (fmtbase) {
+	case ARCHIVE_FORMAT_AR:
+	case ARCHIVE_FORMAT_ZIP:
+		res->strategy = ARCHIVE_ENTRY_LINKIFY_LIKE_OLD_CPIO;
+		break;
 	case ARCHIVE_FORMAT_CPIO:
 		switch (fmt) {
 		case ARCHIVE_FORMAT_CPIO_SVR4_NOCRC:
@@ -134,11 +138,13 @@ archive_entry_linkresolver_set_strategy(struct archive_entry_linkresolver *res,
 	case ARCHIVE_FORMAT_MTREE:
 		res->strategy = ARCHIVE_ENTRY_LINKIFY_LIKE_MTREE;
 		break;
+	case ARCHIVE_FORMAT_ISO9660:
+	case ARCHIVE_FORMAT_SHAR:
 	case ARCHIVE_FORMAT_TAR:
 		res->strategy = ARCHIVE_ENTRY_LINKIFY_LIKE_TAR;
 		break;
 	default:
-		res->strategy = ARCHIVE_ENTRY_LINKIFY_LIKE_TAR;
+		res->strategy = ARCHIVE_ENTRY_LINKIFY_LIKE_OLD_CPIO;
 		break;
 	}
 }
@@ -181,8 +187,10 @@ archive_entry_linkify(struct archive_entry_linkresolver *res,
 	/* If it has only one link, then we're done. */
 	if (archive_entry_nlink(*e) == 1)
 		return;
-	/* Directories never have hardlinks. */
-	if (archive_entry_filetype(*e) == AE_IFDIR)
+	/* Directories, devices never have hardlinks. */
+	if (archive_entry_filetype(*e) == AE_IFDIR
+	    || archive_entry_filetype(*e) == AE_IFBLK
+	    || archive_entry_filetype(*e) == AE_IFCHR)
 		return;
 
 	switch (res->strategy) {

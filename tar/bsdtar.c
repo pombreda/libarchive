@@ -32,6 +32,9 @@ __FBSDID("$FreeBSD: src/usr.bin/tar/bsdtar.c,v 1.93 2008/11/08 04:43:24 kientzle
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
+#ifdef HAVE_COPYFILE_H
+#include <copyfile.h>
+#endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
@@ -80,14 +83,22 @@ __FBSDID("$FreeBSD: src/usr.bin/tar/bsdtar.c,v 1.93 2008/11/08 04:43:24 kientzle
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #define	_PATH_DEFTAPE "\\\\.\\tape0"
 #endif
+#if defined(__APPLE__)
+#undef _PATH_DEFTAPE
+#define _PATH_DEFTAPE "-"  /* Mac OS has no tape support, default to stdio. */
+#endif
 
 #ifndef _PATH_DEFTAPE
 #define	_PATH_DEFTAPE "/dev/tape"
 #endif
 
+#ifdef __MINGW32__
+int _CRT_glob = 0; /* Disable broken CRT globbing. */
+#endif
+
 static struct bsdtar *_bsdtar;
 
-#if defined(SIGINFO) || defined(SIGUSR1)
+#if defined(HAVE_SIGACTION) && (defined(SIGINFO) || defined(SIGUSR1))
 static volatile int siginfo_occurred;
 
 static void
@@ -145,7 +156,7 @@ main(int argc, char **argv)
 	bsdtar->fd = -1; /* Mark as "unused" */
 	option_o = 0;
 
-#if defined(SIGINFO) || defined(SIGUSR1)
+#if defined(HAVE_SIGACTION) && (defined(SIGINFO) || defined(SIGUSR1))
 	{ /* Catch SIGINFO and SIGUSR1, if they exist. */
 		struct sigaction sa;
 		sa.sa_handler = siginfo_handler;
@@ -218,6 +229,16 @@ main(int argc, char **argv)
 	}
 #endif
 
+	/*
+	 * Enable Mac OS "copyfile()" extension by default.
+	 * This has no effect on other platforms.
+	 */
+	bsdtar->enable_copyfile = 1;
+#ifdef COPYFILE_DISABLE_VAR
+	if (getenv(COPYFILE_DISABLE_VAR))
+		bsdtar->enable_copyfile = 0;
+#endif
+
 	bsdtar->argv = argv;
 	bsdtar->argc = argc;
 
@@ -251,6 +272,9 @@ main(int argc, char **argv)
 		case OPTION_CHROOT: /* NetBSD */
 			bsdtar->option_chroot = 1;
 			break;
+		case OPTION_DISABLE_COPYFILE: /* Mac OS X */
+			bsdtar->enable_copyfile = 0;
+			break;
 		case OPTION_EXCLUDE: /* GNU tar */
 			if (lafe_exclude(&bsdtar->matching, bsdtar->optarg))
 				lafe_errc(1, 0,
@@ -264,8 +288,6 @@ main(int argc, char **argv)
 			break;
 		case 'f': /* SUSv2 */
 			bsdtar->filename = bsdtar->optarg;
-			if (strcmp(bsdtar->filename, "-") == 0)
-				bsdtar->filename = NULL;
 			break;
 		case 'H': /* BSD convention */
 			bsdtar->symlink_mode = 'H';
@@ -330,7 +352,7 @@ main(int argc, char **argv)
 			/* GNU tar 1.13  used -l for --one-file-system */
 			bsdtar->option_warn_links = 1;
 			break;
-		case OPTION_LZMA:
+		case OPTION_LZMA: /* GNU tar beginning with 1.20 */
 			if (bsdtar->create_compression != '\0')
 				lafe_errc(1, 0,
 				    "Can't specify both -%c and -%c", opt,
@@ -593,6 +615,10 @@ main(int argc, char **argv)
 	if (bsdtar->strip_components != 0)
 		only_mode(bsdtar, "--strip-components", "xt");
 
+	/* Filename "-" implies stdio. */
+	if (strcmp(bsdtar->filename, "-") == 0)
+		bsdtar->filename = NULL;
+
 	switch(bsdtar->mode) {
 	case 'c':
 		tar_mode_c(bsdtar);
@@ -664,7 +690,7 @@ version(void)
 {
 	printf("bsdtar %s - %s\n",
 	    BSDTAR_VERSION_STRING,
-	    archive_version());
+	    archive_version_string());
 	exit(0);
 }
 

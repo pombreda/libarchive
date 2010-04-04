@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_tar_large.c,v 1.4 2008/09/01 05:38:33 kientzle Exp $");
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_tar_large.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 #include <errno.h>
 #include <stdlib.h>
@@ -73,10 +73,10 @@ struct memdata {
 #define GB ((int64_t)1024 * MB)
 #define TB ((int64_t)1024 * GB)
 
-#if ARCHIVE_VERSION_NUMBER < 2000000
-static ssize_t	memory_read_skip(struct archive *, void *, size_t request);
-#else
+#if ARCHIVE_VERSION_NUMBER < 3000000
 static off_t	memory_read_skip(struct archive *, void *, off_t request);
+#else
+static int64_t	memory_read_skip(struct archive *, void *, int64_t request);
 #endif
 static ssize_t	memory_read(struct archive *, void *, const void **buff);
 static ssize_t	memory_write(struct archive *, void *, const void *, size_t);
@@ -167,18 +167,13 @@ memory_read(struct archive *a, void *_private, const void **buff)
 }
 
 
-#if ARCHIVE_VERSION_NUMBER < 2000000
-static ssize_t
-memory_read_skip(struct archive *a, void *private, size_t skip)
-{
-	(void)a;  /* UNUSED */
-	(void)private; /* UNUSED */
-	(void)skip; /* UNUSED */
-	return (0);
-}
-#else
+#if ARCHIVE_VERSION_NUMBER < 3000000
 static off_t
 memory_read_skip(struct archive *a, void *_private, off_t skip)
+#else
+static int64_t
+memory_read_skip(struct archive *a, void *_private, int64_t skip)
+#endif
 {
 	struct memdata *private = _private;
 
@@ -197,7 +192,6 @@ memory_read_skip(struct archive *a, void *_private, off_t skip)
 	}
 	return (skip);
 }
-#endif
 
 DEFINE_TEST(test_tar_large)
 {
@@ -270,12 +264,8 @@ DEFINE_TEST(test_tar_large)
 
 
 	/* Close out the archive. */
-	assertA(0 == archive_write_close(a));
-#if ARCHIVE_VERSION_NUMBER < 2000000
-	archive_write_finish(a);
-#else
-	assertA(0 == archive_write_finish(a));
-#endif
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/*
 	 * Open the same archive for reading.
@@ -300,12 +290,8 @@ DEFINE_TEST(test_tar_large)
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 
 	/* Close out the archive. */
-	assertA(0 == archive_read_close(a));
-#if ARCHIVE_VERSION_NUMBER < 2000000
-	archive_read_finish(a);
-#else
-	assertA(0 == archive_read_finish(a));
-#endif
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 
 	free(memdata.buff);
 	free(filedata);

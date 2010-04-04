@@ -32,7 +32,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_read.c,v 1.39 2008/12/06 06:45:15 kientzle Exp $");
+__FBSDID("$FreeBSD: head/lib/libarchive/archive_read.c 201157 2009-12-29 05:30:23Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -57,9 +57,14 @@ __FBSDID("$FreeBSD: src/lib/libarchive/archive_read.c,v 1.39 2008/12/06 06:45:15
 
 static int	build_stream(struct archive_read *);
 static int	choose_format(struct archive_read *);
+static void	free_filters(struct archive_read *);
+static int	close_filters(struct archive_read *);
 static struct archive_vtable *archive_read_vtable(void);
+static int64_t	_archive_filter_bytes(struct archive *, int);
+static int	_archive_filter_code(struct archive *, int);
+static const char *_archive_filter_name(struct archive *, int);
 static int	_archive_read_close(struct archive *);
-static int	_archive_read_finish(struct archive *);
+static int	_archive_read_free(struct archive *);
 
 static struct archive_vtable *
 archive_read_vtable(void)
@@ -68,7 +73,10 @@ archive_read_vtable(void)
 	static int inited = 0;
 
 	if (!inited) {
-		av.archive_finish = _archive_read_finish;
+		av.archive_filter_bytes = _archive_filter_bytes;
+		av.archive_filter_code = _archive_filter_code;
+		av.archive_filter_name = _archive_filter_name;
+		av.archive_free = _archive_read_free;
 		av.archive_close = _archive_read_close;
 	}
 	return (&av);
@@ -98,12 +106,20 @@ archive_read_new(void)
 /*
  * Record the do-not-extract-to file. This belongs in archive_read_extract.c.
  */
+#if ARCHIVE_VERSION_NUMBER < 3000000
 void
 archive_read_extract_set_skip_file(struct archive *_a, dev_t d, ino_t i)
+#else
+void
+archive_read_extract_set_skip_file(struct archive *_a, int64_t d, int64_t i)
+#endif
 {
 	struct archive_read *a = (struct archive_read *)_a;
-	__archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_ANY,
-	    "archive_read_extract_set_skip_file");
+
+	if (ARCHIVE_OK != __archive_check_magic(_a, ARCHIVE_READ_MAGIC,
+		ARCHIVE_STATE_ANY, "archive_read_extract_set_skip_file"))
+		return;
+
 	a->skip_file_dev = d;
 	a->skip_file_ino = i;
 }
@@ -121,14 +137,12 @@ archive_read_set_format_options(struct archive *_a, const char *s)
 	size_t i;
 	int len, r;
 
-	__archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
 	    "archive_read_set_format_options");
 
 	if (s == NULL || *s == '\0')
 		return (ARCHIVE_OK);
 	a = (struct archive_read *)_a;
-	__archive_check_magic(&a->archive, ARCHIVE_READ_MAGIC,
-	    ARCHIVE_STATE_NEW, "archive_read_set_format_options");
 	len = 0;
 	for (i = 0; i < sizeof(a->formats)/sizeof(a->formats[0]); i++) {
 		format = &a->formats[i];
@@ -168,14 +182,12 @@ archive_read_set_filter_options(struct archive *_a, const char *s)
 	char key[64], val[64];
 	int len, r;
 
-	__archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
 	    "archive_read_set_filter_options");
 
 	if (s == NULL || *s == '\0')
 		return (ARCHIVE_OK);
 	a = (struct archive_read *)_a;
-	__archive_check_magic(&a->archive, ARCHIVE_READ_MAGIC,
-	    ARCHIVE_STATE_NEW, "archive_read_set_filter_options");
 	len = 0;
 	for (filter = a->filter; filter != NULL; filter = filter->upstream) {
 		bidder = filter->bidder;
@@ -211,7 +223,7 @@ archive_read_set_options(struct archive *_a, const char *s)
 {
 	int r;
 
-	__archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
 	    "archive_read_set_options");
 	archive_clear_error(_a);
 
@@ -244,7 +256,6 @@ client_read_proxy(struct archive_read_filter *self, const void **buff)
 	ssize_t r;
 	r = (self->archive->client.reader)(&self->archive->archive,
 	    self->data, buff);
-	self->archive->archive.raw_position += r;
 	return (r);
 }
 
@@ -268,7 +279,6 @@ client_skip_proxy(struct archive_read_filter *self, int64_t request)
 		if (get == 0)
 			return (total);
 		request -= get;
-		self->archive->archive.raw_position += get;
 		total += get;
 	}
 }
@@ -297,7 +307,7 @@ archive_read_open2(struct archive *_a, void *client_data,
 	struct archive_read_filter *filter;
 	int e;
 
-	__archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
 	    "archive_read_open");
 	archive_clear_error(&a->archive);
 
@@ -393,14 +403,14 @@ build_stream(struct archive_read *a)
 			free(filter);
 			return (r);
 		}
+		a->filter = filter;
 		/* Verify the filter by asking it for some data. */
 		__archive_read_filter_ahead(filter, 1, &avail);
 		if (avail < 0) {
-			/* If the read failed, bail out now. */
-			free(filter);
-			return (avail);
+			close_filters(a);
+			free_filters(a);
+			return (ARCHIVE_FATAL);
 		}
-		a->filter = filter;
 	}
 }
 
@@ -413,7 +423,7 @@ archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 	struct archive_read *a = (struct archive_read *)_a;
 	int slot, ret;
 
-	__archive_check_magic(_a, ARCHIVE_READ_MAGIC,
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
 	    ARCHIVE_STATE_HEADER | ARCHIVE_STATE_DATA,
 	    "archive_read_next_header");
 
@@ -448,8 +458,8 @@ archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 			return (ret);
 	}
 
-	/* Record start-of-header. */
-	a->header_position = a->archive.file_position;
+	/* Record start-of-header offset in uncompressed stream. */
+	a->header_position = a->filter->bytes_consumed;
 
 	ret = (a->format->read_header)(a, entry);
 
@@ -551,7 +561,7 @@ int64_t
 archive_read_header_position(struct archive *_a)
 {
 	struct archive_read *a = (struct archive_read *)_a;
-	__archive_check_magic(_a, ARCHIVE_READ_MAGIC,
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
 	    ARCHIVE_STATE_ANY, "archive_read_header_position");
 	return (a->header_position);
 }
@@ -665,9 +675,13 @@ archive_read_data_skip(struct archive *_a)
 	int r;
 	const void *buff;
 	size_t size;
+#if ARCHIVE_VERSION_NUMBER < 3000000
 	off_t offset;
+#else
+	int64_t offset;
+#endif
 
-	__archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_DATA,
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_DATA,
 	    "archive_read_data_skip");
 
 	if (a->format->read_data_skip != NULL)
@@ -694,12 +708,18 @@ archive_read_data_skip(struct archive *_a)
  * Returns ARCHIVE_OK if the operation is successful, ARCHIVE_EOF if
  * the end of entry is encountered.
  */
+#if ARCHIVE_VERSION_NUMBER < 3000000
 int
 archive_read_data_block(struct archive *_a,
     const void **buff, size_t *size, off_t *offset)
+#else
+int
+archive_read_data_block(struct archive *_a,
+    const void **buff, size_t *size, int64_t *offset)
+#endif
 {
 	struct archive_read *a = (struct archive_read *)_a;
-	__archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_DATA,
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_DATA,
 	    "archive_read_data_block");
 
 	if (a->format->read_data == NULL) {
@@ -712,54 +732,57 @@ archive_read_data_block(struct archive *_a,
 	return (a->format->read_data)(a, buff, size, offset);
 }
 
+static int
+close_filters(struct archive_read *a)
+{
+	struct archive_read_filter *f = a->filter;
+	int r = ARCHIVE_OK;
+	/* Close each filter in the pipeline. */
+	while (f != NULL) {
+		struct archive_read_filter *t = f->upstream;
+		if (f->close != NULL) {
+			int r1 = (f->close)(f);
+			if (r1 < r)
+				r = r1;
+		}
+		free(f->buffer);
+		f->buffer = NULL;
+		f = t;
+	}
+	return r;
+}
+
+static void
+free_filters(struct archive_read *a)
+{
+	while (a->filter != NULL) {
+		struct archive_read_filter *t = a->filter->upstream;
+		free(a->filter);
+		a->filter = t;
+	}
+}
+
 /*
- * Close the file and release most resources.
- *
- * Be careful: client might just call read_new and then read_finish.
- * Don't assume we actually read anything or performed any non-trivial
- * initialization.
+ * Close the file and all I/O.
  */
 static int
 _archive_read_close(struct archive *_a)
 {
 	struct archive_read *a = (struct archive_read *)_a;
 	int r = ARCHIVE_OK, r1 = ARCHIVE_OK;
-	size_t i, n;
 
-	__archive_check_magic(&a->archive, ARCHIVE_READ_MAGIC,
-	    ARCHIVE_STATE_ANY, "archive_read_close");
+	archive_check_magic(&a->archive, ARCHIVE_READ_MAGIC,
+	    ARCHIVE_STATE_ANY | ARCHIVE_STATE_FATAL, "archive_read_close");
 	archive_clear_error(&a->archive);
-	a->archive.state = ARCHIVE_STATE_CLOSED;
-
-
-	/* Call cleanup functions registered by optional components. */
-	if (a->cleanup_archive_extract != NULL)
-		r = (a->cleanup_archive_extract)(a);
+	if (a->archive.state != ARCHIVE_STATE_FATAL)
+		a->archive.state = ARCHIVE_STATE_CLOSED;
 
 	/* TODO: Clean up the formatters. */
 
-	/* Clean up the filter pipeline. */
-	while (a->filter != NULL) {
-		struct archive_read_filter *t = a->filter->upstream;
-		if (a->filter->close != NULL) {
-			r1 = (a->filter->close)(a->filter);
-			if (r1 < r)
-				r = r1;
-		}
-		free(a->filter->buffer);
-		free(a->filter);
-		a->filter = t;
-	}
-
-	/* Release the bidder objects. */
-	n = sizeof(a->bidders)/sizeof(a->bidders[0]);
-	for (i = 0; i < n; i++) {
-		if (a->bidders[i].free != NULL) {
-			r1 = (a->bidders[i].free)(&a->bidders[i]);
-			if (r1 < r)
-				r = r1;
-		}
-	}
+	/* Release the filter objects. */
+	r1 = close_filters(a);
+	if (r1 < r)
+		r = r1;
 
 	return (r);
 }
@@ -768,17 +791,24 @@ _archive_read_close(struct archive *_a)
  * Release memory and other resources.
  */
 static int
-_archive_read_finish(struct archive *_a)
+_archive_read_free(struct archive *_a)
 {
 	struct archive_read *a = (struct archive_read *)_a;
-	int i;
+	int i, n;
 	int slots;
 	int r = ARCHIVE_OK;
 
-	__archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_ANY,
-	    "archive_read_finish");
-	if (a->archive.state != ARCHIVE_STATE_CLOSED)
+	if (_a == NULL)
+		return (ARCHIVE_OK);
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
+	    ARCHIVE_STATE_ANY | ARCHIVE_STATE_FATAL, "archive_read_free");
+	if (a->archive.state != ARCHIVE_STATE_CLOSED
+	    && a->archive.state != ARCHIVE_STATE_FATAL)
 		r = archive_read_close(&a->archive);
+
+	/* Call cleanup functions registered by optional components. */
+	if (a->cleanup_archive_extract != NULL)
+		r = (a->cleanup_archive_extract)(a);
 
 	/* Cleanup format-specific data. */
 	slots = sizeof(a->formats) / sizeof(a->formats[0]);
@@ -788,14 +818,61 @@ _archive_read_finish(struct archive *_a)
 			(a->formats[i].cleanup)(a);
 	}
 
+	/* Free the filters */
+	free_filters(a);
+
+	/* Release the bidder objects. */
+	n = sizeof(a->bidders)/sizeof(a->bidders[0]);
+	for (i = 0; i < n; i++) {
+		if (a->bidders[i].free != NULL) {
+			int r1 = (a->bidders[i].free)(&a->bidders[i]);
+			if (r1 < r)
+				r = r1;
+		}
+	}
+
 	archive_string_free(&a->archive.error_string);
 	if (a->entry)
 		archive_entry_free(a->entry);
 	a->archive.magic = 0;
 	free(a);
-#if ARCHIVE_API_VERSION > 1
 	return (r);
-#endif
+}
+
+static struct archive_read_filter *
+get_filter(struct archive *_a, int n)
+{
+	struct archive_read *a = (struct archive_read *)_a;
+	struct archive_read_filter *f = a->filter;
+	/* XXX handle n == -1 */
+	if (n < 0)
+		return NULL;
+	while (n > 0 && f != NULL) {
+		f = f->upstream;
+		--n;
+	}
+	return (f);
+}
+
+static int
+_archive_filter_code(struct archive *_a, int n)
+{
+	struct archive_read_filter *f = get_filter(_a, n);
+	return f == NULL ? -1 : f->code;
+}
+
+static const char *
+_archive_filter_name(struct archive *_a, int n)
+{
+	struct archive_read_filter *f = get_filter(_a, n);
+	return f == NULL ? NULL : f->name;
+}
+
+static int64_t
+_archive_filter_bytes(struct archive *_a, int n)
+{
+	struct archive_read_filter *f = get_filter(_a, n);
+	return f == NULL ? -1 : f->bytes_consumed;
 }
 
 /*
@@ -809,13 +886,17 @@ __archive_read_register_format(struct archive_read *a,
     int (*bid)(struct archive_read *),
     int (*options)(struct archive_read *, const char *, const char *),
     int (*read_header)(struct archive_read *, struct archive_entry *),
+#if ARCHIVE_VERSION_NUMBER < 3000000
     int (*read_data)(struct archive_read *, const void **, size_t *, off_t *),
+#else
+    int (*read_data)(struct archive_read *, const void **, size_t *, int64_t *),
+#endif
     int (*read_data_skip)(struct archive_read *),
     int (*cleanup)(struct archive_read *))
 {
 	int i, number_slots;
 
-	__archive_check_magic(&a->archive,
+	archive_check_magic(&a->archive,
 	    ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
 	    "__archive_read_register_format");
 
@@ -849,10 +930,6 @@ struct archive_read_filter_bidder *
 __archive_read_get_bidder(struct archive_read *a)
 {
 	int i, number_slots;
-
-	__archive_check_magic(&a->archive,
-	    ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
-	    "__archive_read_get_bidder");
 
 	number_slots = sizeof(a->bidders) / sizeof(a->bidders[0]);
 
@@ -1116,10 +1193,7 @@ __archive_read_filter_ahead(struct archive_read_filter *filter,
 ssize_t
 __archive_read_consume(struct archive_read *a, size_t request)
 {
-	ssize_t r;
-	r = __archive_read_filter_consume(a->filter, request);
-	a->archive.file_position += r;
-	return (r);
+	return (__archive_read_filter_consume(a->filter, request));
 }
 
 ssize_t
@@ -1135,6 +1209,7 @@ __archive_read_filter_consume(struct archive_read_filter * filter,
 		filter->client_next += request;
 		filter->client_avail -= request;
 	}
+	filter->bytes_consumed += request;
 	return (request);
 }
 
@@ -1164,10 +1239,7 @@ __archive_read_skip(struct archive_read *a, int64_t request)
 int64_t
 __archive_read_skip_lenient(struct archive_read *a, int64_t request)
 {
-	int64_t skipped = __archive_read_filter_skip(a->filter, request);
-	if (skipped > 0)
-		a->archive.file_position += skipped;
-	return (skipped);
+	return (__archive_read_filter_skip(a->filter, request));
 }
 
 int64_t
@@ -1195,14 +1267,11 @@ __archive_read_filter_skip(struct archive_read_filter *filter, int64_t request)
 	}
 	if (request == 0)
 		return (total_bytes_skipped);
+
 	/*
 	 * If a client_skipper was provided, try that first.
 	 */
-#if ARCHIVE_API_VERSION < 2
-	if ((filter->skip != NULL) && (request < SSIZE_MAX)) {
-#else
 	if (filter->skip != NULL) {
-#endif
 		bytes_skipped = (filter->skip)(filter, request);
 		if (bytes_skipped < 0) {	/* error */
 			filter->client_total = filter->client_avail = 0;
@@ -1210,6 +1279,7 @@ __archive_read_filter_skip(struct archive_read_filter *filter, int64_t request)
 			filter->fatal = 1;
 			return (bytes_skipped);
 		}
+		filter->bytes_consumed += bytes_skipped;
 		total_bytes_skipped += bytes_skipped;
 		request -= bytes_skipped;
 		filter->client_next = filter->client_buff;

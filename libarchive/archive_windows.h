@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2009 Michihiro NAKAJIMA
+ * Copyright (c) 2009,2010 Michihiro NAKAJIMA
  * Copyright (c) 2003-2006 Tim Kientzle
  * All rights reserved.
  *
@@ -54,6 +54,9 @@
 #define	set_errno(val)	((errno)=val)
 #include <io.h>
 #include <stdlib.h>   //brings in NULL
+#if defined(HAVE_STDINT_H)
+#include <stdint.h>
+#endif
 #include <stdio.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -79,7 +82,10 @@
 #if defined(_MSC_VER)
 /* TODO: Fix the code, don't suppress the warnings. */
 #pragma warning(disable:4244)   /* 'conversion' conversion from 'type1' to 'type2', possible loss of data */
-#pragma warning(default: 4365)  /* 'action':conversion from 'type_1' to 'type_2', signed/unsigned mismatch */
+#endif
+#if defined(__BORLANDC__)
+#pragma warn -8068	/* Constant out of range in comparison. */
+#pragma warn -8072	/* Suspicious pointer arithmetic. */
 #endif
 
 #ifndef NULL
@@ -91,7 +97,6 @@
 #endif
 
 /* Alias the Windows _function to the POSIX equivalent. */
-#define	access		_access
 #define	chdir		__la_chdir
 #define	chmod		__la_chmod
 #define	close		_close
@@ -102,13 +107,11 @@
 #define	fstat		__la_fstat
 #define	ftruncate	__la_ftruncate
 #define	futimes		__la_futimes
-#define	getcwd		_getcwd
 #define link		__la_link
 #define	lseek		__la_lseek
 #define	lstat		__la_stat
 #define	mbstowcs	__la_mbstowcs
 #define	mkdir(d,m)	__la_mkdir(d, m)
-#define	mktemp		_mktemp
 #define	open		__la_open
 #define	read		__la_read
 #define	rmdir		__la_rmdir
@@ -296,8 +299,6 @@ struct _timeval64i32 {
 #define __timeval _timeval64i32
 #endif
 
-typedef int pid_t;
-
 /* Message digest define */
 #if !defined(HAVE_OPENSSL_MD5_H) && !defined(HAVE_OPENSSL_SHA_H)
 # if defined(_MSC_VER) && _MSC_VER < 1300
@@ -322,17 +323,17 @@ typedef struct {
 #define HAVE_SHA1 1
 #define SHA1_CTX Digest_CTX
 #endif
-#ifdef CALG_SHA256
+#ifdef CALG_SHA_256
 #define SHA256_DIGEST_LENGTH	32
 #define HAVE_SHA256 1
 #define SHA256_CTX Digest_CTX
 #endif
-#ifdef CALG_SHA384
+#ifdef CALG_SHA_384
 #define SHA384_DIGEST_LENGTH	48
 #define HAVE_SHA384 1
 #define SHA384_CTX Digest_CTX
 #endif
-#ifdef CALG_SHA512
+#ifdef CALG_SHA_512
 #define SHA512_DIGEST_LENGTH	64
 #define HAVE_SHA512 1
 #define SHA512_CTX Digest_CTX
@@ -366,6 +367,7 @@ extern int	 __la_link(const char *src, const char *dst);
 extern __int64	 __la_lseek(int fd, __int64 offset, int whence);
 extern size_t	 __la_mbstowcs(wchar_t *wcstr, const char *mbstr, size_t nwchars);
 extern int	 __la_mkdir(const char *path, mode_t mode);
+extern int	 __la_mkstemp(char *template);
 extern int	 __la_open(const char *path, int flags, ...);
 extern ssize_t	 __la_read(int fd, void *buf, size_t nbytes);
 extern int	 __la_rmdir(const char *path);
@@ -378,8 +380,6 @@ extern ssize_t	 __la_write(int fd, const void *buf, size_t nbytes);
 #define _stat64i32(path, st)	__la_stat(path, st)
 #define _stat64(path, st)	__la_stat(path, st)
 /* for status returned by la_waitpid */
-#define WIFSIGNALED(sts)	0
-#define WTERMSIG(sts)		0
 #define WIFEXITED(sts)		((sts & 0x100) == 0)
 #define WEXITSTATUS(sts)	(sts & 0x0FF)
 
@@ -389,36 +389,31 @@ extern ssize_t	 __la_write(int fd, const void *buf, size_t nbytes);
 extern void	 MD5_Init(Digest_CTX *ctx);
 extern void	 MD5_Update(Digest_CTX *ctx, const unsigned char *buf,
 		     size_t len);
-extern void	 MD5_Final(unsigned char buf[MD5_DIGEST_LENGTH],
-		     Digest_CTX *ctx);
+extern void	 MD5_Final(unsigned char *buf, Digest_CTX *ctx);
 #endif
 #ifdef SHA1_DIGEST_LENGTH
 extern void	 SHA1_Init(Digest_CTX *ctx);
 extern void	 SHA1_Update(Digest_CTX *ctx, const unsigned char *buf,
 		     size_t len);
-extern void	 SHA1_Final(unsigned char buf[SHA1_DIGEST_LENGTH],
-		     Digest_CTX *ctx);
+extern void	 SHA1_Final(unsigned char *buf, Digest_CTX *ctx);
 #endif
 #ifdef SHA256_DIGEST_LENGTH
 extern void	 SHA256_Init(Digest_CTX *ctx);
 extern void	 SHA256_Update(Digest_CTX *ctx, const unsigned char *buf,
 		     size_t len);
-extern void	 SHA256_Final(unsigned char buf[SHA256_DIGEST_LENGTH],
-		     Digest_CTX *ctx);
+extern void	 SHA256_Final(unsigned char *buf, Digest_CTX *ctx);
 #endif
 #ifdef SHA384_DIGEST_LENGTH
 extern void	 SHA384_Init(Digest_CTX *ctx);
 extern void	 SHA384_Update(Digest_CTX *ctx, const unsigned char *buf,
 		     size_t len);
-extern void	 SHA384_Final(unsigned char buf[SHA384_DIGEST_LENGTH],
-		     Digest_CTX *ctx);
+extern void	 SHA384_Final(unsigned char *buf, Digest_CTX *ctx);
 #endif
 #ifdef SHA512_DIGEST_LENGTH
 extern void	 SHA512_Init(Digest_CTX *ctx);
 extern void	 SHA512_Update(Digest_CTX *ctx, const unsigned char *buf,
 		     size_t len);
-extern void	 SHA512_Final(unsigned char buf[SHA512_DIGEST_LENGTH],
-		     Digest_CTX *ctx);
+extern void	 SHA512_Final(unsigned char *buf, Digest_CTX *ctx);
 #endif
 #endif
 

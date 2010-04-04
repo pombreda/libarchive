@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_set_format_cpio.c,v 1.14 2008/03/15 11:04:45 kientzle Exp $");
+__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_format_cpio.c 201170 2009-12-29 06:34:23Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -44,8 +44,8 @@ __FBSDID("$FreeBSD: src/lib/libarchive/archive_write_set_format_cpio.c,v 1.14 20
 
 static ssize_t	archive_write_cpio_data(struct archive_write *,
 		    const void *buff, size_t s);
-static int	archive_write_cpio_finish(struct archive_write *);
-static int	archive_write_cpio_destroy(struct archive_write *);
+static int	archive_write_cpio_close(struct archive_write *);
+static int	archive_write_cpio_free(struct archive_write *);
 static int	archive_write_cpio_finish_entry(struct archive_write *);
 static int	archive_write_cpio_header(struct archive_write *,
 		    struct archive_entry *);
@@ -54,6 +54,12 @@ static int64_t	format_octal_recursive(int64_t, char *, int);
 
 struct cpio {
 	uint64_t	  entry_bytes_remaining;
+
+	int64_t		  ino_next;
+
+	struct		 { int64_t old; int new;} *ino_list;
+	size_t		  ino_list_size;
+	size_t		  ino_list_next;
 };
 
 struct cpio_header {
@@ -79,9 +85,12 @@ archive_write_set_format_cpio(struct archive *_a)
 	struct archive_write *a = (struct archive_write *)_a;
 	struct cpio *cpio;
 
+	archive_check_magic(_a, ARCHIVE_WRITE_MAGIC,
+	    ARCHIVE_STATE_NEW, "archive_write_set_format_cpio");
+
 	/* If someone else was already registered, unregister them. */
-	if (a->format_destroy != NULL)
-		(a->format_destroy)(a);
+	if (a->format_free != NULL)
+		(a->format_free)(a);
 
 	cpio = (struct cpio *)malloc(sizeof(*cpio));
 	if (cpio == NULL) {
@@ -96,11 +105,76 @@ archive_write_set_format_cpio(struct archive *_a)
 	a->format_write_header = archive_write_cpio_header;
 	a->format_write_data = archive_write_cpio_data;
 	a->format_finish_entry = archive_write_cpio_finish_entry;
-	a->format_finish = archive_write_cpio_finish;
-	a->format_destroy = archive_write_cpio_destroy;
+	a->format_close = archive_write_cpio_close;
+	a->format_free = archive_write_cpio_free;
 	a->archive.archive_format = ARCHIVE_FORMAT_CPIO_POSIX;
 	a->archive.archive_format_name = "POSIX cpio";
 	return (ARCHIVE_OK);
+}
+
+/*
+ * Ino values are as long as 64 bits on some systems; cpio format
+ * only allows 18 bits and relies on the ino values to identify hardlinked
+ * files.  So, we can't merely "hash" the ino numbers since collisions
+ * would corrupt the archive.  Instead, we generate synthetic ino values
+ * to store in the archive and maintain a map of original ino values to
+ * synthetic ones so we can preserve hardlink information.
+ *
+ * TODO: Make this more efficient.  It's not as bad as it looks (most
+ * files don't have any hardlinks and we don't do any work here for those),
+ * but it wouldn't be hard to do better.
+ *
+ * TODO: Work with dev/ino pairs here instead of just ino values.
+ */
+static int
+synthesize_ino_value(struct cpio *cpio, struct archive_entry *entry)
+{
+	int64_t ino = archive_entry_ino64(entry);
+	int ino_new;
+	size_t i;
+
+	/*
+	 * If no index number was given, don't assign one.  In
+	 * particular, this handles the end-of-archive marker
+	 * correctly by giving it a zero index value.  (This is also
+	 * why we start our synthetic index numbers with one below.)
+	 */
+	if (ino == 0)
+		return (0);
+
+	/* Don't store a mapping if we don't need to. */
+	if (archive_entry_nlink(entry) < 2) {
+		return ++cpio->ino_next;
+	}
+
+	/* Look up old ino; if we have it, this is a hardlink
+	 * and we reuse the same value. */
+	for (i = 0; i < cpio->ino_list_next; ++i) {
+		if (cpio->ino_list[i].old == ino)
+			return (cpio->ino_list[i].new);
+	}
+
+	/* Assign a new index number. */
+	ino_new = ++cpio->ino_next;
+
+	/* Ensure space for the new mapping. */
+	if (cpio->ino_list_size <= cpio->ino_list_next) {
+		size_t newsize = cpio->ino_list_size < 512
+		    ? 512 : cpio->ino_list_size * 2;
+		void *newlist = realloc(cpio->ino_list,
+		    sizeof(cpio->ino_list[0]) * newsize);
+		if (newlist == NULL)
+			return (-1);
+
+		cpio->ino_list_size = newsize;
+		cpio->ino_list = newlist;
+	}
+
+	/* Record and return the new value. */
+	cpio->ino_list[cpio->ino_list_next].old = ino;
+	cpio->ino_list[cpio->ino_list_next].new = ino_new;
+	++cpio->ino_list_next;
+	return (ino_new);
 }
 
 static int
@@ -116,24 +190,24 @@ archive_write_cpio_header(struct archive_write *a, struct archive_entry *entry)
 	ret2 = ARCHIVE_OK;
 
 	path = archive_entry_pathname(entry);
-	pathlength = strlen(path) + 1; /* Include trailing null. */
+	pathlength = (int)strlen(path) + 1; /* Include trailing null. */
 
 	memset(&h, 0, sizeof(h));
 	format_octal(070707, &h.c_magic, sizeof(h.c_magic));
 	format_octal(archive_entry_dev(entry), &h.c_dev, sizeof(h.c_dev));
-	/*
-	 * TODO: Generate artificial inode numbers rather than just
-	 * re-using the ones off the disk.  That way, the 18-bit c_ino
-	 * field only limits the number of files in the archive.
-	 */
-	ino = archive_entry_ino64(entry);
-	if (ino < 0 || ino > 0777777) {
-		archive_set_error(&a->archive, ERANGE,
-		    "large inode number truncated");
-		ret2 = ARCHIVE_WARN;
-	}
 
-	format_octal(archive_entry_ino64(entry) & 0777777, &h.c_ino, sizeof(h.c_ino));
+	ino = synthesize_ino_value(cpio, entry);
+	if (ino < 0) {
+		archive_set_error(&a->archive, ENOMEM,
+		    "No memory for ino translation table");
+		return (ARCHIVE_FATAL);
+	} else if (ino > 0777777) {
+		archive_set_error(&a->archive, ERANGE,
+		    "Too many files for this cpio format");
+		return (ARCHIVE_FATAL);
+	}
+	format_octal(ino & 0777777, &h.c_ino, sizeof(h.c_ino));
+
 	format_octal(archive_entry_mode(entry), &h.c_mode, sizeof(h.c_mode));
 	format_octal(archive_entry_uid(entry), &h.c_uid, sizeof(h.c_uid));
 	format_octal(archive_entry_gid(entry), &h.c_gid, sizeof(h.c_gid));
@@ -158,11 +232,11 @@ archive_write_cpio_header(struct archive_write *a, struct archive_entry *entry)
 		format_octal(archive_entry_size(entry),
 		    &h.c_filesize, sizeof(h.c_filesize));
 
-	ret = (a->compressor.write)(a, &h, sizeof(h));
+	ret = __archive_write_output(a, &h, sizeof(h));
 	if (ret != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 
-	ret = (a->compressor.write)(a, path, pathlength);
+	ret = __archive_write_output(a, path, pathlength);
 	if (ret != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 
@@ -170,7 +244,7 @@ archive_write_cpio_header(struct archive_write *a, struct archive_entry *entry)
 
 	/* Write the symlink now. */
 	if (p != NULL  &&  *p != '\0')
-		ret = (a->compressor.write)(a, p, strlen(p));
+		ret = __archive_write_output(a, p, strlen(p));
 
 	if (ret == ARCHIVE_OK)
 		ret = ret2;
@@ -187,7 +261,7 @@ archive_write_cpio_data(struct archive_write *a, const void *buff, size_t s)
 	if (s > cpio->entry_bytes_remaining)
 		s = cpio->entry_bytes_remaining;
 
-	ret = (a->compressor.write)(a, buff, s);
+	ret = __archive_write_output(a, buff, s);
 	cpio->entry_bytes_remaining -= s;
 	if (ret >= 0)
 		return (s);
@@ -226,7 +300,7 @@ format_octal_recursive(int64_t v, char *p, int s)
 }
 
 static int
-archive_write_cpio_finish(struct archive_write *a)
+archive_write_cpio_close(struct archive_write *a)
 {
 	int er;
 	struct archive_entry *trailer;
@@ -241,11 +315,12 @@ archive_write_cpio_finish(struct archive_write *a)
 }
 
 static int
-archive_write_cpio_destroy(struct archive_write *a)
+archive_write_cpio_free(struct archive_write *a)
 {
 	struct cpio *cpio;
 
 	cpio = (struct cpio *)a->format_data;
+	free(cpio->ino_list);
 	free(cpio);
 	a->format_data = NULL;
 	return (ARCHIVE_OK);
@@ -255,14 +330,15 @@ static int
 archive_write_cpio_finish_entry(struct archive_write *a)
 {
 	struct cpio *cpio;
-	int to_write, ret;
+	size_t to_write;
+	int ret;
 
 	cpio = (struct cpio *)a->format_data;
 	ret = ARCHIVE_OK;
 	while (cpio->entry_bytes_remaining > 0) {
 		to_write = cpio->entry_bytes_remaining < a->null_length ?
 		    cpio->entry_bytes_remaining : a->null_length;
-		ret = (a->compressor.write)(a, a->nulls, to_write);
+		ret = __archive_write_output(a, a->nulls, to_write);
 		if (ret != ARCHIVE_OK)
 			return (ret);
 		cpio->entry_bytes_remaining -= to_write;

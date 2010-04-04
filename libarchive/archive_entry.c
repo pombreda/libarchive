@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_entry.c,v 1.55 2008/12/23 05:01:43 kientzle Exp $");
+__FBSDID("$FreeBSD: head/lib/libarchive/archive_entry.c 201096 2009-12-28 02:41:27Z kientzle $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -97,6 +97,21 @@ __FBSDID("$FreeBSD: src/lib/libarchive/archive_entry.c,v 1.55 2008/12/23 05:01:4
 /* There's a "makedev" function. */
 #define ae_makedev(maj, min) makedev((maj), (min))
 #endif
+
+/*
+ * This adjustment is needed to support the following idiom for adding
+ * 1000ns to the stored time:
+ * archive_entry_set_atime(archive_entry_atime(),
+ *                         archive_entry_atime_nsec() + 1000)
+ * The additional if() here compensates for ambiguity in the C standard,
+ * which permits two possible interpretations of a % b when a is negative.
+ */
+#define FIX_NS(t,ns) \
+	do {	\
+		t += ns / 1000000000; \
+		ns %= 1000000000; \
+		if (ns < 0) { --t; ns += 1000000000; } \
+	} while (0)
 
 static void	aes_clean(struct aes *);
 static void	aes_copy(struct aes *dest, struct aes *src);
@@ -222,7 +237,7 @@ static const wchar_t *
 aes_get_wcs(struct aes *aes)
 {
 	wchar_t *w;
-	int r;
+	size_t r;
 
 	/* Return WCS form if we already have it. */
 	if (aes->aes_set & AES_SET_WCS)
@@ -240,7 +255,7 @@ aes_get_wcs(struct aes *aes)
 		if (w == NULL)
 			__archive_errx(1, "No memory for aes_get_wcs()");
 		r = mbstowcs(w, aes->aes_mbs.s, wcs_length);
-		if (r > 0) {
+		if (r != (size_t)-1 && r != 0) {
 			w[r] = 0;
 			aes->aes_set |= AES_SET_WCS;
 			return (aes->aes_wcs = w);
@@ -383,6 +398,7 @@ archive_entry_clear(struct archive_entry *entry)
 	aes_clean(&entry->ae_uname);
 	archive_entry_acl_clear(entry);
 	archive_entry_xattr_clear(entry);
+	archive_entry_sparse_clear(entry);
 	free(entry->stat);
 	memset(entry, 0, sizeof(*entry));
 	return entry;
@@ -394,12 +410,12 @@ archive_entry_clone(struct archive_entry *entry)
 	struct archive_entry *entry2;
 	struct ae_acl *ap, *ap2;
 	struct ae_xattr *xp;
+	struct ae_sparse *sp;
 
 	/* Allocate new structure and copy over all of the fields. */
-	entry2 = (struct archive_entry *)malloc(sizeof(*entry2));
+	entry2 = archive_entry_new();
 	if (entry2 == NULL)
 		return (NULL);
-	memset(entry2, 0, sizeof(*entry2));
 	entry2->ae_stat = entry->ae_stat;
 	entry2->ae_fflags_set = entry->ae_fflags_set;
 	entry2->ae_fflags_clear = entry->ae_fflags_clear;
@@ -429,6 +445,14 @@ archive_entry_clone(struct archive_entry *entry)
 		archive_entry_xattr_add_entry(entry2,
 		    xp->name, xp->value, xp->size);
 		xp = xp->next;
+	}
+
+	/* Copy sparse data over. */
+	sp = entry->sparse_head;
+	while (sp != NULL) {
+		archive_entry_sparse_add_entry(entry2,
+		    sp->offset, sp->length);
+		sp = sp->next;
 	}
 
 	return (entry2);
@@ -619,11 +643,19 @@ archive_entry_hardlink_w(struct archive_entry *entry)
 	return (NULL);
 }
 
+#if ARCHIVE_VERSION_NUMBER < 3000000
 ino_t
 archive_entry_ino(struct archive_entry *entry)
 {
 	return (entry->ae_stat.aest_ino);
 }
+#else
+int64_t
+archive_entry_ino(struct archive_entry *entry)
+{
+	return (entry->ae_stat.aest_ino);
+}
+#endif
 
 int64_t
 archive_entry_ino64(struct archive_entry *entry)
@@ -671,6 +703,12 @@ const wchar_t *
 archive_entry_pathname_w(struct archive_entry *entry)
 {
 	return (aes_get_wcs(&entry->ae_pathname));
+}
+
+mode_t
+archive_entry_perm(struct archive_entry *entry)
+{
+	return (~AE_IFMT & entry->ae_stat.aest_mode);
 }
 
 dev_t
@@ -823,12 +861,21 @@ archive_entry_update_gname_utf8(struct archive_entry *entry, const char *name)
 	return (aes_update_utf8(&entry->ae_gname, name));
 }
 
+#if ARCHIVE_VERSION_NUMBER < 3000000
 void
 archive_entry_set_ino(struct archive_entry *entry, unsigned long ino)
 {
 	entry->stat_valid = 0;
 	entry->ae_stat.aest_ino = ino;
 }
+#else
+void
+archive_entry_set_ino(struct archive_entry *entry, int64_t ino)
+{
+	entry->stat_valid = 0;
+	entry->ae_stat.aest_ino = ino;
+}
+#endif
 
 void
 archive_entry_set_ino64(struct archive_entry *entry, int64_t ino)
@@ -867,9 +914,20 @@ archive_entry_copy_hardlink_w(struct archive_entry *entry, const wchar_t *target
 		entry->ae_set &= ~AE_SET_HARDLINK;
 }
 
+int
+archive_entry_update_hardlink_utf8(struct archive_entry *entry, const char *target)
+{
+	if (target != NULL)
+		entry->ae_set |= AE_SET_HARDLINK;
+	else
+		entry->ae_set &= ~AE_SET_HARDLINK;
+	return (aes_update_utf8(&entry->ae_hardlink, target));
+}
+
 void
 archive_entry_set_atime(struct archive_entry *entry, time_t t, long ns)
 {
+	FIX_NS(t, ns);
 	entry->stat_valid = 0;
 	entry->ae_set |= AE_SET_ATIME;
 	entry->ae_stat.aest_atime = t;
@@ -884,11 +942,12 @@ archive_entry_unset_atime(struct archive_entry *entry)
 }
 
 void
-archive_entry_set_birthtime(struct archive_entry *entry, time_t m, long ns)
+archive_entry_set_birthtime(struct archive_entry *entry, time_t t, long ns)
 {
+	FIX_NS(t, ns);
 	entry->stat_valid = 0;
 	entry->ae_set |= AE_SET_BIRTHTIME;
-	entry->ae_stat.aest_birthtime = m;
+	entry->ae_stat.aest_birthtime = t;
 	entry->ae_stat.aest_birthtime_nsec = ns;
 }
 
@@ -902,6 +961,7 @@ archive_entry_unset_birthtime(struct archive_entry *entry)
 void
 archive_entry_set_ctime(struct archive_entry *entry, time_t t, long ns)
 {
+	FIX_NS(t, ns);
 	entry->stat_valid = 0;
 	entry->ae_set |= AE_SET_CTIME;
 	entry->ae_stat.aest_ctime = t;
@@ -986,11 +1046,12 @@ archive_entry_set_mode(struct archive_entry *entry, mode_t m)
 }
 
 void
-archive_entry_set_mtime(struct archive_entry *entry, time_t m, long ns)
+archive_entry_set_mtime(struct archive_entry *entry, time_t t, long ns)
 {
+	FIX_NS(t, ns);
 	entry->stat_valid = 0;
 	entry->ae_set |= AE_SET_MTIME;
-	entry->ae_stat.aest_mtime = m;
+	entry->ae_stat.aest_mtime = t;
 	entry->ae_stat.aest_mtime_nsec = ns;
 }
 
@@ -1113,6 +1174,16 @@ archive_entry_copy_symlink_w(struct archive_entry *entry, const wchar_t *linknam
 		entry->ae_set |= AE_SET_SYMLINK;
 	else
 		entry->ae_set &= ~AE_SET_SYMLINK;
+}
+
+int
+archive_entry_update_symlink_utf8(struct archive_entry *entry, const char *linkname)
+{
+	if (linkname != NULL)
+		entry->ae_set |= AE_SET_SYMLINK;
+	else
+		entry->ae_set &= ~AE_SET_SYMLINK;
+	return (aes_update_utf8(&entry->ae_symlink, linkname));
 }
 
 void
@@ -1922,6 +1993,18 @@ static struct flag {
 	{ "nouunlnk",	L"nouunlnk",		UF_NOUNLINK,	0 },
 	{ "nouunlink",	L"nouunlink",		UF_NOUNLINK,	0 },
 #endif
+#ifdef EXT2_UNRM_FL
+        { "nouunlink",	L"nouunlink",		EXT2_UNRM_FL,	0},
+#endif
+
+#ifdef EXT2_BTREE_FL
+        { "nobtree",	L"nobtree",       	EXT2_BTREE_FL,	0 },
+#endif
+
+#ifdef EXT2_ECOMPR_FL
+        { "nocomperr",	L"nocomperr",       	EXT2_ECOMPR_FL,	0 },
+#endif
+
 #ifdef EXT2_COMPR_FL				/* 'c' */
         { "nocompress",	L"nocompress",       	EXT2_COMPR_FL,	0 },
 #endif
@@ -1929,6 +2012,46 @@ static struct flag {
 #ifdef EXT2_NOATIME_FL				/* 'A' */
         { "noatime",	L"noatime",		0,		EXT2_NOATIME_FL},
 #endif
+
+#ifdef EXT2_DIRTY_FL
+        { "nocompdirty",L"nocompdirty",		EXT2_DIRTY_FL,		0},
+#endif
+
+#ifdef EXT2_COMPRBLK_FL
+#ifdef EXT2_NOCOMPR_FL
+        { "nocomprblk",	L"nocomprblk",		EXT2_COMPRBLK_FL, EXT2_NOCOMPR_FL},
+#else
+        { "nocomprblk",	L"nocomprblk",		EXT2_COMPRBLK_FL,	0},
+#endif
+#endif
+#ifdef EXT2_DIRSYNC_FL
+        { "nodirsync",	L"nodirsync",		EXT2_DIRSYNC_FL,	0},
+#endif
+#ifdef EXT2_INDEX_FL
+        { "nohashidx",	L"nohashidx",		EXT2_INDEX_FL,		0},
+#endif
+#ifdef EXT2_IMAGIC_FL
+        { "noimagic",	L"noimagic",		EXT2_IMAGIC_FL,		0},
+#endif
+#ifdef EXT3_JOURNAL_DATA_FL
+        { "nojournal",	L"nojournal",		EXT3_JOURNAL_DATA_FL,	0},
+#endif
+#ifdef EXT2_SECRM_FL
+        { "nosecuredeletion",L"nosecuredeletion",EXT2_SECRM_FL,		0},
+#endif
+#ifdef EXT2_SYNC_FL
+        { "nosync",	L"nosync",		EXT2_SYNC_FL,		0},
+#endif
+#ifdef EXT2_NOTAIL_FL
+        { "notail",	L"notail",		0,		EXT2_NOTAIL_FL},
+#endif
+#ifdef EXT2_TOPDIR_FL
+        { "notopdir",	L"notopdir",		EXT2_TOPDIR_FL,		0},
+#endif
+#ifdef EXT2_RESERVED_FL
+        { "noreserved",	L"noreserved",		EXT2_RESERVED_FL,	0},
+#endif
+
 	{ NULL,		NULL,			0,		0 }
 };
 

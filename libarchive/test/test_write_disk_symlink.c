@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk_symlink.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
  * Exercise symlink recreation.
@@ -99,7 +99,7 @@ DEFINE_TEST(test_write_disk_symlink)
 	assertEqualIntA(ad, 0, archive_write_finish_entry(ad));
 	archive_entry_free(ae);
 
-	assertEqualInt(ARCHIVE_OK, archive_write_finish(ad));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(ad));
 
 	/* Test the entries on disk. */
 

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_compat_gtar.c,v 1.4 2008/12/17 19:05:00 kientzle Exp $");
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_compat_gtar.c 189308 2009-03-03 17:02:51Z kientzle $");
 
 /*
  * Verify our ability to read sample files created by GNU tar.
@@ -54,7 +54,7 @@ test_compat_gtar_1(void)
 	/* Read first entry. */
 	assertEqualIntA(a, ARCHIVE_OK, r = archive_read_next_header(a, &ae));
 	if (r != ARCHIVE_OK) {
-		archive_read_finish(a);
+		archive_read_free(a);
 		return;
 	}
 	assertEqualString(
@@ -73,7 +73,7 @@ test_compat_gtar_1(void)
 	/* Read second entry. */
 	assertEqualIntA(a, ARCHIVE_OK, r = archive_read_next_header(a, &ae));
 	if (r != ARCHIVE_OK) {
-		archive_read_finish(a);
+		archive_read_free(a);
 		return;
 	}
 	assertEqualString(
@@ -103,11 +103,7 @@ test_compat_gtar_1(void)
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_GNUTAR);
 
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
-#if ARCHIVE_VERSION_NUMBER < 2000000
-	archive_read_finish(a);
-#else
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
-#endif
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 
 

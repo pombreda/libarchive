@@ -19,6 +19,7 @@ IF(ENABLE_TEST)
     test_archive_api_feature.c
     test_bad_fd.c
     test_compat_bzip2.c
+    test_compat_cpio.c
     test_compat_gtar.c
     test_compat_gzip.c
     test_compat_lzma.c
@@ -43,6 +44,7 @@ IF(ENABLE_TEST)
     test_read_extract.c
     test_read_file_nonexistent.c
     test_read_format_ar.c
+    test_read_format_cpio_afio.c
     test_read_format_cpio_bin.c
     test_read_format_cpio_bin_Z.c
     test_read_format_cpio_bin_be.c
@@ -79,12 +81,14 @@ IF(ENABLE_TEST)
     test_read_format_tlz.c
     test_read_format_txz.c
     test_read_format_tz.c
+    test_read_format_xar.c
     test_read_format_zip.c
     test_read_large.c
     test_read_pax_truncated.c
     test_read_position.c
     test_read_truncated.c
     test_read_uu.c
+    test_sparse_basic.c
     test_tar_filenames.c
     test_tar_large.c
     test_ustar_filenames.c
@@ -107,6 +111,11 @@ IF(ENABLE_TEST)
     test_write_format_cpio_empty.c
     test_write_format_cpio_odc.c
     test_write_format_cpio_newc.c
+    test_write_format_iso9660.c
+    test_write_format_iso9660_boot.c
+    test_write_format_iso9660_empty.c
+    test_write_format_iso9660_filename.c
+    test_write_format_iso9660_zisofs.c
     test_write_format_mtree.c
     test_write_format_pax.c
     test_write_format_shar_empty.c

@@ -21,9 +21,8 @@ TESTS= libarchive_test $(bsdtar_test_programs) $(bsdcpio_test_programs)
 TESTS_ENVIRONMENT= $(libarchive_TESTS_ENVIRONMENT) $(bsdtar_TESTS_ENVIRONMENT) $(bsdcpio_TESTS_ENVIRONMENT)
 # Always build and test both bsdtar and bsdcpio as part of 'distcheck'
 DISTCHECK_CONFIGURE_FLAGS = --enable-bsdtar --enable-bsdcpio
-# Especially for early development, we want to be a little
-# aggressive about diagnosing build problems; this can get
-# relaxed somewhat in final shipping versions.
+# The next line is commented out by default in shipping libarchive releases.
+# It is uncommented by default in trunk.
 AM_CFLAGS=-Wall -Werror
 PLATFORMCPPFLAGS = @PLATFORMCPPFLAGS@
 AM_CPPFLAGS=$(PLATFORMCPPFLAGS)
@@ -34,7 +33,8 @@ AM_CPPFLAGS=$(PLATFORMCPPFLAGS)
 EXTRA_DIST= \
 	CMakeLists.txt			\
 	build/autogen.sh		\
-	build/release.sh		\
+	build/bump-version.sh		\
+	build/clean.sh			\
 	build/cmake			\
 	build/version			\
 	build/windows			\
@@ -93,12 +93,14 @@ include_HEADERS= libarchive/archive.h libarchive/archive_entry.h
 
 libarchive_la_SOURCES=						\
 	libarchive/archive_check_magic.c			\
+	libarchive/archive_crc32.h				\
 	libarchive/archive_endian.h				\
 	libarchive/archive_entry.c				\
 	libarchive/archive_entry.h				\
 	libarchive/archive_entry_copy_stat.c			\
 	libarchive/archive_entry_link_resolver.c		\
 	libarchive/archive_entry_private.h			\
+	libarchive/archive_entry_sparse.c			\
 	libarchive/archive_entry_stat.c				\
 	libarchive/archive_entry_strmode.c			\
 	libarchive/archive_entry_xattr.c			\
@@ -134,6 +136,7 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_read_support_format_mtree.c		\
 	libarchive/archive_read_support_format_raw.c		\
 	libarchive/archive_read_support_format_tar.c		\
+	libarchive/archive_read_support_format_xar.c		\
 	libarchive/archive_read_support_format_zip.c		\
 	libarchive/archive_string.c				\
 	libarchive/archive_string.h				\
@@ -149,24 +152,25 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_write_open_filename.c		\
 	libarchive/archive_write_open_memory.c			\
 	libarchive/archive_write_private.h			\
-	libarchive/archive_write_set_compression_bzip2.c	\
-	libarchive/archive_write_set_compression_compress.c	\
-	libarchive/archive_write_set_compression_gzip.c		\
-	libarchive/archive_write_set_compression_none.c		\
-	libarchive/archive_write_set_compression_program.c	\
-	libarchive/archive_write_set_compression_xz.c		\
+	libarchive/archive_write_add_filter_bzip2.c	\
+	libarchive/archive_write_add_filter_compress.c	\
+	libarchive/archive_write_add_filter_gzip.c		\
+	libarchive/archive_write_add_filter_none.c		\
+	libarchive/archive_write_add_filter_program.c	\
+	libarchive/archive_write_add_filter_xz.c		\
 	libarchive/archive_write_set_format.c			\
 	libarchive/archive_write_set_format_ar.c		\
 	libarchive/archive_write_set_format_by_name.c		\
 	libarchive/archive_write_set_format_cpio.c		\
 	libarchive/archive_write_set_format_cpio_newc.c		\
+	libarchive/archive_write_set_format_iso9660.c		\
 	libarchive/archive_write_set_format_mtree.c		\
 	libarchive/archive_write_set_format_pax.c		\
 	libarchive/archive_write_set_format_shar.c		\
 	libarchive/archive_write_set_format_ustar.c		\
 	libarchive/archive_write_set_format_zip.c		\
+	libarchive/archive_write_set_options.c			\
 	libarchive/config_freebsd.h				\
-	libarchive/config_windows.h				\
 	libarchive/filter_fork.c				\
 	libarchive/filter_fork.h
 
@@ -185,11 +189,18 @@ libarchive_la_LDFLAGS= -no-undefined -version-info $(ARCHIVE_LIBTOOL_VERSION)
 # Manpages to install
 libarchive_man_MANS=						\
 	libarchive/archive_entry.3				\
+	libarchive/archive_entry_acl.3				\
+	libarchive/archive_entry_linkify.3			\
+	libarchive/archive_entry_paths.3			\
+	libarchive/archive_entry_perms.3			\
+	libarchive/archive_entry_stat.3				\
+	libarchive/archive_entry_time.3				\
 	libarchive/archive_read.3				\
 	libarchive/archive_read_disk.3				\
 	libarchive/archive_util.3				\
 	libarchive/archive_write.3				\
 	libarchive/archive_write_disk.3				\
+	libarchive/archive_write_set_options.3			\
 	libarchive/cpio.5					\
 	libarchive/libarchive.3					\
 	libarchive/libarchive_internals.3			\
@@ -226,6 +237,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_archive_api_feature.c		\
 	libarchive/test/test_bad_fd.c				\
 	libarchive/test/test_compat_bzip2.c			\
+	libarchive/test/test_compat_cpio.c			\
 	libarchive/test/test_compat_gtar.c			\
 	libarchive/test/test_compat_gzip.c			\
 	libarchive/test/test_compat_lzma.c			\
@@ -250,6 +262,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_read_extract.c			\
 	libarchive/test/test_read_file_nonexistent.c		\
 	libarchive/test/test_read_format_ar.c			\
+	libarchive/test/test_read_format_cpio_afio.c		\
 	libarchive/test/test_read_format_cpio_bin.c		\
 	libarchive/test/test_read_format_cpio_bin_Z.c		\
 	libarchive/test/test_read_format_cpio_bin_be.c		\
@@ -286,12 +299,14 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_read_format_tlz.c			\
 	libarchive/test/test_read_format_txz.c			\
 	libarchive/test/test_read_format_tz.c			\
+	libarchive/test/test_read_format_xar.c			\
 	libarchive/test/test_read_format_zip.c			\
 	libarchive/test/test_read_large.c			\
 	libarchive/test/test_read_pax_truncated.c		\
 	libarchive/test/test_read_position.c			\
 	libarchive/test/test_read_truncated.c			\
 	libarchive/test/test_read_uu.c				\
+	libarchive/test/test_sparse_basic.c			\
 	libarchive/test/test_tar_filenames.c			\
 	libarchive/test/test_tar_large.c			\
 	libarchive/test/test_ustar_filenames.c			\
@@ -314,6 +329,11 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_write_format_cpio_empty.c		\
 	libarchive/test/test_write_format_cpio_odc.c		\
 	libarchive/test/test_write_format_cpio_newc.c		\
+	libarchive/test/test_write_format_iso9660.c		\
+	libarchive/test/test_write_format_iso9660_boot.c	\
+	libarchive/test/test_write_format_iso9660_empty.c	\
+	libarchive/test/test_write_format_iso9660_filename.c	\
+	libarchive/test/test_write_format_iso9660_zisofs.c	\
 	libarchive/test/test_write_format_mtree.c		\
 	libarchive/test/test_write_format_pax.c			\
 	libarchive/test/test_write_format_shar_empty.c		\
@@ -338,6 +358,7 @@ libarchive_TESTS_ENVIRONMENT= LIBARCHIVE_TEST_FILES=`cd $(top_srcdir);/bin/pwd`/
 libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_compat_bzip2_1.tbz.uu			\
 	libarchive/test/test_compat_bzip2_2.tbz.uu			\
+	libarchive/test/test_compat_cpio_1.cpio.uu			\
 	libarchive/test/test_compat_gtar_1.tar.uu			\
 	libarchive/test/test_compat_gzip_1.tgz.uu			\
 	libarchive/test/test_compat_gzip_2.tgz.uu			\
@@ -459,6 +480,7 @@ bsdtar_test_SOURCES=						\
 	tar/test/test_0.c					\
 	tar/test/test_basic.c					\
 	tar/test/test_copy.c					\
+	tar/test/test_empty_mtree.c				\
 	tar/test/test_getdate.c					\
 	tar/test/test_help.c					\
 	tar/test/test_option_T_upper.c				\

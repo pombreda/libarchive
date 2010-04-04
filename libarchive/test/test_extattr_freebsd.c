@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_extattr_freebsd.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 #if defined(__FreeBSD__) && __FreeBSD__ > 4
 #include <sys/extattr.h>
@@ -123,7 +123,7 @@ DEFINE_TEST(test_extattr_freebsd)
 		assertEqualIntA(a, ARCHIVE_WARN, archive_write_close(a));
 	else
 		assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/* Verify the data on disk. */
 	assertEqualInt(0, stat("test0", &st));
@@ -166,7 +166,7 @@ DEFINE_TEST(test_extattr_freebsd)
 	assertEqualInt(xsize, 5);
 	assertEqualMem(xval, "12345", xsize);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 	archive_entry_free(ae);
 #endif
 }

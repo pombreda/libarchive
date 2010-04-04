@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_string_sprintf.c,v 1.10 2008/03/14 22:00:09 kientzle Exp $");
+__FBSDID("$FreeBSD: head/lib/libarchive/archive_string_sprintf.c 189435 2009-03-06 05:14:55Z kientzle $");
 
 /*
  * The use of printf()-family functions can be troublesome
@@ -112,11 +112,9 @@ __archive_string_vsprintf(struct archive_string *as, const char *fmt,
 		long_flag = '\0';
 		switch(*p) {
 		case 'j':
-			long_flag = 'j';
-			p++;
-			break;
 		case 'l':
-			long_flag = 'l';
+		case 'z':
+			long_flag = *p;
 			p++;
 			break;
 		}
@@ -133,6 +131,7 @@ __archive_string_vsprintf(struct archive_string *as, const char *fmt,
 			switch(long_flag) {
 			case 'j': s = va_arg(ap, intmax_t); break;
 			case 'l': s = va_arg(ap, long); break;
+			case 'z': s = va_arg(ap, ssize_t); break;
 			default:  s = va_arg(ap, int); break;
 			}
 		        append_int(as, s, 10);
@@ -146,6 +145,7 @@ __archive_string_vsprintf(struct archive_string *as, const char *fmt,
 			switch(long_flag) {
 			case 'j': u = va_arg(ap, uintmax_t); break;
 			case 'l': u = va_arg(ap, unsigned long); break;
+			case 'z': u = va_arg(ap, size_t); break;
 			default:  u = va_arg(ap, unsigned int); break;
 			}
 			/* Format it in the correct base. */

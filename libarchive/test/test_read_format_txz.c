@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_txz.c 191183 2009-04-17 01:06:31Z kientzle $");
 
 static unsigned char archive[] = {
 253, 55,122, 88, 90,  0,  0,  4,230,214,180, 70,  2,  0, 33,  1,
@@ -49,7 +49,7 @@ DEFINE_TEST(test_read_format_txz)
 	r = archive_read_support_compression_xz(a);
 	if (r == ARCHIVE_WARN) {
 		skipping("xz reading not fully supported on this platform");
-		assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 		return;
 	}
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
@@ -59,5 +59,5 @@ DEFINE_TEST(test_read_format_txz)
 	assertEqualInt(archive_compression(a), ARCHIVE_COMPRESSION_XZ);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
