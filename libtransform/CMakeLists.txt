@@ -8,26 +8,26 @@
 # Public headers
 SET(include_HEADERS
   transform.h
-  archive_entry.h
+  transform_entry.h
 )
 
 # Sources and private headers
-SET(libarchive_SOURCES
-  archive_check_magic.c
+SET(libtransform_SOURCES
+  transform_check_magic.c
   transform_endian.h
-  archive_entry.c
-  archive_entry.h
-  archive_entry_copy_stat.c
-  archive_entry_link_resolver.c
-  archive_entry_private.h
-  archive_entry_sparse.c
-  archive_entry_stat.c
-  archive_entry_strmode.c
-  archive_entry_xattr.c
+  transform_entry.c
+  transform_entry.h
+  transform_entry_copy_stat.c
+  transform_entry_link_resolver.c
+  transform_entry_private.h
+  transform_entry_sparse.c
+  transform_entry_stat.c
+  transform_entry_strmode.c
+  transform_entry_xattr.c
   transform_hash.h
   transform_platform.h
   transform_private.h
-  archive_read.c
+  transform_read.c
   transform_read_data_into_fd.c
   transform_read_disk.c
   transform_read_disk_entry_from_file.c
@@ -58,12 +58,12 @@ SET(libarchive_SOURCES
   transform_read_support_format_tar.c
   transform_read_support_format_xar.c
   transform_read_support_format_zip.c
-  archive_string.c
+  transform_string.c
   transform_string.h
-  archive_string_sprintf.c
-  archive_util.c
-  archive_virtual.c
-  archive_write.c
+  transform_string_sprintf.c
+  transform_util.c
+  transform_virtual.c
+  transform_write.c
   transform_write_disk.c
   transform_write_disk_private.h
   transform_write_disk_set_standard_lookup.c
@@ -95,55 +95,55 @@ SET(libarchive_SOURCES
 )
 
 # Man pages
-SET(libarchive_MANS
-  archive_entry.3
-  archive_entry_acl.3
-  archive_entry_linkify.3
-  archive_entry_paths.3
-  archive_entry_perms.3
-  archive_entry_stat.3
-  archive_entry_time.3
-  archive_read.3
+SET(libtransform_MANS
+  transform_entry.3
+  transform_entry_acl.3
+  transform_entry_linkify.3
+  transform_entry_paths.3
+  transform_entry_perms.3
+  transform_entry_stat.3
+  transform_entry_time.3
+  transform_read.3
   transform_read_disk.3
-  archive_util.3
-  archive_write.3
+  transform_util.3
+  transform_write.3
   transform_write_disk.3
   transform_write_set_options.3
   cpio.5
   libarchive.3
-  libarchive_internals.3
+  libtransform_internals.3
   libarchive-formats.5
   mtree.5
   tar.5
 )
 
 IF(WIN32 AND NOT CYGWIN)
-  LIST(APPEND libarchive_SOURCES archive_entry_copy_bhfi.c)
-  LIST(APPEND libarchive_SOURCES archive_windows.c)
-  LIST(APPEND libarchive_SOURCES transform_windows.h)
-  LIST(APPEND libarchive_SOURCES filter_fork_windows.c)
+  LIST(APPEND libtransform_SOURCES archive_entry_copy_bhfi.c)
+  LIST(APPEND libtransform_SOURCES archive_windows.c)
+  LIST(APPEND libtransform_SOURCES transform_windows.h)
+  LIST(APPEND libtransform_SOURCES filter_fork_windows.c)
 ENDIF(WIN32 AND NOT CYGWIN)
 
 # Libarchive is a shared library
-ADD_LIBRARY(archive SHARED ${libarchive_SOURCES} ${include_HEADERS})
+ADD_LIBRARY(archive SHARED ${libtransform_SOURCES} ${include_HEADERS})
 TARGET_LINK_LIBRARIES(archive ${ADDITIONAL_LIBS})
 SET_TARGET_PROPERTIES(archive PROPERTIES SOVERSION ${SOVERSION})
 
-# archive_static is a static library
-ADD_LIBRARY(archive_static STATIC ${libarchive_SOURCES} ${include_HEADERS})
-SET_TARGET_PROPERTIES(archive_static PROPERTIES COMPILE_DEFINITIONS
+# transform_static is a static library
+ADD_LIBRARY(transform_static STATIC ${libarchive_SOURCES} ${include_HEADERS})
+SET_TARGET_PROPERTIES(transform_static PROPERTIES COMPILE_DEFINITIONS
   LIBARCHIVE_STATIC)
 # On Posix systems, libarchive.so and libarchive.a can co-exist.
 IF(NOT WIN32 OR CYGWIN)
-  SET_TARGET_PROPERTIES(archive_static PROPERTIES OUTPUT_NAME archive)
+  SET_TARGET_PROPERTIES(transform_static PROPERTIES OUTPUT_NAME archive)
 ENDIF(NOT WIN32 OR CYGWIN)
 
 # How to install the libraries
-INSTALL(TARGETS archive archive_static
+INSTALL(TARGETS archive transform_static
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
-INSTALL_MAN(${libarchive_MANS})
+INSTALL_MAN(${libtransform_MANS})
 INSTALL(FILES ${include_HEADERS} DESTINATION include)
 
 add_subdirectory(test)

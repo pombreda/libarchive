@@ -94,6 +94,7 @@ libtransform_la_SOURCES = 									\
 	libtransform/transform_write_add_filter_none.c		\
 	libtransform/transform_write_add_filter_program.c	\
 	libtransform/transform_write_add_filter_xz.c		\
+	libtransform/transform_util.c					\
 	libtransform/filter_fork.c						\
 	libtransform/filter_fork.h
 
@@ -137,7 +138,7 @@ libtransform_test_SOURCES=					\
 	libtransform/test/test_acl_basic.c			\
 	libtransform/test/test_acl_freebsd.c			\
 	libtransform/test/test_acl_pax.c				\
-	libtransform/test/test_archive_api_feature.c		\
+	libtransform/test/test_transform_api_feature.c		\
 	libtransform/test/test_bad_fd.c				\
 	libtransform/test/test_compat_bzip2.c			\
 	libtransform/test/test_compat_cpio.c			\
