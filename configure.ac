@@ -203,6 +203,9 @@ AC_CHECK_HEADERS([sys/param.h sys/poll.h sys/select.h sys/time.h sys/utime.h])
 AC_CHECK_HEADERS([sys/utsname.h time.h unistd.h utime.h wchar.h wctype.h])
 AC_CHECK_HEADERS([windows.h winioctl])
 
+AC_CHECK_HEADERS([transform.h])
+AC_CHECK_LIB(transform,transform_version_number)
+
 # Checks for libraries.
 AC_ARG_WITH([zlib],
   AS_HELP_STRING([--without-zlib], [Don't build support for gzip through zlib]))
