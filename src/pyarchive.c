@@ -649,8 +649,5 @@ init_extension()
         (PyObject *)&PyArchiveEntryType) == -1)
         return;
 
-    if(PyModule_AddObject(new_m, "open",
-        (PyObject *)&PyArchiveStreamType) == -1)
-        return;
 }
 
