@@ -183,7 +183,7 @@ core.setup(
     packages=packages,
     ext_modules=[
         core.Extension(
-            'pyarchive', ['src/pyarchive.c'], libraries=['archive']),
+            'pyarchive._extension', ['src/pyarchive.c'], libraries=['archive']),
         ],
     cmdclass={
         'sdist': mysdist,
