@@ -2,11 +2,15 @@
 
 The libarchive distribution builds *bsdtar*, which
 is a full-featured command-line tar program.
-Of course, the source code distribution assumes you
-already have the ability to unpack a tar archive that
-has been compressed with gzip.
-If you don't already have a tar program or a gunzip
-program, this could present problems.
+
+The source code is distributed in two forms:
+ * as a tar archive that has been compressed with gzip
+ * as a zip archive
+
+If you don't already have software that can extract
+such archives, this may be problematic.
+The remainder of this article explains one way around
+this chicken-and-egg problem.
 
 You can use very simple tools to unpack the libarchive
 distribution in two steps:
@@ -35,8 +39,8 @@ onto the target system and untar it.
 
 = Untar =
 
-I've created "untar" as an extremely minimal C
-program that knows just enough about the tar format
+I've created an extremely minimal C
+program called "untar" that knows just enough about the tar format
 to extract a simple uncompressed tar archive.
 In particular, it's sufficient to unpack the libarchive
 distribution after you decompress it.
@@ -57,3 +61,9 @@ standard `mkdir()` function.  Most platforms have `mkdir()`,
 though you may need to adjust the headers somewhat.  If your
 platform does not have `mkdir()`, you may need to edit the
 `create_dir` function to create a directory in some other way.
+
+The untar.c source code can also be used as an extremely
+small implementation of a tar unpacker for use in very
+space-constrained applications.
+The source is in the public domain, please feel free
+to use it as you see fit.
