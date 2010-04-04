@@ -79,6 +79,7 @@ distclean-local:
 include_HEADERS= libtransform/transform.h
 
 libtransform_la_SOURCES = 									\
+	libtransform/transform_read.c							\
 	libtransform/transform_read_support_compression_all.c	\
 	libtransform/transform_read_support_compression_bzip2.c	\
 	libtransform/transform_read_support_compression_compress.c	\
