@@ -5,6 +5,10 @@
 #include <archive.h>
 #include <archive_entry.h>
 
+#define GETSET_HELPER(type, doc, attr)          \
+    {doc, (getter)type##_get_##attr ,           \
+            (setter)type##_set_##attr , NULL}
+            
 #if ARCHIVE_VERSION_NUMBER > 2006001
 #define HAS_ARCHIVE_READ_NEXT_HEADER2 1
 #endif
@@ -61,6 +65,78 @@ PyArchiveEntry_str(PyArchiveEntry *self)
     return PyString_FromString(archive_entry_pathname(self->archive_entry));
 }
 
+static PyObject *
+PyArchiveEntry_get_name(PyArchiveEntry *self, void *closure)
+{
+    return PyArchiveEntry_str(self);
+}
+
+static int
+PyArchiveEntry_set_name(PyArchiveEntry *self, void *closure)
+{
+    PyErr_SetString(PyExc_AttributeError, "name is currently immutable");
+    return -1;
+}
+
+static PyObject *
+PyArchive_Entry_generic_time_setter(PyArchiveEntry *self, void *closure)
+{
+    PyErr_SetString(PyExc_AttributeError, "immutable attribute");
+}
+
+/* yes this is redundant code... avoiding gcc macro tricks since it may 
+ not work under windows... check w/ tim re: that */
+
+static PyObject *
+PyArchive_Entry_get_ctime_is_set(PyArchiveEntry *self, void *closure)
+{
+    if(archive_entry_ctime_is_set(self->archive_entry)) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
+PyArchive_Entry_get_mtime_is_set(PyArchiveEntry *self, void *closure)
+{
+    if(archive_entry_mtime_is_set(self->archive_entry)) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
+PyArchive_Entry_get_atime_is_set(PyArchiveEntry *self, void *closure)
+{
+    if(archive_entry_atime_is_set(self->archive_entry)) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
+PyArchive_Entry_get_birthtime_is_set(PyArchiveEntry *self, void *closure)
+{
+    if(archive_entry_birthtime_is_set(self->archive_entry)) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
+}
+
+static PyGetSetDef PyArchiveEntry_getsetters[] = {
+    GETSET_HELPER(PyArchiveEntry, "name", name),
+    {"ctime_is_set", (getter)PyArchive_Entry_get_ctime_is_set,
+        (setter)PyArchive_Entry_generic_time_setter, NULL},
+    {"atime_is_set", (getter)PyArchive_Entry_get_atime_is_set,
+        (setter)PyArchive_Entry_generic_time_setter, NULL},
+    {"mtime_is_set", (getter)PyArchive_Entry_get_mtime_is_set,
+        (setter)PyArchive_Entry_generic_time_setter, NULL},
+    {"birthtime_is_set", (getter)PyArchive_Entry_get_mtime_is_set,
+        (setter)PyArchive_Entry_generic_time_setter, NULL},
+    {NULL}
+};
+
+
 
 static PyTypeObject PyArchiveEntryType = {
     PyObject_HEAD_INIT(NULL)
@@ -94,7 +170,7 @@ static PyTypeObject PyArchiveEntryType = {
     0,                                /* tp_iternext */
     0,                                /* tp_methods */
     0,                                /* tp_members */
-    0,                                /* tp_getset */
+    PyArchiveEntry_getsetters,        /* tp_getset */
     0,                                /* tp_base */
     0,                                /* tp_dict */
     0,                                /* tp_descr_get */
@@ -279,6 +355,12 @@ initpyarchive()
 
     if(PyModule_AddObject(m, "archive",
         (PyObject *)&PyArchiveType) == -1)
+        return;
+
+    if(PyType_Ready(&PyArchiveEntryType) < 0)
+        return;
+    if(PyModule_AddObject(m, "archive_entry",
+        (PyObject *)&PyArchiveEntryType) == -1)
         return;
 
     if(PyModule_AddObject(m, "open",
