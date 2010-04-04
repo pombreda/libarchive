@@ -102,14 +102,14 @@ libtransform_la_SOURCES = 									\
 	libtransform/transform_string.c					\
 	libtransform/transform_string.h					\
 	libtransform/transform_string_sprintf.c					\
-	libtransform/filter_fork.c						\
-	libtransform/filter_fork.h
+	libtransform/filters/filter_fork.c						\
+	libtransform/filters/filter_fork.h
 
 libtransform_la_CFLAGS = -I libtransform/
 
 if INC_WINDOWS_FILES
 libtransform_la_SOURCES+=						\
-	libtransform/filter_fork_windows.c
+	libtransform/filters/filter_fork_windows.c
 endif
 
 # -no-undefined marks that libtransform doesn't rely on symbols
@@ -126,7 +126,7 @@ libtransform_EXTRA_DIST=			\
 	libtransform/test/list.h		\
 	libtransform/transform_windows.c	\
 	libtransform/transform_windows.h	\
-	libtransform/filter_fork_windows.c	\
+	libtransform/filters/filter_fork_windows.c	\
 	libtransform/CMakeLists.txt	\
 	$(libtransform_man_MANS)
 
