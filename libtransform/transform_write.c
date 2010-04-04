@@ -418,7 +418,7 @@ transform_write_open(struct transform *_a, void *client_data,
 
 	ret = __transform_write_open_filter(a->filter_first);
 
-	a->transform.state = TRANSFORM_STATE_HEADER;
+	a->transform.state = TRANSFORM_STATE_DATA;
 
 	return (ret);
 }

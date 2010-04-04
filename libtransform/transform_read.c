@@ -276,7 +276,7 @@ transform_read_open2(struct transform *_a, void *client_data,
 	/* Build out the input pipeline. */
 	e = build_stream(a);
 	if (e == TRANSFORM_OK)
-		a->transform.state = TRANSFORM_STATE_HEADER;
+		a->transform.state = TRANSFORM_STATE_DATA;
 
 	return (e);
 }

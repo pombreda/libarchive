@@ -77,7 +77,6 @@ state_name(unsigned s)
 {
 	switch (s) {
 	case TRANSFORM_STATE_NEW:		return ("new");
-	case TRANSFORM_STATE_HEADER:	return ("header");
 	case TRANSFORM_STATE_DATA:	return ("data");
 	case TRANSFORM_STATE_CLOSED:	return ("closed");
 	case TRANSFORM_STATE_FATAL:	return ("fatal");
