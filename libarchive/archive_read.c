@@ -234,7 +234,6 @@ archive_read_open2(struct archive *a, void *_client_data,
     archive_skip_callback *client_skipper,
     archive_close_callback *client_closer)
 {
-	int ret;
 	void *client_data = __archive_shim_new(a, _client_data,
 		client_opener, client_closer, NULL, client_reader, client_skipper);
 
@@ -243,14 +242,8 @@ archive_read_open2(struct archive *a, void *_client_data,
 		return (ARCHIVE_FATAL);
 	}
 
-	ret = archive_read_open3(a, client_data, __archive_shim_open,
+	return archive_read_open3(a, client_data, __archive_shim_open,
 		__archive_shim_read, __archive_shim_skip, __archive_shim_close);
-
-	if (ARCHIVE_OK != ret) {
-		/* XXX what about warn... ? */
-		free(client_data);
-	}
-	return ret;
 }
 
 int

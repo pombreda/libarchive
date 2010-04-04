@@ -227,21 +227,14 @@ archive_write_open(struct archive *a, void *_client_data,
 	archive_open_callback *opener, archive_write_callback *writer,
 	archive_close_callback *closer)
 {
-	int ret;
 	void *client_data = __archive_shim_new(a, _client_data, opener, closer,
 		writer, NULL, NULL);
 	if (NULL == client_data) {
 		archive_set_error(a, ENOMEM, "No memory");
 		return (ARCHIVE_FATAL);
 	}
-	ret = archive_write_open2(a, client_data,
+	return archive_write_open2(a, client_data,
 		__archive_shim_open, __archive_shim_write, __archive_shim_close);
-
-	if (ARCHIVE_OK != ret) {
-		/* XXX what about warn? */
-		free(client_data);
-	}
-	return ret;
 }
 
 /*
