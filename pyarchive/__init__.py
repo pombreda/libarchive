@@ -51,7 +51,6 @@ class Archive(object):
             except StopIteration:
                 raise errors.PyArchiveError("can't find %s in %r" % (instance, self))
         assert self._stream.header_position == instance.header_position
-        print instance.header_position, self._stream.header_position
         return self._stream.extractfile(instance)
 
 
