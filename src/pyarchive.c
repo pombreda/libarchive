@@ -26,11 +26,14 @@ wide char:
 #endif
 
 #define DEFAULT_BUFSIZE 4096
+#define PYARCHIVE_EOF       0x1
+#define PYARCHIVE_FAILURE   0x2
 
 typedef struct {
     PyObject_HEAD
     struct archive *archive;
-    Py_ssize_t header_position;
+    Py_ssize_t      header_position;
+    unsigned int    flags;
 } PyArchive;
 
 typedef struct {
@@ -445,6 +448,7 @@ PyObject *
 PyArchive_init(PyArchive *self, PyObject *args, PyObject *kwds)
 {
     PyObject *filepath = NULL;
+    int ret;
     if(!PyArg_ParseTuple(args, "S", &filepath))
         return NULL;
     if(NULL == (self->archive = archive_read_new()))
@@ -455,13 +459,14 @@ PyArchive_init(PyArchive *self, PyObject *args, PyObject *kwds)
         return NULL;
     if(ARCHIVE_OK != archive_read_support_format_all(self->archive))
         return NULL;
-    int ret;
+    self->flags = 0;
     if(ARCHIVE_OK != (ret = archive_read_open_file(self->archive,
         PyString_AsString(filepath), DEFAULT_BUFSIZE))) {
         printf("bailing w/ %i\n", ret);
         printf("%s\n", archive_error_string(self->archive));
         archive_read_finish(self->archive);
         self->archive = NULL;
+        self->flags |= PYARCHIVE_FAILURE;
         return NULL;
     }
     self->header_position = 0;
@@ -484,7 +489,12 @@ static PyObject *
 PyArchive_iternext(PyArchive *self)
 {
     int ret;
-    PyArchiveEntry *pae = mk_PyArchiveEntry(self);
+    PyArchiveEntry *pae = NULL;
+    if(self->flags) {
+        /* something is wrong... */
+        return NULL;
+    }
+    pae = mk_PyArchiveEntry(self);
     if(!pae)
         return NULL;
 
@@ -503,11 +513,16 @@ PyArchive_iternext(PyArchive *self)
         }
     }
 #endif
-    if(ret != ARCHIVE_OK) {
-        Py_DECREF(pae);
-        // do something appropriate...
-        return NULL;
+    if(ret == ARCHIVE_EOF) {
+        self->flags |= PYARCHIVE_EOF;
+    } else if(ret != ARCHIVE_OK) {
+        self->flags |= PYARCHIVE_FAILURE;
+    } else {
+        self->header_position++;
+        return (PyObject *)pae;
     }
+    Py_DECREF(pae);
+    return NULL;
     self->header_position++;
     return (PyObject *)pae;
 }
