@@ -103,7 +103,8 @@ libtransform_la_SOURCES = 									\
 	libtransform/transform_string.h					\
 	libtransform/transform_string_sprintf.c					\
 	libtransform/filters/filter_fork.c						\
-	libtransform/filters/filter_fork.h
+	libtransform/filters/filter_fork.h				\
+	libtransform/transform_crc32.h
 
 libtransform_la_CFLAGS = -I libtransform/
 
