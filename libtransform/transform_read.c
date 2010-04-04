@@ -339,121 +339,6 @@ build_stream(struct transform_read *a)
 	}
 }
 
-/*
- * Read data from an archive entry, using a read(2)-style interface.
- * This is a convenience routine that just calls
- * transform_read_data_block and copies the results into the client
- * buffer, filling any gaps with zero bytes.  Clients using this
- * API can be completely ignorant of sparse-file issues; sparse files
- * will simply be padded with nulls.
- *
- * DO NOT intermingle calls to this function and transform_read_data_block
- * to read a single entry body.
- */
-ssize_t
-transform_read_data(struct transform *_a, void *buff, size_t s)
-{
-	struct transform_read *a = (struct transform_read *)_a;
-	char	*dest;
-	const void *read_buf;
-	size_t	 bytes_read;
-	size_t	 len;
-	int	 r;
-
-	bytes_read = 0;
-	dest = (char *)buff;
-
-	while (s > 0) {
-		if (a->read_data_remaining == 0) {
-			read_buf = a->read_data_block;
-			r = transform_read_data_block(&a->archive, &read_buf,
-			    &a->read_data_remaining, &a->read_data_offset);
-			a->read_data_block = read_buf;
-			if (r == ARCHIVE_EOF)
-				return (bytes_read);
-			/*
-			 * Error codes are all negative, so the status
-			 * return here cannot be confused with a valid
-			 * byte count.  (ARCHIVE_OK is zero.)
-			 */
-			if (r < ARCHIVE_OK)
-				return (r);
-		}
-
-		if (a->read_data_offset < a->read_data_output_offset) {
-			archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
-			    "Encountered out-of-order sparse blocks");
-			return (ARCHIVE_RETRY);
-		}
-
-		/* Compute the amount of zero padding needed. */
-		if (a->read_data_output_offset + (off_t)s <
-		    a->read_data_offset) {
-			len = s;
-		} else if (a->read_data_output_offset <
-		    a->read_data_offset) {
-			len = a->read_data_offset -
-			    a->read_data_output_offset;
-		} else
-			len = 0;
-
-		/* Add zeroes. */
-		memset(dest, 0, len);
-		s -= len;
-		a->read_data_output_offset += len;
-		dest += len;
-		bytes_read += len;
-
-		/* Copy data if there is any space left. */
-		if (s > 0) {
-			len = a->read_data_remaining;
-			if (len > s)
-				len = s;
-			memcpy(dest, a->read_data_block, len);
-			s -= len;
-			a->read_data_block += len;
-			a->read_data_remaining -= len;
-			a->read_data_output_offset += len;
-			a->read_data_offset += len;
-			dest += len;
-			bytes_read += len;
-		}
-	}
-	return (bytes_read);
-}
-
-/*
- * Read the next block of entry data from the archive.
- * This is a zero-copy interface; the client receives a pointer,
- * size, and file offset of the next available block of data.
- *
- * Returns ARCHIVE_OK if the operation is successful, ARCHIVE_EOF if
- * the end of entry is encountered.
- */
-#if ARCHIVE_VERSION_NUMBER < 3000000
-int
-transform_read_data_block(struct transform *_a,
-    const void **buff, size_t *size, off_t *offset)
-#else
-int
-transform_read_data_block(struct transform *_a,
-    const void **buff, size_t *size, int64_t *offset)
-#endif
-{
-	struct transform_read *a = (struct transform_read *)_a;
-	archive_check_magic(_a, TRANSFORM_READ_MAGIC, ARCHIVE_STATE_DATA,
-	    "transform_read_data_block");
-
-	if (a->format->read_data == NULL) {
-		archive_set_error(&a->archive, ARCHIVE_ERRNO_PROGRAMMER,
-		    "Internal error: "
-		    "No format_read_data_block function registered");
-		return (ARCHIVE_FATAL);
-	}
-
-	return (a->format->read_data)(a, buff, size, offset);
-}
-
 static int
 close_filters(struct transform_read *a)
 {
@@ -527,14 +412,6 @@ _transform_read_free(struct transform *_a)
 	if (a->archive.state != ARCHIVE_STATE_CLOSED
 	    && a->archive.state != ARCHIVE_STATE_FATAL)
 		r = transform_read_close(&a->archive);
-
-	/* Cleanup format-specific data. */
-	slots = sizeof(a->formats) / sizeof(a->formats[0]);
-	for (i = 0; i < slots; i++) {
-		a->format = &(a->formats[i]);
-		if (a->formats[i].cleanup)
-			(a->formats[i].cleanup)(a);
-	}
 
 	/* Free the filters */
 	free_filters(a);

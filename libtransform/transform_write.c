@@ -183,26 +183,6 @@ transform_write_get_bytes_in_last_block(struct transform *_a)
 
 
 /*
- * dev/ino of a file to be rejected.  Used to prevent adding
- * an archive to itself recursively.
- */
-#if ARCHIVE_VERSION_NUMBER < 3000000
-int
-transform_write_set_skip_file(struct transform *_a, dev_t d, ino_t i)
-#else
-int
-transform_write_set_skip_file(struct transform *_a, int64_t d, int64_t i)
-#endif
-{
-	struct transform_write *a = (struct transform_write *)_a;
-	archive_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
-	    ARCHIVE_STATE_ANY, "transform_write_set_skip_file");
-	a->skip_file_dev = d;
-	a->skip_file_ino = i;
-	return (ARCHIVE_OK);
-}
-
-/*
  * Allocate and return the next filter structure.
  */
 struct transform_write_filter *

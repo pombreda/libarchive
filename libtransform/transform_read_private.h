@@ -156,22 +156,6 @@ struct transform_read {
 	 * examine.
 	 */
 
-	struct transform_format_descriptor {
-		void	 *data;
-		const char *name;
-		int	(*bid)(struct transform_read *);
-		int	(*options)(struct transform_read *, const char *key,
-		    const char *value);
-#if ARCHIVE_VERSION_NUMBER < 3000000
-		int	(*read_data)(struct transform_read *, const void **, size_t *, off_t *);
-#else
-		int	(*read_data)(struct transform_read *, const void **, size_t *, int64_t *);
-#endif
-		int	(*read_data_skip)(struct transform_read *);
-		int	(*cleanup)(struct transform_read *);
-	}	formats[9];
-	struct transform_format_descriptor	*format; /* Active format. */
-
 };
 
 struct transform_read_filter_bidder

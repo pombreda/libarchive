@@ -69,10 +69,6 @@ int __transform_write_close_filter(struct transform_write_filter *);
 struct transform_write {
 	struct transform	archive;
 
-	/* Dev/ino of the archive being written. */
-	dev_t		  skip_file_dev;
-	int64_t		  skip_file_ino;
-
 	/* Utility:  Pointer to a block of nulls. */
 	const unsigned char	*nulls;
 	size_t			 null_length;
