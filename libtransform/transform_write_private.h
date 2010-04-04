@@ -112,8 +112,6 @@ struct archive_write {
 	 * Pointers to format-specific functions for writing.  They're
 	 * initialized by archive_write_set_format_XXX() calls.
 	 */
-	void	 *format_data;
-	const char *format_name;
 	int	(*format_init)(struct archive_write *);
 	int	(*format_options)(struct archive_write *,
 		    const char *key, const char *value);

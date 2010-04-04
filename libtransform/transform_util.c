@@ -113,19 +113,6 @@ archive_file_count(struct archive *a)
 }
 
 int
-archive_format(struct archive *a)
-{
-	return (a->archive_format);
-}
-
-const char *
-archive_format_name(struct archive *a)
-{
-	return (a->archive_format_name);
-}
-
-
-int
 archive_compression(struct archive *a)
 {
 	return archive_filter_code(a, 0);
