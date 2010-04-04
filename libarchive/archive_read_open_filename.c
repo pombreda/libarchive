@@ -74,14 +74,14 @@ struct read_file_data {
 	char	 filename[1]; /* Must be last! */
 };
 
-static int	file_close(struct archive *, void *);
-static ssize_t	file_read(struct archive *, void *, const void **buff);
+static int	file_close(struct transform *, void *);
+static ssize_t	file_read(struct transform *, void *, const void **buff);
 #if ARCHIVE_VERSION_NUMBER < 3000000
-static off_t	file_skip(struct archive *, void *, off_t request);
+static off_t	file_skip(struct transform *, void *, off_t request);
 #else
-static int64_t	file_skip(struct archive *, void *, int64_t request);
+static int64_t	file_skip(struct transform *, void *, int64_t request);
 #endif
-static off_t	file_skip_lseek(struct archive *, void *, off_t request);
+static off_t	file_skip_lseek(struct transform *, void *, off_t request);
 
 int
 archive_read_open_file(struct archive *a, const char *filename,
@@ -221,12 +221,12 @@ archive_read_open_filename(struct archive *a, const char *filename,
 	if (is_disk_like)
 		mine->use_lseek = 1;
 
-	return (archive_read_open2(a, mine,
+	return (archive_read_open3(a, mine,
 		NULL, file_read, file_skip, file_close));
 }
 
 static ssize_t
-file_read(struct archive *a, void *client_data, const void **buff)
+file_read(struct transform *t, void *client_data, const void **buff)
 {
 	struct read_file_data *mine = (struct read_file_data *)client_data;
 	ssize_t bytes_read;
@@ -248,9 +248,9 @@ file_read(struct archive *a, void *client_data, const void **buff)
 	bytes_read = read(mine->fd, mine->buffer, mine->block_size);
 	if (bytes_read < 0) {
 		if (mine->filename[0] == '\0')
-			archive_set_error(a, errno, "Error reading stdin");
+			transform_set_error(t, errno, "Error reading stdin");
 		else
-			archive_set_error(a, errno, "Error reading '%s'",
+			transform_set_error(t, errno, "Error reading '%s'",
 			    mine->filename);
 	}
 	return (bytes_read);
@@ -277,7 +277,7 @@ file_read(struct archive *a, void *client_data, const void **buff)
  * top of the read callback above.
  */
 static off_t
-file_skip_lseek(struct archive *a, void *client_data, off_t request)
+file_skip_lseek(struct transform *t, void *client_data, off_t request)
 {
 	struct read_file_data *mine = (struct read_file_data *)client_data;
 	off_t old_offset, new_offset;
@@ -296,9 +296,9 @@ file_skip_lseek(struct archive *a, void *client_data, off_t request)
 	/* If the input is corrupted or truncated, fail. */
 	if (mine->filename[0] == '\0')
 		/* Shouldn't happen; lseek() on stdin should raise ESPIPE. */
-		archive_set_error(a, errno, "Error seeking in stdin");
+		transform_set_error(t, errno, "Error seeking in stdin");
 	else
-		archive_set_error(a, errno, "Error seeking in '%s'",
+		transform_set_error(t, errno, "Error seeking in '%s'",
 		    mine->filename);
 	return (-1);
 }
@@ -311,28 +311,28 @@ file_skip_lseek(struct archive *a, void *client_data, off_t request)
 
 #if ARCHIVE_VERSION_NUMBER < 3000000
 static off_t
-file_skip(struct archive *a, void *client_data, off_t request)
+file_skip(struct transform *t, void *client_data, off_t request)
 #else
 static int64_t
-file_skip(struct archive *a, void *client_data, int64_t request)
+file_skip(struct transform *t, void *client_data, int64_t request)
 #endif
 {
 	struct read_file_data *mine = (struct read_file_data *)client_data;
 
 	/* Delegate skip requests. */
 	if (mine->use_lseek)
-		return (file_skip_lseek(a, client_data, request));
+		return (file_skip_lseek(t, client_data, request));
 
 	/* If we can't skip, return 0; libarchive will read+discard instead. */
 	return (0);
 }
 
 static int
-file_close(struct archive *a, void *client_data)
+file_close(struct transform *t, void *client_data)
 {
 	struct read_file_data *mine = (struct read_file_data *)client_data;
 
-	(void)a; /* UNUSED */
+	(void)t; /* UNUSED */
 
 	/* Only flush and close if open succeeded. */
 	if (mine->fd >= 0) {
@@ -362,5 +362,5 @@ file_close(struct archive *a, void *client_data)
 	}
 	free(mine->buffer);
 	free(mine);
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }

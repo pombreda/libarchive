@@ -74,11 +74,11 @@ struct memdata {
 #define TB ((int64_t)1024 * GB)
 
 #if ARCHIVE_VERSION_NUMBER < 3000000
-static off_t	memory_read_skip(struct archive *, void *, off_t request);
+static off_t	memory_read_skip(struct transform *, void *, off_t request);
 #else
-static int64_t	memory_read_skip(struct archive *, void *, int64_t request);
+static int64_t	memory_read_skip(struct transform *, void *, int64_t request);
 #endif
-static ssize_t	memory_read(struct archive *, void *, const void **buff);
+static ssize_t	memory_read(struct transform *, void *, const void **buff);
 static ssize_t	memory_write(struct transform *, void *, const void *, size_t);
 
 
@@ -121,13 +121,13 @@ memory_write(struct transform *t, void *_private, const void *buff, size_t size)
 }
 
 static ssize_t
-memory_read(struct archive *a, void *_private, const void **buff)
+memory_read(struct transform *t, void *_private, const void **buff)
 {
 	struct memdata *private = _private;
 	struct memblock *block;
 	ssize_t size;
 
-	(void)a;
+	(void)t;
 
 	free(private->buff);
 	private->buff = NULL;
@@ -169,15 +169,15 @@ memory_read(struct archive *a, void *_private, const void **buff)
 
 #if ARCHIVE_VERSION_NUMBER < 3000000
 static off_t
-memory_read_skip(struct archive *a, void *_private, off_t skip)
+memory_read_skip(struct transform *t, void *_private, off_t skip)
 #else
 static int64_t
-memory_read_skip(struct archive *a, void *_private, int64_t skip)
+memory_read_skip(struct transform *t, void *_private, int64_t skip)
 #endif
 {
 	struct memdata *private = _private;
 
-	(void)a;
+	(void)t;
 
 	if (private->first == NULL) {
 		private->last = NULL;
@@ -272,7 +272,7 @@ DEFINE_TEST(test_tar_large)
 	 */
 	a = archive_read_new();
 	archive_read_support_format_tar(a);
-	archive_read_open2(a, &memdata, NULL,
+	archive_read_open3(a, &memdata, NULL,
 	    memory_read, memory_read_skip, NULL);
 
 	/*

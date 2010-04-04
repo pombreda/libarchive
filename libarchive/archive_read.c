@@ -253,6 +253,32 @@ archive_read_open2(struct archive *a, void *client_data,
 	return (e);
 }
 
+int
+archive_read_open3(struct archive *a, void *client_data,
+    transform_open_callback *client_opener,
+    transform_read_callback *client_reader,
+    transform_skip_callback *client_skipper,
+    transform_close_callback *client_closer)
+{
+	int e;
+
+	archive_check_magic(a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
+	    "archive_read_open");
+	archive_clear_error(a);
+
+	e = transform_read_open2(a->transform,
+		client_data,
+		client_opener,
+		client_reader,
+		client_skipper,
+		client_closer);
+	e = __convert_transform_error_to_archive_error(a, a->transform, e);
+	if (ARCHIVE_OK == e)
+		a->state = ARCHIVE_STATE_HEADER;
+
+	return (e);
+}
+
 /*
  * Read header of next entry.
  */

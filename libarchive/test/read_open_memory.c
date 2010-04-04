@@ -47,14 +47,14 @@ struct read_memory_data {
 	char *copy_buff;
 };
 
-static int	memory_read_close(struct archive *, void *);
-static int	memory_read_open(struct archive *, void *);
+static int	memory_read_close(struct transform *, void *);
+static int	memory_read_open(struct transform *, void *);
 #if ARCHIVE_VERSION_NUMBER < 3000000
-static off_t	memory_read_skip(struct archive *, void *, off_t request);
+static off_t	memory_read_skip(struct transform *, void *, off_t request);
 #else
-static int64_t	memory_read_skip(struct archive *, void *, int64_t request);
+static int64_t	memory_read_skip(struct transform *, void *, int64_t request);
 #endif
-static ssize_t	memory_read(struct archive *, void *, const void **buff);
+static ssize_t	memory_read(struct transform *, void *, const void **buff);
 static int	read_open_memory_internal(struct archive *a, void *buff,
     size_t size, size_t read_size, int fullapi);
 
@@ -95,10 +95,10 @@ read_open_memory_internal(struct archive *a, void *buff,
 	mine->copy_buff = malloc(mine->copy_buff_size);
 	memset(mine->copy_buff, 0xA5, mine->copy_buff_size);
 	if (fullapi)
-		return (archive_read_open2(a, mine, memory_read_open,
+		return (archive_read_open3(a, mine, memory_read_open,
 			    memory_read, memory_read_skip, memory_read_close));
 	else
-		return (archive_read_open2(a, mine, NULL,
+		return (archive_read_open3(a, mine, NULL,
 			    memory_read, NULL, memory_read_close));
 }
 
@@ -106,11 +106,11 @@ read_open_memory_internal(struct archive *a, void *buff,
  * There's nothing to open.
  */
 static int
-memory_read_open(struct archive *a, void *client_data)
+memory_read_open(struct transform *t, void *client_data)
 {
-	(void)a; /* UNUSED */
+	(void)t; /* UNUSED */
 	(void)client_data; /* UNUSED */
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 /*
@@ -120,12 +120,12 @@ memory_read_open(struct archive *a, void *client_data)
  * will screw up.
  */
 static ssize_t
-memory_read(struct archive *a, void *client_data, const void **buff)
+memory_read(struct transform *t, void *client_data, const void **buff)
 {
 	struct read_memory_data *mine = (struct read_memory_data *)client_data;
 	size_t size;
 
-	(void)a; /* UNUSED */
+	(void)t; /* UNUSED */
 	size = mine->end - mine->buffer;
 	if (size > mine->read_size)
 		size = mine->read_size;
@@ -143,15 +143,15 @@ memory_read(struct archive *a, void *client_data, const void **buff)
  */
 #if ARCHIVE_VERSION_NUMBER < 3000000
 static off_t
-memory_read_skip(struct archive *a, void *client_data, off_t skip)
+memory_read_skip(struct transform *t, void *client_data, off_t skip)
 #else
 static int64_t
-memory_read_skip(struct archive *a, void *client_data, int64_t skip)
+memory_read_skip(struct transform *t, void *client_data, int64_t skip)
 #endif
 {
 	struct read_memory_data *mine = (struct read_memory_data *)client_data;
 
-	(void)a; /* UNUSED */
+	(void)t; /* UNUSED */
 	/* We can't skip by more than is available. */
 	if ((off_t)skip > (off_t)(mine->end - mine->buffer))
 		skip = mine->end - mine->buffer;
@@ -166,10 +166,10 @@ memory_read_skip(struct archive *a, void *client_data, int64_t skip)
  * Close is just cleaning up our one small bit of data.
  */
 static int
-memory_read_close(struct archive *a, void *client_data)
+memory_read_close(struct transform *t, void *client_data)
 {
 	struct read_memory_data *mine = (struct read_memory_data *)client_data;
-	(void)a; /* UNUSED */
+	(void)t; /* UNUSED */
 	free(mine->copy_buff);
 	free(mine);
 	return (ARCHIVE_OK);

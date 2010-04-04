@@ -57,12 +57,12 @@ struct read_FILE_data {
 	char	 can_skip;
 };
 
-static int	file_close(struct archive *, void *);
-static ssize_t	file_read(struct archive *, void *, const void **buff);
+static int	file_close(struct transform *, void *);
+static ssize_t	file_read(struct transform *, void *, const void **buff);
 #if ARCHIVE_VERSION_NUMBER < 3000000
-static off_t	file_skip(struct archive *, void *, off_t request);
+static off_t	file_skip(struct transform *, void *, off_t request);
 #else
-static int64_t	file_skip(struct archive *, void *, int64_t request);
+static int64_t	file_skip(struct transform *, void *, int64_t request);
 #endif
 
 int
@@ -101,12 +101,12 @@ archive_read_open_FILE(struct archive *a, FILE *f)
 	setmode(fileno(mine->f), O_BINARY);
 #endif
 
-	return (archive_read_open2(a, mine, NULL, file_read,
+	return (archive_read_open3(a, mine, NULL, file_read,
 		    file_skip, file_close));
 }
 
 static ssize_t
-file_read(struct archive *a, void *client_data, const void **buff)
+file_read(struct transform *t, void *client_data, const void **buff)
 {
 	struct read_FILE_data *mine = (struct read_FILE_data *)client_data;
 	ssize_t bytes_read;
@@ -114,22 +114,22 @@ file_read(struct archive *a, void *client_data, const void **buff)
 	*buff = mine->buffer;
 	bytes_read = fread(mine->buffer, 1, mine->block_size, mine->f);
 	if (bytes_read < 0) {
-		archive_set_error(a, errno, "Error reading file");
+		transform_set_error(t, errno, "Error reading file");
 	}
 	return (bytes_read);
 }
 
 #if ARCHIVE_VERSION_NUMBER < 3000000
 static off_t
-file_skip(struct archive *a, void *client_data, off_t request)
+file_skip(struct transform *t, void *client_data, off_t request)
 #else
 static int64_t
-file_skip(struct archive *a, void *client_data, int64_t request)
+file_skip(struct transform *t, void *client_data, int64_t request)
 #endif
 {
 	struct read_FILE_data *mine = (struct read_FILE_data *)client_data;
 
-	(void)a; /* UNUSED */
+	(void)t; /* UNUSED */
 
 	/*
 	 * If we can't skip, return 0 as the amount we did step and
@@ -153,13 +153,13 @@ file_skip(struct archive *a, void *client_data, int64_t request)
 }
 
 static int
-file_close(struct archive *a, void *client_data)
+file_close(struct transform *t, void *client_data)
 {
 	struct read_FILE_data *mine = (struct read_FILE_data *)client_data;
 
-	(void)a; /* UNUSED */
+	(void)t; /* UNUSED */
 	if (mine->buffer != NULL)
 		free(mine->buffer);
 	free(mine);
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
