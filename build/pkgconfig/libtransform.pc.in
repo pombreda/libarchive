@@ -3,7 +3,7 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: libarchive
+Name: libtransform
 Description: library that can create and read several streaming archive formats
 Version: @VERSION@
 Libs: -larchive

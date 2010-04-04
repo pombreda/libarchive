@@ -6,5 +6,5 @@
 .deps
 .dirstamp
 archive.h
-libarchive_test
+libtransform_test
 list.h

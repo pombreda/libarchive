@@ -24,7 +24,7 @@ echo $VN$MARKER > version
 VS="$(($VN/1000000)).$(( ($VN/1000)%1000 )).$(( $VN%1000 ))$MARKER"
 cd ..
 
-ANNOUNCE=`date +"%b %d, %Y:"`" libarchive $VS released"
+ANNOUNCE=`date +"%b %d, %Y:"`" libtransform $VS released"
 
 echo $ANNOUNCE
 

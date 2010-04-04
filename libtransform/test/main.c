@@ -52,7 +52,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/main.c 201247 2009-12-30 05:59:21Z 
  * Note: Configuration is a tricky issue.  Using HAVE_* feature macros
  * in the test harness is dangerous because they cover up
  * configuration errors.  The classic example of this is omitting a
- * configure check.  If libarchive and libarchive_test both look for
+ * configure check.  If libarchive and libtransform_test both look for
  * the same feature macro, such errors are hard to detect.  Platform
  * macros (e.g., _WIN32 or __GNUC__) are a little better, but can
  * easily lead to very messy code.  It's best to limit yourself
@@ -61,7 +61,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/main.c 201247 2009-12-30 05:59:21Z 
  * try to minimize conditionals by grouping platform-specific tests in
  * one place (e.g., test_acl_freebsd) or by adding new assert()
  * functions (e.g., assertMakeHardlink()) to cover up platform
- * differences.  Platform-specific coding in libarchive_test is often
+ * differences.  Platform-specific coding in libtransform_test is often
  * a symptom that some capability is missing from libarchive itself.
  */
 #if defined(_WIN32) && !defined(__CYGWIN__)

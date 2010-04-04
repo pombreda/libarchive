@@ -34,7 +34,7 @@
 /*
  * TODO: A lot of stuff in here isn't actually used by libarchive and
  * can be trimmed out.  Note that this file is used by libarchive and
- * libarchive_test but nowhere else.  (But note that it gets compiled
+ * libtransform_test but nowhere else.  (But note that it gets compiled
  * with many different Windows environments, including MinGW, Visual
  * Studio, and Cygwin.  Significant changes should be tested in all three.)
  */

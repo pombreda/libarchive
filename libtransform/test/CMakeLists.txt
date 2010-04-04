@@ -1,6 +1,6 @@
 ############################################
 #
-# How to build libarchive_test
+# How to build libtransform_test
 #
 ############################################
 IF(ENABLE_TEST)
@@ -8,7 +8,7 @@ IF(ENABLE_TEST)
     LIST(APPEND parent_libarchive_SOURCES "../${_src}")
   ENDFOREACH(_src)
 
-  SET(libarchive_test_SOURCES
+  SET(libtransform_test_SOURCES
     ${parent_libarchive_SOURCES}
     main.c
     read_open_memory.c
@@ -131,16 +131,16 @@ IF(ENABLE_TEST)
   #
   # Register target
   #
-  ADD_EXECUTABLE(libarchive_test ${libarchive_test_SOURCES})
-  TARGET_LINK_LIBRARIES(libarchive_test ${ADDITIONAL_LIBS})
-  SET_PROPERTY(TARGET libarchive_test PROPERTY COMPILE_DEFINITIONS
+  ADD_EXECUTABLE(libtransform_test ${libtransform_test_SOURCES})
+  TARGET_LINK_LIBRARIES(libtransform_test ${ADDITIONAL_LIBS})
+  SET_PROPERTY(TARGET libtransform_test PROPERTY COMPILE_DEFINITIONS
     LIBARCHIVE_STATIC LIST_H)
 
   #
   # Generate list.h by grepping DEFINE_TEST() lines out of the C sources.
   #
   GENERATE_LIST_H(${CMAKE_CURRENT_BINARY_DIR}/list.h
-    ${CMAKE_CURRENT_LIST_FILE} ${libarchive_test_SOURCES})
+    ${CMAKE_CURRENT_LIST_FILE} ${libtransform_test_SOURCES})
   SET_PROPERTY(DIRECTORY APPEND PROPERTY INCLUDE_DIRECTORIES
     ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -150,7 +150,7 @@ IF(ENABLE_TEST)
   MACRO (DEFINE_TEST _testname)
     ADD_TEST_28(
       NAME libarchive_${_testname}
-      COMMAND libarchive_test -vv
+      COMMAND libtransform_test -vv
                               -r ${CMAKE_CURRENT_SOURCE_DIR}
                               ${_testname})
   ENDMACRO (DEFINE_TEST _testname)
@@ -158,8 +158,8 @@ IF(ENABLE_TEST)
   INCLUDE(${CMAKE_CURRENT_BINARY_DIR}/list.h)
 
   # Experimental new test handling
-  ADD_CUSTOM_TARGET(run_libarchive_test
-	COMMAND	libarchive_test -r ${CMAKE_CURRENT_SOURCE_DIR})
-  ADD_DEPENDENCIES(run_all_tests run_libarchive_test)
+  ADD_CUSTOM_TARGET(run_libtransform_test
+	COMMAND	libtransform_test -r ${CMAKE_CURRENT_SOURCE_DIR})
+  ADD_DEPENDENCIES(run_all_tests run_libtransform_test)
 ENDIF(ENABLE_TEST)
 

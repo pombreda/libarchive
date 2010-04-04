@@ -34,11 +34,11 @@ ZLIB_INCL=\3rdParty\ZLib\Current\Include
 !ifdef DEBUG
 DEST_PATH=.\lib\wccpp\debug
 OBJ_DIR=obj\debug
-EXT_COMPILE_FLAG=-d2 -DLIBARCHIVE_STATIC=1
+EXT_COMPILE_FLAG=-d2 -DLIBTRANSFORM_STATIC=1
 !else
 DEST_PATH=.\lib\wccpp
 OBJ_DIR=obj
-EXT_COMPILE_FLAG=-DLIBARCHIVE_STATIC=1
+EXT_COMPILE_FLAG=-DLIBTRANSFORM_STATIC=1
 !endif
 
 # ----- NT compiler options -----------------------------------------------
@@ -95,11 +95,11 @@ OBJS = &
   $(OBJ_DIR)\archive_write_set_format_cpio.obn         $(OBJ_DIR)\archive_write_set_format_cpio_newc.obn &
   $(OBJ_DIR)\archive_write_set_format_pax.obn          $(OBJ_DIR)\archive_write_set_format_shar.obn &
   $(OBJ_DIR)\archive_write_set_format_ustar.obn        $(OBJ_DIR)\filter_fork.obn &
-  $(OBJ_DIR)\libarchive-nonposix.obn
+  $(OBJ_DIR)\libtransform-nonposix.obn
 
-$(DEST_PATH)\LibArchive.lib :: $(OBJS) $(DEST_PATH)
+$(DEST_PATH)\LibTransform.lib :: $(OBJS) $(DEST_PATH)
 
-$(DEST_PATH)\LibArchive.lib ::
+$(DEST_PATH)\LibTransform.lib ::
     -md $(DEST_PATH) > nul 2>nul
     $(NT_LIBRARIAN) $@ -+ $(OBJS)
 

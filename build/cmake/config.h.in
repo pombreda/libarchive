@@ -659,11 +659,11 @@
 /* Define to 1 if you have the `_mkgmtime64' function. */
 #cmakedefine HAVE__MKGMTIME64 1
 
-/* Version number of libarchive as a single integer */
-#cmakedefine LIBARCHIVE_VERSION_NUMBER "${LIBARCHIVE_VERSION_NUMBER}"
+/* Version number of libtransform as a single integer */
+#cmakedefine LIBTRANSFORM_VERSION_NUMBER "${LIBTRANSFORM_VERSION_NUMBER}"
 
-/* Version number of libarchive */
-#cmakedefine LIBARCHIVE_VERSION_STRING "${LIBARCHIVE_VERSION_STRING}"
+/* Version number of libtransform */
+#cmakedefine LIBTRANSFORM_VERSION_STRING "${LIBTRANSFORM_VERSION_STRING}"
 
 /* Define to 1 if `lstat' dereferences a symlink specified with a trailing
    slash. */

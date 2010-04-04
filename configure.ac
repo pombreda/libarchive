@@ -4,20 +4,20 @@ dnl First, define all of the version numbers up front.
 dnl In particular, this allows the version macro to be used in AC_INIT
 
 dnl These first two version numbers are updated automatically on each release.
-m4_define([LIBARCHIVE_VERSION_S],[2.8.900a])
-m4_define([LIBARCHIVE_VERSION_N],[2008900])
+m4_define([LIBTRANSFORM_VERSION_S],[2.8.900a])
+m4_define([LIBTRANSFORM_VERSION_N],[2008900])
 
-dnl bsdtar and bsdcpio versioning tracks libarchive
-m4_define([BSDTAR_VERSION_S],LIBARCHIVE_VERSION_S())
-m4_define([BSDCPIO_VERSION_S],LIBARCHIVE_VERSION_S())
+dnl bsdtar and bsdcpio versioning tracks libtransform
+m4_define([BSDTAR_VERSION_S],LIBTRANSFORM_VERSION_S())
+m4_define([BSDCPIO_VERSION_S],LIBTRANSFORM_VERSION_S())
 
 #
 # Now starts the "real" configure script.
 #
 
-AC_INIT([libarchive],LIBARCHIVE_VERSION_S(),[kientzle@freebsd.org])
-# Make sure the srcdir contains "libarchive" directory
-AC_CONFIG_SRCDIR([libarchive])
+AC_INIT([libtransform],LIBTRANSFORM_VERSION_S(),[kientzle@freebsd.org])
+# Make sure the srcdir contains "libtransform" directory
+AC_CONFIG_SRCDIR([libtransform])
 # Use auxiliary subscripts from this subdirectory (cleans up root)
 AC_CONFIG_AUX_DIR([build/autoconf])
 # M4 scripts
@@ -29,17 +29,17 @@ AM_INIT_AUTOMAKE()
 # platforms.  At least on FreeBSD, libtool uses an overly complex
 # convention that attempts to solve problems that most people just
 # don't have and which just causes confusion for most end users.
-ARCHIVE_MAJOR=$(( LIBARCHIVE_VERSION_N() / 1000000 ))
-ARCHIVE_MINOR=$(( (LIBARCHIVE_VERSION_N() / 1000) % 1000 ))
-ARCHIVE_REVISION=$(( LIBARCHIVE_VERSION_N() % 1000 ))
+ARCHIVE_MAJOR=$(( LIBTRANSFORM_VERSION_N() / 1000000 ))
+ARCHIVE_MINOR=$(( (LIBTRANSFORM_VERSION_N() / 1000) % 1000 ))
+ARCHIVE_REVISION=$(( LIBTRANSFORM_VERSION_N() % 1000 ))
 ARCHIVE_LIBTOOL_MAJOR=`echo $((${ARCHIVE_MAJOR} + ${ARCHIVE_MINOR}))`
 ARCHIVE_LIBTOOL_VERSION=$ARCHIVE_LIBTOOL_MAJOR:$ARCHIVE_REVISION:$ARCHIVE_MINOR
 
 # Stick the version numbers into config.h
-AC_DEFINE([LIBARCHIVE_VERSION_STRING],"LIBARCHIVE_VERSION_S()",
-	[Version number of libarchive])
-AC_DEFINE_UNQUOTED([LIBARCHIVE_VERSION_NUMBER],"LIBARCHIVE_VERSION_N()",
-	[Version number of libarchive as a single integer])
+AC_DEFINE([LIBTRANSFORM_VERSION_STRING],"LIBTRANSFORM_VERSION_S()",
+	[Version number of libtransform])
+AC_DEFINE_UNQUOTED([LIBTRANSFORM_VERSION_NUMBER],"LIBTRANSFORM_VERSION_N()",
+	[Version number of libtransform as a single integer])
 AC_DEFINE([BSDCPIO_VERSION_STRING],"BSDCPIO_VERSION_S()",
 	[Version number of bsdcpio])
 AC_DEFINE([BSDTAR_VERSION_STRING],"BSDTAR_VERSION_S()",
@@ -50,8 +50,8 @@ AC_DEFINE([BSDTAR_VERSION_STRING],"BSDTAR_VERSION_S()",
 # the m4 macro names above.  Why?  Ask autoconf.
 BSDCPIO_VERSION_STRING=BSDCPIO_VERSION_S()
 BSDTAR_VERSION_STRING=BSDTAR_VERSION_S()
-LIBARCHIVE_VERSION_STRING=LIBARCHIVE_VERSION_S()
-LIBARCHIVE_VERSION_NUMBER=LIBARCHIVE_VERSION_N()
+LIBTRANSFORM_VERSION_STRING=LIBTRANSFORM_VERSION_S()
+LIBTRANSFORM_VERSION_NUMBER=LIBTRANSFORM_VERSION_N()
 
 # Substitute the above version numbers into the various files below.
 # Yes, I believe this is the fourth time we define what are essentially
@@ -59,12 +59,12 @@ LIBARCHIVE_VERSION_NUMBER=LIBARCHIVE_VERSION_N()
 AC_SUBST(ARCHIVE_LIBTOOL_VERSION)
 AC_SUBST(BSDCPIO_VERSION_STRING)
 AC_SUBST(BSDTAR_VERSION_STRING)
-AC_SUBST(LIBARCHIVE_VERSION_STRING)
-AC_SUBST(LIBARCHIVE_VERSION_NUMBER)
+AC_SUBST(LIBTRANSFORM_VERSION_STRING)
+AC_SUBST(LIBTRANSFORM_VERSION_NUMBER)
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile])
-AC_CONFIG_FILES([build/pkgconfig/libarchive.pc])
+AC_CONFIG_FILES([build/pkgconfig/libtransform.pc])
 
 # Check for host type
 AC_CANONICAL_HOST
@@ -117,7 +117,7 @@ yes)
 	;;
 dynamic|shared)
 	if test "$enable_shared" = "no"; then
-		AC_MSG_FAILURE([Shared linking of bsdtar requires shared libarchive])
+		AC_MSG_FAILURE([Shared linking of bsdtar requires shared libtransform])
 	fi
 	build_bsdtar=yes
 	static_bsdtar=no
@@ -161,7 +161,7 @@ yes)
 	;;
 dynamic|shared)
 	if test "$enabled_shared" = "no"; then
-	   AC_MSG_FAILURE([Shared linking of bsdcpio requires shared libarchive])
+	   AC_MSG_FAILURE([Shared linking of bsdcpio requires shared libtransform])
 	fi
 	build_bsdcpio=yes
 	;;
@@ -313,8 +313,8 @@ if test "x$with_openssl" != "xno"; then
 fi
 
 # TODO: Give the user the option of using a pre-existing system
-# libarchive.  This will define HAVE_LIBARCHIVE which will cause
-# bsdtar_platform.h to use #include <...> for the libarchive headers.
+# libtransform.  This will define HAVE_LIBTRANSFORM which will cause
+# bsdtar_platform.h to use #include <...> for the libtransform headers.
 # Need to include Makefile.am magic to link against system
 # -larchive in that case.
 #AC_CHECK_LIB(archive,archive_version)
@@ -447,7 +447,7 @@ fi
 
 # Check for ACL support
 #
-# The ACL support in libarchive is written against the POSIX1e draft,
+# The ACL support in libtransform is written against the POSIX1e draft,
 # which was never officially approved and varies quite a bit across
 # platforms.  Worse, some systems have completely non-POSIX acl functions,
 # which makes the following checks rather more complex than I would like.

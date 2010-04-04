@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD$");
 /*
  * NOTE: On FreeBSD and Solaris, this test needs ZFS.
  * You may should perfom this test as
- * 'TMPDIR=<a directory on the ZFS> libarchive_test'.
+ * 'TMPDIR=<a directory on the ZFS> libtransform_test'.
  */
 
 struct sparse {

@@ -1,7 +1,7 @@
 #!/bin/sh
 
 if [ \! -f build/version ]; then
-    echo 'Must run the clean script from the top-level dir of the libarchive distribution' 1>&2
+    echo 'Must run the clean script from the top-level dir of the libtransform distribution' 1>&2
     exit 1
 fi
 
@@ -52,7 +52,7 @@ rm -f build/autoconf/ltsugar.m4
 rm -f build/autoconf/ltversion.m4
 rm -f build/autoconf/lt~obsolete.m4
 rm -f build/autoconf/missing
-rm -f build/pkgconfig/libarchive.pc
+rm -f build/pkgconfig/libtransform.pc
 rm -f build/version.old
 rm -f config.h
 rm -f config.h.in
@@ -68,11 +68,11 @@ rm -f doc/man/*
 rm -f doc/pdf/*
 rm -f doc/text/*
 rm -f doc/wiki/*
-rm -f libarchive/*.[35].gz
-rm -f libarchive/libarchive.so*
-rm -f libarchive/test/libarchive_test
-rm -f libarchive/test/list.h
-rm -f libarchive_test
+rm -f libtransform/*.[35].gz
+rm -f libtransform/libtransform.so*
+rm -f libtransform/test/libtransform_test
+rm -f libtransform/test/list.h
+rm -f libtransform_test
 rm -f libtool
 rm -f stamp-h1
 rm -f tar/*.1.gz

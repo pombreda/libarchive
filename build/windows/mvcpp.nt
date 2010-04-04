@@ -30,16 +30,16 @@
 
 ZLIB_INCL=\3rdParty\ZLib\Current\Include
 
-EXTRA_DEFINES=/DLIBARCHIVE_STATIC=1
+EXTRA_DEFINES=/DLIBTRANSFORM_STATIC=1
 
 !ifdef DEBUG
 DEST_PATH=.\lib\mvcpp\debug
 OBJ_DIR=obj\debug
-COMPILE_FLAG=/MTd /DDEBUG=1 $(EXTRA_DEFINES) /Zi /Fd$(OBJ_DIR)\libarchive.pdb
+COMPILE_FLAG=/MTd /DDEBUG=1 $(EXTRA_DEFINES) /Zi /Fd$(OBJ_DIR)\libtransform.pdb
 !else
 DEST_PATH=.\lib\mvcpp
 OBJ_DIR=obj
-COMPILE_FLAG=/MT $(EXTRA_DEFINES) /Fd$(OBJ_DIR)\libarchive.pdb
+COMPILE_FLAG=/MT $(EXTRA_DEFINES) /Fd$(OBJ_DIR)\libtransform.pdb
 !endif
 
 INCLUDE=.;$(MSDEVDIR)\INCLUDE;$(ZLIB_INCL);
@@ -97,14 +97,14 @@ OBJS=\
   $(OBJ_DIR)\archive_write_set_format_cpio.obm         $(OBJ_DIR)\archive_write_set_format_cpio_newc.obm \
   $(OBJ_DIR)\archive_write_set_format_pax.obm          $(OBJ_DIR)\archive_write_set_format_shar.obm \
   $(OBJ_DIR)\archive_write_set_format_ustar.obm        $(OBJ_DIR)\filter_fork.obm \
-  $(OBJ_DIR)\libarchive-nonposix.obm
+  $(OBJ_DIR)\libtransform-nonposix.obm
 
-all: CLEAN $(DEST_PATH)\libarchive.lib
+all: CLEAN $(DEST_PATH)\libtransform.lib
 
-$(DEST_PATH)\libarchive.lib :: $(OBJS) $(DEST_PATH)
+$(DEST_PATH)\libtransform.lib :: $(OBJS) $(DEST_PATH)
 
-$(DEST_PATH)\libarchive.lib ::
-    $(NT_LIBRARIAN) $(NT_LIB_OPTS) /OUT:$(DEST_PATH)\libarchive.lib $(OBJS) 
+$(DEST_PATH)\libtransform.lib ::
+    $(NT_LIBRARIAN) $(NT_LIB_OPTS) /OUT:$(DEST_PATH)\libtransform.lib $(OBJS) 
 
 $(DEST_PATH):
     -md $(DEST_PATH) > nul 2>nul

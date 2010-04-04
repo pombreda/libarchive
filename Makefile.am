@@ -7,18 +7,18 @@ ACLOCAL_AMFLAGS = -I build/autoconf
 # What to build and install
 #
 lib_LTLIBRARIES=	libtransform.la
-man_MANS= $(libarchive_man_MANS)
-BUILT_SOURCES= libarchive/test/list.h
+man_MANS= $(libtransform_man_MANS)
+BUILT_SOURCES= libtransform/test/list.h
 
 #
-# What to test: We always test libarchive, test bsdtar and bsdcpio only
+# What to test: We always test libtransform, test bsdtar and bsdcpio only
 # if we built them.
 #
 check_PROGRAMS=
 TESTS=
 TESTS_ENVIRONMENT=
 # Always build and test both bsdtar and bsdcpio as part of 'distcheck'
-# The next line is commented out by default in shipping libarchive releases.
+# The next line is commented out by default in shipping libtransform releases.
 # It is uncommented by default in trunk.
 AM_CFLAGS=-Wall -Werror
 PLATFORMCPPFLAGS = @PLATFORMCPPFLAGS@
@@ -38,8 +38,8 @@ EXTRA_DIST= \
 	contrib				\
 	doc				\
 	examples			\
-	$(libarchive_EXTRA_DIST)	\
-	$(libarchive_test_EXTRA_DIST)
+	$(libtransform_EXTRA_DIST)	\
+	$(libtransform_test_EXTRA_DIST)
 
 # a) Clean out some unneeded files and directories
 # b) Collect all documentation and format it for distribution.
@@ -62,242 +62,242 @@ distcheck-hook:
 # Extra rules for cleanup
 #
 DISTCLEANFILES=					\
-	libarchive/test/list.h
+	libtransform/test/list.h
 
 distclean-local:
 	-rm -rf .ref
 	-rm -rf autom4te.cache/
 	-rm -f *~
-	-[ -f libarchive/Makefile ] && cd libarchive && make clean
-	-[ -f libarchive/test/Makefile ] && cd libarchive/test && make clean
+	-[ -f libtransform/Makefile ] && cd libtransform && make clean
+	-[ -f libtransform/test/Makefile ] && cd libtransform/test && make clean
 
 #
 # Libarchive headers, source, etc.
 #
 #
 
-include_HEADERS= libarchive/archive.h
+include_HEADERS= libtransform/archive.h
 
 libtransform_la_SOURCES = 									\
-	libarchive/archive_read_support_compression_all.c	\
-	libarchive/archive_read_support_compression_bzip2.c	\
-	libarchive/archive_read_support_compression_compress.c	\
-	libarchive/archive_read_support_compression_gzip.c	\
-	libarchive/archive_read_support_compression_none.c	\
-	libarchive/archive_read_support_compression_program.c	\
-	libarchive/archive_read_support_compression_rpm.c	\
-	libarchive/archive_read_support_compression_uu.c	\
-	libarchive/archive_read_support_compression_xz.c	\
-	libarchive/archive_write_add_filter_bzip2.c	\
-	libarchive/archive_write_add_filter_compress.c	\
-	libarchive/archive_write_add_filter_gzip.c		\
-	libarchive/archive_write_add_filter_none.c		\
-	libarchive/archive_write_add_filter_program.c	\
-	libarchive/archive_write_add_filter_xz.c		\
-	libarchive/filter_fork.c						\
-	libarchive/filter_fork.h
+	libtransform/archive_read_support_compression_all.c	\
+	libtransform/archive_read_support_compression_bzip2.c	\
+	libtransform/archive_read_support_compression_compress.c	\
+	libtransform/archive_read_support_compression_gzip.c	\
+	libtransform/archive_read_support_compression_none.c	\
+	libtransform/archive_read_support_compression_program.c	\
+	libtransform/archive_read_support_compression_rpm.c	\
+	libtransform/archive_read_support_compression_uu.c	\
+	libtransform/archive_read_support_compression_xz.c	\
+	libtransform/archive_write_add_filter_bzip2.c	\
+	libtransform/archive_write_add_filter_compress.c	\
+	libtransform/archive_write_add_filter_gzip.c		\
+	libtransform/archive_write_add_filter_none.c		\
+	libtransform/archive_write_add_filter_program.c	\
+	libtransform/archive_write_add_filter_xz.c		\
+	libtransform/filter_fork.c						\
+	libtransform/filter_fork.h
 
 if INC_WINDOWS_FILES
 libtransform_la_SOURCES+=						\
-	libarchive/filter_fork_windows.c
+	libtransform/filter_fork_windows.c
 endif
 
-# -no-undefined marks that libarchive doesn't rely on symbols
+# -no-undefined marks that libtransform doesn't rely on symbols
 # defined in the application.  This is mandatory for cygwin.
 libtransform_la_LDFLAGS= -no-undefined
 
 # Manpages to install
-libarchive_man_MANS=						\
-	libarchive/libarchive.3					\
-	libarchive/libarchive_internals.3
+libtransform_man_MANS=						\
+	libtransform/libtransform.3					\
+	libtransform/libtransform_internals.3
 
-# Additional libarchive files to include in the distribution
-libarchive_EXTRA_DIST=			\
-	libarchive/test/list.h		\
-	libarchive/archive_windows.c	\
-	libarchive/archive_windows.h	\
-	libarchive/filter_fork_windows.c	\
-	libarchive/CMakeLists.txt	\
-	$(libarchive_man_MANS)
+# Additional libtransform files to include in the distribution
+libtransform_EXTRA_DIST=			\
+	libtransform/test/list.h		\
+	libtransform/archive_windows.c	\
+	libtransform/archive_windows.h	\
+	libtransform/filter_fork_windows.c	\
+	libtransform/CMakeLists.txt	\
+	$(libtransform_man_MANS)
 
 # pkgconfig
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = build/pkgconfig/libarchive.pc
+pkgconfig_DATA = build/pkgconfig/libtransform.pc
 
 #
 #
-# libarchive_test program
+# libtransform_test program
 #
 #
-libarchive_test_SOURCES=					\
-	$(libarchive_la_SOURCES)				\
-	libarchive/test/main.c					\
-	libarchive/test/read_open_memory.c			\
-	libarchive/test/test.h					\
-	libarchive/test/test_acl_basic.c			\
-	libarchive/test/test_acl_freebsd.c			\
-	libarchive/test/test_acl_pax.c				\
-	libarchive/test/test_archive_api_feature.c		\
-	libarchive/test/test_bad_fd.c				\
-	libarchive/test/test_compat_bzip2.c			\
-	libarchive/test/test_compat_cpio.c			\
-	libarchive/test/test_compat_gtar.c			\
-	libarchive/test/test_compat_gzip.c			\
-	libarchive/test/test_compat_lzma.c			\
-	libarchive/test/test_compat_solaris_tar_acl.c		\
-	libarchive/test/test_compat_tar_hardlink.c		\
-	libarchive/test/test_compat_xz.c			\
-	libarchive/test/test_compat_zip.c			\
-	libarchive/test/test_empty_write.c			\
-	libarchive/test/test_entry.c				\
-	libarchive/test/test_extattr_freebsd.c			\
-	libarchive/test/test_fuzz.c				\
-	libarchive/test/test_entry_strmode.c			\
-	libarchive/test/test_link_resolver.c			\
-	libarchive/test/test_open_fd.c				\
-	libarchive/test/test_open_file.c			\
-	libarchive/test/test_open_filename.c			\
-	libarchive/test/test_pax_filename_encoding.c		\
-	libarchive/test/test_read_compress_program.c		\
-	libarchive/test/test_read_data_large.c			\
-	libarchive/test/test_read_disk.c			\
-	libarchive/test/test_read_disk_entry_from_file.c	\
-	libarchive/test/test_read_extract.c			\
-	libarchive/test/test_read_file_nonexistent.c		\
-	libarchive/test/test_read_format_ar.c			\
-	libarchive/test/test_read_format_cpio_afio.c		\
-	libarchive/test/test_read_format_cpio_bin.c		\
-	libarchive/test/test_read_format_cpio_bin_Z.c		\
-	libarchive/test/test_read_format_cpio_bin_be.c		\
-	libarchive/test/test_read_format_cpio_bin_bz2.c		\
-	libarchive/test/test_read_format_cpio_bin_gz.c		\
-	libarchive/test/test_read_format_cpio_bin_lzma.c	\
-	libarchive/test/test_read_format_cpio_bin_xz.c		\
-	libarchive/test/test_read_format_cpio_odc.c		\
-	libarchive/test/test_read_format_cpio_svr4_bzip2_rpm.c	\
-	libarchive/test/test_read_format_cpio_svr4_gzip.c	\
-	libarchive/test/test_read_format_cpio_svr4_gzip_rpm.c	\
-	libarchive/test/test_read_format_cpio_svr4c_Z.c		\
-	libarchive/test/test_read_format_empty.c		\
-	libarchive/test/test_read_format_gtar_gz.c		\
-	libarchive/test/test_read_format_gtar_lzma.c		\
-	libarchive/test/test_read_format_gtar_sparse.c		\
-	libarchive/test/test_read_format_iso_gz.c		\
-	libarchive/test/test_read_format_iso_multi_extent.c	\
-	libarchive/test/test_read_format_isojoliet_bz2.c	\
-	libarchive/test/test_read_format_isojoliet_long.c	\
-	libarchive/test/test_read_format_isojoliet_rr.c		\
-	libarchive/test/test_read_format_isorr_bz2.c		\
-	libarchive/test/test_read_format_isorr_ce.c		\
-	libarchive/test/test_read_format_isorr_new_bz2.c	\
-	libarchive/test/test_read_format_isorr_rr_moved.c	\
-	libarchive/test/test_read_format_isozisofs_bz2.c	\
-	libarchive/test/test_read_format_mtree.c		\
-	libarchive/test/test_read_format_pax_bz2.c		\
-	libarchive/test/test_read_format_raw.c			\
-	libarchive/test/test_read_format_tar.c			\
-	libarchive/test/test_read_format_tar_empty_filename.c	\
-	libarchive/test/test_read_format_tbz.c			\
-	libarchive/test/test_read_format_tgz.c			\
-	libarchive/test/test_read_format_tlz.c			\
-	libarchive/test/test_read_format_txz.c			\
-	libarchive/test/test_read_format_tz.c			\
-	libarchive/test/test_read_format_xar.c			\
-	libarchive/test/test_read_format_zip.c			\
-	libarchive/test/test_read_large.c			\
-	libarchive/test/test_read_pax_truncated.c		\
-	libarchive/test/test_read_position.c			\
-	libarchive/test/test_read_truncated.c			\
-	libarchive/test/test_read_uu.c				\
-	libarchive/test/test_sparse_basic.c			\
-	libarchive/test/test_tar_filenames.c			\
-	libarchive/test/test_tar_large.c			\
-	libarchive/test/test_ustar_filenames.c			\
-	libarchive/test/test_write_compress.c			\
-	libarchive/test/test_write_compress_bzip2.c		\
-	libarchive/test/test_write_compress_gzip.c		\
-	libarchive/test/test_write_compress_lzma.c		\
-	libarchive/test/test_write_compress_program.c		\
-	libarchive/test/test_write_compress_xz.c		\
-	libarchive/test/test_write_disk.c			\
-	libarchive/test/test_write_disk_failures.c		\
-	libarchive/test/test_write_disk_hardlink.c		\
-	libarchive/test/test_write_disk_perms.c			\
-	libarchive/test/test_write_disk_secure.c		\
-	libarchive/test/test_write_disk_sparse.c		\
-	libarchive/test/test_write_disk_symlink.c		\
-	libarchive/test/test_write_disk_times.c			\
-	libarchive/test/test_write_format_ar.c			\
-	libarchive/test/test_write_format_cpio.c		\
-	libarchive/test/test_write_format_cpio_empty.c		\
-	libarchive/test/test_write_format_cpio_odc.c		\
-	libarchive/test/test_write_format_cpio_newc.c		\
-	libarchive/test/test_write_format_iso9660.c		\
-	libarchive/test/test_write_format_iso9660_boot.c	\
-	libarchive/test/test_write_format_iso9660_empty.c	\
-	libarchive/test/test_write_format_iso9660_filename.c	\
-	libarchive/test/test_write_format_iso9660_zisofs.c	\
-	libarchive/test/test_write_format_mtree.c		\
-	libarchive/test/test_write_format_pax.c			\
-	libarchive/test/test_write_format_shar_empty.c		\
-	libarchive/test/test_write_format_tar.c			\
-	libarchive/test/test_write_format_tar_empty.c		\
-	libarchive/test/test_write_format_tar_ustar.c		\
-	libarchive/test/test_write_format_zip.c			\
-	libarchive/test/test_write_format_zip_empty.c		\
-	libarchive/test/test_write_format_zip_no_compression.c	\
-	libarchive/test/test_write_open_memory.c
+libtransform_test_SOURCES=					\
+	$(libtransform_la_SOURCES)				\
+	libtransform/test/main.c					\
+	libtransform/test/read_open_memory.c			\
+	libtransform/test/test.h					\
+	libtransform/test/test_acl_basic.c			\
+	libtransform/test/test_acl_freebsd.c			\
+	libtransform/test/test_acl_pax.c				\
+	libtransform/test/test_archive_api_feature.c		\
+	libtransform/test/test_bad_fd.c				\
+	libtransform/test/test_compat_bzip2.c			\
+	libtransform/test/test_compat_cpio.c			\
+	libtransform/test/test_compat_gtar.c			\
+	libtransform/test/test_compat_gzip.c			\
+	libtransform/test/test_compat_lzma.c			\
+	libtransform/test/test_compat_solaris_tar_acl.c		\
+	libtransform/test/test_compat_tar_hardlink.c		\
+	libtransform/test/test_compat_xz.c			\
+	libtransform/test/test_compat_zip.c			\
+	libtransform/test/test_empty_write.c			\
+	libtransform/test/test_entry.c				\
+	libtransform/test/test_extattr_freebsd.c			\
+	libtransform/test/test_fuzz.c				\
+	libtransform/test/test_entry_strmode.c			\
+	libtransform/test/test_link_resolver.c			\
+	libtransform/test/test_open_fd.c				\
+	libtransform/test/test_open_file.c			\
+	libtransform/test/test_open_filename.c			\
+	libtransform/test/test_pax_filename_encoding.c		\
+	libtransform/test/test_read_compress_program.c		\
+	libtransform/test/test_read_data_large.c			\
+	libtransform/test/test_read_disk.c			\
+	libtransform/test/test_read_disk_entry_from_file.c	\
+	libtransform/test/test_read_extract.c			\
+	libtransform/test/test_read_file_nonexistent.c		\
+	libtransform/test/test_read_format_ar.c			\
+	libtransform/test/test_read_format_cpio_afio.c		\
+	libtransform/test/test_read_format_cpio_bin.c		\
+	libtransform/test/test_read_format_cpio_bin_Z.c		\
+	libtransform/test/test_read_format_cpio_bin_be.c		\
+	libtransform/test/test_read_format_cpio_bin_bz2.c		\
+	libtransform/test/test_read_format_cpio_bin_gz.c		\
+	libtransform/test/test_read_format_cpio_bin_lzma.c	\
+	libtransform/test/test_read_format_cpio_bin_xz.c		\
+	libtransform/test/test_read_format_cpio_odc.c		\
+	libtransform/test/test_read_format_cpio_svr4_bzip2_rpm.c	\
+	libtransform/test/test_read_format_cpio_svr4_gzip.c	\
+	libtransform/test/test_read_format_cpio_svr4_gzip_rpm.c	\
+	libtransform/test/test_read_format_cpio_svr4c_Z.c		\
+	libtransform/test/test_read_format_empty.c		\
+	libtransform/test/test_read_format_gtar_gz.c		\
+	libtransform/test/test_read_format_gtar_lzma.c		\
+	libtransform/test/test_read_format_gtar_sparse.c		\
+	libtransform/test/test_read_format_iso_gz.c		\
+	libtransform/test/test_read_format_iso_multi_extent.c	\
+	libtransform/test/test_read_format_isojoliet_bz2.c	\
+	libtransform/test/test_read_format_isojoliet_long.c	\
+	libtransform/test/test_read_format_isojoliet_rr.c		\
+	libtransform/test/test_read_format_isorr_bz2.c		\
+	libtransform/test/test_read_format_isorr_ce.c		\
+	libtransform/test/test_read_format_isorr_new_bz2.c	\
+	libtransform/test/test_read_format_isorr_rr_moved.c	\
+	libtransform/test/test_read_format_isozisofs_bz2.c	\
+	libtransform/test/test_read_format_mtree.c		\
+	libtransform/test/test_read_format_pax_bz2.c		\
+	libtransform/test/test_read_format_raw.c			\
+	libtransform/test/test_read_format_tar.c			\
+	libtransform/test/test_read_format_tar_empty_filename.c	\
+	libtransform/test/test_read_format_tbz.c			\
+	libtransform/test/test_read_format_tgz.c			\
+	libtransform/test/test_read_format_tlz.c			\
+	libtransform/test/test_read_format_txz.c			\
+	libtransform/test/test_read_format_tz.c			\
+	libtransform/test/test_read_format_xar.c			\
+	libtransform/test/test_read_format_zip.c			\
+	libtransform/test/test_read_large.c			\
+	libtransform/test/test_read_pax_truncated.c		\
+	libtransform/test/test_read_position.c			\
+	libtransform/test/test_read_truncated.c			\
+	libtransform/test/test_read_uu.c				\
+	libtransform/test/test_sparse_basic.c			\
+	libtransform/test/test_tar_filenames.c			\
+	libtransform/test/test_tar_large.c			\
+	libtransform/test/test_ustar_filenames.c			\
+	libtransform/test/test_write_compress.c			\
+	libtransform/test/test_write_compress_bzip2.c		\
+	libtransform/test/test_write_compress_gzip.c		\
+	libtransform/test/test_write_compress_lzma.c		\
+	libtransform/test/test_write_compress_program.c		\
+	libtransform/test/test_write_compress_xz.c		\
+	libtransform/test/test_write_disk.c			\
+	libtransform/test/test_write_disk_failures.c		\
+	libtransform/test/test_write_disk_hardlink.c		\
+	libtransform/test/test_write_disk_perms.c			\
+	libtransform/test/test_write_disk_secure.c		\
+	libtransform/test/test_write_disk_sparse.c		\
+	libtransform/test/test_write_disk_symlink.c		\
+	libtransform/test/test_write_disk_times.c			\
+	libtransform/test/test_write_format_ar.c			\
+	libtransform/test/test_write_format_cpio.c		\
+	libtransform/test/test_write_format_cpio_empty.c		\
+	libtransform/test/test_write_format_cpio_odc.c		\
+	libtransform/test/test_write_format_cpio_newc.c		\
+	libtransform/test/test_write_format_iso9660.c		\
+	libtransform/test/test_write_format_iso9660_boot.c	\
+	libtransform/test/test_write_format_iso9660_empty.c	\
+	libtransform/test/test_write_format_iso9660_filename.c	\
+	libtransform/test/test_write_format_iso9660_zisofs.c	\
+	libtransform/test/test_write_format_mtree.c		\
+	libtransform/test/test_write_format_pax.c			\
+	libtransform/test/test_write_format_shar_empty.c		\
+	libtransform/test/test_write_format_tar.c			\
+	libtransform/test/test_write_format_tar_empty.c		\
+	libtransform/test/test_write_format_tar_ustar.c		\
+	libtransform/test/test_write_format_zip.c			\
+	libtransform/test/test_write_format_zip_empty.c		\
+	libtransform/test/test_write_format_zip_no_compression.c	\
+	libtransform/test/test_write_open_memory.c
 
-libarchive_test_CPPFLAGS= -I$(top_srcdir)/libarchive -I$(top_builddir)/libarchive/test -DLIBARCHIVE_STATIC $(PLATFORMCPPFLAGS)
+libtransform_test_CPPFLAGS= -I$(top_srcdir)/libtransform -I$(top_builddir)/libtransform/test -DLIBTRANSFORM_STATIC $(PLATFORMCPPFLAGS)
 
 # The "list.h" file just lists all of the tests defined in all of the sources.
-# Building it automatically provides a sanity-check on libarchive_test_SOURCES
+# Building it automatically provides a sanity-check on libtransform_test_SOURCES
 # above.
-libarchive/test/list.h: Makefile
-	cat $(top_srcdir)/libarchive/test/test_*.c | grep DEFINE_TEST > libarchive/test/list.h
+libtransform/test/list.h: Makefile
+	cat $(top_srcdir)/libtransform/test/test_*.c | grep DEFINE_TEST > libtransform/test/list.h
 
-libarchive_TESTS_ENVIRONMENT= LIBARCHIVE_TEST_FILES=`cd $(top_srcdir);/bin/pwd`/libarchive/test
+libtransform_TESTS_ENVIRONMENT= LIBTRANSFORM_TEST_FILES=`cd $(top_srcdir);/bin/pwd`/libtransform/test
 
-libarchive_test_EXTRA_DIST=\
-	libarchive/test/test_compat_bzip2_1.tbz.uu			\
-	libarchive/test/test_compat_bzip2_2.tbz.uu			\
-	libarchive/test/test_compat_cpio_1.cpio.uu			\
-	libarchive/test/test_compat_gtar_1.tar.uu			\
-	libarchive/test/test_compat_gzip_1.tgz.uu			\
-	libarchive/test/test_compat_gzip_2.tgz.uu			\
-	libarchive/test/test_compat_lzma_1.tlz.uu			\
-	libarchive/test/test_compat_lzma_2.tlz.uu			\
-	libarchive/test/test_compat_lzma_3.tlz.uu			\
-	libarchive/test/test_compat_solaris_tar_acl.tar.uu		\
-	libarchive/test/test_compat_tar_hardlink_1.tar.uu		\
-	libarchive/test/test_compat_xz_1.txz.uu				\
-	libarchive/test/test_compat_zip_1.zip.uu			\
-	libarchive/test/test_fuzz_1.iso.Z.uu				\
-	libarchive/test/test_pax_filename_encoding.tar.uu		\
-	libarchive/test/test_read_format_ar.ar.uu			\
-	libarchive/test/test_read_format_cpio_bin_be.cpio.uu		\
-	libarchive/test/test_read_format_cpio_svr4_bzip2_rpm.rpm.uu	\
-	libarchive/test/test_read_format_cpio_svr4_gzip_rpm.rpm.uu	\
-	libarchive/test/test_read_format_gtar_sparse_1_13.tar.uu	\
-	libarchive/test/test_read_format_gtar_sparse_1_17.tar.uu	\
-	libarchive/test/test_read_format_gtar_sparse_1_17_posix00.tar.uu \
-	libarchive/test/test_read_format_gtar_sparse_1_17_posix01.tar.uu \
-	libarchive/test/test_read_format_gtar_sparse_1_17_posix10.tar.uu \
-	libarchive/test/test_read_format_gtar_sparse_1_17_posix10_modified.tar.uu \
-	libarchive/test/test_read_format_iso.iso.Z.uu			\
-	libarchive/test/test_read_format_iso_joliet.iso.Z.uu		\
-	libarchive/test/test_read_format_iso_joliet_long.iso.Z.uu	\
-	libarchive/test/test_read_format_iso_joliet_rockridge.iso.Z.uu	\
-	libarchive/test/test_read_format_iso_multi_extent.iso.Z.uu	\
-	libarchive/test/test_read_format_iso_rockridge.iso.Z.uu		\
-	libarchive/test/test_read_format_iso_rockridge_ce.iso.Z.uu	\
-	libarchive/test/test_read_format_iso_rockridge_new.iso.Z.uu	\
-	libarchive/test/test_read_format_iso_rockridge_rr_moved.iso.Z.uu\
-	libarchive/test/test_read_format_iso_zisofs.iso.Z.uu		\
-	libarchive/test/test_read_format_mtree.mtree.uu			\
-	libarchive/test/test_read_format_raw.data.Z.uu			\
-	libarchive/test/test_read_format_raw.data.uu			\
-	libarchive/test/test_read_format_tar_empty_filename.tar.uu	\
-	libarchive/test/test_read_format_zip.zip.uu			\
-	libarchive/test/CMakeLists.txt					\
-	libarchive/test/README
+libtransform_test_EXTRA_DIST=\
+	libtransform/test/test_compat_bzip2_1.tbz.uu			\
+	libtransform/test/test_compat_bzip2_2.tbz.uu			\
+	libtransform/test/test_compat_cpio_1.cpio.uu			\
+	libtransform/test/test_compat_gtar_1.tar.uu			\
+	libtransform/test/test_compat_gzip_1.tgz.uu			\
+	libtransform/test/test_compat_gzip_2.tgz.uu			\
+	libtransform/test/test_compat_lzma_1.tlz.uu			\
+	libtransform/test/test_compat_lzma_2.tlz.uu			\
+	libtransform/test/test_compat_lzma_3.tlz.uu			\
+	libtransform/test/test_compat_solaris_tar_acl.tar.uu		\
+	libtransform/test/test_compat_tar_hardlink_1.tar.uu		\
+	libtransform/test/test_compat_xz_1.txz.uu				\
+	libtransform/test/test_compat_zip_1.zip.uu			\
+	libtransform/test/test_fuzz_1.iso.Z.uu				\
+	libtransform/test/test_pax_filename_encoding.tar.uu		\
+	libtransform/test/test_read_format_ar.ar.uu			\
+	libtransform/test/test_read_format_cpio_bin_be.cpio.uu		\
+	libtransform/test/test_read_format_cpio_svr4_bzip2_rpm.rpm.uu	\
+	libtransform/test/test_read_format_cpio_svr4_gzip_rpm.rpm.uu	\
+	libtransform/test/test_read_format_gtar_sparse_1_13.tar.uu	\
+	libtransform/test/test_read_format_gtar_sparse_1_17.tar.uu	\
+	libtransform/test/test_read_format_gtar_sparse_1_17_posix00.tar.uu \
+	libtransform/test/test_read_format_gtar_sparse_1_17_posix01.tar.uu \
+	libtransform/test/test_read_format_gtar_sparse_1_17_posix10.tar.uu \
+	libtransform/test/test_read_format_gtar_sparse_1_17_posix10_modified.tar.uu \
+	libtransform/test/test_read_format_iso.iso.Z.uu			\
+	libtransform/test/test_read_format_iso_joliet.iso.Z.uu		\
+	libtransform/test/test_read_format_iso_joliet_long.iso.Z.uu	\
+	libtransform/test/test_read_format_iso_joliet_rockridge.iso.Z.uu	\
+	libtransform/test/test_read_format_iso_multi_extent.iso.Z.uu	\
+	libtransform/test/test_read_format_iso_rockridge.iso.Z.uu		\
+	libtransform/test/test_read_format_iso_rockridge_ce.iso.Z.uu	\
+	libtransform/test/test_read_format_iso_rockridge_new.iso.Z.uu	\
+	libtransform/test/test_read_format_iso_rockridge_rr_moved.iso.Z.uu\
+	libtransform/test/test_read_format_iso_zisofs.iso.Z.uu		\
+	libtransform/test/test_read_format_mtree.mtree.uu			\
+	libtransform/test/test_read_format_raw.data.Z.uu			\
+	libtransform/test/test_read_format_raw.data.uu			\
+	libtransform/test/test_read_format_tar_empty_filename.tar.uu	\
+	libtransform/test/test_read_format_zip.zip.uu			\
+	libtransform/test/CMakeLists.txt					\
+	libtransform/test/README
