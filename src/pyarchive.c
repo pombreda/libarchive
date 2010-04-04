@@ -48,6 +48,35 @@ static PyArchiveEntry *archive_entry_freelist[MAX_FREE_ARCHIVE_ENTRY];
 static int archive_entry_free_count = 0;
 #endif
 
+static PyObject *PyArchiveError = NULL;
+
+/* utility funcs */
+
+static void
+_convert_and_set_archive_error(PyObject *err_kls, struct archive *a)
+{
+    PyObject *tmp = NULL, *err_pstr = NULL;
+    const char *err_cstr = archive_error_string(a);
+    if(!err_cstr) {
+        PyErr_NoMemory();
+        return;
+    }
+    if(!err_kls)
+        err_kls = (PyObject *)PyArchiveError;
+
+    if(err_pstr = PyString_FromString(err_cstr)) {
+        tmp = PyObject_CallFunction(err_kls, "O", err_pstr);
+        if(tmp) {
+            PyErr_SetObject(err_kls, tmp);
+            Py_DECREF(tmp);
+        }
+        Py_DECREF(err_pstr);
+    }
+}
+
+
+/* class funcs */
+
 static void
 PyArchiveEntry_dealloc(PyArchiveEntry *pae)
 {
@@ -444,33 +473,41 @@ PyArchive_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 }
 
 
-PyObject *
+static int
 PyArchive_init(PyArchive *self, PyObject *args, PyObject *kwds)
 {
     PyObject *filepath = NULL;
     int ret;
     if(!PyArg_ParseTuple(args, "S", &filepath))
-        return NULL;
-    if(NULL == (self->archive = archive_read_new()))
-        return NULL;
+        return -1;
+    if(NULL == (self->archive = archive_read_new())) {
+        // memory...
+        PyErr_NoMemory();
+        return -1;
+    }
+    self->header_position = 0;
     // doesn't set an exception.
     // error checking in general.
-    if(ARCHIVE_OK != archive_read_support_compression_all(self->archive))
-        return NULL;
-    if(ARCHIVE_OK != archive_read_support_format_all(self->archive))
-        return NULL;
+    if(ARCHIVE_OK != (ret = archive_read_support_compression_all(self->archive))) {
+        goto pyarchive_init_err;
+    }
+    if(ARCHIVE_OK != (ret = archive_read_support_format_all(self->archive))) {
+        goto pyarchive_init_err;
+    }
     self->flags = 0;
     if(ARCHIVE_OK != (ret = archive_read_open_file(self->archive,
         PyString_AsString(filepath), DEFAULT_BUFSIZE))) {
-        printf("bailing w/ %i\n", ret);
-        printf("%s\n", archive_error_string(self->archive));
-        archive_read_finish(self->archive);
-        self->archive = NULL;
-        self->flags |= PYARCHIVE_FAILURE;
-        return NULL;
+        goto pyarchive_init_err;
     }
     self->header_position = 0;
-    return NULL;
+    return 0;
+
+pyarchive_init_err:
+    _convert_and_set_archive_error(NULL, self->archive);
+    archive_read_finish(self->archive);
+    self->archive = NULL;
+    self->flags |= PYARCHIVE_FAILURE;
+    return -1;
 }
 
 
@@ -574,27 +611,39 @@ PyDoc_STRVAR(
     "fill this out");
 
 PyMODINIT_FUNC
-initpyarchive()
+init_extension()
 {
-    PyObject *m = Py_InitModule3("pyarchive", NULL,
+    PyObject *new_m = NULL;
+    PyObject *err_m = NULL;
+    new_m = Py_InitModule3("pyarchive._extension", NULL,
         Pydocumentation);
-    if(!m)
+    if(!new_m)
         return;
+
+    if(!(err_m = PyImport_ImportModule("pyarchive.errors")))
+        return; 
+
+    if(!(PyArchiveError = PyObject_GetAttrString(err_m, "PyArchiveError"))) {
+        Py_DECREF(err_m);
+        return;
+    }
+
+    Py_CLEAR(err_m);
 
     if(PyType_Ready(&PyArchiveType) < 0)
         return;
 
-    if(PyModule_AddObject(m, "archive",
+    if(PyModule_AddObject(new_m, "archive",
         (PyObject *)&PyArchiveType) == -1)
         return;
 
     if(PyType_Ready(&PyArchiveEntryType) < 0)
         return;
-    if(PyModule_AddObject(m, "archive_entry",
+    if(PyModule_AddObject(new_m, "archive_entry",
         (PyObject *)&PyArchiveEntryType) == -1)
         return;
 
-    if(PyModule_AddObject(m, "open",
+    if(PyModule_AddObject(new_m, "open",
         (PyObject *)&PyArchiveType) == -1)
         return;
 }
