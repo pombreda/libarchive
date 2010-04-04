@@ -284,6 +284,14 @@ PyArchive_Entry_get_mode(PyArchiveEntry *self, void *closure)
     return PyInt_FromLong(archive_entry_mode(self->archive_entry));
 }
 
+static PyObject *
+PyArchive_Entry_get_symlink(PyArchiveEntry *self, void *closure)
+{
+    char *sym = archive_entry_symlink(self->archive_entry);
+    if(sym)
+        return PyString_FromString(sym);
+    return PyString_FromString("");
+}
 
 static PyGetSetDef PyArchiveEntry_getsetters[] = {
     GETSET_HELPER(PyArchiveEntry, "name", name),
@@ -338,6 +346,8 @@ static PyGetSetDef PyArchiveEntry_getsetters[] = {
     {"inode", (getter)PyArchive_Entry_get_inode,
         (setter)PyArchive_Entry_generic_immutable, NULL},
     {"mode", (getter)PyArchive_Entry_get_mode,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"symlink", (getter)PyArchive_Entry_get_symlink,
         (setter)PyArchive_Entry_generic_immutable, NULL},
     {NULL}
 };
