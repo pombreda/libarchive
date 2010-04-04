@@ -134,10 +134,14 @@ struct transform;
  * to retrieve details.  Unless specified otherwise, all functions
  * that return 'int' use these codes.
  */
-#define	TRANSFORM_EOF	  1	/* Found end of transform. */
+
+/* XXX note these values have intentionally been shifted- this should
+ help catch any issues where conversion from transform to archive
+ doesn't occur */
+#define	TRANSFORM_EOF	  0xdead	/* Found end of transform. */
 #define	TRANSFORM_OK	  0	/* Operation was successful. */
-#define	TRANSFORM_WARN	(-20)	/* Partial success. */
-#define	TRANSFORM_FATAL	(-30)	/* No more operations are possible. */
+#define	TRANSFORM_WARN	(-200)	/* Partial success. */
+#define	TRANSFORM_FATAL	(-300)	/* No more operations are possible. */
 
 /*
  * As far as possible, transform_errno returns standard platform errno codes.
