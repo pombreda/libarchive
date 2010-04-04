@@ -1,0 +1,2 @@
+add tests for archive_write_open2 vs archive_write_open
+convert archive_read_open to something similar, dropping shims in place
