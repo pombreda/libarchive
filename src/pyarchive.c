@@ -15,6 +15,14 @@ wide char:
   pathname
   symlink
   hardlink
+
+optimizations:
+  ArchiveEntry continual StringFromString;
+   store/reuse the string if it was accessed to avoid repeat
+   PyString initializations (could use intern alternatively)
+  convert to archive_read_data_block perhaps?  Has some 'fun'
+   issues when dealing w/ the vm's lifespan of objects vs
+   libarchive's vm (mem obj management wise)
 */
 
 
