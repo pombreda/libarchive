@@ -5,6 +5,10 @@
 #include <archive.h>
 #include <archive_entry.h>
 
+#if ARCHIVE_VERSION_NUMBER > 2006001
+#define HAS_ARCHIVE_READ_NEXT_HEADER2 1
+#endif
+
 #define DEFAULT_BUFSIZE 4096
 
 typedef struct {
@@ -19,23 +23,44 @@ typedef struct {
     struct archive_entry *archive_entry;
 } PyArchiveEntry;
 
+#ifdef HAS_ARCHIVE_READ_NEXT_HEADER2
+#define MAX_FREE_ARCHIVE_ENTRY 5
+static PyArchiveEntry *archive_entry_freelist[MAX_FREE_ARCHIVE_ENTRY];
+static int archive_entry_free_count = 0;
+#endif
 
 static void
 PyArchiveEntry_dealloc(PyArchiveEntry *pae)
 {
     PyObject_GC_UnTrack(pae);
+    PyObject *archive = (PyObject *)pae->archive;
+
+#ifdef HAS_ARCHIVE_READ_NEXT_HEADER2
+    if(archive_entry_free_count < MAX_FREE_ARCHIVE_ENTRY) {
+        archive_entry_freelist[archive_entry_free_count++] = pae;
+        pae->archive = NULL;
+    } else {
+        if(pae->archive_entry) {
+            archive_entry_free(pae->archive_entry);
+        }
+        pae->ob_type->tp_free((PyObject *)pae);
+    }
+#else
     if(pae->archive_entry) {
         archive_entry_free(pae->archive_entry);
     }
-    Py_XDECREF(pae->archive);
     pae->ob_type->tp_free((PyObject *)pae);
+#endif
+    Py_XDECREF(archive);
 }
+
 
 static PyObject *
 PyArchiveEntry_str(PyArchiveEntry *self)
 {
     return PyString_FromString(archive_entry_pathname(self->archive_entry));
 }
+
 
 static PyTypeObject PyArchiveEntryType = {
     PyObject_HEAD_INIT(NULL)
@@ -80,20 +105,34 @@ static PyTypeObject PyArchiveEntryType = {
     PyType_GenericNew,                /* tp_new */
     PyObject_GC_Del,                  /* tp_free */
 };
-    
 
 static PyArchiveEntry *
-mk_PyArchiveEntry(PyArchive *archive, struct archive_entry *entry)
+mk_PyArchiveEntry(PyArchive *archive)
 {
-    PyArchiveEntry *pae = PyObject_GC_New(PyArchiveEntry,
-        &PyArchiveEntryType);
+    PyArchiveEntry *pae = NULL;
+#ifdef HAS_ARCHIVE_READ_NEXT_HEADER2
+    if(archive_entry_free_count) {
+        archive_entry_free_count--;
+        pae = archive_entry_freelist[archive_entry_free_count];
+        _Py_NewReference((PyObject *)pae);
+    } else {
+        pae = PyObject_GC_New(PyArchiveEntry,
+            &PyArchiveEntryType);
+        if(!pae)
+            return NULL;
+        pae->archive_entry = archive_entry_new();
+        if(!pae->archive_entry) {
+            pae->archive = NULL;
+            Py_DECREF(pae);
+            return NULL;
+        }
+    }
+#else
+    pae = PyObject_GC_New(PyArchiveEntry, &PyArchiveEntryType);
     if(!pae)
         return NULL;
-    pae->archive_entry = archive_entry_clone(entry);
-    if(!pae) {
-        Py_DECREF(pae);
-        return NULL;
-    }
+    pae->archive_entry = NULL;
+#endif
     Py_INCREF(archive);
     pae->archive = archive;
     return pae;
@@ -152,14 +191,33 @@ PyArchive_dealloc(PyArchive *self)
 static PyObject *
 PyArchive_iternext(PyArchive *self)
 {
+    int ret;
+    PyArchiveEntry *pae = mk_PyArchiveEntry(self);
+    if(!pae)
+        return NULL;
+
+#ifdef HAS_ARCHIVE_READ_NEXT_HEADER2
+    ret = archive_read_next_header2(self->archive, pae->archive_entry);
+#else
     struct archive_entry *entry = NULL;
-    int ret = archive_read_next_header(self->archive, &entry);
+    ret = archive_read_next_header(self->archive, &entry);
+    if(entry) {
+        // clone the sucker into pae.
+        pae->archive_entry =archive_entry_clone(entry);
+        if(!pae->archive_entry) {
+            // exception setting is missing her.
+            Py_DECREF(pae);
+            return NULL;
+        }
+    }
+#endif
     if(ret != ARCHIVE_OK) {
+        Py_DECREF(pae);
         // do something appropriate...
         return NULL;
     }
     self->header_position++;
-    return mk_PyArchiveEntry(self, entry);
+    return (PyObject *)pae;
 }
 
 static PyTypeObject PyArchiveType = {
