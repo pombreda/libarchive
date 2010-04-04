@@ -420,8 +420,6 @@ transform_write_open(struct transform *_a, void *client_data,
 
 	a->transform.state = TRANSFORM_STATE_HEADER;
 
-	if (a->format_init && ret == TRANSFORM_OK)
-		ret = (a->format_init)(a);
 	return (ret);
 }
 
@@ -442,14 +440,6 @@ _transform_write_close(struct transform *_a)
 		return (TRANSFORM_OK); // Okay to close() when not open.
 
 	transform_clear_error(&a->transform);
-
-	/* Finish off the transform. */
-	/* TODO: have format closers invoke compression close. */
-	if (a->format_close != NULL) {
-		r1 = (a->format_close)(a);
-		if (r1 < r)
-			r = r1;
-	}
 
 	/* Finish the compression and close the stream. */
 	r1 = __transform_write_close_filter(a->filter_first);
@@ -501,13 +491,6 @@ _transform_write_free(struct transform *_a)
 	    TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL, "transform_write_free");
 	if (a->transform.state != TRANSFORM_STATE_FATAL)
 		r = transform_write_close(&a->transform);
-
-	/* Release format resources. */
-	if (a->format_free != NULL) {
-		r1 = (a->format_free)(a);
-		if (r1 < r)
-			r = r1;
-	}
 
 	__transform_write_filters_free(_a);
 

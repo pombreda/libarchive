@@ -104,13 +104,8 @@ struct transform_write {
 	 * Pointers to format-specific functions for writing.  They're
 	 * initialized by transform_write_set_format_XXX() calls.
 	 */
-	int	(*format_init)(struct transform_write *);
-	int	(*format_options)(struct transform_write *,
-		    const char *key, const char *value);
 	ssize_t	(*format_write_data)(struct transform_write *,
 		    const void *buff, size_t);
-	int	(*format_close)(struct transform_write *);
-	int	(*format_free)(struct transform_write *);
 };
 
 #endif
