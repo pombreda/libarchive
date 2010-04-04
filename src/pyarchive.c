@@ -34,11 +34,11 @@ typedef struct {
     struct archive *archive;
     Py_ssize_t      header_position;
     unsigned int    flags;
-} PyArchive;
+} PyArchiveStream;
 
 typedef struct {
     PyObject_HEAD
-    PyArchive *archive;
+    PyArchiveStream *archive;
     struct archive_entry *archive_entry;
 } PyArchiveEntry;
 
@@ -431,7 +431,7 @@ static PyTypeObject PyArchiveEntryType = {
 };
 
 static PyArchiveEntry *
-mk_PyArchiveEntry(PyArchive *archive)
+mk_PyArchiveEntry(PyArchiveStream *archive)
 {
     PyArchiveEntry *pae = NULL;
 #ifdef HAS_ARCHIVE_READ_NEXT_HEADER2
@@ -464,9 +464,9 @@ mk_PyArchiveEntry(PyArchive *archive)
 
 
 PyObject *
-PyArchive_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+PyArchiveStream_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-    PyArchive *self = (PyArchive *)type->tp_alloc(type, 0);
+    PyArchiveStream *self = (PyArchiveStream *)type->tp_alloc(type, 0);
     if(self)
         self->archive = NULL;
     return (PyObject *)self;
@@ -474,7 +474,7 @@ PyArchive_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 
 
 static int
-PyArchive_init(PyArchive *self, PyObject *args, PyObject *kwds)
+PyArchiveStream_init(PyArchiveStream *self, PyObject *args, PyObject *kwds)
 {
     PyObject *filepath = NULL;
     int ret;
@@ -514,7 +514,7 @@ pyarchive_init_err:
 
 
 static void
-PyArchive_dealloc(PyArchive *self)
+PyArchiveStream_dealloc(PyArchiveStream *self)
 {
     if(self->archive) {
         archive_read_finish(self->archive);
@@ -525,7 +525,7 @@ PyArchive_dealloc(PyArchive *self)
 
 
 static PyObject *
-PyArchive_iternext(PyArchive *self)
+PyArchiveStream_iternext(PyArchiveStream *self)
 {
     int ret;
     PyArchiveEntry *pae = NULL;
@@ -567,13 +567,13 @@ PyArchive_iternext(PyArchive *self)
     return (PyObject *)pae;
 }
 
-static PyTypeObject PyArchiveType = {
+static PyTypeObject PyArchiveStreamType = {
     PyObject_HEAD_INIT(NULL)
     0,                                /* ob_size */
     "archive",                        /* tp_name */
-    sizeof(PyArchive),                /* tp_basicsize */
+    sizeof(PyArchiveStream),                /* tp_basicsize */
     0,                                /* tp_itemsize */
-    (destructor)PyArchive_dealloc,    /* tp_dealloc */
+    (destructor)PyArchiveStream_dealloc,    /* tp_dealloc */
     0,                                /* tp_print */
     0,                                /* tp_getattr */
     0,                                /* tp_setattr */
@@ -595,7 +595,7 @@ static PyTypeObject PyArchiveType = {
     0,                                /* tp_richcompare */
     0,                                /* tp_weaklistoffset */
     (getiterfunc)PyObject_SelfIter,   /* tp_iter */
-    (iternextfunc)PyArchive_iternext, /* tp_iternext */
+    (iternextfunc)PyArchiveStream_iternext, /* tp_iternext */
     0,                                /* tp_methods */
     0,                                /* tp_members */
     0,                                /* tp_getset */
@@ -604,9 +604,9 @@ static PyTypeObject PyArchiveType = {
     0,                                /* tp_descr_get */
     0,                                /* tp_descr_set */
     0,                                /* tp_dictoffset */
-    (initproc)PyArchive_init,         /* tp_init */
+    (initproc)PyArchiveStream_init,         /* tp_init */
     0,                                /* tp_alloc */
-    PyArchive_new,                    /* tp_new */
+    PyArchiveStream_new,                    /* tp_new */
 };
 
 PyDoc_STRVAR(
@@ -633,21 +633,22 @@ init_extension()
 
     Py_CLEAR(err_m);
 
-    if(PyType_Ready(&PyArchiveType) < 0)
+    if(PyType_Ready(&PyArchiveStreamType) < 0)
         return;
 
-    if(PyModule_AddObject(new_m, "archive",
-        (PyObject *)&PyArchiveType) == -1)
+    if(PyModule_AddObject(new_m, "archive_stream",
+        (PyObject *)&PyArchiveStreamType) == -1)
         return;
 
     if(PyType_Ready(&PyArchiveEntryType) < 0)
         return;
+
     if(PyModule_AddObject(new_m, "archive_entry",
         (PyObject *)&PyArchiveEntryType) == -1)
         return;
 
     if(PyModule_AddObject(new_m, "open",
-        (PyObject *)&PyArchiveType) == -1)
+        (PyObject *)&PyArchiveStreamType) == -1)
         return;
 }
 
