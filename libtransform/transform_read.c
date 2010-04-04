@@ -102,73 +102,6 @@ archive_read_new(void)
 }
 
 /*
- * Record the do-not-extract-to file. This belongs in archive_read_extract.c.
- */
-#if ARCHIVE_VERSION_NUMBER < 3000000
-void
-archive_read_extract_set_skip_file(struct archive *_a, dev_t d, ino_t i)
-#else
-void
-archive_read_extract_set_skip_file(struct archive *_a, int64_t d, int64_t i)
-#endif
-{
-	struct archive_read *a = (struct archive_read *)_a;
-
-	if (ARCHIVE_OK != __archive_check_magic(_a, ARCHIVE_READ_MAGIC,
-		ARCHIVE_STATE_ANY, "archive_read_extract_set_skip_file"))
-		return;
-
-	a->skip_file_dev = d;
-	a->skip_file_ino = i;
-}
-
-/*
- * Set read options for the format.
- */
-int
-archive_read_set_format_options(struct archive *_a, const char *s)
-{
-	struct archive_read *a;
-	struct archive_format_descriptor *format;
-	char key[64], val[64];
-	char *valp;
-	size_t i;
-	int len, r;
-
-	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
-	    "archive_read_set_format_options");
-
-	if (s == NULL || *s == '\0')
-		return (ARCHIVE_OK);
-	a = (struct archive_read *)_a;
-	len = 0;
-	for (i = 0; i < sizeof(a->formats)/sizeof(a->formats[0]); i++) {
-		format = &a->formats[i];
-		if (format == NULL || format->options == NULL ||
-		    format->name == NULL)
-			/* This format does not support option. */
-			continue;
-
-		while ((len = __archive_parse_options(s, format->name,
-		    sizeof(key), key, sizeof(val), val)) > 0) {
-			valp = val[0] == '\0' ? NULL : val;
-			a->format = format;
-			r = format->options(a, key, valp);
-			a->format = NULL;
-			if (r == ARCHIVE_FATAL)
-				return (r);
-			s += len;
-		}
-	}
-	if (len < 0) {
-		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-		    "Illegal format options.");
-		return (ARCHIVE_WARN);
-	}
-	return (ARCHIVE_OK);
-}
-
-/*
  * Set read options for the filter.
  */
 int
@@ -225,9 +158,6 @@ archive_read_set_options(struct archive *_a, const char *s)
 	    "archive_read_set_options");
 	archive_clear_error(_a);
 
-	r = archive_read_set_format_options(_a, s);
-	if (r != ARCHIVE_OK)
-		return (r);
 	r = archive_read_set_filter_options(_a, s);
 	if (r != ARCHIVE_OK)
 		return (r);
@@ -493,57 +423,6 @@ archive_read_data(struct archive *_a, void *buff, size_t s)
 		}
 	}
 	return (bytes_read);
-}
-
-#if ARCHIVE_API_VERSION < 3
-/*
- * Obsolete function provided for compatibility only.  Note that the API
- * of this function doesn't allow the caller to detect if the remaining
- * data from the archive entry is shorter than the buffer provided, or
- * even if an error occurred while reading data.
- */
-int
-archive_read_data_into_buffer(struct archive *a, void *d, ssize_t len)
-{
-
-	archive_read_data(a, d, len);
-	return (ARCHIVE_OK);
-}
-#endif
-
-/*
- * Skip over all remaining data in this entry.
- */
-int
-archive_read_data_skip(struct archive *_a)
-{
-	struct archive_read *a = (struct archive_read *)_a;
-	int r;
-	const void *buff;
-	size_t size;
-#if ARCHIVE_VERSION_NUMBER < 3000000
-	off_t offset;
-#else
-	int64_t offset;
-#endif
-
-	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_DATA,
-	    "archive_read_data_skip");
-
-	if (a->format->read_data_skip != NULL)
-		r = (a->format->read_data_skip)(a);
-	else {
-		while ((r = archive_read_data_block(&a->archive,
-			    &buff, &size, &offset))
-		    == ARCHIVE_OK)
-			;
-	}
-
-	if (r == ARCHIVE_EOF)
-		r = ARCHIVE_OK;
-
-	a->archive.state = ARCHIVE_STATE_HEADER;
-	return (r);
 }
 
 /*

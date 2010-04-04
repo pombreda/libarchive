@@ -376,17 +376,11 @@ __LA_DECL int archive_read_data_block(struct archive *a,
  *  'into_buffer': writes data into memory buffer that you provide
  *  'into_fd': writes data to specified filedes
  */
-__LA_DECL int archive_read_data_skip(struct archive *);
-__LA_DECL int archive_read_data_into_buffer(struct archive *,
-			    void *buffer, __LA_SSIZE_T len);
 __LA_DECL int archive_read_data_into_fd(struct archive *, int fd);
 
 /*
  * Set read options.
  */
-/* Apply option string to the format only. */
-__LA_DECL int archive_read_set_format_options(struct archive *_a,
-			    const char *s);
 /* Apply option string to the filter only. */
 __LA_DECL int archive_read_set_filter_options(struct archive *_a,
 			    const char *s);
@@ -444,16 +438,6 @@ __LA_DECL int archive_read_extract2(struct archive *, struct archive_entry *,
 		     struct archive * /* dest */);
 __LA_DECL void	 archive_read_extract_set_progress_callback(struct archive *,
 		     void (*_progress_func)(void *), void *_user_data);
-
-/* Record the dev/ino of a file that will not be written.  This is
- * generally set to the dev/ino of the archive being read. */
-#if ARCHIVE_VERSION_NUMBER < 3000000
-__LA_DECL void		archive_read_extract_set_skip_file(struct archive *,
-		     dev_t, ino_t);
-#else
-__LA_DECL void		archive_read_extract_set_skip_file(struct archive *,
-		     __LA_INT64_T, __LA_INT64_T);
-#endif
 
 /* Close the file and release most resources. */
 __LA_DECL int		 archive_read_close(struct archive *);
