@@ -188,20 +188,6 @@ struct archive_read {
 	int			(*cleanup_archive_extract)(struct archive_read *);
 };
 
-int	__archive_read_register_format(struct archive_read *a,
-	    void *format_data,
-	    const char *name,
-	    int (*bid)(struct archive_read *),
-	    int (*options)(struct archive_read *, const char *, const char *),
-	    int (*read_header)(struct archive_read *, struct archive_entry *),
-#if ARCHIVE_VERSION_NUMBER < 3000000
-	    int (*read_data)(struct archive_read *, const void **, size_t *, off_t *),
-#else
-	    int (*read_data)(struct archive_read *, const void **, size_t *, int64_t *),
-#endif
-	    int (*read_data_skip)(struct archive_read *),
-	    int (*cleanup)(struct archive_read *));
-
 struct archive_read_filter_bidder
 	*__archive_read_get_bidder(struct archive_read *a);
 
