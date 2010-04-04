@@ -41,7 +41,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_compression_bzip2.c 20
 #include <bzlib.h>
 #endif
 
-#include "archive.h"
+#include "transform.h"
 #include "archive_private.h"
 #include "transform_write_private.h"
 

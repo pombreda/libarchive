@@ -32,7 +32,7 @@
 #ifndef ARCHIVE_READ_PRIVATE_H_INCLUDED
 #define	ARCHIVE_READ_PRIVATE_H_INCLUDED
 
-#include "archive.h"
+#include "transform.h"
 #include "archive_string.h"
 #include "archive_private.h"
 

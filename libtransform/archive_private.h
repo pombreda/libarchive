@@ -32,7 +32,7 @@
 #ifndef ARCHIVE_PRIVATE_H_INCLUDED
 #define	ARCHIVE_PRIVATE_H_INCLUDED
 
-#include "archive.h"
+#include "transform.h"
 #include "archive_string.h"
 
 #if defined(__GNUC__) && (__GNUC__ > 2 || \

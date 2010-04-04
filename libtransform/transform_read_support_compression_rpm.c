@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #endif
 
-#include "archive.h"
+#include "transform.h"
 #include "archive_endian.h"
 #include "archive_private.h"
 #include "transform_read_private.h"

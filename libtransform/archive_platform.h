@@ -38,7 +38,7 @@
 #ifndef ARCHIVE_PLATFORM_H_INCLUDED
 #define	ARCHIVE_PLATFORM_H_INCLUDED
 
-/* archive.h and archive_entry.h require this. */
+/* transform.h and archive_entry.h require this. */
 #define	__LIBARCHIVE_BUILD 1
 
 #if defined(PLATFORM_CONFIG_H)

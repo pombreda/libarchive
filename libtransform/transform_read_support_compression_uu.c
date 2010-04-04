@@ -36,7 +36,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_uu.c 20
 #include <string.h>
 #endif
 
-#include "archive.h"
+#include "transform.h"
 #include "archive_private.h"
 #include "transform_read_private.h"
 

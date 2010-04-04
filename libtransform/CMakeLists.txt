@@ -7,7 +7,7 @@
 
 # Public headers
 SET(include_HEADERS
-  archive.h
+  transform.h
   archive_entry.h
 )
 

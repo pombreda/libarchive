@@ -44,7 +44,7 @@
 #include <wchar.h>
 #endif
 
-#include "archive.h"
+#include "transform.h"
 
 /*
  * Basic resizable/reusable string support a la Java's "StringBuffer."

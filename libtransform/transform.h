@@ -22,14 +22,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libarchive/archive.h.in,v 1.50 2008/05/26 17:00:22 kientzle Exp $
+ * $FreeBSD: src/lib/libarchive/transform.h.in,v 1.50 2008/05/26 17:00:22 kientzle Exp $
  */
 
 #ifndef ARCHIVE_H_INCLUDED
 #define	ARCHIVE_H_INCLUDED
 
 /*
- * Note: archive.h is for use outside of libarchive; the configuration
+ * Note: transform.h is for use outside of libarchive; the configuration
  * headers (config.h, archive_platform.h, etc.) are purely internal.
  * Do NOT use HAVE_XXX configuration macros to control the behavior of
  * this header!  If you must conditionalize, use predefined compiler and/or

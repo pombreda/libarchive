@@ -26,7 +26,7 @@
 #include "archive_platform.h"
 __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_none.c 185679 2008-12-06 06:45:15Z kientzle $");
 
-#include "archive.h"
+#include "transform.h"
 
 /*
  * Uncompressed streams are handled implicitly by the read core,

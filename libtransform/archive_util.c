@@ -43,7 +43,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_util.c 201098 2009-12-28 02:58:1
 #include <string.h>
 #endif
 
-#include "archive.h"
+#include "transform.h"
 #include "archive_private.h"
 #include "archive_string.h"
 

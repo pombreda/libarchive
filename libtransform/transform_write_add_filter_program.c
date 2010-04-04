@@ -42,7 +42,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_compression_program.c 
 #  include <string.h>
 #endif
 
-#include "archive.h"
+#include "transform.h"
 #include "archive_private.h"
 #include "transform_write_private.h"
 
