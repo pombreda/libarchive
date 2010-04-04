@@ -33,12 +33,7 @@ DEFINE_TEST(test_patterns)
 	const char *reffile2 = "test_patterns_2.tar";
 	const char *reffile3 = "test_patterns_3.tar";
 	const char *reffile4 = "test_patterns_4.tar";
-
-	const char *tar2aExpected[] = {
-		"/tmp/foo/bar/",
-		"/tmp/foo/bar/baz",
-		NULL
-	};
+	const char *p;
 
 	/*
 	 * Test basic command-line pattern handling.
@@ -67,7 +62,12 @@ DEFINE_TEST(test_patterns)
 	r = systemf("%s tf %s /tmp/foo/bar > tar2a.out 2> tar2a.err",
 	    testprog, reffile2);
 	assertEqualInt(r, 0);
-	assertFileContainsLinesAnyOrder("tar2a.out", tar2aExpected);
+#if !defined(_WIN32) || defined(__CYGWIN__)
+	p = "/tmp/foo/bar/\n/tmp/foo/bar/baz\n";
+#else
+	p = "/tmp/foo/bar/\r\n/tmp/foo/bar/baz\r\n";
+#endif
+	assertFileContents(p, strlen(p), "tar2a.out");
 	assertEmptyFile("tar2a.err");
 
 	/*

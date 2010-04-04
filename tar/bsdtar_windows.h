@@ -40,12 +40,9 @@
 #endif
 
 #include <string.h>  /* Must include before redefining 'strdup' */
-#if !defined(__BORLANDC__)
 #define strdup _strdup
-#endif
-#if !defined(__BORLANDC__)
+#define	read _read
 #define getcwd _getcwd
-#endif
 
 #define chdir __tar_chdir
 int __tar_chdir(const char *);

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_compat_zip.c 196962 2009-09-08 05:02:41Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_compat_zip.c,v 1.3 2008/09/01 05:38:33 kientzle Exp $");
 
 /* Copy this function for each test file and adjust it accordingly. */
 static void
@@ -64,7 +64,11 @@ test_compat_zip_1(void)
 
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
 finish:
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+#if ARCHIVE_VERSION_NUMBER < 2000000
+	archive_read_finish(a);
+#else
+	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+#endif
 }
 
 

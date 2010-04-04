@@ -31,7 +31,7 @@
 /* TODO: reader does not yet restore permissions. */
 
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_zip.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 DEFINE_TEST(test_write_format_zip)
 {
@@ -111,7 +111,7 @@ DEFINE_TEST(test_write_format_zip)
 
 	/* Close out the archive. */
 	assertEqualInt(ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
 
 	/*
 	 * Now, read the data back.
@@ -175,6 +175,6 @@ DEFINE_TEST(test_write_format_zip)
 	/* Verify the end of the archive. */
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
 	free(buff);
 }

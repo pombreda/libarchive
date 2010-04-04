@@ -49,7 +49,7 @@ DEFINE_TEST(test_option_T_upper)
 	struct stat st;
 	int gnarlyFilesSupported;
 
-	/* Create a simple dir hierarchy; bail if anything fails. */
+	/* Create a simple dir heirarchy; bail if anything fails. */
 	if (!assertMakeDir("d1", 0755)) return;
 	if (!assertMakeDir("d1/d2", 0755))	return;
 	if (!touch("f", 1)) return;
@@ -79,12 +79,12 @@ DEFINE_TEST(test_option_T_upper)
 		return;
 	/* Use null-terminated names. */
 	fprintf(f, "d1/d2/f3");
-	assertEqualInt(1, fwrite("\0", 1, 1, f));
+	fwrite("\0", 1, 1, f);
 	fprintf(f, "d1/d2/f5");
-	assertEqualInt(1, fwrite("\0", 1, 1, f));
+	fwrite("\0", 1, 1, f);
 	if (gnarlyFilesSupported) {
 		fprintf(f, "d1/d2/f\x0a");
-		assertEqualInt(1, fwrite("\0", 1, 1, f));
+		fwrite("\0", 1, 1, f);
 	}
 	fclose(f);
 

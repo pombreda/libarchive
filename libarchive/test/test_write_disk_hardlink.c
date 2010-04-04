@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk_hardlink.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_write_disk_hardlink.c,v 1.5 2008/09/05 06:13:11 kientzle Exp $");
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 /* Execution bits, Group members bits and others bits do not work. */
@@ -157,7 +157,11 @@ DEFINE_TEST(test_write_disk_hardlink)
 	archive_entry_set_mode(ae, S_IFREG | 0600);
 	archive_entry_set_size(ae, 0);
 	assertEqualIntA(ad, 0, archive_write_header(ad, ae));
+#if ARCHIVE_VERSION_NUMBER < 3000000
 	assertEqualInt(ARCHIVE_WARN, archive_write_data(ad, data, 1));
+#else
+	assertEqualInt(-1, archive_write_data(ad, data, 1));
+#endif
 	assertEqualIntA(ad, 0, archive_write_finish_entry(ad));
 	archive_entry_free(ae);
 
@@ -174,7 +178,7 @@ DEFINE_TEST(test_write_disk_hardlink)
 		assertEqualIntA(ad, 0, archive_write_finish_entry(ad));
 	}
 	archive_entry_free(ae);
-	assertEqualInt(0, archive_write_free(ad));
+	assertEqualInt(0, archive_write_finish(ad));
 
 	/* Test the entries on disk. */
 

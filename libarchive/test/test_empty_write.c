@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_empty_write.c 189308 2009-03-03 17:02:51Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_empty_write.c,v 1.3 2008/09/01 05:38:33 kientzle Exp $");
 
 DEFINE_TEST(test_empty_write)
 {
@@ -60,8 +60,8 @@ DEFINE_TEST(test_empty_write)
 		assertEqualIntA(a, 0, archive_write_data(a, "", 0));
 
 		/* Close out the archive. */
-		assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-		assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+		assertA(0 == archive_write_close(a));
+		assertA(0 == archive_write_finish(a));
 	}
 
 	/*
@@ -90,8 +90,8 @@ DEFINE_TEST(test_empty_write)
 		assertEqualIntA(a, 0, archive_write_data(a, "", 0));
 
 		/* Close out the archive. */
-		assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-		assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+		assertA(0 == archive_write_close(a));
+		assertA(0 == archive_write_finish(a));
 	}
 
 	/*
@@ -115,6 +115,6 @@ DEFINE_TEST(test_empty_write)
 	assertEqualIntA(a, 0, archive_write_data(a, "", 0));
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertA(0 == archive_write_close(a));
+	assertA(0 == archive_write_finish(a));
 }

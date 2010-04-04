@@ -48,9 +48,6 @@ __FBSDID("$FreeBSD: src/usr.bin/tar/read.c,v 1.40 2008/08/21 06:41:14 kientzle E
 #ifdef HAVE_PWD_H
 #include <pwd.h>
 #endif
-#ifdef HAVE_STDINT_H
-#include <stdint.h>
-#endif
 #include <stdio.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
@@ -155,7 +152,7 @@ read_archive(struct bsdtar *bsdtar, char mode)
 		archive_read_support_compression_all(a);
 	archive_read_support_format_all(a);
 	if (ARCHIVE_OK != archive_read_set_options(a, bsdtar->option_options))
-		lafe_errc(1, 0, "%s", archive_error_string(a));
+		lafe_errc(1, 0, archive_error_string(a));
 	if (archive_read_open_file(a, bsdtar->filename,
 	    bsdtar->bytes_per_block != 0 ? bsdtar->bytes_per_block :
 	    DEFAULT_BYTES_PER_BLOCK))
@@ -332,7 +329,7 @@ read_archive(struct bsdtar *bsdtar, char mode)
 		fprintf(stdout, "Archive Format: %s,  Compression: %s\n",
 		    archive_format_name(a), archive_compression_name(a));
 
-	archive_read_free(a);
+	archive_read_finish(a);
 }
 
 

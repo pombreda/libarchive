@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_large.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_read_large.c,v 1.4 2008/09/01 05:38:33 kientzle Exp $");
 
 static unsigned char testdata[10 * 1024 * 1024];
 static unsigned char testdatacopy[10 * 1024 * 1024];
@@ -57,8 +57,8 @@ DEFINE_TEST(test_read_large)
 	archive_entry_set_pathname(entry, "test");
 	assertA(0 == archive_write_header(a, entry));
 	archive_entry_free(entry);
-	assertA((int)sizeof(testdata) == archive_write_data(a, testdata, sizeof(testdata)));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertA(sizeof(testdata) == archive_write_data(a, testdata, sizeof(testdata)));
+	assertA(0 == archive_write_finish(a));
 
 	assert(NULL != (a = archive_read_new()));
 	assertA(0 == archive_read_support_format_all(a));
@@ -66,7 +66,7 @@ DEFINE_TEST(test_read_large)
 	assertA(0 == archive_read_open_memory(a, buff, sizeof(buff)));
 	assertA(0 == archive_read_next_header(a, &entry));
 	assertA(0 == archive_read_data_into_buffer(a, testdatacopy, sizeof(testdatacopy)));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertA(0 == archive_read_finish(a));
 	assert(0 == memcmp(testdata, testdatacopy, sizeof(testdata)));
 
 
@@ -75,15 +75,12 @@ DEFINE_TEST(test_read_large)
 	assertA(0 == archive_read_support_compression_all(a));
 	assertA(0 == archive_read_open_memory(a, buff, sizeof(buff)));
 	assertA(0 == archive_read_next_header(a, &entry));
-#if defined(__BORLANDC__)
-	tmpfilefd = open(tmpfilename, O_WRONLY | O_CREAT | O_BINARY);
-#else
-	tmpfilefd = open(tmpfilename, O_WRONLY | O_CREAT | O_BINARY, 0755);
-#endif
-	assert(0 < tmpfilefd);
+	// TODO: Provide a Windows-friendly version of this?
+	assert(0 < (tmpfilefd = open(tmpfilename,
+		    O_WRONLY | O_CREAT | O_BINARY, 0755)));
 	assertA(0 == archive_read_data_into_fd(a, tmpfilefd));
 	close(tmpfilefd);
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertA(0 == archive_read_finish(a));
 
 	f = fopen(tmpfilename, "rb");
 	assertEqualInt(sizeof(testdatacopy),

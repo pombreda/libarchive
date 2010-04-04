@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_zip.c 201102 2009-12-28 03:11:36Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_format_zip.c,v 1.28 2008/12/06 06:45:15 kientzle Exp $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -123,27 +123,15 @@ static const char *compression_names[] = {
 
 static int	archive_read_format_zip_bid(struct archive_read *);
 static int	archive_read_format_zip_cleanup(struct archive_read *);
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static int	archive_read_format_zip_read_data(struct archive_read *,
 		    const void **, size_t *, off_t *);
-#else
-static int	archive_read_format_zip_read_data(struct archive_read *,
-		    const void **, size_t *, int64_t *);
-#endif
 static int	archive_read_format_zip_read_data_skip(struct archive_read *a);
 static int	archive_read_format_zip_read_header(struct archive_read *,
 		    struct archive_entry *);
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static int	zip_read_data_deflate(struct archive_read *a, const void **buff,
 		    size_t *size, off_t *offset);
 static int	zip_read_data_none(struct archive_read *a, const void **buff,
 		    size_t *size, off_t *offset);
-#else
-static int	zip_read_data_deflate(struct archive_read *a, const void **buff,
-		    size_t *size, int64_t *offset);
-static int	zip_read_data_none(struct archive_read *a, const void **buff,
-		    size_t *size, int64_t *offset);
-#endif
 static int	zip_read_file_header(struct archive_read *a,
 		    struct archive_entry *entry, struct zip *zip);
 static time_t	zip_time(const char *);
@@ -155,9 +143,6 @@ archive_read_support_format_zip(struct archive *_a)
 	struct archive_read *a = (struct archive_read *)_a;
 	struct zip *zip;
 	int r;
-
-	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
-	    ARCHIVE_STATE_NEW, "archive_read_support_format_zip");
 
 	zip = (struct zip *)malloc(sizeof(*zip));
 	if (zip == NULL) {
@@ -225,7 +210,7 @@ archive_read_format_zip_bid(struct archive_read *a)
 			/* Get 4k of data beyond where we stopped. */
 			buff = __archive_read_ahead(a, offset + 4096,
 			    &bytes_avail);
-			if (buff == NULL)
+			if (bytes_avail < offset + 1)
 				break;
 			p = (const char *)buff + offset;
 			while (p + 9 < (const char *)buff + bytes_avail) {
@@ -501,15 +486,9 @@ zip_time(const char *p)
 	return mktime(&ts);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static int
 archive_read_format_zip_read_data(struct archive_read *a,
     const void **buff, size_t *size, off_t *offset)
-#else
-static int
-archive_read_format_zip_read_data(struct archive_read *a,
-    const void **buff, size_t *size, int64_t *offset)
-#endif
 {
 	int r;
 	struct zip *zip;
@@ -619,15 +598,9 @@ archive_read_format_zip_read_data(struct archive_read *a,
  * Returns ARCHIVE_OK if successful, ARCHIVE_FATAL otherwise, sets
  * zip->end_of_entry if it consumes all of the data.
  */
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static int
 zip_read_data_none(struct archive_read *a, const void **buff,
     size_t *size, off_t *offset)
-#else
-static int
-zip_read_data_none(struct archive_read *a, const void **buff,
-    size_t *size, int64_t *offset)
-#endif
 {
 	struct zip *zip;
 	ssize_t bytes_avail;
@@ -666,15 +639,9 @@ zip_read_data_none(struct archive_read *a, const void **buff,
 }
 
 #ifdef HAVE_ZLIB_H
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static int
 zip_read_data_deflate(struct archive_read *a, const void **buff,
     size_t *size, off_t *offset)
-#else
-static int
-zip_read_data_deflate(struct archive_read *a, const void **buff,
-    size_t *size, int64_t *offset)
-#endif
 {
 	struct zip *zip;
 	ssize_t bytes_avail;
@@ -770,15 +737,9 @@ zip_read_data_deflate(struct archive_read *a, const void **buff,
 	return (ARCHIVE_OK);
 }
 #else
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static int
 zip_read_data_deflate(struct archive_read *a, const void **buff,
     size_t *size, off_t *offset)
-#else
-static int
-zip_read_data_deflate(struct archive_read *a, const void **buff,
-    size_t *size, int64_t *offset)
-#endif
 {
 	*buff = NULL;
 	*size = 0;
@@ -808,11 +769,7 @@ archive_read_format_zip_read_data_skip(struct archive_read *a)
 	 */
 	if (zip->flags & ZIP_LENGTH_AT_END) {
 		size_t size;
-#if ARCHIVE_VERSION_NUMBER < 3000000
 		off_t offset;
-#else
-		int64_t offset;
-#endif
 		int r;
 		do {
 			r = archive_read_format_zip_read_data(a, &buff,
@@ -825,7 +782,7 @@ archive_read_format_zip_read_data_skip(struct archive_read *a)
 	 * If the length is at the beginning, we can skip the
 	 * compressed data much more quickly.
 	 */
-	bytes_skipped = __archive_read_consume(a, zip->entry_bytes_remaining);
+	bytes_skipped = __archive_read_skip(a, zip->entry_bytes_remaining);
 	if (bytes_skipped < 0)
 		return (ARCHIVE_FATAL);
 

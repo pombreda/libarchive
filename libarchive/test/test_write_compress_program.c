@@ -23,13 +23,16 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_compress_program.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_write_compress_program.c,v 1.3 2008/09/01 05:38:33 kientzle Exp $");
 
 char buff[1000000];
 char buff2[64];
 
 DEFINE_TEST(test_write_compress_program)
 {
+#if ARCHIVE_VERSION_NUMBER < 1009000
+	skipping("archive_write_set_compress_program()");
+#else
 	struct archive_entry *ae;
 	struct archive *a;
 	size_t used;
@@ -49,7 +52,7 @@ DEFINE_TEST(test_write_compress_program)
 	if (r == ARCHIVE_FATAL) {
 		skipping("Write compression via external "
 		    "program unsupported on this platform");
-		archive_write_free(a);
+		archive_write_finish(a);
 		return;
 	}
 	assertA(0 == archive_write_set_bytes_per_block(a, blocksize));
@@ -72,8 +75,8 @@ DEFINE_TEST(test_write_compress_program)
 	assertA(8 == archive_write_data(a, "12345678", 9));
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertA(0 == archive_write_close(a));
+	assertA(0 == archive_write_finish(a));
 
 	/*
 	 * Now, read the data back through the built-in gzip support.
@@ -88,13 +91,13 @@ DEFINE_TEST(test_write_compress_program)
 	if (r != ARCHIVE_OK && !canGunzip()) {
 		skipping("No libz and no gunzip program, "
 		    "unable to verify gzip compression");
-		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+		assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
 		return;
 	}
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_memory(a, buff, used));
 
 	if (!assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae))) {
-		archive_read_free(a);
+		archive_read_finish(a);
 		return;
 	}
 
@@ -110,5 +113,6 @@ DEFINE_TEST(test_write_compress_program)
 	/* Verify the end of the archive. */
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
+#endif
 }

@@ -23,11 +23,18 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk_failures.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_write_disk.c,v 1.15 2008/09/30 04:02:36 kientzle Exp $");
+
+#if ARCHIVE_VERSION_NUMBER >= 1009000
+
+#define UMASK 022
+
+
+#endif
 
 DEFINE_TEST(test_write_disk_failures)
 {
-#if defined(_WIN32) && !defined(__CYGWIN__)
+#if ARCHIVE_VERSION_NUMBER < 1009000 || (defined(_WIN32) && !defined(__CYGWIN__))
 	skipping("archive_write_disk interface");
 #else
 	struct archive_entry *ae;
@@ -35,7 +42,7 @@ DEFINE_TEST(test_write_disk_failures)
 	int fd;
 
 	/* Force the umask to something predictable. */
-	assertUmask(022);
+	assertUmask(UMASK);
 
 	/* A directory that we can't write to. */
 	assertMakeDir("dir", 0555);
@@ -59,7 +66,7 @@ DEFINE_TEST(test_write_disk_failures)
 	archive_entry_set_mtime(ae, 123456789, 0);
 	assertEqualIntA(a, ARCHIVE_FAILED, archive_write_header(a, ae));
 	assertEqualIntA(a, 0, archive_write_finish_entry(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualInt(0, archive_write_finish(a));
 	archive_entry_free(ae);
 #endif
 }

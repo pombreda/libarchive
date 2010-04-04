@@ -26,7 +26,7 @@
 
 #include "archive_platform.h"
 
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_xz.c 201167 2009-12-29 06:06:20Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -299,6 +299,7 @@ lzma_bidder_bid(struct archive_read_filter_bidder *self,
 		 * possible that someone makes lzma stream with
 		 * liblzma/LZMA SDK in one's dictionary size. */
 		return (0);
+		break;
 	}
 
 	/* TODO: The above test is still very weak.  It would be

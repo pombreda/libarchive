@@ -289,7 +289,7 @@ create(const char *filename, int compress, const char **argv)
 		argv++;
 	}
 	archive_write_close(a);
-	archive_write_free(a);
+	archive_write_finish(a);
 }
 #endif
 
@@ -353,7 +353,7 @@ extract(const char *filename, int do_extract, int flags)
 			msg("\n");
 	}
 	archive_read_close(a);
-	archive_read_free(a);
+	archive_read_finish(a);
 	exit(0);
 }
 

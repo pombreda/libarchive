@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_disk_set_standard_lookup.c 201083 2009-12-28 02:09:57Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_disk_set_standard_lookup.c,v 1.4 2007/05/29 01:00:19 kientzle Exp $");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -58,13 +58,8 @@ struct bucket {
 
 static const size_t cache_size = 127;
 static unsigned int	hash(const char *);
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static gid_t	lookup_gid(void *, const char *uname, gid_t);
 static uid_t	lookup_uid(void *, const char *uname, uid_t);
-#else
-static int64_t	lookup_gid(void *, const char *uname, int64_t);
-static int64_t	lookup_uid(void *, const char *uname, int64_t);
-#endif
 static void	cleanup(void *);
 
 /*
@@ -98,13 +93,8 @@ archive_write_disk_set_standard_lookup(struct archive *a)
 	return (ARCHIVE_OK);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static gid_t
 lookup_gid(void *private_data, const char *gname, gid_t gid)
-#else
-static int64_t
-lookup_gid(void *private_data, const char *gname, int64_t gid)
-#endif
 {
 	int h;
 	struct bucket *b;
@@ -127,7 +117,6 @@ lookup_gid(void *private_data, const char *gname, int64_t gid)
 	/* Note: If strdup fails, that's okay; we just won't cache. */
 	b->hash = h;
 #if HAVE_GRP_H
-#  if HAVE_GETGRNAM_R
 	{
 		char _buffer[128];
 		size_t bufsize = 128;
@@ -154,15 +143,6 @@ lookup_gid(void *private_data, const char *gname, int64_t gid)
 		if (buffer != _buffer)
 			free(buffer);
 	}
-#  else /* HAVE_GETGRNAM_R */
-	{
-		struct group *result;
-
-		result = getgrnam(gname);
-		if (result != NULL)
-			gid = result->gr_gid;
-	}
-#  endif /* HAVE_GETGRNAM_R */
 #elif defined(_WIN32) && !defined(__CYGWIN__)
 	/* TODO: do a gname->gid lookup for Windows. */
 #else
@@ -173,13 +153,8 @@ lookup_gid(void *private_data, const char *gname, int64_t gid)
 	return (gid);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static uid_t
 lookup_uid(void *private_data, const char *uname, uid_t uid)
-#else
-static int64_t
-lookup_uid(void *private_data, const char *uname, int64_t uid)
-#endif
 {
 	int h;
 	struct bucket *b;
@@ -202,7 +177,6 @@ lookup_uid(void *private_data, const char *uname, int64_t uid)
 	/* Note: If strdup fails, that's okay; we just won't cache. */
 	b->hash = h;
 #if HAVE_PWD_H
-#  if HAVE_GETPWNAM_R
 	{
 		char _buffer[128];
 		size_t bufsize = 128;
@@ -229,15 +203,6 @@ lookup_uid(void *private_data, const char *uname, int64_t uid)
 		if (buffer != _buffer)
 			free(buffer);
 	}
-#  else /* HAVE_GETPWNAM_R */
-	{
-		struct passwd *result;
-
-		result = getpwnam(uname);
-		if (result != NULL)
-			uid = result->pw_uid;
-	}
-#endif	/* HAVE_GETPWNAM_R */
 #elif defined(_WIN32) && !defined(__CYGWIN__)
 	/* TODO: do a uname->uid lookup for Windows. */
 #else

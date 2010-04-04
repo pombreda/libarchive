@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_gtar_gz.c 191183 2009-04-17 01:06:31Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_read_format_gtar_gz.c,v 1.2 2008/09/01 05:38:33 kientzle Exp $");
 
 static unsigned char archive[] = {
 31,139,8,0,'+','e',217,'D',0,3,211,211,'g',160,'9','0',0,2,'s','S','S',16,
@@ -43,7 +43,7 @@ DEFINE_TEST(test_read_format_gtar_gz)
 	r = archive_read_support_compression_gzip(a);
 	if (r == ARCHIVE_WARN) {
 		skipping("gzip reading not fully supported on this platform");
-		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+		assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
 		return;
 	}
 	assertEqualInt(ARCHIVE_OK, archive_read_support_format_all(a));
@@ -54,7 +54,7 @@ DEFINE_TEST(test_read_format_gtar_gz)
 	    ARCHIVE_COMPRESSION_GZIP);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_GNUTAR);
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
 }
 
 

@@ -25,7 +25,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_format_shar.c 189438 2009-03-06 05:58:56Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_set_format_shar.c,v 1.20 2008/08/31 07:10:40 kientzle Exp $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -59,8 +59,8 @@ struct shar {
 	struct archive_string	 quoted_name;
 };
 
-static int	archive_write_shar_close(struct archive_write *);
-static int	archive_write_shar_free(struct archive_write *);
+static int	archive_write_shar_finish(struct archive_write *);
+static int	archive_write_shar_destroy(struct archive_write *);
 static int	archive_write_shar_header(struct archive_write *,
 		    struct archive_entry *);
 static ssize_t	archive_write_shar_data_sed(struct archive_write *,
@@ -106,12 +106,9 @@ archive_write_set_format_shar(struct archive *_a)
 	struct archive_write *a = (struct archive_write *)_a;
 	struct shar *shar;
 
-	archive_check_magic(_a, ARCHIVE_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "archive_write_set_format_shar");
-
 	/* If someone else was already registered, unregister them. */
-	if (a->format_free != NULL)
-		(a->format_free)(a);
+	if (a->format_destroy != NULL)
+		(a->format_destroy)(a);
 
 	shar = (struct shar *)malloc(sizeof(*shar));
 	if (shar == NULL) {
@@ -126,8 +123,8 @@ archive_write_set_format_shar(struct archive *_a)
 	a->pad_uncompressed = 0;
 	a->format_name = "shar";
 	a->format_write_header = archive_write_shar_header;
-	a->format_close = archive_write_shar_close;
-	a->format_free = archive_write_shar_free;
+	a->format_finish = archive_write_shar_finish;
+	a->format_destroy = archive_write_shar_destroy;
 	a->format_write_data = archive_write_shar_data_sed;
 	a->format_finish_entry = archive_write_shar_finish_entry;
 	a->archive.archive_format = ARCHIVE_FORMAT_SHAR_BASE;
@@ -311,15 +308,15 @@ archive_write_shar_header(struct archive_write *a, struct archive_entry *entry)
 			break;
 		case AE_IFCHR:
 			archive_string_sprintf(&shar->work,
-			    "mknod %s c %ju %ju\n", shar->quoted_name.s,
-			    (uintmax_t)archive_entry_rdevmajor(entry),
-			    (uintmax_t)archive_entry_rdevminor(entry));
+			    "mknod %s c %d %d\n", shar->quoted_name.s,
+			    archive_entry_rdevmajor(entry),
+			    archive_entry_rdevminor(entry));
 			break;
 		case AE_IFBLK:
 			archive_string_sprintf(&shar->work,
-			    "mknod %s b %ju %ju\n", shar->quoted_name.s,
-			    (uintmax_t)archive_entry_rdevmajor(entry),
-			    (uintmax_t)archive_entry_rdevminor(entry));
+			    "mknod %s b %d %d\n", shar->quoted_name.s,
+			    archive_entry_rdevmajor(entry),
+			    archive_entry_rdevminor(entry));
 			break;
 		default:
 			return (ARCHIVE_WARN);
@@ -356,7 +353,7 @@ archive_write_shar_data_sed(struct archive_write *a, const void *buff, size_t n)
 		__archive_errx(1, "Out of memory");
 
 	if (shar->work.length > ensured) {
-		ret = __archive_write_output(a, shar->work.s,
+		ret = (*a->compressor.write)(a, shar->work.s,
 		    shar->work.length);
 		if (ret != ARCHIVE_OK)
 			return (ARCHIVE_FATAL);
@@ -380,7 +377,7 @@ archive_write_shar_data_sed(struct archive_write *a, const void *buff, size_t n)
 
 		if (buf >= buf_end) {
 			shar->work.length = buf - shar->work.s;
-			ret = __archive_write_output(a, shar->work.s,
+			ret = (*a->compressor.write)(a, shar->work.s,
 			    shar->work.length);
 			if (ret != ARCHIVE_OK)
 				return (ARCHIVE_FATAL);
@@ -481,7 +478,7 @@ archive_write_shar_data_uuencode(struct archive_write *a, const void *buff,
 
 		if (shar->work.length < 65536)
 			continue;
-		ret = __archive_write_output(a, shar->work.s,
+		ret = (*a->compressor.write)(a, shar->work.s,
 		    shar->work.length);
 		if (ret != ARCHIVE_OK)
 			return (ARCHIVE_FATAL);
@@ -540,7 +537,8 @@ archive_write_shar_finish_entry(struct archive_write *a)
 		}
 
 		if ((p = archive_entry_fflags_text(shar->entry)) != NULL) {
-			archive_string_sprintf(&shar->work, "chflags %s ", p);
+			archive_string_sprintf(&shar->work, "chflags %s ",
+			    p, archive_entry_pathname(shar->entry));
 			shar_quote(&shar->work,
 			    archive_entry_pathname(shar->entry), 1);
 			archive_strcat(&shar->work, "\n");
@@ -563,7 +561,7 @@ archive_write_shar_finish_entry(struct archive_write *a)
 	if (shar->work.length < 65536)
 		return (ARCHIVE_OK);
 
-	ret = __archive_write_output(a, shar->work.s, shar->work.length);
+	ret = (*a->compressor.write)(a, shar->work.s, shar->work.length);
 	if (ret != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 	archive_string_empty(&shar->work);
@@ -572,7 +570,7 @@ archive_write_shar_finish_entry(struct archive_write *a)
 }
 
 static int
-archive_write_shar_close(struct archive_write *a)
+archive_write_shar_finish(struct archive_write *a)
 {
 	struct shar *shar;
 	int ret;
@@ -595,7 +593,7 @@ archive_write_shar_close(struct archive_write *a)
 
 	archive_strcat(&shar->work, "exit\n");
 
-	ret = __archive_write_output(a, shar->work.s, shar->work.length);
+	ret = (*a->compressor.write)(a, shar->work.s, shar->work.length);
 	if (ret != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 
@@ -610,7 +608,7 @@ archive_write_shar_close(struct archive_write *a)
 }
 
 static int
-archive_write_shar_free(struct archive_write *a)
+archive_write_shar_destroy(struct archive_write *a)
 {
 	struct shar *shar;
 

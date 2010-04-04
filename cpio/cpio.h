@@ -52,7 +52,6 @@ struct cpio {
 	const char	 *format; /* -H format */
 	int		  bytes_per_block; /* -b block_size */
 	int		  verbose;   /* -v */
-	int		  dot;  /* -V */
 	int		  quiet;   /* --quiet */
 	int		  extract_flags; /* Flags for extract operation */
 	char		  symlink_mode; /* H or L, per BSD conventions */

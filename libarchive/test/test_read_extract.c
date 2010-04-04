@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_extract.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_read_extract.c,v 1.5 2008/09/01 05:38:33 kientzle Exp $");
 
 #define BUFF_SIZE 1000000
 #define FILE_BUFF_SIZE 100000
@@ -111,8 +111,8 @@ DEFINE_TEST(test_read_extract)
 		archive_entry_free(ae);
 	}
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertA(0 == archive_write_close(a));
+	assertA(0 == archive_write_finish(a));
 
 	/* Extract the entries to disk. */
 	assert((a = archive_read_new()) != NULL);
@@ -132,8 +132,8 @@ DEFINE_TEST(test_read_extract)
 		assertA(0 == archive_read_extract(a, ae, 0));
 	}
 	assertA(ARCHIVE_EOF == archive_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assert(0 == archive_read_close(a));
+	assert(0 == archive_read_finish(a));
 
 	/* Test the entries on disk. */
 	/* This first entry was extracted with ARCHIVE_EXTRACT_PERM,

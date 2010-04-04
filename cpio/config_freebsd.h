@@ -51,6 +51,5 @@
 #define	HAVE_UINTMAX_T 1
 #define	HAVE_UNISTD_H 1
 #define	HAVE_UNSIGNED_LONG_LONG 1
-#define	HAVE_UTIME_H 1
 #define	HAVE_UTIMES 1
 

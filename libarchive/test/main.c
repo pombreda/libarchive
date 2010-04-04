@@ -36,14 +36,13 @@
  * TODO: Move this into a separate configuration header, have all test
  * suites share one copy of this file.
  */
-__FBSDID("$FreeBSD: head/lib/libarchive/test/main.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/main.c,v 1.17 2008/12/21 00:13:50 kientzle Exp $");
 #define KNOWNREF	"test_compat_gtar_1.tar.uu"
 #define	ENVBASE "LIBARCHIVE" /* Prefix for environment variables. */
 #undef	PROGRAM              /* Testing a library, not a program. */
 #define	LIBRARY	"libarchive"
-#define	EXTRA_ERRNO(x)	archive_errno((struct archive *)(x))
 #define	EXTRA_DUMP(x)	archive_error_string((struct archive *)(x))
-#define	EXTRA_VERSION	archive_version_string()
+#define	EXTRA_VERSION	archive_version()
 
 /*
  *
@@ -76,25 +75,19 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/main.c 201247 2009-12-30 05:59:21Z 
 #ifndef S_ISREG
 #define S_ISREG(m)  ((m) & _S_IFREG)
 #endif
-#if !defined(__BORLANDC__)
 #define access _access
 #define chdir _chdir
-#endif
 #ifndef fileno
 #define fileno _fileno
 #endif
 /*#define fstat _fstat64*/
-#if !defined(__BORLANDC__)
 #define getcwd _getcwd
-#endif
 #define lstat stat
 /*#define lstat _stat64*/
 /*#define stat _stat64*/
 #define rmdir _rmdir
-#if !defined(__BORLANDC__)
 #define strdup _strdup
 #define umask _umask
-#endif
 #define int64_t __int64
 #endif
 
@@ -159,7 +152,7 @@ my_GetFileInformationByName(const char *path, BY_HANDLE_FILE_INFORMATION *bhfi)
 }
 #endif
 
-#if defined(HAVE__CrtSetReportMode)
+#if defined(_WIN32) && !defined(__CYGWIN__) && !defined(__GNUC__)
 static void
 invalid_parameter_handler(const wchar_t * expression,
     const wchar_t * function, const wchar_t * file,
@@ -205,19 +198,10 @@ static FILE *logfile;
 static void
 vlogprintf(const char *fmt, va_list ap)
 {
-#ifdef va_copy
-	va_list lfap;
-	va_copy(lfap, ap);
-#endif
 	if (log_console)
 		vfprintf(stdout, fmt, ap);
 	if (logfile != NULL)
-#ifdef va_copy
-		vfprintf(logfile, fmt, lfap);
-	va_end(lfap);
-#else
 		vfprintf(logfile, fmt, ap);
-#endif
 }
 
 static void
@@ -340,16 +324,14 @@ failure_finish(void *extra)
 {
 	(void)extra; /* UNUSED (maybe) */
 #ifdef EXTRA_DUMP
-	if (extra != NULL) {
-		logprintf("    errno: %d\n", EXTRA_ERRNO(extra));
+	if (extra != NULL)
 		logprintf("   detail: %s\n", EXTRA_DUMP(extra));
-	}
 #endif
 
 	if (dump_on_failure) {
 		fprintf(stderr,
 		    " *** forcing core dump so failure can be debugged ***\n");
-		abort();
+		*(char *)(NULL) = 0;
 		exit(1);
 	}
 }
@@ -426,7 +408,7 @@ static void strdump(const char *e, const char *p)
 
 	logprintf("      %s = ", e);
 	if (p == NULL) {
-		logprintf("NULL\n");
+		logprintf("NULL");
 		return;
 	}
 	logprintf("\"");
@@ -821,11 +803,9 @@ assertion_text_file_contents(const char *buff, const char *fn)
 	}
 	failure_start(test_filename, test_line, "Contents don't match");
 	logprintf("  file=\"%s\"\n", fn);
-	if (n > 0) {
+	if (n > 0)
 		hexdump(contents, buff, n, 0);
-		logprintf("  expected\n", fn);
-		hexdump(buff, contents, s, 0);
-	} else {
+	else {
 		logprintf("  File empty, contents should be:\n");
 		hexdump(buff, NULL, s, 0);
 	}
@@ -1061,7 +1041,7 @@ assertion_file_nlinks(const char *file, int line,
 
 	assertion_count(file, line);
 	r = my_GetFileInformationByName(pathname, &bhfi);
-	if (r != 0 && bhfi.nNumberOfLinks == (DWORD)nlinks)
+	if (r != 0 && bhfi.nNumberOfLinks == nlinks)
 		return (1);
 	failure_start(file, line, "File %s has %d links, expected %d",
 	    pathname, bhfi.nNumberOfLinks, nlinks);
@@ -1118,9 +1098,6 @@ assertion_is_dir(const char *file, int line, const char *pathname, int mode)
 	struct stat st;
 	int r;
 
-#if defined(_WIN32) && !defined(__CYGWIN__)
-	(void)mode; /* UNUSED */
-#endif
 	assertion_count(file, line);
 	r = lstat(pathname, &st);
 	if (r != 0) {
@@ -1156,9 +1133,6 @@ assertion_is_reg(const char *file, int line, const char *pathname, int mode)
 	struct stat st;
 	int r;
 
-#if defined(_WIN32) && !defined(__CYGWIN__)
-	(void)mode; /* UNUSED */
-#endif
 	assertion_count(file, line);
 	r = lstat(pathname, &st);
 	if (r != 0 || !S_ISREG(st.st_mode)) {
@@ -1188,8 +1162,6 @@ is_symlink(const char *file, int line,
     const char *pathname, const char *contents)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__)
-	(void)pathname; /* UNUSED */
-	(void)contents; /* UNUSED */
 	assertion_count(file, line);
 	/* Windows sort-of has real symlinks, but they're only usable
 	 * by privileged users and are crippled even then, so there's
@@ -1249,7 +1221,6 @@ assertion_make_dir(const char *file, int line, const char *dirname, int mode)
 {
 	assertion_count(file, line);
 #if defined(_WIN32) && !defined(__CYGWIN__)
-	(void)mode; /* UNUSED */
 	if (0 == _mkdir(dirname))
 		return (1);
 #else
@@ -1269,7 +1240,6 @@ assertion_make_file(const char *file, int line,
 #if defined(_WIN32) && !defined(__CYGWIN__)
 	/* TODO: Rework this to set file mode as well. */
 	FILE *f;
-	(void)mode; /* UNUSED */
 	assertion_count(file, line);
 	f = fopen(path, "wb");
 	if (f == NULL) {
@@ -1718,19 +1688,7 @@ test_run(int i, const char *tmpdir)
 	if (tests[i].failures == 0) {
 		if (!keep_temp_files && assertChdir(tmpdir)) {
 #if defined(_WIN32) && !defined(__CYGWIN__)
-			/* Make sure not to leave empty directories.
-			 * Sometimes a processing of closing files used by tests
-			 * is not done, then rmdir will be failed and it will
-			 * leave a empty test directory. So we should wait a few
-			 * seconds and retry rmdir. */
-			int r, t;
-			for (t = 0; t < 10; t++) {
-				if (t > 0)
-					Sleep(1000);
-				r = systemf("rmdir /S /Q %s", tests[i].name);
-				if (r == 0)
-					break;
-			}
+			systemf("rmdir /S /Q %s", tests[i].name);
 			systemf("del %s", logfilename);
 #else
 			systemf("rm -rf %s", tests[i].name);
@@ -1855,7 +1813,7 @@ int
 main(int argc, char **argv)
 {
 	static const int limit = sizeof(tests) / sizeof(tests[0]);
-	int i, start, end, tests_run = 0, tests_failed = 0, option;
+	int i, tests_run = 0, tests_failed = 0, option;
 	time_t now;
 	char *refdir_alloc = NULL;
 	const char *progname;
@@ -2052,46 +2010,19 @@ main(int argc, char **argv)
 	} else {
 		while (*(argv) != NULL) {
 			if (**argv >= '0' && **argv <= '9') {
-				char *p = *argv;
-				start = 0;
-				while (*p >= '0' && *p <= '9') {
-					start *= 10;
-					start += *p - '0';
-					++p;
-				}
-				if (*p == '\0') {
-					end = start;
-				} else if (*p == '-') {
-					++p;
-					if (*p == '\0') {
-						end = limit - 1;
-					} else {
-						end = 0;
-						while (*p >= '0' && *p <= '9') {
-							end *= 10;
-							end += *p - '0';
-							++p;
-						}
-					}
-				} else {
+				i = atoi(*argv);
+				if (i < 0 || i >= limit) {
 					printf("*** INVALID Test %s\n", *argv);
 					free(refdir_alloc);
 					usage(progname);
-					return (1);
-				}
-				if (start < 0 || end >= limit || start > end) {
-					printf("*** INVALID Test %s\n", *argv);
-					free(refdir_alloc);
-					usage(progname);
-					return (1);
+					/* usage() never returns */
 				}
 			} else {
-				for (start = 0; start < limit; ++start) {
-					if (strcmp(*argv, tests[start].name) == 0)
+				for (i = 0; i < limit; ++i) {
+					if (strcmp(*argv, tests[i].name) == 0)
 						break;
 				}
-				end = start;
-				if (start >= limit) {
+				if (i >= limit) {
 					printf("*** INVALID Test ``%s''\n",
 					       *argv);
 					free(refdir_alloc);
@@ -2099,12 +2030,9 @@ main(int argc, char **argv)
 					/* usage() never returns */
 				}
 			}
-			while (start <= end) {
-				if (test_run(start, tmpdir))
-					tests_failed++;
-				tests_run++;
-				++start;
-			}
+			if (test_run(i, tmpdir))
+				tests_failed++;
+			tests_run++;
 			argv++;
 		}
 	}

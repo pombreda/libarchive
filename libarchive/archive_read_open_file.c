@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_open_file.c 201093 2009-12-28 02:28:44Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_open_file.c,v 1.20 2007/06/26 03:06:48 kientzle Exp $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -59,10 +59,10 @@ struct read_FILE_data {
 
 static int	file_close(struct archive *, void *);
 static ssize_t	file_read(struct archive *, void *, const void **buff);
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static off_t	file_skip(struct archive *, void *, off_t request);
+#if ARCHIVE_API_VERSION < 2
+static ssize_t	file_skip(struct archive *, void *, size_t request);
 #else
-static int64_t	file_skip(struct archive *, void *, int64_t request);
+static off_t	file_skip(struct archive *, void *, off_t request);
 #endif
 
 int
@@ -119,12 +119,12 @@ file_read(struct archive *a, void *client_data, const void **buff)
 	return (bytes_read);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
+#if ARCHIVE_API_VERSION < 2
+static ssize_t
+file_skip(struct archive *a, void *client_data, size_t request)
+#else
 static off_t
 file_skip(struct archive *a, void *client_data, off_t request)
-#else
-static int64_t
-file_skip(struct archive *a, void *client_data, int64_t request)
 #endif
 {
 	struct read_FILE_data *mine = (struct read_FILE_data *)client_data;

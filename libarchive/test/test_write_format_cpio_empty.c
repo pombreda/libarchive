@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_cpio_empty.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_write_format_cpio_empty.c,v 1.3 2008/09/01 05:38:33 kientzle Exp $");
 
 /*
  * Check that an "empty" cpio archive is correctly created.
@@ -61,11 +61,15 @@ DEFINE_TEST(test_write_format_cpio_empty)
 	assertA(0 == archive_write_open_memory(a, buff, sizeof(buff), &used));
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertA(0 == archive_write_close(a));
+#if ARCHIVE_VERSION_NUMBER < 2000000
+	archive_write_finish(a);
+#else
+	assertA(0 == archive_write_finish(a));
+#endif
 
 	failure("Empty cpio archive should be exactly 87 bytes, was %d.", used);
 	assert(used == 87);
 	failure("Empty cpio archive is incorrectly formatted.");
-	assertEqualMem(buff, ref, 87);
+	assert(memcmp(buff, ref, 87) == 0);
 }

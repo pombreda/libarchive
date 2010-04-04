@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_fuzz.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_fuzz.c,v 1.1 2008/12/06 07:08:08 kientzle Exp $");
 
 /*
  * This was inspired by an ISO fuzz tester written by Michal Zalewski
@@ -74,11 +74,7 @@ DEFINE_TEST(test_fuzz)
 {
 	const void *blk;
 	size_t blk_size;
-#if ARCHIVE_VERSION_NUMBER < 3000000
 	off_t blk_offset;
-#else
-	int64_t blk_offset;
-#endif
 	int n;
 
 	for (n = 0; files[n].name != NULL; ++n) {
@@ -101,7 +97,7 @@ DEFINE_TEST(test_fuzz)
 			    archive_read_support_format_raw(a));
 			r = archive_read_open_filename(a, filename, 16384);
 			if (r != ARCHIVE_OK) {
-				archive_read_free(a);
+				archive_read_finish(a);
 				skipping("Cannot uncompress %s", filename);
 				continue;
 			}
@@ -112,14 +108,12 @@ DEFINE_TEST(test_fuzz)
 			assertEqualIntA(a, ARCHIVE_EOF,
 			    archive_read_next_header(a, &ae));
 			assertEqualInt(ARCHIVE_OK,
-			    archive_read_free(a));
+			    archive_read_finish(a));
 			assert(size > 0);
 			failure("Internal buffer is not big enough for "
 			    "uncompressed test file: %s", filename);
-			if (!assert(size < buffsize)) {
-				free(rawimage);
+			if (!assert(size < buffsize))
 				continue;
-			}
 		} else {
 			rawimage = slurpfile(&size, filename);
 			if (!assert(rawimage != NULL))
@@ -143,7 +137,7 @@ DEFINE_TEST(test_fuzz)
 			 * If we crash, that file will be useful. */
 			f = fopen("after.test.failure.send.this.file."
 			    "to.libarchive.maintainers.with.system.details", "wb");
-			assertEqualInt((size_t)size, fwrite(image, 1, (size_t)size, f));
+			fwrite(image, 1, (size_t)size, f);
 			fclose(f);
 
 			assert((a = archive_read_new()) != NULL);
@@ -159,8 +153,8 @@ DEFINE_TEST(test_fuzz)
 						continue;
 				}
 				archive_read_close(a);
+				archive_read_finish(a);
 			}
-			archive_read_free(a);
 		}
 		free(image);
 		free(rawimage);

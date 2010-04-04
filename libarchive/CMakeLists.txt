@@ -20,7 +20,6 @@ SET(libarchive_SOURCES
   archive_entry_copy_stat.c
   archive_entry_link_resolver.c
   archive_entry_private.h
-  archive_entry_sparse.c
   archive_entry_stat.c
   archive_entry_strmode.c
   archive_entry_xattr.c
@@ -56,7 +55,6 @@ SET(libarchive_SOURCES
   archive_read_support_format_mtree.c
   archive_read_support_format_raw.c
   archive_read_support_format_tar.c
-  archive_read_support_format_xar.c
   archive_read_support_format_zip.c
   archive_string.c
   archive_string.h
@@ -72,24 +70,22 @@ SET(libarchive_SOURCES
   archive_write_open_file.c
   archive_write_open_filename.c
   archive_write_open_memory.c
-  archive_write_add_filter_bzip2.c
-  archive_write_add_filter_compress.c
-  archive_write_add_filter_gzip.c
-  archive_write_add_filter_none.c
-  archive_write_add_filter_program.c
-  archive_write_add_filter_xz.c
+  archive_write_set_compression_bzip2.c
+  archive_write_set_compression_compress.c
+  archive_write_set_compression_gzip.c
+  archive_write_set_compression_none.c
+  archive_write_set_compression_program.c
+  archive_write_set_compression_xz.c
   archive_write_set_format.c
   archive_write_set_format_ar.c
   archive_write_set_format_by_name.c
   archive_write_set_format_cpio.c
   archive_write_set_format_cpio_newc.c
-  archive_write_set_format_iso9660.c
   archive_write_set_format_mtree.c
   archive_write_set_format_pax.c
   archive_write_set_format_shar.c
   archive_write_set_format_ustar.c
   archive_write_set_format_zip.c
-  archive_write_set_options.c
   filter_fork.c
   filter_fork.h
 )
@@ -97,18 +93,11 @@ SET(libarchive_SOURCES
 # Man pages
 SET(libarchive_MANS
   archive_entry.3
-  archive_entry_acl.3
-  archive_entry_linkify.3
-  archive_entry_paths.3
-  archive_entry_perms.3
-  archive_entry_stat.3
-  archive_entry_time.3
   archive_read.3
   archive_read_disk.3
   archive_util.3
   archive_write.3
   archive_write_disk.3
-  archive_write_set_options.3
   cpio.5
   libarchive.3
   libarchive_internals.3
@@ -128,11 +117,15 @@ ENDIF(WIN32 AND NOT CYGWIN)
 ADD_LIBRARY(archive SHARED ${libarchive_SOURCES} ${include_HEADERS})
 TARGET_LINK_LIBRARIES(archive ${ADDITIONAL_LIBS})
 SET_TARGET_PROPERTIES(archive PROPERTIES SOVERSION ${SOVERSION})
+SET_TARGET_PROPERTIES(archive PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # archive_static is a static library
 ADD_LIBRARY(archive_static STATIC ${libarchive_SOURCES} ${include_HEADERS})
 SET_TARGET_PROPERTIES(archive_static PROPERTIES COMPILE_DEFINITIONS
   LIBARCHIVE_STATIC)
+SET_TARGET_PROPERTIES(archive_static PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 # On Posix systems, libarchive.so and libarchive.a can co-exist.
 IF(NOT WIN32 OR CYGWIN)
   SET_TARGET_PROPERTIES(archive_static PROPERTIES OUTPUT_NAME archive)

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_position.c 189389 2009-03-05 02:19:42Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_read_position.c,v 1.4 2008/09/01 05:38:33 kientzle Exp $");
 
 static unsigned char nulls[10000];
 static unsigned char  buff[10000000];
@@ -58,8 +58,8 @@ DEFINE_TEST(test_read_position)
 		assertA(data_sizes[i]
 		    == (size_t)archive_write_data(a, nulls, sizeof(nulls)));
 	}
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertA(0 == archive_write_close(a));
+	assertA(0 == archive_write_finish(a));
 
 	/* Read the archive back. */
 	assert(NULL != (a = archive_read_new()));
@@ -88,7 +88,7 @@ DEFINE_TEST(test_read_position)
 
 	assertA(1 == archive_read_next_header(a, &ae));
 	assert(read_position == (intmax_t)archive_read_header_position(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+	assertA(0 == archive_read_close(a));
 	assert(read_position == (intmax_t)archive_read_header_position(a));
-	archive_read_free(a);
+	archive_read_finish(a);
 }

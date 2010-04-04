@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_ar.c 201101 2009-12-28 03:06:27Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_format_ar.c,v 1.12 2008/12/17 19:02:42 kientzle Exp $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -55,7 +55,6 @@ struct ar {
 	off_t	 entry_padding;
 	char	*strtab;
 	size_t	 strtab_size;
-	char	 read_global_header;
 };
 
 /*
@@ -78,13 +77,8 @@ struct ar {
 
 static int	archive_read_format_ar_bid(struct archive_read *a);
 static int	archive_read_format_ar_cleanup(struct archive_read *a);
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static int	archive_read_format_ar_read_data(struct archive_read *a,
 		    const void **buff, size_t *size, off_t *offset);
-#else
-static int	archive_read_format_ar_read_data(struct archive_read *a,
-		    const void **buff, size_t *size, int64_t *offset);
-#endif
 static int	archive_read_format_ar_skip(struct archive_read *a);
 static int	archive_read_format_ar_read_header(struct archive_read *a,
 		    struct archive_entry *e);
@@ -100,9 +94,6 @@ archive_read_support_format_ar(struct archive *_a)
 	struct archive_read *a = (struct archive_read *)_a;
 	struct ar *ar;
 	int r;
-
-	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
-	    ARCHIVE_STATE_NEW, "archive_read_support_format_ar");
 
 	ar = (struct ar *)malloc(sizeof(*ar));
 	if (ar == NULL) {
@@ -181,13 +172,12 @@ archive_read_format_ar_read_header(struct archive_read *a,
 
 	ar = (struct ar*)(a->format->data);
 
-	if (!ar->read_global_header) {
+	if (a->archive.file_position == 0) {
 		/*
 		 * We are now at the beginning of the archive,
 		 * so we need first consume the ar global header.
 		 */
 		__archive_read_consume(a, 8);
-		ar->read_global_header = 1;
 		/* Set a default format code for now. */
 		a->archive.archive_format = ARCHIVE_FORMAT_AR;
 	}
@@ -442,15 +432,9 @@ ar_parse_common_header(struct ar *ar, struct archive_entry *entry,
 	return (ARCHIVE_OK);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static int
 archive_read_format_ar_read_data(struct archive_read *a,
     const void **buff, size_t *size, off_t *offset)
-#else
-static int
-archive_read_format_ar_read_data(struct archive_read *a,
-    const void **buff, size_t *size, int64_t *offset)
-#endif
 {
 	ssize_t bytes_read;
 	struct ar *ar;
@@ -499,7 +483,7 @@ archive_read_format_ar_skip(struct archive_read *a)
 
 	ar = (struct ar *)(a->format->data);
 
-	bytes_skipped = __archive_read_consume(a,
+	bytes_skipped = __archive_read_skip(a,
 	    ar->entry_bytes_remaining + ar->entry_padding);
 	if (bytes_skipped < 0)
 		return (ARCHIVE_FATAL);

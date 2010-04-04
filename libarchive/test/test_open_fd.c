@@ -23,13 +23,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_open_fd.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #define open _open
-#if !defined(__BORLANDC__)
 #define lseek _lseek
-#endif
 #define close _close
 #endif
 
@@ -40,11 +38,7 @@ DEFINE_TEST(test_open_fd)
 	struct archive *a;
 	int fd;
 
-#if defined(__BORLANDC__)
-	fd = open("test.tar", O_RDWR | O_CREAT | O_BINARY);
-#else
 	fd = open("test.tar", O_RDWR | O_CREAT | O_BINARY, 0777);
-#endif
 	assert(fd >= 0);
 	if (fd < 0)
 		return;
@@ -79,7 +73,7 @@ DEFINE_TEST(test_open_fd)
 
 	/* Close out the archive. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
 
 	/*
 	 * Now, read the data back.
@@ -110,7 +104,7 @@ DEFINE_TEST(test_open_fd)
 	/* Verify the end of the archive. */
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
 	close(fd);
 
 
@@ -124,5 +118,5 @@ DEFINE_TEST(test_open_fd)
 	assertEqualIntA(a, ARCHIVE_FATAL,
 	    archive_read_open_fd(a, 100, 512));
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
 }

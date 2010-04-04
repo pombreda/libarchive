@@ -23,15 +23,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_gtar_sparse.c 189308 2009-03-03 17:02:51Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_read_format_gtar_sparse.c,v 1.11 2008/12/06 05:58:24 kientzle Exp $");
 
 
 struct contents {
-#if ARCHIVE_VERSION_NUMBER < 3000000
 	off_t	o;
-#else
-	int64_t	o;
-#endif
 	size_t	s;
 	const char *d;
 };
@@ -199,7 +195,7 @@ verify_archive_file(const char *name, struct archive_contents *ac)
 		struct contents *cts = ac->contents;
 
 		if (!assertEqualIntA(a, 0, archive_read_next_header(a, &ae))) {
-			assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+			assert(0 == archive_read_finish(a));
 			return;
 		}
 		failure("Name mismatch in archive %s", name);
@@ -237,7 +233,7 @@ verify_archive_file(const char *name, struct archive_contents *ac)
 					failure("%s: Unexpected trailing data",
 					    name);
 					assert(actual.o <= expect.o);
-					archive_read_free(a);
+					archive_read_finish(a);
 					return;
 				}
 				actual.d++;
@@ -249,8 +245,13 @@ verify_archive_file(const char *name, struct archive_contents *ac)
 		assertEqualIntA(a, err, ARCHIVE_EOF);
 		failure("%s: Size returned at EOF must be zero", name);
 		assertEqualInt((int)actual.s, 0);
+#if ARCHIVE_VERSION_NUMBER < 1009000
+		/* libarchive < 1.9 doesn't get this right */
+		skipping("offset of final sparse chunk");
+#else
 		failure("%s: Offset of final empty chunk must be same as file size", name);
 		assertEqualInt(actual.o, expect.o);
+#endif
 		/* Step to next file description. */
 		++ac;
 	}
@@ -258,8 +259,12 @@ verify_archive_file(const char *name, struct archive_contents *ac)
 	err = archive_read_next_header(a, &ae);
 	assertEqualIntA(a, ARCHIVE_EOF, err);
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assert(0 == archive_read_close(a));
+#if ARCHIVE_VERSION_NUMBER < 2000000
+	archive_read_finish(a);
+#else
+	assert(0 == archive_read_finish(a));
+#endif
 }
 
 
@@ -273,7 +278,9 @@ DEFINE_TEST(test_read_format_gtar_sparse)
 	 * libarchive < 1.9 doesn't support the newer --posix sparse formats
 	 * from GNU tar 1.15 and later.
 	 */
-
+#if ARCHIVE_VERSION_NUMBER < 1009000
+	skipping("read support for GNUtar --posix sparse formats");
+#else
 	/*
 	 * An archive created by GNU tar 1.17 using --posix --sparse-format=0.1
 	 */
@@ -305,6 +312,7 @@ DEFINE_TEST(test_read_format_gtar_sparse)
 	verify_archive_file(
 		"test_read_format_gtar_sparse_1_17_posix10_modified.tar",
 		files);
+#endif
 }
 
 

@@ -131,6 +131,7 @@ pm(const char *p, const char *s, int flags)
 				s = pm_slashskip(s);
 			}
 			return (*s == '\0');
+			break;
 		case '?':
 			/* ? always succeds, unless we hit end of 's' */
 			if (*s == '\0')
@@ -149,6 +150,7 @@ pm(const char *p, const char *s, int flags)
 				++s;
 			}
 			return (0);
+			break;
 		case '[':
 			/*
 			 * Find the end of the [...] character class,

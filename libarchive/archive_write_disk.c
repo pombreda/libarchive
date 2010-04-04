@@ -25,7 +25,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_disk.c 201159 2009-12-29 05:35:40Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_disk.c,v 1.42 2008/12/06 05:55:46 kientzle Exp $");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -95,9 +95,6 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_disk.c 201159 2009-12-29 0
 #ifdef HAVE_UTIME_H
 #include <utime.h>
 #endif
-#if defined(HAVE_WINIOCTL_H) && !defined(__CYGWIN__)
-#include <winioctl.h>
-#endif
 
 #include "archive.h"
 #include "archive_string.h"
@@ -154,23 +151,15 @@ struct archive_write_disk {
 	mode_t			 user_umask;
 	struct fixup_entry	*fixup_list;
 	struct fixup_entry	*current_fixup;
-	int64_t			 user_uid;
+	uid_t			 user_uid;
 	dev_t			 skip_file_dev;
 	ino_t			 skip_file_ino;
 	time_t			 start_time;
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
 	gid_t (*lookup_gid)(void *private, const char *gname, gid_t gid);
-#else
-	int64_t (*lookup_gid)(void *private, const char *gname, int64_t gid);
-#endif
 	void  (*cleanup_gid)(void *private);
 	void			*lookup_gid_data;
-#if ARCHIVE_VERSION_NUMBER < 3000000
-	uid_t (*lookup_uid)(void *private, const char *uname, uid_t uid);
-#else
-	int64_t (*lookup_uid)(void *private, const char *uname, int64_t uid);
-#endif
+	uid_t (*lookup_uid)(void *private, const char *gname, gid_t gid);
 	void  (*cleanup_uid)(void *private);
 	void			*lookup_uid_data;
 
@@ -200,20 +189,18 @@ struct archive_write_disk {
 	/* Handle for the file we're restoring. */
 	int			 fd;
 	/* Current offset for writing data to the file. */
-	int64_t			 offset;
+	off_t			 offset;
 	/* Last offset actually written to disk. */
-	int64_t			 fd_offset;
-	/* Total bytes actually written to files. */
-	int64_t			 total_bytes_written;
+	off_t			 fd_offset;
 	/* Maximum size of file, -1 if unknown. */
-	int64_t			 filesize;
+	off_t			 filesize;
 	/* Dir we were in before this restore; only for deep paths. */
 	int			 restore_pwd;
 	/* Mode we should use for this entry; affected by _PERM and umask. */
 	mode_t			 mode;
 	/* UID/GID to use in restoring this entry. */
-	int64_t			 uid;
-	int64_t			 gid;
+	uid_t			 uid;
+	gid_t			 gid;
 };
 
 /*
@@ -257,28 +244,22 @@ static int	set_mode(struct archive_write_disk *, int mode);
 static int	set_time(int, int, const char *, time_t, long, time_t, long);
 static int	set_times(struct archive_write_disk *);
 static struct fixup_entry *sort_dir_list(struct fixup_entry *p);
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static gid_t	trivial_lookup_gid(void *, const char *, gid_t);
 static uid_t	trivial_lookup_uid(void *, const char *, uid_t);
-#else
-static int64_t	trivial_lookup_gid(void *, const char *, int64_t);
-static int64_t	trivial_lookup_uid(void *, const char *, int64_t);
-#endif
 static ssize_t	write_data_block(struct archive_write_disk *,
 		    const char *, size_t);
 
 static struct archive_vtable *archive_write_disk_vtable(void);
 
-static int	_archive_write_disk_close(struct archive *);
-static int	_archive_write_disk_free(struct archive *);
-static int	_archive_write_disk_header(struct archive *, struct archive_entry *);
-static int64_t	_archive_write_disk_filter_bytes(struct archive *, int);
-static int	_archive_write_disk_finish_entry(struct archive *);
-static ssize_t	_archive_write_disk_data(struct archive *, const void *, size_t);
-static ssize_t	_archive_write_disk_data_block(struct archive *, const void *, size_t, int64_t);
+static int	_archive_write_close(struct archive *);
+static int	_archive_write_finish(struct archive *);
+static int	_archive_write_header(struct archive *, struct archive_entry *);
+static int	_archive_write_finish_entry(struct archive *);
+static ssize_t	_archive_write_data(struct archive *, const void *, size_t);
+static ssize_t	_archive_write_data_block(struct archive *, const void *, size_t, off_t);
 
 static int
-lazy_stat(struct archive_write_disk *a)
+_archive_write_disk_lazy_stat(struct archive_write_disk *a)
 {
 	if (a->pst != NULL) {
 		/* Already have stat() data available. */
@@ -309,26 +290,14 @@ archive_write_disk_vtable(void)
 	static int inited = 0;
 
 	if (!inited) {
-		av.archive_close = _archive_write_disk_close;
-		av.archive_filter_bytes = _archive_write_disk_filter_bytes;
-		av.archive_free = _archive_write_disk_free;
-		av.archive_write_header = _archive_write_disk_header;
-		av.archive_write_finish_entry
-		    = _archive_write_disk_finish_entry;
-		av.archive_write_data = _archive_write_disk_data;
-		av.archive_write_data_block = _archive_write_disk_data_block;
+		av.archive_close = _archive_write_close;
+		av.archive_finish = _archive_write_finish;
+		av.archive_write_header = _archive_write_header;
+		av.archive_write_finish_entry = _archive_write_finish_entry;
+		av.archive_write_data = _archive_write_data;
+		av.archive_write_data_block = _archive_write_data_block;
 	}
 	return (&av);
-}
-
-static int64_t
-_archive_write_disk_filter_bytes(struct archive *_a, int n)
-{
-	struct archive_write_disk *a = (struct archive_write_disk *)_a;
-	(void)n; /* UNUSED */
-	if (n == -1 || n == 0)
-		return (a->total_bytes_written);
-	return (-1);
 }
 
 
@@ -354,18 +323,18 @@ archive_write_disk_set_options(struct archive *_a, int flags)
  *
  */
 static int
-_archive_write_disk_header(struct archive *_a, struct archive_entry *entry)
+_archive_write_header(struct archive *_a, struct archive_entry *entry)
 {
 	struct archive_write_disk *a = (struct archive_write_disk *)_a;
 	struct fixup_entry *fe;
 	int ret, r;
 
-	archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
+	__archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
 	    ARCHIVE_STATE_HEADER | ARCHIVE_STATE_DATA,
 	    "archive_write_disk_header");
 	archive_clear_error(&a->archive);
 	if (a->archive.state & ARCHIVE_STATE_DATA) {
-		r = _archive_write_disk_finish_entry(&a->archive);
+		r = _archive_write_finish_entry(&a->archive);
 		if (r == ARCHIVE_FATAL)
 			return (r);
 	}
@@ -465,7 +434,7 @@ _archive_write_disk_header(struct archive *_a, struct archive_entry *entry)
 		if (ret != ARCHIVE_OK)
 			goto done;
 	}
-#if defined(HAVE_FCHDIR) && defined(PATH_MAX)
+#ifdef HAVE_FCHDIR
 	/* If path exceeds PATH_MAX, shorten the path. */
 	edit_deep_directories(a);
 #endif
@@ -544,33 +513,6 @@ _archive_write_disk_header(struct archive *_a, struct archive_entry *entry)
 		/* TODO: Complete this.. defer fflags from below. */
 	}
 
-#if defined(_WIN32) && !defined(__CYGWIN__)
-	/*
-	 * On Windows, A creating sparse file requires a special mark.
-	 */
-	if (a->fd >= 0 && archive_entry_sparse_count(entry) > 0) {
-		int64_t base = 0, offset, length;
-		int i, cnt = archive_entry_sparse_reset(entry);
-		int sparse = 0;
-
-		for (i = 0; i < cnt; i++) {
-			archive_entry_sparse_next(entry, &offset, &length);
-			if (offset - base >= 4096) {
-				sparse = 1;/* we have a hole. */
-				break;
-			}
-			base = offset + length;
-		}
-		if (sparse) {
-			HANDLE h = (HANDLE)_get_osfhandle(a->fd);
-			DWORD dmy;
-			/* Mark this file as sparse. */
-			DeviceIoControl(h, FSCTL_SET_SPARSE,
-			    NULL, 0, NULL, 0, &dmy, NULL);
-		}
-	}
-#endif
-
 	/* We've created the object and are ready to pour data into it. */
 	if (ret >= ARCHIVE_WARN)
 		a->archive.state = ARCHIVE_STATE_DATA;
@@ -589,16 +531,11 @@ done:
 	return (ret);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
 int
 archive_write_disk_set_skip_file(struct archive *_a, dev_t d, ino_t i)
-#else
-int
-archive_write_disk_set_skip_file(struct archive *_a, int64_t d, int64_t i)
-#endif
 {
 	struct archive_write_disk *a = (struct archive_write_disk *)_a;
-	archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
+	__archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
 	    ARCHIVE_STATE_ANY, "archive_write_disk_set_skip_file");
 	a->skip_file_dev = d;
 	a->skip_file_ino = i;
@@ -624,7 +561,7 @@ write_data_block(struct archive_write_disk *a, const char *buff, size_t size)
 	if (a->flags & ARCHIVE_EXTRACT_SPARSE) {
 #if HAVE_STRUCT_STAT_ST_BLKSIZE
 		int r;
-		if ((r = lazy_stat(a)) != ARCHIVE_OK)
+		if ((r = _archive_write_disk_lazy_stat(a)) != ARCHIVE_OK)
 			return (r);
 		block_size = a->pst->st_blksize;
 #else
@@ -635,7 +572,7 @@ write_data_block(struct archive_write_disk *a, const char *buff, size_t size)
 	}
 
 	/* If this write would run beyond the file size, truncate it. */
-	if (a->filesize >= 0 && (int64_t)(a->offset + size) > a->filesize)
+	if (a->filesize >= 0 && (off_t)(a->offset + size) > a->filesize)
 		start_size = size = (size_t)(a->filesize - a->offset);
 
 	/* Write the data. */
@@ -645,7 +582,7 @@ write_data_block(struct archive_write_disk *a, const char *buff, size_t size)
 		} else {
 			/* We're sparsifying the file. */
 			const char *p, *end;
-			int64_t block_end;
+			off_t block_end;
 
 			/* Skip leading zero bytes. */
 			for (p = buff, end = buff + size; p < end; ++p) {
@@ -676,6 +613,8 @@ write_data_block(struct archive_write_disk *a, const char *buff, size_t size)
 				return (ARCHIVE_FATAL);
 			}
 			a->fd_offset = a->offset;
+			a->archive.file_position = a->offset;
+			a->archive.raw_position = a->offset;
  		}
 		bytes_written = write(a->fd, buff, bytes_to_write);
 		if (bytes_written < 0) {
@@ -684,22 +623,23 @@ write_data_block(struct archive_write_disk *a, const char *buff, size_t size)
 		}
 		buff += bytes_written;
 		size -= bytes_written;
-		a->total_bytes_written += bytes_written;
 		a->offset += bytes_written;
+		a->archive.file_position += bytes_written;
+		a->archive.raw_position += bytes_written;
 		a->fd_offset = a->offset;
 	}
 	return (start_size - size);
 }
 
 static ssize_t
-_archive_write_disk_data_block(struct archive *_a,
-    const void *buff, size_t size, int64_t offset)
+_archive_write_data_block(struct archive *_a,
+    const void *buff, size_t size, off_t offset)
 {
 	struct archive_write_disk *a = (struct archive_write_disk *)_a;
 	ssize_t r;
 
-	archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
-	    ARCHIVE_STATE_DATA, "archive_write_data_block");
+	__archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
+	    ARCHIVE_STATE_DATA, "archive_write_disk_block");
 
 	a->offset = offset;
 	r = write_data_block(a, buff, size);
@@ -714,23 +654,23 @@ _archive_write_disk_data_block(struct archive *_a,
 }
 
 static ssize_t
-_archive_write_disk_data(struct archive *_a, const void *buff, size_t size)
+_archive_write_data(struct archive *_a, const void *buff, size_t size)
 {
 	struct archive_write_disk *a = (struct archive_write_disk *)_a;
 
-	archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
+	__archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
 	    ARCHIVE_STATE_DATA, "archive_write_data");
 
 	return (write_data_block(a, buff, size));
 }
 
 static int
-_archive_write_disk_finish_entry(struct archive *_a)
+_archive_write_finish_entry(struct archive *_a)
 {
 	struct archive_write_disk *a = (struct archive_write_disk *)_a;
 	int ret = ARCHIVE_OK;
 
-	archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
+	__archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
 	    ARCHIVE_STATE_HEADER | ARCHIVE_STATE_DATA,
 	    "archive_write_finish_entry");
 	if (a->archive.state & ARCHIVE_STATE_HEADER)
@@ -760,7 +700,7 @@ _archive_write_disk_finish_entry(struct archive *_a)
 		 * to see what happened.
 		 */
 		a->pst = NULL;
-		if ((ret = lazy_stat(a)) != ARCHIVE_OK)
+		if ((ret = _archive_write_disk_lazy_stat(a)) != ARCHIVE_OK)
 			return (ret);
 		/* We can use lseek()/write() to extend the file if
 		 * ftruncate didn't work or isn't available. */
@@ -855,22 +795,14 @@ _archive_write_disk_finish_entry(struct archive *_a)
 	return (ret);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
 int
 archive_write_disk_set_group_lookup(struct archive *_a,
     void *private_data,
     gid_t (*lookup_gid)(void *private, const char *gname, gid_t gid),
     void (*cleanup_gid)(void *private))
-#else
-int
-archive_write_disk_set_group_lookup(struct archive *_a,
-    void *private_data,
-    int64_t (*lookup_gid)(void *private, const char *gname, int64_t gid),
-    void (*cleanup_gid)(void *private))
-#endif
 {
 	struct archive_write_disk *a = (struct archive_write_disk *)_a;
-	archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
+	__archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
 	    ARCHIVE_STATE_ANY, "archive_write_disk_set_group_lookup");
 
 	a->lookup_gid = lookup_gid;
@@ -879,22 +811,14 @@ archive_write_disk_set_group_lookup(struct archive *_a,
 	return (ARCHIVE_OK);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
 int
 archive_write_disk_set_user_lookup(struct archive *_a,
     void *private_data,
     uid_t (*lookup_uid)(void *private, const char *uname, uid_t uid),
     void (*cleanup_uid)(void *private))
-#else
-int
-archive_write_disk_set_user_lookup(struct archive *_a,
-    void *private_data,
-    int64_t (*lookup_uid)(void *private, const char *uname, int64_t uid),
-    void (*cleanup_uid)(void *private))
-#endif
 {
 	struct archive_write_disk *a = (struct archive_write_disk *)_a;
-	archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
+	__archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
 	    ARCHIVE_STATE_ANY, "archive_write_disk_set_user_lookup");
 
 	a->lookup_uid = lookup_uid;
@@ -942,7 +866,7 @@ archive_write_disk_new(void)
  * object creation is likely to fail, but any error will get handled
  * at that time.
  */
-#if defined(HAVE_FCHDIR) && defined(PATH_MAX)
+#ifdef HAVE_FCHDIR
 static void
 edit_deep_directories(struct archive_write_disk *a)
 {
@@ -1228,22 +1152,22 @@ create_filesystem_object(struct archive_write_disk *a)
 		 * S_IFCHR for the mknod() call.  This is correct.  */
 		r = mknod(a->name, mode | S_IFCHR,
 		    archive_entry_rdev(a->entry));
-		break;
 #else
 		/* TODO: Find a better way to warn about our inability
 		 * to restore a char device node. */
 		return (EINVAL);
 #endif /* HAVE_MKNOD */
+		break;
 	case AE_IFBLK:
 #ifdef HAVE_MKNOD
 		r = mknod(a->name, mode | S_IFBLK,
 		    archive_entry_rdev(a->entry));
-		break;
 #else
 		/* TODO: Find a better way to warn about our inability
 		 * to restore a block device node. */
 		return (EINVAL);
 #endif /* HAVE_MKNOD */
+		break;
 	case AE_IFDIR:
 		mode = (mode | MINIMUM_DIR_MODE) & MAXIMUM_DIR_MODE;
 		r = mkdir(a->name, mode);
@@ -1263,12 +1187,12 @@ create_filesystem_object(struct archive_write_disk *a)
 	case AE_IFIFO:
 #ifdef HAVE_MKFIFO
 		r = mkfifo(a->name, mode);
-		break;
 #else
 		/* TODO: Find a better way to warn about our inability
 		 * to restore a fifo. */
 		return (EINVAL);
 #endif /* HAVE_MKFIFO */
+		break;
 	}
 
 	/* All the system calls above set errno on failure. */
@@ -1303,16 +1227,16 @@ create_filesystem_object(struct archive_write_disk *a)
  * reason we set directory perms here. XXX
  */
 static int
-_archive_write_disk_close(struct archive *_a)
+_archive_write_close(struct archive *_a)
 {
 	struct archive_write_disk *a = (struct archive_write_disk *)_a;
 	struct fixup_entry *next, *p;
 	int ret;
 
-	archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
+	__archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
 	    ARCHIVE_STATE_HEADER | ARCHIVE_STATE_DATA,
 	    "archive_write_disk_close");
-	ret = _archive_write_disk_finish_entry(&a->archive);
+	ret = _archive_write_finish_entry(&a->archive);
 
 	/* Sort dir list so directories are fixed up in depth-first order. */
 	p = sort_dir_list(a->fixup_list);
@@ -1371,16 +1295,11 @@ _archive_write_disk_close(struct archive *_a)
 }
 
 static int
-_archive_write_disk_free(struct archive *_a)
+_archive_write_finish(struct archive *_a)
 {
-	struct archive_write_disk *a;
+	struct archive_write_disk *a = (struct archive_write_disk *)_a;
 	int ret;
-	if (_a == NULL)
-		return (ARCHIVE_OK);
-	archive_check_magic(_a, ARCHIVE_WRITE_DISK_MAGIC,
-	    ARCHIVE_STATE_ANY | ARCHIVE_STATE_FATAL, "archive_write_disk_free");
-	a = (struct archive_write_disk *)_a;
-	ret = _archive_write_disk_close(&a->archive);
+	ret = _archive_write_close(&a->archive);
 	if (a->cleanup_gid != NULL && a->lookup_gid_data != NULL)
 		(a->cleanup_gid)(a->lookup_gid_data);
 	if (a->cleanup_uid != NULL && a->lookup_uid_data != NULL)
@@ -1390,7 +1309,6 @@ _archive_write_disk_free(struct archive *_a)
 	archive_string_free(&a->_name_data);
 	archive_string_free(&a->archive.error_string);
 	archive_string_free(&a->path_safe);
-	a->archive.magic = 0;
 	free(a);
 	return (ret);
 }
@@ -1812,8 +1730,7 @@ create_dir(struct archive_write_disk *a, char *path)
 		if (unlink(path) != 0) {
 			archive_set_error(&a->archive, errno,
 			    "Can't create directory '%s': "
-			    "Conflicting file cannot be removed",
-			    path);
+			    "Conflicting file cannot be removed");
 			return (ARCHIVE_FAILED);
 		}
 	} else if (errno != ENOENT && errno != ENOTDIR) {
@@ -1884,7 +1801,7 @@ set_ownership(struct archive_write_disk *a)
 	/* If we know we can't change it, don't bother trying. */
 	if (a->user_uid != 0  &&  a->user_uid != a->uid) {
 		archive_set_error(&a->archive, errno,
-		    "Can't set UID=%jd", (intmax_t)a->uid);
+		    "Can't set UID=%d", a->uid);
 		return (ARCHIVE_WARN);
 	}
 #endif
@@ -1915,8 +1832,8 @@ set_ownership(struct archive_write_disk *a)
 #endif
 
 	archive_set_error(&a->archive, errno,
-	    "Can't set user=%jd/group=%jd for %s",
-	    (intmax_t)a->uid, (intmax_t)a->gid, a->name);
+	    "Can't set user=%d/group=%d for %s", a->uid, a->gid,
+	    a->name);
 	return (ARCHIVE_WARN);
 }
 
@@ -2084,7 +2001,7 @@ set_mode(struct archive_write_disk *a, int mode)
 		 * process, since systems sometimes set GID from
 		 * the enclosing dir or based on ACLs.
 		 */
-		if ((r = lazy_stat(a)) != ARCHIVE_OK)
+		if ((r = _archive_write_disk_lazy_stat(a)) != ARCHIVE_OK)
 			return (r);
 		if (a->pst->st_gid != a->gid) {
 			mode &= ~ S_ISGID;
@@ -2269,7 +2186,7 @@ set_fflags_platform(struct archive_write_disk *a, int fd, const char *name,
 	 * about the correct approach if we're overwriting an existing
 	 * file that already has flags on it. XXX
 	 */
-	if ((r = lazy_stat(a)) != ARCHIVE_OK)
+	if ((r = _archive_write_disk_lazy_stat(a)) != ARCHIVE_OK)
 		return (r);
 
 	a->st.st_flags &= ~clear;
@@ -2653,26 +2570,16 @@ set_xattrs(struct archive_write_disk *a)
  * These are normally overridden by the client, but these stub
  * versions ensure that we always have something that works.
  */
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static gid_t
 trivial_lookup_gid(void *private_data, const char *gname, gid_t gid)
-#else
-static int64_t
-trivial_lookup_gid(void *private_data, const char *gname, int64_t gid)
-#endif
 {
 	(void)private_data; /* UNUSED */
 	(void)gname; /* UNUSED */
 	return (gid);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static uid_t
 trivial_lookup_uid(void *private_data, const char *uname, uid_t uid)
-#else
-static int64_t
-trivial_lookup_uid(void *private_data, const char *uname, int64_t uid)
-#endif
 {
 	(void)private_data; /* UNUSED */
 	(void)uname; /* UNUSED */

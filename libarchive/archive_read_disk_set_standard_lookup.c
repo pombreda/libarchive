@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_disk_set_standard_lookup.c 201109 2009-12-28 03:30:31Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -72,13 +72,8 @@ struct name_cache {
 	} cache[name_cache_size];
 };
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static const char *	lookup_gname(void *, gid_t);
 static const char *	lookup_uname(void *, uid_t);
-#else
-static const char *	lookup_gname(void *, int64_t);
-static const char *	lookup_uname(void *, int64_t);
-#endif
 static void	cleanup(void *);
 static const char *	lookup_gname_helper(struct name_cache *, id_t gid);
 static const char *	lookup_uname_helper(struct name_cache *, id_t uid);
@@ -179,13 +174,8 @@ lookup_name(struct name_cache *cache,
 	return (cache->cache[slot].name);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static const char *
 lookup_uname(void *data, uid_t uid)
-#else
-static const char *
-lookup_uname(void *data, int64_t uid)
-#endif
 {
 	struct name_cache *uname_cache = (struct name_cache *)data;
 	return (lookup_name(uname_cache,
@@ -233,13 +223,8 @@ lookup_uname_helper(struct name_cache *cache, id_t id)
 	return strdup(result->pw_name);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static const char *
 lookup_gname(void *data, gid_t gid)
-#else
-static const char *
-lookup_gname(void *data, int64_t gid)
-#endif
 {
 	struct name_cache *gname_cache = (struct name_cache *)data;
 	return (lookup_name(gname_cache,

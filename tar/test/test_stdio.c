@@ -27,6 +27,7 @@ __FBSDID("$FreeBSD: src/usr.bin/tar/test/test_stdio.c,v 1.2 2008/05/26 17:10:10 
 
 DEFINE_TEST(test_stdio)
 {
+	FILE *f;
 	FILE *filelist;
 	char *p;
 	size_t s;
@@ -37,15 +38,16 @@ DEFINE_TEST(test_stdio)
 	/*
 	 * Create a couple of files on disk.
 	 */
-	/* File */
-	assertMakeFile("f", 0755, "abc");
-	/* Link to above file. */
-	assertMakeHardlink("l", "f");
-
-	/* Create file list (text mode here) */
 	filelist = fopen("filelist", "w");
 	assert(filelist != NULL);
+	/* File */
+	f = fopen("f", "w");
+	assert(f != NULL);
+	fprintf(f, "f\n");
+	fclose(f);
 	fprintf(filelist, "f\n");
+	/* Link to above file. */
+	assertMakeHardlink("l", "f");
 	fprintf(filelist, "l\n");
 	fclose(filelist);
 
@@ -113,8 +115,9 @@ DEFINE_TEST(test_stdio)
 	assertEqualInt(r, 0);
 	/* Verify xvOf.out is the file contents */
 	p = slurpfile(&s, "xvOf.out");
-	assert(s = 3);
-	assertEqualMem(p, "abc", 3);
+	assert(p != NULL);
+	assert(s = 2);
+	assertEqualMem(p, "f\n", 2);
 	/* TODO: Verify xvf.err */
 
 	/* 'xvf -' should generate list on stderr, empty stdout. */

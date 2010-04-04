@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/test/test.h 201247 2009-12-30 05:59:21Z kientzle $
+ * $FreeBSD: src/lib/libarchive/test/test.h,v 1.10 2008/06/15 10:35:22 kientzle Exp $
  */
 
 /* Every test program should #include "test.h" as the first thing. */
@@ -48,10 +48,12 @@
 #include <sys/types.h>  /* Windows requires this before sys/stat.h */
 #include <sys/stat.h>
 
+#ifdef USE_DMALLOC
+#include <dmalloc.h>
+#endif
 #if HAVE_DIRENT_H
 #include <dirent.h>
-#endif
-#ifdef HAVE_DIRECT_H
+#else
 #include <direct.h>
 #define dirent direct
 #endif
@@ -59,9 +61,6 @@
 #include <fcntl.h>
 #ifdef HAVE_IO_H
 #include <io.h>
-#endif
-#ifdef HAVE_STDINT_H
-#include <stdint.h>
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -83,9 +82,7 @@
 
 /* Windows (including Visual Studio and MinGW but not Cygwin) */
 #if defined(_WIN32) && !defined(__CYGWIN__)
-#if !defined(__BORLANDC__)
 #define strdup _strdup
-#endif
 #define	LOCALE_UTF8	NULL
 #else
 #define LOCALE_UTF8	"de_DE.UTF-8"
@@ -94,10 +91,6 @@
 /* Visual Studio */
 #ifdef _MSC_VER
 #define snprintf	sprintf_s
-#endif
-
-#if defined(__BORLANDC__)
-#pragma warn -8068	/* Constant out of range in comparison. */
 #endif
 
 /* Cygwin */
@@ -296,7 +289,3 @@ int read_open_memory2(struct archive *, void *, size_t, size_t);
   assertion_equal_int(__FILE__, __LINE__, (v1), #v1, (v2), #v2, (a))
 #define assertEqualStringA(a,v1,v2)   \
   assertion_equal_string(__FILE__, __LINE__, (v1), #v1, (v2), #v2, (a))
-
-#ifdef USE_DMALLOC
-#include <dmalloc.h>
-#endif

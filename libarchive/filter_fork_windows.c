@@ -105,8 +105,6 @@ fail:
 void
 __archive_check_child(int in, int out)
 {
-	(void)in; /* UNSED */
-	(void)out; /* UNSED */
 	Sleep(100);
 }
 

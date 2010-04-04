@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_format_ustar.c 191579 2009-04-27 18:35:03Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_set_format_ustar.c,v 1.27 2008/05/26 17:00:23 kientzle Exp $");
 
 
 #ifdef HAVE_ERRNO_H
@@ -143,8 +143,8 @@ static const char template_header[] = {
 
 static ssize_t	archive_write_ustar_data(struct archive_write *a, const void *buff,
 		    size_t s);
-static int	archive_write_ustar_free(struct archive_write *);
-static int	archive_write_ustar_close(struct archive_write *);
+static int	archive_write_ustar_destroy(struct archive_write *);
+static int	archive_write_ustar_finish(struct archive_write *);
 static int	archive_write_ustar_finish_entry(struct archive_write *);
 static int	archive_write_ustar_header(struct archive_write *,
 		    struct archive_entry *entry);
@@ -162,16 +162,13 @@ archive_write_set_format_ustar(struct archive *_a)
 	struct archive_write *a = (struct archive_write *)_a;
 	struct ustar *ustar;
 
-	archive_check_magic(_a, ARCHIVE_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "archive_write_set_format_ustar");
-
 	/* If someone else was already registered, unregister them. */
-	if (a->format_free != NULL)
-		(a->format_free)(a);
+	if (a->format_destroy != NULL)
+		(a->format_destroy)(a);
 
 	/* Basic internal sanity test. */
 	if (sizeof(template_header) != 512) {
-		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC, "Internal: template_header wrong size: %zu should be 512", sizeof(template_header));
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC, "Internal: template_header wrong size: %d should be 512", sizeof(template_header));
 		return (ARCHIVE_FATAL);
 	}
 
@@ -187,8 +184,8 @@ archive_write_set_format_ustar(struct archive *_a)
 	a->format_name = "ustar";
 	a->format_write_header = archive_write_ustar_header;
 	a->format_write_data = archive_write_ustar_data;
-	a->format_close = archive_write_ustar_close;
-	a->format_free = archive_write_ustar_free;
+	a->format_finish = archive_write_ustar_finish;
+	a->format_destroy = archive_write_ustar_destroy;
 	a->format_finish_entry = archive_write_ustar_finish_entry;
 	a->archive.archive_format = ARCHIVE_FORMAT_TAR_USTAR;
 	a->archive.archive_format_name = "POSIX ustar";
@@ -235,7 +232,7 @@ archive_write_ustar_header(struct archive_write *a, struct archive_entry *entry)
 	ret = __archive_write_format_header_ustar(a, buff, entry, -1, 1);
 	if (ret < ARCHIVE_WARN)
 		return (ret);
-	ret2 = __archive_write_output(a, buff, 512);
+	ret2 = (a->compressor.write)(a, buff, 512);
 	if (ret2 < ARCHIVE_WARN)
 		return (ret2);
 	if (ret2 < ret)
@@ -522,13 +519,19 @@ format_octal(int64_t v, char *p, int s)
 }
 
 static int
-archive_write_ustar_close(struct archive_write *a)
+archive_write_ustar_finish(struct archive_write *a)
 {
-	return (write_nulls(a, 512*2));
+	int r;
+
+	if (a->compressor.write == NULL)
+		return (ARCHIVE_OK);
+
+	r = write_nulls(a, 512*2);
+	return (r);
 }
 
 static int
-archive_write_ustar_free(struct archive_write *a)
+archive_write_ustar_destroy(struct archive_write *a)
 {
 	struct ustar *ustar;
 
@@ -559,7 +562,7 @@ write_nulls(struct archive_write *a, size_t padding)
 
 	while (padding > 0) {
 		to_write = padding < a->null_length ? padding : a->null_length;
-		ret = __archive_write_output(a, a->nulls, to_write);
+		ret = (a->compressor.write)(a, a->nulls, to_write);
 		if (ret != ARCHIVE_OK)
 			return (ret);
 		padding -= to_write;
@@ -576,7 +579,7 @@ archive_write_ustar_data(struct archive_write *a, const void *buff, size_t s)
 	ustar = (struct ustar *)a->format_data;
 	if (s > ustar->entry_bytes_remaining)
 		s = ustar->entry_bytes_remaining;
-	ret = __archive_write_output(a, buff, s);
+	ret = (a->compressor.write)(a, buff, s);
 	ustar->entry_bytes_remaining -= s;
 	if (ret != ARCHIVE_OK)
 		return (ret);

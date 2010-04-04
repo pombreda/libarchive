@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_compat_bzip2.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Verify our ability to read sample files compatibly with bunzip2.
@@ -71,12 +71,8 @@ compat_bzip2(const char *name)
 	assertEqualString(archive_compression_name(a), "bzip2");
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(archive_compression(a), ARCHIVE_COMPRESSION_BZIP2);
-	assertEqualString(archive_compression_name(a), "bzip2");
-	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
-
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
 }
 
 

@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/archive_read_disk_private.h 201105 2009-12-28 03:20:54Z kientzle $
+ * $FreeBSD$
  */
 
 #ifndef __LIBARCHIVE_BUILD
@@ -51,18 +51,10 @@ struct archive_read_disk {
 	 */
 	char	follow_symlinks;  /* Either 'L' or 'P'. */
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
 	const char * (*lookup_gname)(void *private, gid_t gid);
-#else
-	const char * (*lookup_gname)(void *private, int64_t gid);
-#endif
 	void	(*cleanup_gname)(void *private);
 	void	 *lookup_gname_data;
-#if ARCHIVE_VERSION_NUMBER < 3000000
-	const char * (*lookup_uname)(void *private, uid_t uid);
-#else
-	const char * (*lookup_uname)(void *private, int64_t uid);
-#endif
+	const char * (*lookup_uname)(void *private, gid_t gid);
 	void	(*cleanup_uname)(void *private);
 	void	 *lookup_uname_data;
 };

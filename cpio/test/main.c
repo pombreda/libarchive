@@ -76,25 +76,19 @@ __FBSDID("$FreeBSD: src/usr.bin/cpio/test/main.c,v 1.3 2008/08/24 04:58:22 kient
 #ifndef S_ISREG
 #define S_ISREG(m)  ((m) & _S_IFREG)
 #endif
-#if !defined(__BORLANDC__)
 #define access _access
 #define chdir _chdir
-#endif
 #ifndef fileno
 #define fileno _fileno
 #endif
 /*#define fstat _fstat64*/
-#if !defined(__BORLANDC__)
 #define getcwd _getcwd
-#endif
 #define lstat stat
 /*#define lstat _stat64*/
 /*#define stat _stat64*/
 #define rmdir _rmdir
-#if !defined(__BORLANDC__)
 #define strdup _strdup
 #define umask _umask
-#endif
 #define int64_t __int64
 #endif
 
@@ -159,7 +153,7 @@ my_GetFileInformationByName(const char *path, BY_HANDLE_FILE_INFORMATION *bhfi)
 }
 #endif
 
-#if defined(HAVE__CrtSetReportMode)
+#if defined(_WIN32) && !defined(__CYGWIN__) && !defined(__GNUC__)
 static void
 invalid_parameter_handler(const wchar_t * expression,
     const wchar_t * function, const wchar_t * file,
@@ -205,19 +199,10 @@ static FILE *logfile;
 static void
 vlogprintf(const char *fmt, va_list ap)
 {
-#ifdef va_copy
-	va_list lfap;
-	va_copy(lfap, ap);
-#endif
 	if (log_console)
 		vfprintf(stdout, fmt, ap);
 	if (logfile != NULL)
-#ifdef va_copy
-		vfprintf(logfile, fmt, lfap);
-	va_end(lfap);
-#else
 		vfprintf(logfile, fmt, ap);
-#endif
 }
 
 static void
@@ -793,12 +778,6 @@ assertion_text_file_contents(const char *buff, const char *fn)
 
 	assertion_count(test_filename, test_line);
 	f = fopen(fn, "r");
-	if (f == NULL) {
-		failure_start(test_filename, test_line,
-		    "File doesn't exist: %s", fn);
-		failure_finish(test_extra);
-		return (0);
-	}
 	s = strlen(buff);
 	contents = malloc(s * 2 + 128);
 	n = fread(contents, 1, s * 2 + 128 - 1, f);
@@ -1066,7 +1045,7 @@ assertion_file_nlinks(const char *file, int line,
 
 	assertion_count(file, line);
 	r = my_GetFileInformationByName(pathname, &bhfi);
-	if (r != 0 && bhfi.nNumberOfLinks == (DWORD)nlinks)
+	if (r != 0 && bhfi.nNumberOfLinks == nlinks)
 		return (1);
 	failure_start(file, line, "File %s has %d links, expected %d",
 	    pathname, bhfi.nNumberOfLinks, nlinks);
@@ -1123,9 +1102,6 @@ assertion_is_dir(const char *file, int line, const char *pathname, int mode)
 	struct stat st;
 	int r;
 
-#if defined(_WIN32) && !defined(__CYGWIN__)
-	(void)mode; /* UNUSED */
-#endif
 	assertion_count(file, line);
 	r = lstat(pathname, &st);
 	if (r != 0) {
@@ -1161,9 +1137,6 @@ assertion_is_reg(const char *file, int line, const char *pathname, int mode)
 	struct stat st;
 	int r;
 
-#if defined(_WIN32) && !defined(__CYGWIN__)
-	(void)mode; /* UNUSED */
-#endif
 	assertion_count(file, line);
 	r = lstat(pathname, &st);
 	if (r != 0 || !S_ISREG(st.st_mode)) {
@@ -1193,8 +1166,6 @@ is_symlink(const char *file, int line,
     const char *pathname, const char *contents)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__)
-	(void)pathname; /* UNUSED */
-	(void)contents; /* UNUSED */
 	assertion_count(file, line);
 	/* Windows sort-of has real symlinks, but they're only usable
 	 * by privileged users and are crippled even then, so there's
@@ -1254,7 +1225,6 @@ assertion_make_dir(const char *file, int line, const char *dirname, int mode)
 {
 	assertion_count(file, line);
 #if defined(_WIN32) && !defined(__CYGWIN__)
-	(void)mode; /* UNUSED */
 	if (0 == _mkdir(dirname))
 		return (1);
 #else
@@ -1274,7 +1244,6 @@ assertion_make_file(const char *file, int line,
 #if defined(_WIN32) && !defined(__CYGWIN__)
 	/* TODO: Rework this to set file mode as well. */
 	FILE *f;
-	(void)mode; /* UNUSED */
 	assertion_count(file, line);
 	f = fopen(path, "wb");
 	if (f == NULL) {
@@ -1723,19 +1692,7 @@ test_run(int i, const char *tmpdir)
 	if (tests[i].failures == 0) {
 		if (!keep_temp_files && assertChdir(tmpdir)) {
 #if defined(_WIN32) && !defined(__CYGWIN__)
-			/* Make sure not to leave empty directories.
-			 * Sometimes a processing of closing files used by tests
-			 * is not done, then rmdir will be failed and it will
-			 * leave a empty test directory. So we should wait a few
-			 * seconds and retry rmdir. */
-			int r, t;
-			for (t = 0; t < 10; t++) {
-				if (t > 0)
-					Sleep(1000);
-				r = systemf("rmdir /S /Q %s", tests[i].name);
-				if (r == 0)
-					break;
-			}
+			systemf("rmdir /S /Q %s", tests[i].name);
 			systemf("del %s", logfilename);
 #else
 			systemf("rm -rf %s", tests[i].name);

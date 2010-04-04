@@ -25,7 +25,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_mtree.c 201165 2009-12-29 05:52:13Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_format_mtree.c,v 1.11 2008/12/06 06:45:15 kientzle Exp $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -110,13 +110,8 @@ static int	parse_line(struct archive_read *, struct archive_entry *,
 		    struct mtree *, struct mtree_entry *, int *);
 static int	parse_keyword(struct archive_read *, struct mtree *,
 		    struct archive_entry *, struct mtree_option *, int *);
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static int	read_data(struct archive_read *a,
 		    const void **buff, size_t *size, off_t *offset);
-#else
-static int	read_data(struct archive_read *a,
-		    const void **buff, size_t *size, int64_t *offset);
-#endif
 static ssize_t	readline(struct archive_read *, struct mtree *, char **, ssize_t);
 static int	skip(struct archive_read *a);
 static int	read_header(struct archive_read *,
@@ -143,9 +138,6 @@ archive_read_support_format_mtree(struct archive *_a)
 	struct archive_read *a = (struct archive_read *)_a;
 	struct mtree *mtree;
 	int r;
-
-	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
-	    ARCHIVE_STATE_NEW, "archive_read_support_format_mtree");
 
 	mtree = (struct mtree *)malloc(sizeof(*mtree));
 	if (mtree == NULL) {
@@ -204,7 +196,7 @@ mtree_bid(struct archive_read *a)
 		return (-1);
 
 	if (strncmp(p, signature, strlen(signature)) == 0)
-		return (8 * (int)strlen(signature));
+		return (8 * strlen(signature));
 	return (0);
 }
 
@@ -976,13 +968,8 @@ parse_keyword(struct archive_read *a, struct mtree *mtree,
 	return (ARCHIVE_OK);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
 static int
 read_data(struct archive_read *a, const void **buff, size_t *size, off_t *offset)
-#else
-static int
-read_data(struct archive_read *a, const void **buff, size_t *size, int64_t *offset)
-#endif
 {
 	size_t bytes_to_read;
 	ssize_t bytes_read;
@@ -1049,7 +1036,11 @@ parse_escapes(char *src, struct mtree_entry *mentry)
 	char *dest = src;
 	char c;
 
-	if (mentry != NULL && strcmp(src, ".") == 0)
+	/*
+	 * The current directory is somewhat special, it should be archived
+	 * only once as it will confuse extraction otherwise.
+	 */
+	if (strcmp(src, ".") == 0)
 		mentry->full = 1;
 
 	while (*src != '\0') {

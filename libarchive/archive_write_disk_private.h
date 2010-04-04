@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/archive_write_disk_private.h 201086 2009-12-28 02:17:53Z kientzle $
+ * $FreeBSD: src/lib/libarchive/archive_write_disk_private.h,v 1.1 2007/03/03 07:37:36 kientzle Exp $
  */
 
 #ifndef __LIBARCHIVE_BUILD

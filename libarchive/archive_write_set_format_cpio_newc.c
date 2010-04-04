@@ -25,7 +25,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_format_cpio_newc.c 201160 2009-12-29 05:41:57Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_set_format_cpio_newc.c,v 1.4 2008/03/15 11:04:45 kientzle Exp $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -45,8 +45,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_format_cpio_newc.c 201
 
 static ssize_t	archive_write_newc_data(struct archive_write *,
 		    const void *buff, size_t s);
-static int	archive_write_newc_close(struct archive_write *);
-static int	archive_write_newc_free(struct archive_write *);
+static int	archive_write_newc_finish(struct archive_write *);
+static int	archive_write_newc_destroy(struct archive_write *);
 static int	archive_write_newc_finish_entry(struct archive_write *);
 static int	archive_write_newc_header(struct archive_write *,
 		    struct archive_entry *);
@@ -87,12 +87,9 @@ archive_write_set_format_cpio_newc(struct archive *_a)
 	struct archive_write *a = (struct archive_write *)_a;
 	struct cpio *cpio;
 
-	archive_check_magic(_a, ARCHIVE_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "archive_write_set_format_cpio_newc");
-
 	/* If someone else was already registered, unregister them. */
-	if (a->format_free != NULL)
-		(a->format_free)(a);
+	if (a->format_destroy != NULL)
+		(a->format_destroy)(a);
 
 	cpio = (struct cpio *)malloc(sizeof(*cpio));
 	if (cpio == NULL) {
@@ -107,8 +104,8 @@ archive_write_set_format_cpio_newc(struct archive *_a)
 	a->format_write_header = archive_write_newc_header;
 	a->format_write_data = archive_write_newc_data;
 	a->format_finish_entry = archive_write_newc_finish_entry;
-	a->format_close = archive_write_newc_close;
-	a->format_free = archive_write_newc_free;
+	a->format_finish = archive_write_newc_finish;
+	a->format_destroy = archive_write_newc_destroy;
 	a->archive.archive_format = ARCHIVE_FORMAT_CPIO_SVR4_NOCRC;
 	a->archive.archive_format_name = "SVR4 cpio nocrc";
 	return (ARCHIVE_OK);
@@ -117,7 +114,6 @@ archive_write_set_format_cpio_newc(struct archive *_a)
 static int
 archive_write_newc_header(struct archive_write *a, struct archive_entry *entry)
 {
-	int64_t ino;
 	struct cpio *cpio;
 	const char *p, *path;
 	int pathlength, ret, ret2;
@@ -128,23 +124,18 @@ archive_write_newc_header(struct archive_write *a, struct archive_entry *entry)
 	ret2 = ARCHIVE_OK;
 
 	path = archive_entry_pathname(entry);
-	pathlength = (int)strlen(path) + 1; /* Include trailing null. */
+	pathlength = strlen(path) + 1; /* Include trailing null. */
 
 	memset(&h, 0, sizeof(h));
 	format_hex(0x070701, &h.c_magic, sizeof(h.c_magic));
-	format_hex(archive_entry_devmajor(entry), &h.c_devmajor,
-	    sizeof(h.c_devmajor));
-	format_hex(archive_entry_devminor(entry), &h.c_devminor,
-	    sizeof(h.c_devminor));
-
-	ino = archive_entry_ino64(entry);
-	if (ino > 0xffffffff) {
-		archive_set_error(&a->archive, ERANGE,
-		    "large inode number truncated");
+	format_hex(archive_entry_devmajor(entry), &h.c_devmajor, sizeof(h.c_devmajor));
+	format_hex(archive_entry_devminor(entry), &h.c_devminor, sizeof(h.c_devminor));
+	if (archive_entry_ino64(entry) > 0xffffffff) {
+		archive_set_error(&a->archive, ERANGE, "large inode number truncated");
 		ret2 = ARCHIVE_WARN;
 	}
 
-	format_hex(ino & 0xffffffff, &h.c_ino, sizeof(h.c_ino));
+	format_hex(archive_entry_ino64(entry) & 0xffffffff, &h.c_ino, sizeof(h.c_ino));
 	format_hex(archive_entry_mode(entry), &h.c_mode, sizeof(h.c_mode));
 	format_hex(archive_entry_uid(entry), &h.c_uid, sizeof(h.c_uid));
 	format_hex(archive_entry_gid(entry), &h.c_gid, sizeof(h.c_gid));
@@ -173,17 +164,17 @@ archive_write_newc_header(struct archive_write *a, struct archive_entry *entry)
 		format_hex(archive_entry_size(entry),
 		    &h.c_filesize, sizeof(h.c_filesize));
 
-	ret = __archive_write_output(a, &h, sizeof(h));
+	ret = (a->compressor.write)(a, &h, sizeof(h));
 	if (ret != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 
 	/* Pad pathname to even length. */
-	ret = __archive_write_output(a, path, pathlength);
+	ret = (a->compressor.write)(a, path, pathlength);
 	if (ret != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 	pad = PAD4(pathlength + sizeof(struct cpio_header_newc));
 	if (pad)
-		ret = __archive_write_output(a, "\0\0\0", pad);
+		ret = (a->compressor.write)(a, "\0\0\0", pad);
 	if (ret != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 
@@ -192,11 +183,11 @@ archive_write_newc_header(struct archive_write *a, struct archive_entry *entry)
 
 	/* Write the symlink now. */
 	if (p != NULL  &&  *p != '\0') {
-		ret = __archive_write_output(a, p, strlen(p));
+		ret = (a->compressor.write)(a, p, strlen(p));
 		if (ret != ARCHIVE_OK)
 			return (ARCHIVE_FATAL);
 		pad = PAD4(strlen(p));
-		ret = __archive_write_output(a, "\0\0\0", pad);
+		ret = (a->compressor.write)(a, "\0\0\0", pad);
 	}
 
 	if (ret == ARCHIVE_OK)
@@ -214,7 +205,7 @@ archive_write_newc_data(struct archive_write *a, const void *buff, size_t s)
 	if (s > cpio->entry_bytes_remaining)
 		s = cpio->entry_bytes_remaining;
 
-	ret = __archive_write_output(a, buff, s);
+	ret = (a->compressor.write)(a, buff, s);
 	cpio->entry_bytes_remaining -= s;
 	if (ret >= 0)
 		return (s);
@@ -253,7 +244,7 @@ format_hex_recursive(int64_t v, char *p, int s)
 }
 
 static int
-archive_write_newc_close(struct archive_write *a)
+archive_write_newc_finish(struct archive_write *a)
 {
 	int er;
 	struct archive_entry *trailer;
@@ -267,7 +258,7 @@ archive_write_newc_close(struct archive_write *a)
 }
 
 static int
-archive_write_newc_free(struct archive_write *a)
+archive_write_newc_destroy(struct archive_write *a)
 {
 	struct cpio *cpio;
 
@@ -281,18 +272,17 @@ static int
 archive_write_newc_finish_entry(struct archive_write *a)
 {
 	struct cpio *cpio;
-	size_t to_write;
-	int ret;
+	int to_write, ret;
 
 	cpio = (struct cpio *)a->format_data;
 	while (cpio->entry_bytes_remaining > 0) {
 		to_write = cpio->entry_bytes_remaining < a->null_length ?
 		    cpio->entry_bytes_remaining : a->null_length;
-		ret = __archive_write_output(a, a->nulls, to_write);
+		ret = (a->compressor.write)(a, a->nulls, to_write);
 		if (ret != ARCHIVE_OK)
 			return (ret);
 		cpio->entry_bytes_remaining -= to_write;
 	}
-	ret = __archive_write_output(a, a->nulls, cpio->padding);
+	ret = (a->compressor.write)(a, a->nulls, cpio->padding);
 	return (ret);
 }

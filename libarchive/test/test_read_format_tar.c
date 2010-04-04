@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_tar.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_read_format_tar.c,v 1.4 2008/09/01 05:38:33 kientzle Exp $");
 
 /*
  * Each of these archives is a short archive with a single entry.  The
@@ -75,8 +75,12 @@ static void verifyEmpty(void)
 	failure("512 zero bytes should be recognized as a tar archive.");
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR);
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assert(0 == archive_read_close(a));
+#if ARCHIVE_VERSION_NUMBER < 2000000
+	archive_read_finish(a);
+#else
+	assert(0 == archive_read_finish(a));
+#endif
 }
 
 /* Single entry with a hardlink. */
@@ -443,8 +447,12 @@ static void verify(unsigned char *d, size_t s,
 	/* Verify the only entry. */
 	f(ae);
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assert(0 == archive_read_close(a));
+#if ARCHIVE_VERSION_NUMBER < 2000000
+	archive_read_finish(a);
+#else
+	assert(0 == archive_read_finish(a));
+#endif
 	free(buff);
 }
 

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_cpio_newc.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_write_format_cpio_newc.c,v 1.3 2008/09/01 05:38:33 kientzle Exp $");
 
 
 static int
@@ -52,7 +52,7 @@ DEFINE_TEST(test_write_format_cpio_newc)
 {
 	struct archive *a;
 	struct archive_entry *entry;
-	char *buff, *e, *file;
+	char *buff, *e;
 	size_t buffsize = 100000;
 	size_t used;
 
@@ -111,7 +111,12 @@ DEFINE_TEST(test_write_format_cpio_newc)
 	assertEqualIntA(a, 0, archive_write_header(a, entry));
 	archive_entry_free(entry);
 
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+
+#if ARCHIVE_VERSION_NUMBER < 2000000
+	archive_write_finish(a);
+#else
+	assert(0 == archive_write_finish(a));
+#endif
 
 	/*
 	 * Verify the archive format.
@@ -119,10 +124,9 @@ DEFINE_TEST(test_write_format_cpio_newc)
 	e = buff;
 
 	/* First entry is "file" */
-	file = e;
 	assert(is_hex(e, 110)); /* Entire header is hex digits. */
 	assertEqualMem(e + 0, "070701", 6); /* Magic */
-	assert(memcmp(e + 6, "00000000", 8) != 0); /* ino != 0 */
+	assertEqualMem(e + 6, "00000059", 8); /* ino */
 	assertEqualMem(e + 14, "000081b4", 8); /* Mode */
 	assertEqualMem(e + 22, "00000050", 8); /* uid */
 	assertEqualMem(e + 30, "0000005a", 8); /* gid */
@@ -163,8 +167,7 @@ DEFINE_TEST(test_write_format_cpio_newc)
 	/* Third entry is "lnk" */
 	assert(is_hex(e, 110)); /* Entire header is hex digits. */
 	assertEqualMem(e + 0, "070701", 6); /* Magic */
-	assert(memcmp(e + 6, file + 6, 8) != 0); /* ino != file ino */
-	assert(memcmp(e + 6, "00000000", 8) != 0); /* ino != 0 */
+	assertEqualMem(e + 6, "00000058", 8); /* ino */
 	assertEqualMem(e + 14, "0000a1b4", 8); /* Mode */
 	assertEqualMem(e + 22, "00000053", 8); /* uid */
 	assertEqualMem(e + 30, "0000005d", 8); /* gid */

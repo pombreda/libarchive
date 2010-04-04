@@ -74,7 +74,6 @@ struct bsdtar {
 	char		  option_unlink_first; /* -U */
 	char		  option_warn_links; /* --check-links */
 	char		  day_first; /* show day before month in -tv output */
-	char		  enable_copyfile; /* For Mac OS */
 
 	/* If >= 0, then close this when done. */
 	int		  fd;
@@ -110,7 +109,6 @@ struct bsdtar {
 enum {
 	OPTION_CHECK_LINKS = 1,
 	OPTION_CHROOT,
-	OPTION_DISABLE_COPYFILE,
 	OPTION_EXCLUDE,
 	OPTION_FORMAT,
 	OPTION_OPTIONS,

@@ -25,7 +25,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_format_mtree.c 201171 2009-12-29 06:39:07Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -718,9 +718,9 @@ archive_write_mtree_finish_entry(struct archive_write *a)
 			archive_strcat(str, " type=char");
 		if ((keys & F_DEV) != 0) {
 			archive_string_sprintf(str,
-			    " device=native,%ju,%ju",
-			    (uintmax_t)archive_entry_rdevmajor(entry),
-			    (uintmax_t)archive_entry_rdevminor(entry));
+			    " device=native,%d,%d",
+			    archive_entry_rdevmajor(entry),
+			    archive_entry_rdevminor(entry));
 		}
 		break;
 	case AE_IFBLK:
@@ -728,9 +728,9 @@ archive_write_mtree_finish_entry(struct archive_write *a)
 			archive_strcat(str, " type=block");
 		if ((keys & F_DEV) != 0) {
 			archive_string_sprintf(str,
-			    " device=native,%ju,%ju",
-			    (uintmax_t)archive_entry_rdevmajor(entry),
-			    (uintmax_t)archive_entry_rdevminor(entry));
+			    " device=native,%d,%d",
+			    archive_entry_rdevmajor(entry),
+			    archive_entry_rdevminor(entry));
 		}
 		break;
 	case AE_IFDIR:
@@ -821,7 +821,7 @@ archive_write_mtree_finish_entry(struct archive_write *a)
 	archive_entry_free(entry);
 
 	if (mtree->buf.length > 32768) {
-		ret = __archive_write_output(a, mtree->buf.s, mtree->buf.length);
+		ret = (a->compressor.write)(a, mtree->buf.s, mtree->buf.length);
 		archive_string_empty(&mtree->buf);
 	} else
 		ret = ARCHIVE_OK;
@@ -830,13 +830,13 @@ archive_write_mtree_finish_entry(struct archive_write *a)
 }
 
 static int
-archive_write_mtree_close(struct archive_write *a)
+archive_write_mtree_finish(struct archive_write *a)
 {
 	struct mtree_writer *mtree= a->format_data;
 
 	archive_write_set_bytes_in_last_block(&a->archive, 1);
 
-	return __archive_write_output(a, mtree->buf.s, mtree->buf.length);
+	return (a->compressor.write)(a, mtree->buf.s, mtree->buf.length);
 }
 
 static ssize_t
@@ -854,7 +854,7 @@ archive_write_mtree_data(struct archive_write *a, const void *buff, size_t n)
 		 * Compute a POSIX 1003.2 checksum
 		 */
 		const unsigned char *p;
-		size_t nn;
+		int nn;
 
 		for (nn = n, p = buff; nn--; ++p)
 			COMPUTE_CRC(mtree->crc, *p);
@@ -888,7 +888,7 @@ archive_write_mtree_data(struct archive_write *a, const void *buff, size_t n)
 }
 
 static int
-archive_write_mtree_free(struct archive_write *a)
+archive_write_mtree_destroy(struct archive_write *a)
 {
 	struct mtree_writer *mtree= a->format_data;
 
@@ -1015,11 +1015,8 @@ archive_write_set_format_mtree(struct archive *_a)
 	struct archive_write *a = (struct archive_write *)_a;
 	struct mtree_writer *mtree;
 
-	archive_check_magic(_a, ARCHIVE_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "archive_write_set_format_mtree");
-
-	if (a->format_free != NULL)
-		(a->format_free)(a);
+	if (a->format_destroy != NULL)
+		(a->format_destroy)(a);
 
 	if ((mtree = malloc(sizeof(*mtree))) == NULL) {
 		archive_set_error(&a->archive, ENOMEM,
@@ -1037,13 +1034,13 @@ archive_write_set_format_mtree(struct archive *_a)
 	archive_string_init(&mtree->ebuf);
 	archive_string_init(&mtree->buf);
 	a->format_data = mtree;
-	a->format_free = archive_write_mtree_free;
+	a->format_destroy = archive_write_mtree_destroy;
 
 	a->pad_uncompressed = 0;
 	a->format_name = "mtree";
 	a->format_options = archive_write_mtree_options;
 	a->format_write_header = archive_write_mtree_header;
-	a->format_close = archive_write_mtree_close;
+	a->format_finish = archive_write_mtree_finish;
 	a->format_write_data = archive_write_mtree_data;
 	a->format_finish_entry = archive_write_mtree_finish_entry;
 	a->archive.archive_format = ARCHIVE_FORMAT_MTREE;

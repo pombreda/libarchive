@@ -47,7 +47,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_format_zip.c 201168 2009-12-29 06:15:32Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -92,8 +92,8 @@ enum compression {
 };
 
 static ssize_t archive_write_zip_data(struct archive_write *, const void *buff, size_t s);
-static int archive_write_zip_close(struct archive_write *);
-static int archive_write_zip_free(struct archive_write *);
+static int archive_write_zip_finish(struct archive_write *);
+static int archive_write_zip_destroy(struct archive_write *);
 static int archive_write_zip_finish_entry(struct archive_write *);
 static int archive_write_zip_header(struct archive_write *, struct archive_entry *);
 static unsigned int dos_time(const time_t);
@@ -227,14 +227,11 @@ archive_write_set_format_zip(struct archive *_a)
 	struct archive_write *a = (struct archive_write *)_a;
 	struct zip *zip;
 
-	archive_check_magic(_a, ARCHIVE_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "archive_write_set_format_zip");
-
 	/* If another format was already registered, unregister it. */
-	if (a->format_free != NULL)
-		(a->format_free)(a);
+	if (a->format_destroy != NULL)
+		(a->format_destroy)(a);
 
-	zip = (struct zip *) calloc(1, sizeof(*zip));
+	zip = (struct zip *) malloc(sizeof(*zip));
 	if (zip == NULL) {
 		archive_set_error(&a->archive, ENOMEM, "Can't allocate zip data");
 		return (ARCHIVE_FATAL);
@@ -265,8 +262,8 @@ archive_write_set_format_zip(struct archive *_a)
 	a->format_write_header = archive_write_zip_header;
 	a->format_write_data = archive_write_zip_data;
 	a->format_finish_entry = archive_write_zip_finish_entry;
-	a->format_close = archive_write_zip_close;
-	a->format_free = archive_write_zip_free;
+	a->format_finish = archive_write_zip_finish;
+	a->format_destroy = archive_write_zip_destroy;
 	a->archive.archive_format = ARCHIVE_FORMAT_ZIP;
 	a->archive.archive_format_name = "ZIP";
 
@@ -332,7 +329,7 @@ archive_write_zip_header(struct archive_write *a, struct archive_entry *entry)
 	archive_le16enc(&h.flags, ZIP_FLAGS);
 	archive_le16enc(&h.compression, zip->compression);
 	archive_le32enc(&h.timedate, dos_time(archive_entry_mtime(entry)));
-	archive_le16enc(&h.filename_length, (uint16_t)path_length(entry));
+	archive_le16enc(&h.filename_length, path_length(entry));
 
 	switch (zip->compression) {
 	case COMPRESSION_STORE:
@@ -369,7 +366,7 @@ archive_write_zip_header(struct archive_write *a, struct archive_entry *entry)
 	archive_le32enc(&e.mtime, archive_entry_mtime(entry));
 	archive_le32enc(&e.atime, archive_entry_atime(entry));
 	archive_le32enc(&e.ctime, archive_entry_ctime(entry));
-
+	    
 	archive_le16enc(&e.unix_id, ZIP_SIGNATURE_EXTRA_UNIX);
 	archive_le16enc(&e.unix_size, sizeof(e.unix_uid) + sizeof(e.unix_gid));
 	archive_le16enc(&e.unix_uid, archive_entry_uid(entry));
@@ -377,7 +374,7 @@ archive_write_zip_header(struct archive_write *a, struct archive_entry *entry)
 
 	archive_le32enc(&d->uncompressed_size, size);
 
-	ret = __archive_write_output(a, &h, sizeof(h));
+	ret = (a->compressor.write)(a, &h, sizeof(h));
 	if (ret != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 	zip->written_bytes += sizeof(h);
@@ -387,7 +384,7 @@ archive_write_zip_header(struct archive_write *a, struct archive_entry *entry)
 		return (ARCHIVE_FATAL);
 	zip->written_bytes += ret;
 
-	ret = __archive_write_output(a, &e, sizeof(e));
+	ret = (a->compressor.write)(a, &e, sizeof(e));
 	if (ret != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 	zip->written_bytes += sizeof(e);
@@ -409,7 +406,7 @@ archive_write_zip_data(struct archive_write *a, const void *buff, size_t s)
 
 	switch (zip->compression) {
 	case COMPRESSION_STORE:
-		ret = __archive_write_output(a, buff, s);
+		ret = (a->compressor.write)(a, buff, s);
 		if (ret != ARCHIVE_OK) return (ret);
 		zip->written_bytes += s;
 		zip->remaining_data_bytes -= s;
@@ -425,7 +422,7 @@ archive_write_zip_data(struct archive_write *a, const void *buff, size_t s)
 			if (ret == Z_STREAM_ERROR)
 				return (ARCHIVE_FATAL);
 			if (zip->stream.avail_out == 0) {
-				ret = __archive_write_output(a, zip->buf, zip->len_buf);
+				ret = (a->compressor.write)(a, zip->buf, zip->len_buf);
 				if (ret != ARCHIVE_OK)
 					return (ret);
 				l->compressed_size += zip->len_buf;
@@ -469,7 +466,7 @@ archive_write_zip_finish_entry(struct archive_write *a)
 			if (ret == Z_STREAM_ERROR)
 				return (ARCHIVE_FATAL);
 			reminder = zip->len_buf - zip->stream.avail_out;
-			ret = __archive_write_output(a, zip->buf, reminder);
+			ret = (a->compressor.write)(a, zip->buf, reminder);
 			if (ret != ARCHIVE_OK)
 				return (ret);
 			l->compressed_size += reminder;
@@ -486,7 +483,7 @@ archive_write_zip_finish_entry(struct archive_write *a)
 
 	archive_le32enc(&d->crc32, l->crc32);
 	archive_le32enc(&d->compressed_size, l->compressed_size);
-	ret = __archive_write_output(a, d, sizeof(*d));
+	ret = (a->compressor.write)(a, d, sizeof(*d));
 	if (ret != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 	zip->written_bytes += sizeof(*d);
@@ -494,7 +491,7 @@ archive_write_zip_finish_entry(struct archive_write *a)
 }
 
 static int
-archive_write_zip_close(struct archive_write *a)
+archive_write_zip_finish(struct archive_write *a)
 {
 	struct zip *zip;
 	struct zip_file_header_link *l;
@@ -533,7 +530,7 @@ archive_write_zip_close(struct archive_write *a)
 		archive_le32enc(&h.crc32, l->crc32);
 		archive_le32enc(&h.compressed_size, l->compressed_size);
 		archive_le32enc(&h.uncompressed_size, archive_entry_size(l->entry));
-		archive_le16enc(&h.filename_length, (uint16_t)path_length(l->entry));
+		archive_le16enc(&h.filename_length, path_length(l->entry));
 		archive_le16enc(&h.extra_length, sizeof(e));
 		archive_le16enc(&h.attributes_external[2], archive_entry_mode(l->entry));
 		archive_le32enc(&h.offset, l->offset);
@@ -546,7 +543,7 @@ archive_write_zip_close(struct archive_write *a)
 		archive_le16enc(&e.unix_id, ZIP_SIGNATURE_EXTRA_UNIX);
 		archive_le16enc(&e.unix_size, 0x0000);
 
-		ret = __archive_write_output(a, &h, sizeof(h));
+		ret = (a->compressor.write)(a, &h, sizeof(h));
 		if (ret != ARCHIVE_OK)
 			return (ARCHIVE_FATAL);
 		zip->written_bytes += sizeof(h);
@@ -556,7 +553,7 @@ archive_write_zip_close(struct archive_write *a)
 			return (ARCHIVE_FATAL);
 		zip->written_bytes += ret;
 
-		ret = __archive_write_output(a, &e, sizeof(e));
+		ret = (a->compressor.write)(a, &e, sizeof(e));
 		if (ret != ARCHIVE_OK)
 			return (ARCHIVE_FATAL);
 		zip->written_bytes += sizeof(e);
@@ -575,7 +572,7 @@ archive_write_zip_close(struct archive_write *a)
 	archive_le32enc(&end.offset, offset_start);
 
 	/* Writing end of central directory. */
-	ret = __archive_write_output(a, &end, sizeof(end));
+	ret = (a->compressor.write)(a, &end, sizeof(end));
 	if (ret != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 	zip->written_bytes += sizeof(end);
@@ -583,7 +580,7 @@ archive_write_zip_close(struct archive_write *a)
 }
 
 static int
-archive_write_zip_free(struct archive_write *a)
+archive_write_zip_destroy(struct archive_write *a)
 {
 	struct zip *zip;
 	struct zip_file_header_link *l;
@@ -614,23 +611,14 @@ dos_time(const time_t unix_time)
 	 * on two systems with different time zones. */
 	t = localtime(&unix_time);
 
-	/* MSDOS-style date/time is only between 1980-01-01 and 2107-12-31 */
-	if (t->tm_year < 1980 - 1900)
-		/* Set minimum date/time '1980-01-01 00:00:00'. */
-		dt = 0x00210000U;
-	else if (t->tm_year > 2107 - 1900)
-		/* Set maximum date/time '2107-12-31 23:59:58'. */
-		dt = 0xff9fbf7dU;
-	else {
-		dt = 0;
-		dt += ((t->tm_year - 80) & 0x7f) << 9;
-		dt += ((t->tm_mon + 1) & 0x0f) << 5;
-		dt += (t->tm_mday & 0x1f);
-		dt <<= 16;
-		dt += (t->tm_hour & 0x1f) << 11;
-		dt += (t->tm_min & 0x3f) << 5;
-		dt += (t->tm_sec & 0x3e) >> 1; /* Only counting every 2 seconds. */
-	}
+	dt = 0;
+	dt += ((t->tm_year - 80) & 0x7f) << 9;
+	dt += ((t->tm_mon + 1) & 0x0f) << 5;
+	dt += (t->tm_mday & 0x1f);
+	dt <<= 16;
+	dt += (t->tm_hour & 0x1f) << 11;
+	dt += (t->tm_min & 0x3f) << 5;
+	dt += (t->tm_sec & 0x3e) >> 1; /* Only counting every 2 seconds. */
 	return dt;
 }
 
@@ -662,18 +650,18 @@ write_path(struct archive_entry *entry, struct archive_write *archive)
 	type = archive_entry_filetype(entry);
 	written_bytes = 0;
 
-	ret = __archive_write_output(archive, path, strlen(path));
+	ret = (archive->compressor.write)(archive, path, strlen(path));
 	if (ret != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 	written_bytes += strlen(path);
 
 	/* Folders are recognized by a traling slash. */
 	if ((type == AE_IFDIR) & (path[strlen(path) - 1] != '/')) {
-		ret = __archive_write_output(archive, "/", 1);
+		ret = (archive->compressor.write)(archive, "/", 1);
 		if (ret != ARCHIVE_OK)
 			return (ARCHIVE_FATAL);
 		written_bytes += 1;
 	}
 
-	return ((int)written_bytes);
+	return written_bytes;
 }
