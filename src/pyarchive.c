@@ -287,7 +287,7 @@ PyArchive_Entry_get_mode(PyArchiveEntry *self, void *closure)
 static PyObject *
 PyArchive_Entry_get_symlink(PyArchiveEntry *self, void *closure)
 {
-    char *sym = archive_entry_symlink(self->archive_entry);
+    const char *sym = archive_entry_symlink(self->archive_entry);
     if(sym)
         return PyString_FromString(sym);
     return PyString_FromString("");
