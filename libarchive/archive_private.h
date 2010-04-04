@@ -124,6 +124,25 @@ int __convert_transform_error_to_archive_error(struct archive *, struct transfor
 		int);
 void __archive_set_error_from_transform(struct archive *, struct transform *);
 
+/* compatibility shims for mapping old style callbacks to transform callbacks */
+void * __archive_shim_new(struct archive *, archive_open_callback *,
+		archive_open_callback *, archive_close_callback *,
+		archive_write_callback *, archive_read_callback *,
+		archive_skip_callback *);
+
+int __archive_shim_open(struct transform *, void *);
+int __archive_shim_close(struct transform *, void *);
+
+#if ARCHIVE_VERSION_NUMBER < 3000000
+off_t __archive_shim_skip(struct transform *, void *, off_t);
+#else
+int64_t __archive_shim_skip(struct transform *, void *, int64_t);
+#endif
+
+ssize_t __archive_shim_write(struct transform *, void *, const void *, size_t);
+ssize_t __archive_shim_read(struct transform *, void *, const void **);
+
+
 #define	err_combine(a,b)	((a) < (b) ? (a) : (b))
 
 #if defined(__BORLANDC__) || (defined(_MSC_VER) &&  _MSC_VER <= 1300)

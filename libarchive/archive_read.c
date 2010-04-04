@@ -228,29 +228,29 @@ archive_read_open(struct archive *a, void *client_data,
 }
 
 int
-archive_read_open2(struct archive *a, void *client_data,
+archive_read_open2(struct archive *a, void *_client_data,
     archive_open_callback *client_opener,
     archive_read_callback *client_reader,
     archive_skip_callback *client_skipper,
     archive_close_callback *client_closer)
 {
-	int e;
+	int ret;
+	void *client_data = __archive_shim_new(a, _client_data,
+		client_opener, client_closer, NULL, client_reader, client_skipper);
 
-	archive_check_magic(a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
-	    "archive_read_open");
-	archive_clear_error(a);
+	if (NULL == client_data) {
+		archive_set_error(a, ENOMEM, "No memory");
+		return (ARCHIVE_FATAL);
+	}
 
-	e = transform_read_open2(a->transform,
-		client_data,
-		(transform_open_callback *)client_opener,
-		(transform_read_callback *)client_reader,
-		(transform_skip_callback *)client_skipper,
-		(transform_close_callback *)client_closer);
-	e = __convert_transform_error_to_archive_error(a, a->transform, e);
-	if (ARCHIVE_OK == e)
-		a->state = ARCHIVE_STATE_HEADER;
+	ret = archive_read_open3(a, client_data, __archive_shim_open,
+		__archive_shim_read, __archive_shim_skip, __archive_shim_close);
 
-	return (e);
+	if (ARCHIVE_OK != ret) {
+		/* XXX what about warn... ? */
+		free(client_data);
+	}
+	return ret;
 }
 
 int
