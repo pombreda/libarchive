@@ -52,16 +52,6 @@ struct archive_write {
 	size_t			 null_length;
 
 	/*
-	 * These control whether data within a gzip/bzip2 compressed
-	 * stream gets padded or not.  If pad_uncompressed is set,
-	 * the data will be padded to a full block before being
-	 * compressed.  The pad_uncompressed_byte determines the value
-	 * that will be used for padding.  Note that these have no
-	 * effect on compression "none."
-	 */
-	int		  pad_uncompressed;
-
-	/*
 	 * Pointers to format-specific functions for writing.  They're
 	 * initialized by archive_write_set_format_XXX() calls.
 	 */
