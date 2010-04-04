@@ -51,6 +51,14 @@ archive_read_support_compression_gzip(struct archive *a)
 }
 }}}
 
+This implementation uses a standard module that feeds
+the data through an external program.
+It also registers a simple bidder that looks for a fixed
+file prefix.
+In this case, we've specified the two byte prefix
+"\037\213" which is the "magic number" for gzip compressed
+files.
+
 Of course, if you're adding a new compression method,
 you'll need to add a prototype for `archive_read_support_compression_foo`
 to the `archive.h` public header file.
@@ -65,7 +73,8 @@ header data to avoid false positives.
 Also, there are many formats where you can't simply
 compare the first bytes to a fixed string.
 This is especially true of text formats such as uudecode
-where you may have to look quite far ahead.
+where you may have to look quite far ahead in the
+input in order to skip over leading garbage.
 
 To implement this, you'll need to implement a custom
 handler for the internal bidding protocol, which makes
