@@ -46,15 +46,6 @@ __FBSDID("$FreeBSD: head/lib/libarchive/transform_write_set_compression_program.
 #include "transform_private.h"
 #include "transform_write_private.h"
 
-#if ARCHIVE_VERSION_NUMBER < 4000000
-int
-transform_write_set_compression_program(struct transform *a, const char *cmd)
-{
-	__transform_write_filters_free(a);
-	return (transform_write_add_filter_program(a, cmd));
-}
-#endif
-
 /* This capability is only available on POSIX systems. */
 #if (!defined(HAVE_PIPE) || !defined(HAVE_FCNTL) || \
     !(defined(HAVE_FORK) || defined(HAVE_VFORK))) && (!defined(_WIN32) || defined(__CYGWIN__))

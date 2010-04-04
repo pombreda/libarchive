@@ -45,15 +45,6 @@ __FBSDID("$FreeBSD: head/lib/libarchive/transform_write_set_compression_bzip2.c 
 #include "transform_private.h"
 #include "transform_write_private.h"
 
-#if ARCHIVE_VERSION_NUMBER < 4000000
-int
-transform_write_set_compression_bzip2(struct transform *a)
-{
-	__transform_write_filters_free(a);
-	return (transform_write_add_filter_bzip2(a));
-}
-#endif
-
 #ifndef HAVE_BZLIB_H
 int
 transform_write_add_filter_bzip2(struct transform *a)

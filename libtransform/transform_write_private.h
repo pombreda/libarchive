@@ -55,10 +55,6 @@ struct transform_write_filter {
 	int	  bytes_in_last_block;
 };
 
-#if ARCHIVE_VERSION < 4000000
-void __transform_write_filters_free(struct transform *);
-#endif
-
 struct transform_write_filter *__transform_write_allocate_filter(struct transform *);
 
 int __transform_write_output(struct transform_write *, const void *, size_t);
