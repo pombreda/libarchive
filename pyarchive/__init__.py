@@ -1,3 +1,6 @@
+# Copyright: 2010 Brian Harring <ferringb@gmail.com>
+# License: GPL2/BSD 3 clause
+
 from _extension import archive_stream, archive_entry
 from pyarchive import errors
 
