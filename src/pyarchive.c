@@ -686,10 +686,12 @@ PyArchiveStream_iternext(PyArchiveStream *self)
 #endif
     if(ret == ARCHIVE_EOF) {
         self->flags |= PYARCHIVE_EOF;
+        Py_DECREF(pae);
         return NULL;
     } else if(ret != ARCHIVE_OK) {
         // XXX yes this converts warnings into failures.  later.
         self->flags |= PYARCHIVE_FAILURE;
+        Py_DECREF(pae);
         return NULL;
     }
     self->header_position++;
