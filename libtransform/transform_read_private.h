@@ -160,10 +160,7 @@ struct transform_read_filter_bidder
 const void *__transform_read_ahead(struct transform_read *, size_t, ssize_t *);
 const void *__transform_read_filter_ahead(struct transform_read_filter *,
     size_t, ssize_t *);
-ssize_t	__transform_read_consume(struct transform_read *, size_t);
-ssize_t	__transform_read_filter_consume(struct transform_read_filter *, size_t);
-int64_t	__transform_read_skip(struct transform_read *, int64_t);
-int64_t	__transform_read_skip_lenient(struct transform_read *, int64_t);
-int64_t	__transform_read_filter_skip(struct transform_read_filter *, int64_t);
+int64_t	__transform_read_consume(struct transform_read *, int64_t);
+int64_t	__transform_read_filter_consume(struct transform_read_filter *, int64_t);
 int __transform_read_program(struct transform_read_filter *, const char *);
 #endif

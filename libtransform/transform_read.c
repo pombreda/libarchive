@@ -63,6 +63,7 @@ static int	_transform_filter_code(struct transform *, int);
 static const char *_transform_filter_name(struct transform *, int);
 static int	_transform_read_close(struct transform *);
 static int	_transform_read_free(struct transform *);
+static int64_t  advance_file_pointer(struct transform_read_filter *, int64_t);
 
 static struct transform_vtable *
 transform_read_vtable(void)
@@ -491,30 +492,31 @@ __transform_read_get_bidder(struct transform_read *a)
 }
 
 /*
- * The next three functions comprise the peek/consume internal I/O
- * system used by transform format readers.  This system allows fairly
- * flexible read-ahead and allows the I/O code to operate in a
- * zero-copy manner most of the time.
+ * The next section implements the peek/consume internal I/O
+ * system used by archive readers.  This system allows simple
+ * read-ahead for consumers while preserving zero-copy operation
+ * most of the time.
+ *
+ * The two key operations:
+ *  * The read-ahead function returns a pointer to a block of data
+ *    that satisfies a minimum request.
+ *  * The consume function advances the file pointer.
  *
  * In the ideal case, filters generate blocks of data
  * and __transform_read_ahead() just returns pointers directly into
  * those blocks.  Then __transform_read_consume() just bumps those
  * pointers.  Only if your request would span blocks does the I/O
  * layer use a copy buffer to provide you with a contiguous block of
- * data.  The __transform_read_skip() is an optimization; it scans ahead
- * very quickly (it usually translates into a seek() operation if
- * you're reading uncompressed disk files).
+ * data.
  *
  * A couple of useful idioms:
  *  * "I just want some data."  Ask for 1 byte and pay attention to
  *    the "number of bytes available" from __transform_read_ahead().
- *    You can consume more than you asked for; you just can't consume
- *    more than is available.  If you consume everything that's
- *    immediately available, the next read_ahead() call will pull
- *    the next block.
+ *    Consume whatever you actually use.
  *  * "I want to output a large block of data."  As above, ask for 1 byte,
- *    emit all that's available (up to whatever limit you have), then
- *    repeat until you're done.
+ *    emit all that's available (up to whatever limit you have), consume
+ *    it all, then repeat until you're done.  This effectively means that
+ *    you're passing along the blocks that came from your provider.
  *  * "I want to peek ahead by a large amount."  Ask for 4k or so, then
  *    double and repeat until you get an error or have enough.  Note
  *    that the I/O layer will likely end up expanding its copy buffer
@@ -536,7 +538,8 @@ __transform_read_get_bidder(struct transform_read *a)
  *    in the current buffer, which may be much larger than requested.
  *  * If end-of-file, *avail gets set to zero.
  *  * If error, *avail gets error code.
- *  * If request can be met, returns pointer to data, returns NULL
+ *  * If request can be met, returns pointer to data.
+ *  * If minimum request cannot be met, returns NULL.
  *    if request is not met.
  *
  * Note: If you just want "some data", ask for 1 byte and pay attention
@@ -548,16 +551,6 @@ __transform_read_get_bidder(struct transform_read *a)
  * __transform_read_consume() below.
  */
 
-/*
- * This is tricky.  We need to provide our clients with pointers to
- * contiguous blocks of memory but we want to avoid copying whenever
- * possible.
- *
- * Mostly, this code returns pointers directly into the block of data
- * provided by the client_read routine.  It can do this unless the
- * request would split across blocks.  In that case, we have to copy
- * into an internal buffer to combine reads.
- */
 const void *
 __transform_read_ahead(struct transform_read *a, size_t min, ssize_t *avail)
 {
@@ -736,119 +729,108 @@ __transform_read_filter_ahead(struct transform_read_filter *filter,
  * often be much smaller than the size of the previous read_ahead
  * request.
  */
-ssize_t
-__transform_read_consume(struct transform_read *a, size_t request)
+int64_t
+__transform_read_consume(struct transform_read *a, int64_t request)
 {
 	return (__transform_read_filter_consume(a->filter, request));
 }
 
-ssize_t
-__transform_read_filter_consume(struct transform_read_filter * filter,
-    size_t request)
-{
-	if (filter->avail > 0) {
-		/* Read came from copy buffer. */
-		filter->next += request;
-		filter->avail -= request;
-	} else {
-		/* Read came from client buffer. */
-		filter->client_next += request;
-		filter->client_avail -= request;
-	}
-	filter->bytes_consumed += request;
-	return (request);
-}
-
-/*
- * Move the file pointer ahead by an arbitrary amount.  If you're
- * reading uncompressed data from a disk file, this will actually
- * translate into a seek() operation.  Even in cases where seek()
- * isn't feasible, this at least pushes the read-and-discard loop
- * down closer to the data source.
- */
 int64_t
-__transform_read_skip(struct transform_read *a, int64_t request)
+__transform_read_filter_consume(struct transform_read_filter *filter,
+	int64_t request)
 {
-	int64_t skipped = __transform_read_skip_lenient(a, request);
+	int64_t skipped = advance_file_pointer(filter, request);
 	if (skipped == request)
 		return (skipped);
 	/* We hit EOF before we satisfied the skip request. */
 	if (skipped < 0)  // Map error code to 0 for error message below.
 		skipped = 0;
-	transform_set_error(&a->transform,
+	transform_set_error(&filter->transform->transform,
 	    TRANSFORM_ERRNO_MISC,
 	    "Truncated input file (needed %jd bytes, only %jd available)",
 	    (intmax_t)request, (intmax_t)skipped);
 	return (TRANSFORM_FATAL);
 }
 
+/*
+ * Advance the file pointer by the amount requested.
+ * Returns the amount actually advanced, which may be less than the
+ * request if EOF is encountered first.
+ * Returns a negative value if there's an I/O error.
+ */
 int64_t
-__transform_read_skip_lenient(struct transform_read *a, int64_t request)
-{
-	return (__transform_read_filter_skip(a->filter, request));
-}
-
-int64_t
-__transform_read_filter_skip(struct transform_read_filter *filter, int64_t request)
+advance_file_pointer(struct transform_read_filter *filter, int64_t request)
 {
 	int64_t bytes_skipped, total_bytes_skipped = 0;
+	ssize_t bytes_read;
 	size_t min;
 
 	if (filter->fatal)
 		return (-1);
-	/*
-	 * If there is data in the buffers already, use that first.
-	 */
+
+	/* Use up the copy buffer first */
 	if (filter->avail > 0) {
-		min = minimum(request, (off_t)filter->avail);
-		bytes_skipped = __transform_read_filter_consume(filter, min);
-		request -= bytes_skipped;
-		total_bytes_skipped += bytes_skipped;
+		min = minimum(request, filter->avail);
+		filter->next += min;
+		filter->avail -= min;
+		request -= min;
+		filter->bytes_consumed += min;
+		total_bytes_skipped += min;
 	}
+
+	/* Then use up the client buffer */
 	if (filter->client_avail > 0) {
-		min = minimum(request, (int64_t)filter->client_avail);
-		bytes_skipped = __transform_read_filter_consume(filter, min);
-		request -= bytes_skipped;
-		total_bytes_skipped += bytes_skipped;
+		min = minimum(request, filter->client_avail);
+		filter->client_next += min;
+		filter->client_avail -= min;
+		request -= min;
+		filter->bytes_consumed += min;
+		total_bytes_skipped += min;
 	}
 	if (request == 0)
 		return (total_bytes_skipped);
 
-	/*
-	 * If a client_skipper was provided, try that first.
-	 */
+	/* If there's an optimized skip function, use it */
 	if (filter->skip != NULL) {
 		bytes_skipped = (filter->skip)(filter, request);
 		if (bytes_skipped < 0) {	/* error */
-			filter->client_total = filter->client_avail = 0;
-			filter->client_next = filter->client_buff = NULL;
 			filter->fatal = 1;
 			return (bytes_skipped);
 		}
 		filter->bytes_consumed += bytes_skipped;
 		total_bytes_skipped += bytes_skipped;
 		request -= bytes_skipped;
-		filter->client_next = filter->client_buff;
-		filter->client_avail = filter->client_total = 0;
+		if(request == 0)
+			return (total_bytes_skipped);
 	}
-	/*
-	 * Note that client_skipper will usually not satisfy the
-	 * full request (due to low-level blocking concerns),
-	 * so even if client_skipper is provided, we may still
-	 * have to use ordinary reads to finish out the request.
-	 */
-	while (request > 0) {
-		ssize_t bytes_read;
-		(void)__transform_read_filter_ahead(filter, 1, &bytes_read);
-		if (bytes_read < 0)
+
+	/* Use ordinary reads as necessary to complete the request. */
+	for (;;) {
+		bytes_read = (filter->read)(filter, &filter->client_buff);
+
+		if (bytes_read < 0) {
+			filter->client_buff = NULL;
+			filter->fatal = 1;
 			return (bytes_read);
+		}
+
 		if (bytes_read == 0) {
+			filter->client_buff = NULL;
+			filter->end_of_file = 1;
 			return (total_bytes_skipped);
 		}
-		min = (size_t)(minimum(bytes_read, request));
-		bytes_read = __transform_read_filter_consume(filter, min);
+
+		filter->position += bytes_read;
+
+		if (bytes_read >= request) {
+			filter->client_next = filter->client_buff + request;
+			filter->client_avail = bytes_read - request;
+			filter->client_total = bytes_read;
+			total_bytes_skipped += request;
+			return (total_bytes_skipped);
+		}
+
 		total_bytes_skipped += bytes_read;
 		request -= bytes_read;
 	}
-	return (total_bytes_skipped);
 }

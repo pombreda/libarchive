@@ -4,12 +4,7 @@
 #
 ############################################
 IF(ENABLE_TEST)
-  FOREACH (_src ${libtransform_SOURCES})
-    LIST(APPEND parent_libtransform_SOURCES "../${_src}")
-  ENDFOREACH(_src)
-
-  SET(libtransform_test_SOURCES
-    ${parent_libtransform_SOURCES}
+  SET(libarchive_test_SOURCES
     main.c
     read_open_memory.c
     test.h
@@ -131,10 +126,10 @@ IF(ENABLE_TEST)
   #
   # Register target
   #
-  ADD_EXECUTABLE(libtransform_test ${libtransform_test_SOURCES})
-  TARGET_LINK_LIBRARIES(libtransform_test ${ADDITIONAL_LIBS})
-  SET_PROPERTY(TARGET libtransform_test PROPERTY COMPILE_DEFINITIONS
-    LIBTRANSFORM_STATIC LIST_H)
+  ADD_EXECUTABLE(libarchive_test ${libarchive_test_SOURCES})
+  TARGET_LINK_LIBRARIES(libarchive_test archive_static ${ADDITIONAL_LIBS})
+  SET_PROPERTY(TARGET libarchive_test PROPERTY COMPILE_DEFINITIONS
+    LIBARCHIVE_STATIC LIST_H)
 
   #
   # Generate list.h by grepping DEFINE_TEST() lines out of the C sources.
