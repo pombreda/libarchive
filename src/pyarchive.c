@@ -38,8 +38,9 @@ typedef struct {
 
 typedef struct {
     PyObject_HEAD
-    PyArchiveStream *archive;
-    struct archive_entry *archive_entry;
+    PyArchiveStream         *archive;
+    Py_ssize_t              archive_header_position;
+    struct archive_entry    *archive_entry;
 } PyArchiveEntry;
 
 #ifdef HAS_ARCHIVE_READ_NEXT_HEADER2
@@ -450,6 +451,7 @@ mk_PyArchiveEntry(PyArchiveStream *archive)
             Py_DECREF(pae);
             return NULL;
         }
+        pae->archive_header_position = archive->header_position;
     }
 #else
     pae = PyObject_GC_New(PyArchiveEntry, &PyArchiveEntryType);
