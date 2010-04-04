@@ -95,6 +95,9 @@ libtransform_la_SOURCES = 									\
 	libtransform/transform_write_add_filter_program.c	\
 	libtransform/transform_write_add_filter_xz.c		\
 	libtransform/transform_util.c					\
+	libtransform/transform_string.c					\
+	libtransform/transform_string.h					\
+	libtransform/transform_string_sprintf.c					\
 	libtransform/filter_fork.c						\
 	libtransform/filter_fork.h
 
