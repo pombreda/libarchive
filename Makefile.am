@@ -80,22 +80,22 @@ include_HEADERS= libtransform/transform.h
 
 libtransform_la_SOURCES = 									\
 	libtransform/transform_read.c							\
-	libtransform/filters/transform_read_support_compression_all.c	\
-	libtransform/filters/transform_read_support_compression_bzip2.c	\
-	libtransform/filters/transform_read_support_compression_compress.c	\
-	libtransform/filters/transform_read_support_compression_gzip.c	\
-	libtransform/filters/transform_read_support_compression_none.c	\
-	libtransform/filters/transform_read_support_compression_program.c	\
-	libtransform/filters/transform_read_support_compression_rpm.c	\
-	libtransform/filters/transform_read_support_compression_uu.c	\
-	libtransform/filters/transform_read_support_compression_xz.c	\
+	libtransform/filters/transform_read_all.c	\
+	libtransform/filters/transform_read_bzip2.c	\
+	libtransform/filters/transform_read_compress.c	\
+	libtransform/filters/transform_read_gzip.c	\
+	libtransform/filters/transform_read_none.c	\
+	libtransform/filters/transform_read_program.c	\
+	libtransform/filters/transform_read_rpm.c	\
+	libtransform/filters/transform_read_uu.c	\
+	libtransform/filters/transform_read_xz.c	\
 	libtransform/transform_write.c							\
-	libtransform/filters/transform_write_add_filter_bzip2.c	\
-	libtransform/filters/transform_write_add_filter_compress.c	\
-	libtransform/filters/transform_write_add_filter_gzip.c		\
-	libtransform/filters/transform_write_add_filter_none.c		\
-	libtransform/filters/transform_write_add_filter_program.c	\
-	libtransform/filters/transform_write_add_filter_xz.c		\
+	libtransform/filters/transform_write_bzip2.c	\
+	libtransform/filters/transform_write_compress.c	\
+	libtransform/filters/transform_write_gzip.c		\
+	libtransform/filters/transform_write_none.c		\
+	libtransform/filters/transform_write_program.c	\
+	libtransform/filters/transform_write_xz.c		\
 	libtransform/transform_util.c					\
 	libtransform/transform_virtual.c				\
 	libtransform/transform_check_magic.c			\
