@@ -580,7 +580,7 @@ mk_PyArchiveEntry(PyArchiveStream *archive)
             Py_DECREF(pae);
             return NULL;
         }
-        pae->archive_header_position = archive->header_position;
+        pae->archive_header_position = -1;
     }
 #else
     pae = PyObject_GC_New(PyArchiveEntry, &PyArchiveEntryType);
@@ -632,7 +632,7 @@ PyArchiveStream_init(PyArchiveStream *self, PyObject *args, PyObject *kwds)
         PyString_AsString(filepath), DEFAULT_BUFSIZE))) {
         goto pyarchive_init_err;
     }
-    self->header_position = 0;
+    self->header_position = -1;
     return 0;
 
 pyarchive_init_err:
@@ -667,7 +667,6 @@ PyArchiveStream_iternext(PyArchiveStream *self)
     pae = mk_PyArchiveEntry(self);
     if(!pae)
         return NULL;
-
 #ifdef HAS_ARCHIVE_READ_NEXT_HEADER2
     ret = archive_read_next_header2(self->archive, pae->archive_entry);
 #else
@@ -685,15 +684,15 @@ PyArchiveStream_iternext(PyArchiveStream *self)
 #endif
     if(ret == ARCHIVE_EOF) {
         self->flags |= PYARCHIVE_EOF;
+        return NULL;
     } else if(ret != ARCHIVE_OK) {
         // XXX yes this converts warnings into failures.  later.
         self->flags |= PYARCHIVE_FAILURE;
-    } else {
-        self->header_position++;
-        return (PyObject *)pae;
+        return NULL;
     }
-    Py_DECREF(pae);
-    return NULL;
+    self->header_position++;
+    pae->archive_header_position = self->header_position;
+    return (PyObject *)pae;
 }
 
 /* XXX bloody hack */
