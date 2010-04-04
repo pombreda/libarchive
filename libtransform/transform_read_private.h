@@ -172,11 +172,6 @@ struct transform_read {
 	}	formats[9];
 	struct transform_format_descriptor	*format; /* Active format. */
 
-	/*
-	 * Various information needed by archive_extract.
-	 */
-	struct extract		 *extract;
-	int			(*cleanup_archive_extract)(struct transform_read *);
 };
 
 struct transform_read_filter_bidder

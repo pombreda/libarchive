@@ -528,10 +528,6 @@ _transform_read_free(struct transform *_a)
 	    && a->archive.state != ARCHIVE_STATE_FATAL)
 		r = transform_read_close(&a->archive);
 
-	/* Call cleanup functions registered by optional components. */
-	if (a->cleanup_archive_extract != NULL)
-		r = (a->cleanup_archive_extract)(a);
-
 	/* Cleanup format-specific data. */
 	slots = sizeof(a->formats) / sizeof(a->formats[0]);
 	for (i = 0; i < slots; i++) {
