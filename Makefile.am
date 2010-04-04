@@ -6,7 +6,7 @@ ACLOCAL_AMFLAGS = -I build/autoconf
 #
 # What to build and install
 #
-lib_LTLIBRARIES=	libstransform.la
+lib_LTLIBRARIES=	libtransform.la
 man_MANS= $(libarchive_man_MANS)
 BUILT_SOURCES= libarchive/test/list.h
 
@@ -78,7 +78,7 @@ distclean-local:
 
 include_HEADERS= libarchive/archive.h
 
-libstransform_la_SOURCES = 									\
+libtransform_la_SOURCES = 									\
 	libarchive/archive_read_support_compression_all.c	\
 	libarchive/archive_read_support_compression_bzip2.c	\
 	libarchive/archive_read_support_compression_compress.c	\
@@ -98,13 +98,13 @@ libstransform_la_SOURCES = 									\
 	libarchive/filter_fork.h
 
 if INC_WINDOWS_FILES
-libstransform_la_SOURCES+=						\
+libtransform_la_SOURCES+=						\
 	libarchive/filter_fork_windows.c
 endif
 
 # -no-undefined marks that libarchive doesn't rely on symbols
 # defined in the application.  This is mandatory for cygwin.
-libstransform_la_LDFLAGS= -no-undefined
+libtransform_la_LDFLAGS= -no-undefined
 
 # Manpages to install
 libarchive_man_MANS=						\
