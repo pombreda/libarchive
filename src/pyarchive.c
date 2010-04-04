@@ -59,6 +59,7 @@ static int archive_entry_free_count = 0;
 #endif
 
 static PyObject *PyArchiveError = NULL;
+static PyObject *UsageError = NULL;
 // XXX: this won't survive long; hack
 static PyObject *StringIO_kls = NULL;
 
@@ -77,6 +78,24 @@ _convert_and_set_archive_error(PyObject *err_kls, struct archive *a)
         err_kls = (PyObject *)PyArchiveError;
 
     if(err_pstr = PyString_FromString(err_cstr)) {
+        tmp = PyObject_CallFunction(err_kls, "O", err_pstr);
+        if(tmp) {
+            PyErr_SetObject(err_kls, tmp);
+            Py_DECREF(tmp);
+        }
+        Py_DECREF(err_pstr);
+    }
+}
+
+
+static void
+_usage_error(PyObject *err_kls, PyArchiveStream *archive, const char *msg)
+{
+    PyObject *tmp = NULL, *err_pstr = NULL;
+    if(!err_kls)
+        err_kls = (PyObject *)UsageError;
+
+    if(err_pstr = PyString_FromString(msg)) {
         tmp = PyObject_CallFunction(err_kls, "O", err_pstr);
         if(tmp) {
             PyErr_SetObject(err_kls, tmp);
@@ -480,6 +499,10 @@ PyArchive_Entry_data(PyArchiveEntry *self)
 {
     Py_ssize_t len = 0;
     PyObject *str = NULL, *obj = NULL;
+    if(self->archive_header_position != self->archive->header_position) {
+        _usage_error(NULL, self->archive, "stream isn't positioned to allow for data access");
+        return NULL;
+    }
     if(!(PyArchive_Entry_raw_isreg(self))) {
         PyErr_SetString(PyExc_TypeError, "data() is only usable on files");
         return NULL;
@@ -764,6 +787,11 @@ init_extension()
         return; 
 
     if(!(PyArchiveError = PyObject_GetAttrString(tmp, "PyArchiveError"))) {
+        Py_DECREF(tmp);
+        return;
+    }
+
+    if(!(UsageError = PyObject_GetAttrString(tmp, "PyArchiveError"))) {
         Py_DECREF(tmp);
         return;
     }
