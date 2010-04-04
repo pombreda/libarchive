@@ -50,7 +50,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_xz.c 20
 #include "archive.h"
 #include "archive_endian.h"
 #include "archive_private.h"
-#include "archive_read_private.h"
+#include "transform_read_private.h"
 
 #if HAVE_LZMA_H && HAVE_LIBLZMA
 

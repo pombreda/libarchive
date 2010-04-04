@@ -35,7 +35,7 @@
 #include "archive.h"
 #include "archive_endian.h"
 #include "archive_private.h"
-#include "archive_read_private.h"
+#include "transform_read_private.h"
 
 struct rpm {
 	int64_t		 total_in;

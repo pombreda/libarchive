@@ -72,7 +72,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_compression_compress.c
 
 #include "archive.h"
 #include "archive_private.h"
-#include "archive_write_private.h"
+#include "transform_write_private.h"
 
 #define	HSIZE		69001	/* 95% occupancy */
 #define	HSHIFT		8	/* 8 - trunc(log2(HSIZE / 65536)) */

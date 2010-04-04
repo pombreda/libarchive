@@ -46,7 +46,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_bzip2.c
 
 #include "archive.h"
 #include "archive_private.h"
-#include "archive_read_private.h"
+#include "transform_read_private.h"
 
 #if HAVE_BZLIB_H
 struct private_data {

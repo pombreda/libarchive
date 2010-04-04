@@ -79,21 +79,21 @@ distclean-local:
 include_HEADERS= libtransform/archive.h
 
 libtransform_la_SOURCES = 									\
-	libtransform/archive_read_support_compression_all.c	\
-	libtransform/archive_read_support_compression_bzip2.c	\
-	libtransform/archive_read_support_compression_compress.c	\
-	libtransform/archive_read_support_compression_gzip.c	\
-	libtransform/archive_read_support_compression_none.c	\
-	libtransform/archive_read_support_compression_program.c	\
-	libtransform/archive_read_support_compression_rpm.c	\
-	libtransform/archive_read_support_compression_uu.c	\
-	libtransform/archive_read_support_compression_xz.c	\
-	libtransform/archive_write_add_filter_bzip2.c	\
-	libtransform/archive_write_add_filter_compress.c	\
-	libtransform/archive_write_add_filter_gzip.c		\
-	libtransform/archive_write_add_filter_none.c		\
-	libtransform/archive_write_add_filter_program.c	\
-	libtransform/archive_write_add_filter_xz.c		\
+	libtransform/transform_read_support_compression_all.c	\
+	libtransform/transform_read_support_compression_bzip2.c	\
+	libtransform/transform_read_support_compression_compress.c	\
+	libtransform/transform_read_support_compression_gzip.c	\
+	libtransform/transform_read_support_compression_none.c	\
+	libtransform/transform_read_support_compression_program.c	\
+	libtransform/transform_read_support_compression_rpm.c	\
+	libtransform/transform_read_support_compression_uu.c	\
+	libtransform/transform_read_support_compression_xz.c	\
+	libtransform/transform_write_add_filter_bzip2.c	\
+	libtransform/transform_write_add_filter_compress.c	\
+	libtransform/transform_write_add_filter_gzip.c		\
+	libtransform/transform_write_add_filter_none.c		\
+	libtransform/transform_write_add_filter_program.c	\
+	libtransform/transform_write_add_filter_xz.c		\
 	libtransform/filter_fork.c						\
 	libtransform/filter_fork.h
 

@@ -53,7 +53,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_program
 
 #include "archive.h"
 #include "archive_private.h"
-#include "archive_read_private.h"
+#include "transform_read_private.h"
 
 int
 archive_read_support_compression_program(struct archive *a, const char *cmd)
