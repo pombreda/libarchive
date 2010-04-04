@@ -809,9 +809,6 @@ __LA_DECL void		 archive_copy_error(struct archive *dest,
 			    struct archive *src);
 __LA_DECL int		 archive_file_count(struct archive *);
 
-// XXX should this be public?
-__LA_DECL int	convert_transform_error_to_archive_error(int);
-
 #ifdef __cplusplus
 }
 #endif

@@ -162,4 +162,8 @@
 #define	ARCHIVE_ERRNO_MISC (-1)
 #endif
 
+#ifndef ARCHIVE_ERRNO_TRANSFORM
+#define ARCHIVE_ERRNO_TRANSFORM (-2)
+#endif
+
 #endif /* !ARCHIVE_PLATFORM_H_INCLUDED */

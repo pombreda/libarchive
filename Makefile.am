@@ -119,15 +119,7 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_read_open_filename.c			\
 	libarchive/archive_read_open_memory.c			\
 	libarchive/archive_read_private.h			\
-	libarchive/archive_read_support_compression_all.c	\
-	libarchive/archive_read_support_compression_bzip2.c	\
-	libarchive/archive_read_support_compression_compress.c	\
-	libarchive/archive_read_support_compression_gzip.c	\
-	libarchive/archive_read_support_compression_none.c	\
-	libarchive/archive_read_support_compression_program.c	\
-	libarchive/archive_read_support_compression_rpm.c	\
-	libarchive/archive_read_support_compression_uu.c	\
-	libarchive/archive_read_support_compression_xz.c	\
+	libarchive/archive_read_support_transform.c	\
 	libarchive/archive_read_support_format_all.c		\
 	libarchive/archive_read_support_format_ar.c		\
 	libarchive/archive_read_support_format_cpio.c		\

@@ -420,6 +420,43 @@ get_tempdir(struct archive_string *temppath)
 	return (ARCHIVE_OK);
 }
 
+void
+__archive_set_error_from_transform(struct archive *a, struct transform *t)
+{
+	/* XXX optimization, transfer the error_string only if it isn't the NULL default */
+ 	archive_set_error(a, ARCHIVE_ERRNO_TRANSFORM,
+ 		"transform error: errno %d, error %s",
+ 		transform_errno(t), transform_error_string(t));
+}
+
+int
+__convert_transform_error_to_archive_error(struct archive *a,
+    struct transform *t, int error)
+{
+	if (TRANSFORM_OK == error)
+		return (ARCHIVE_OK);
+
+	if (TRANSFORM_EOF == error)
+		return (ARCHIVE_EOF);
+
+	/* no other states possible, thus transfer the error data. from the transform*/
+	__archive_set_error_from_transform(a, t);
+
+	/* XXX should we be upgrading unknown states to FATAL? */
+
+	if (TRANSFORM_WARN == error) {
+		return (ARCHIVE_WARN);
+	} else if (TRANSFORM_FATAL == error) {
+		return (ARCHIVE_FATAL);
+	} else {
+		archive_set_error(a, ARCHIVE_ERRNO_PROGRAMMER,
+			"unknown transform return(%d), errno(%d), error(%s)",
+			error, transform_errno(t), transform_error_string(t));
+	}
+
+	return (ARCHIVE_FATAL);
+}
+
 #if defined(HAVE_MKSTEMP)
 
 /*
@@ -520,20 +557,6 @@ __archive_mktemp(const char *tmpdir)
 exit_tmpfile:
 	archive_string_free(&temp_name);
 	return (fd);
-}
-
-int
-convert_transform_error_to_archive_error(int error)
-{
-	if (TRANSFORM_OK == error)
-		return (ARCHIVE_OK);
-	if (TRANSFORM_WARN == error)
-		return (ARCHIVE_WARN);
-	if (TRANSFORM_FATAL == error)
-		return (TRANSFORM_FATAL);
-
-	/* XXX implement proper storing of the errno here */
-	return (TRANSFORM_FATAL);
 }
 
 
