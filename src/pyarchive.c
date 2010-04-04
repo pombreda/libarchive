@@ -450,12 +450,16 @@ PyArchive_Entry_isfifo(PyArchiveEntry *self)
     Py_RETURN_FALSE;
 }
 
+// broken out into a macro since it's used a few other places, and having
+// to refcount true/false (and handle it at the invoker) is overkill
+#define PyArchive_Entry_raw_isreg(self)    \
+    (S_ISREG(archive_entry_mode(((PyArchiveEntry *)self)->archive_entry)))
 
 // note isreg serves double duty as isfile
 static PyObject *
 PyArchive_Entry_isreg(PyArchiveEntry *self)
 {
-    if(S_ISREG(archive_entry_mode(self->archive_entry))) {
+    if(PyArchive_Entry_raw_isreg(self)) {
         Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE;
@@ -478,7 +482,7 @@ PyArchive_Entry_data(PyArchiveEntry *self)
     PyObject *str = NULL, *obj = NULL;
     /* XXX: this really should go through the vm to get isreg, on the offchance
       it's been overriden */
-    if(!(PyArchive_Entry_isreg(self))) {
+    if(!(PyArchive_Entry_raw_isreg(self))) {
         PyErr_SetString(PyExc_TypeError, "data() is only usable on files");
         return NULL;
     }
