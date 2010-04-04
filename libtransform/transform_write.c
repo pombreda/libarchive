@@ -237,8 +237,11 @@ __transform_write_close_filter(struct transform_write_filter *f)
 }
 
 int
-__transform_write_output(struct transform_write *a, const void *buff, size_t length)
+transform_write_output(struct transform *_a, const void *buff, size_t length)
 {
+	struct transform_write *a = (struct transform_write *)_a;
+	transform_check_magic(_a, TRANSFORM_WRITE_MAGIC,
+		TRANSFORM_STATE_DATA, "transform_write_output");	
 	return (__transform_write_filter(a->filter_first, buff, length));
 }
 

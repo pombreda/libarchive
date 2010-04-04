@@ -367,6 +367,7 @@ __LA_DECL int		 transform_read_free(struct transform *);
  *   6) transform_write_free to cleanup the writer and release resources
  */
 __LA_DECL struct transform	*transform_write_new(void);
+__LA_DECL int transform_write_output(struct transform *, const void *, size_t);
 __LA_DECL int transform_write_set_bytes_per_block(struct transform *,
 		     int bytes_per_block);
 __LA_DECL int transform_write_get_bytes_per_block(struct transform *);
