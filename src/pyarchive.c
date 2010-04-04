@@ -555,6 +555,7 @@ PyArchive_iternext(PyArchive *self)
     if(ret == ARCHIVE_EOF) {
         self->flags |= PYARCHIVE_EOF;
     } else if(ret != ARCHIVE_OK) {
+        // XXX yes this converts warnings into failures.  later.
         self->flags |= PYARCHIVE_FAILURE;
     } else {
         self->header_position++;
@@ -570,9 +571,9 @@ static PyTypeObject PyArchiveType = {
     PyObject_HEAD_INIT(NULL)
     0,                                /* ob_size */
     "archive",                        /* tp_name */
-    sizeof(PyArchive),       /* tp_basicsize */
+    sizeof(PyArchive),                /* tp_basicsize */
     0,                                /* tp_itemsize */
-    (destructor)PyArchive_dealloc,     /* tp_dealloc */
+    (destructor)PyArchive_dealloc,    /* tp_dealloc */
     0,                                /* tp_print */
     0,                                /* tp_getattr */
     0,                                /* tp_setattr */
@@ -603,9 +604,9 @@ static PyTypeObject PyArchiveType = {
     0,                                /* tp_descr_get */
     0,                                /* tp_descr_set */
     0,                                /* tp_dictoffset */
-    (initproc)PyArchive_init,          /* tp_init */
+    (initproc)PyArchive_init,         /* tp_init */
     0,                                /* tp_alloc */
-    PyArchive_new,                     /* tp_new */
+    PyArchive_new,                    /* tp_new */
 };
 
 PyDoc_STRVAR(
