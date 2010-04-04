@@ -293,18 +293,6 @@ __LA_DECL int archive_read_support_compression_rpm(struct archive *);
 __LA_DECL int archive_read_support_compression_uu(struct archive *);
 __LA_DECL int archive_read_support_compression_xz(struct archive *);
 
-__LA_DECL int archive_read_support_format_all(struct archive *);
-__LA_DECL int archive_read_support_format_ar(struct archive *);
-__LA_DECL int archive_read_support_format_cpio(struct archive *);
-__LA_DECL int archive_read_support_format_empty(struct archive *);
-__LA_DECL int archive_read_support_format_gnutar(struct archive *);
-__LA_DECL int archive_read_support_format_iso9660(struct archive *);
-__LA_DECL int archive_read_support_format_mtree(struct archive *);
-__LA_DECL int archive_read_support_format_raw(struct archive *);
-__LA_DECL int archive_read_support_format_tar(struct archive *);
-__LA_DECL int archive_read_support_format_xar(struct archive *);
-__LA_DECL int archive_read_support_format_zip(struct archive *);
-
 
 /* Open the archive using callbacks for archive I/O. */
 __LA_DECL int archive_read_open(struct archive *, void *_client_data,
