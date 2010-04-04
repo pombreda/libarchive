@@ -95,6 +95,8 @@ libtransform_la_SOURCES = 									\
 	libtransform/transform_write_add_filter_program.c	\
 	libtransform/transform_write_add_filter_xz.c		\
 	libtransform/transform_util.c					\
+	libtransform/transform_virtual.c				\
+	libtransform/transform_check_magic.c			\
 	libtransform/transform_string.c					\
 	libtransform/transform_string.h					\
 	libtransform/transform_string_sprintf.c					\
