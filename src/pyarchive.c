@@ -480,8 +480,6 @@ PyArchive_Entry_data(PyArchiveEntry *self)
 {
     Py_ssize_t len = 0;
     PyObject *str = NULL, *obj = NULL;
-    /* XXX: this really should go through the vm to get isreg, on the offchance
-      it's been overriden */
     if(!(PyArchive_Entry_raw_isreg(self))) {
         PyErr_SetString(PyExc_TypeError, "data() is only usable on files");
         return NULL;
