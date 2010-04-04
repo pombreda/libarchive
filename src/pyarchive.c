@@ -486,8 +486,10 @@ PyArchive_init(PyArchive *self, PyObject *args, PyObject *kwds)
         return -1;
     }
     self->header_position = 0;
-    // doesn't set an exception.
-    // error checking in general.
+
+    /* XXX: rework this so that it allows controllable compression/format support
+       from python side, and so that it handles warnings
+    */
     if(ARCHIVE_OK != (ret = archive_read_support_compression_all(self->archive))) {
         goto pyarchive_init_err;
     }
