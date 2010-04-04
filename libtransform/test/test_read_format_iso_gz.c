@@ -43,7 +43,7 @@ DEFINE_TEST(test_read_format_iso_gz)
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_next_header(a, &ae));
 	assertEqualInt(archive_compression(a),
-	    ARCHIVE_COMPRESSION_COMPRESS);
+	    ARCHIVE_FILTER_COMPRESS);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_ISO9660);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));

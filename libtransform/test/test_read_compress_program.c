@@ -75,7 +75,7 @@ DEFINE_TEST(test_read_compress_program)
 	    archive_read_open_memory(a, archive, sizeof(archive)));
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_next_header(a, &ae));
-	assertEqualInt(archive_compression(a), ARCHIVE_COMPRESSION_PROGRAM);
+	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_PROGRAM);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));

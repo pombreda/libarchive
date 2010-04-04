@@ -135,7 +135,7 @@ archive_write_add_filter_xz(struct archive *_a)
 	f = __archive_write_allocate_filter(_a);
 	r = common_setup(f);
 	if (r == ARCHIVE_OK) {
-		f->code = ARCHIVE_COMPRESSION_XZ;
+		f->code = ARCHIVE_FILTER_XZ;
 		f->name = "xz";
 	}
 	return (r);
@@ -155,7 +155,7 @@ archive_write_add_filter_lzma(struct archive *_a)
 	f = __archive_write_allocate_filter(_a);
 	r = common_setup(f);
 	if (r == ARCHIVE_OK) {
-		f->code = ARCHIVE_COMPRESSION_LZMA;
+		f->code = ARCHIVE_FILTER_LZMA;
 		f->name = "lzma";
 	}
 	return (r);
@@ -170,7 +170,7 @@ archive_compressor_xz_init_stream(struct archive_write_filter *f,
 	data->stream = (lzma_stream)LZMA_STREAM_INIT;
 	data->stream.next_out = data->compressed;
 	data->stream.avail_out = data->compressed_buffer_size;
-	if (f->code == ARCHIVE_COMPRESSION_XZ)
+	if (f->code == ARCHIVE_FILTER_XZ)
 		ret = lzma_stream_encoder(&(data->stream),
 		    data->lzmafilters, LZMA_CHECK_CRC64);
 	else

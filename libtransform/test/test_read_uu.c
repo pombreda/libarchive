@@ -114,7 +114,7 @@ test_read_uu_sub(const char *uudata, size_t uusize)
 		failure("archive_compression_name(a)=\"%s\"",
 		    archive_compression_name(a));
 		assertEqualInt(archive_compression(a),
-		    ARCHIVE_COMPRESSION_COMPRESS);
+		    ARCHIVE_FILTER_COMPRESS);
 		failure("archive_format_name(a)=\"%s\"",
 		    archive_format_name(a));
 		assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);

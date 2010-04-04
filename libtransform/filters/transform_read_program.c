@@ -374,7 +374,7 @@ __archive_read_program(struct archive_read_filter *self, const char *cmd)
 		return (ARCHIVE_FATAL);
 	}
 
-	self->code = ARCHIVE_COMPRESSION_PROGRAM;
+	self->code = ARCHIVE_FILTER_PROGRAM;
 	state->description = description;
 	strcpy(state->description, prefix);
 	strcat(state->description, cmd);

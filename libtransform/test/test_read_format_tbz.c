@@ -50,7 +50,7 @@ DEFINE_TEST(test_read_format_tbz)
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_open_memory(a, archive, sizeof(archive)));
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt(archive_compression(a), ARCHIVE_COMPRESSION_BZIP2);
+	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_BZIP2);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));

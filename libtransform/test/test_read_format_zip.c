@@ -82,7 +82,7 @@ DEFINE_TEST(test_read_format_zip)
 	failure("file2 has a bad CRC, so reading to end should fail");
 	assertEqualInt(ARCHIVE_WARN, archive_read_data(a, buff, 19));
 	assert(0 == memcmp(buff, "hello\nhello\nhello\n", 18));
-	assertA(archive_compression(a) == ARCHIVE_COMPRESSION_NONE);
+	assertA(archive_compression(a) == ARCHIVE_FILTER_NONE);
 	assertA(archive_format(a) == ARCHIVE_FORMAT_ZIP);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
 finish:

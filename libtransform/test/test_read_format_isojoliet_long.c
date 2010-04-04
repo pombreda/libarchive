@@ -136,7 +136,7 @@ DEFINE_TEST(test_read_format_isojoliet_long)
 	assertEqualInt(ARCHIVE_EOF, archive_read_next_header(a, &ae));
 
 	/* Verify archive format. */
-	assertEqualInt(archive_compression(a), ARCHIVE_COMPRESSION_COMPRESS);
+	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_COMPRESS);
 
 	/* Close the archive. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));

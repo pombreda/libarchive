@@ -47,7 +47,7 @@ DEFINE_TEST(test_read_format_tz)
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
 	failure("archive_compression_name(a)=\"%s\"",
 	    archive_compression_name(a));
-	assertEqualInt(archive_compression(a), ARCHIVE_COMPRESSION_COMPRESS);
+	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_COMPRESS);
 	failure("archive_format_name(a)=\"%s\"", archive_format_name(a));
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));

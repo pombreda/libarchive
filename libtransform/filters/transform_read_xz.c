@@ -315,7 +315,7 @@ lzma_bidder_bid(struct archive_read_filter_bidder *self,
 static int
 xz_bidder_init(struct archive_read_filter *self)
 {
-	self->code = ARCHIVE_COMPRESSION_XZ;
+	self->code = ARCHIVE_FILTER_XZ;
 	self->name = "xz";
 	return (xz_lzma_bidder_init(self));
 }
@@ -323,7 +323,7 @@ xz_bidder_init(struct archive_read_filter *self)
 static int
 lzma_bidder_init(struct archive_read_filter *self)
 {
-	self->code = ARCHIVE_COMPRESSION_LZMA;
+	self->code = ARCHIVE_FILTER_LZMA;
 	self->name = "lzma";
 	return (xz_lzma_bidder_init(self));
 }
@@ -366,7 +366,7 @@ xz_lzma_bidder_init(struct archive_read_filter *self)
 	 *       maybe, it needs to check memory size which
 	 *       running system has.
 	 */
-	if (self->code == ARCHIVE_COMPRESSION_XZ)
+	if (self->code == ARCHIVE_FILTER_XZ)
 		ret = lzma_stream_decoder(&(state->stream),
 		    (1U << 30),/* memlimit */
 		    LZMA_CONCATENATED);
@@ -519,7 +519,7 @@ lzma_bidder_init(struct archive_read_filter *self)
 	struct private_data *state;
 	ssize_t ret, avail_in;
 
-	self->code = ARCHIVE_COMPRESSION_LZMA;
+	self->code = ARCHIVE_FILTER_LZMA;
 	self->name = "lzma";
 
 	state = (struct private_data *)calloc(sizeof(*state), 1);
@@ -682,7 +682,7 @@ lzma_bidder_init(struct archive_read_filter *self)
 	/* Note: We set the format here even if __archive_read_program()
 	 * above fails.  We do, after all, know what the format is
 	 * even if we weren't able to read it. */
-	self->code = ARCHIVE_COMPRESSION_LZMA;
+	self->code = ARCHIVE_FILTER_LZMA;
 	self->name = "lzma";
 	return (r);
 }
@@ -699,7 +699,7 @@ xz_bidder_init(struct archive_read_filter *self)
 	/* Note: We set the format here even if __archive_read_program()
 	 * above fails.  We do, after all, know what the format is
 	 * even if we weren't able to read it. */
-	self->code = ARCHIVE_COMPRESSION_XZ;
+	self->code = ARCHIVE_FILTER_XZ;
 	self->name = "xz";
 	return (r);
 }

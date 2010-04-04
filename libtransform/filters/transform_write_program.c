@@ -117,7 +117,7 @@ archive_write_add_filter_program(struct archive *_a, const char *cmd)
 	f->name = data->description;
 	f->data = data;
 	f->open = &archive_compressor_program_open;
-	f->code = ARCHIVE_COMPRESSION_PROGRAM;
+	f->code = ARCHIVE_FILTER_PROGRAM;
 	return (ARCHIVE_OK);
 }
 
