@@ -107,12 +107,6 @@ archive_error_string(struct archive *a)
 }
 
 int
-archive_file_count(struct archive *a)
-{
-	return (a->file_count);
-}
-
-int
 archive_compression(struct archive *a)
 {
 	return archive_filter_code(a, 0);
