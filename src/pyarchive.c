@@ -2,6 +2,7 @@
 // License: GPL2/BSD
 
 #include <Python.h>
+#include <structmember.h>
 #include <archive.h>
 #include <archive_entry.h>
 #include <unistd.h> /* gid_t, uid_t, time_t */
@@ -356,6 +357,12 @@ PyArchive_Entry_get_symlink(PyArchiveEntry *self, void *closure)
     return PyString_FromString("");
 }
 
+static PyObject *
+PyArchive_Entry_get_header_position(PyArchiveEntry *self, void *closure)
+{
+    return PyLong_FromSsize_t(self->archive_header_position);
+}
+
 static PyGetSetDef PyArchiveEntry_getsetters[] = {
     GETSET_HELPER(PyArchiveEntry, "name", name),
     {"ctime_is_set", (getter)PyArchive_Entry_get_ctime_is_set,
@@ -412,8 +419,11 @@ static PyGetSetDef PyArchiveEntry_getsetters[] = {
         (setter)PyArchive_Entry_generic_immutable, NULL},
     {"symlink", (getter)PyArchive_Entry_get_symlink,
         (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"header_position", (getter)PyArchive_Entry_get_header_position,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
     {NULL}
 };
+
 
 /*
 --methods--
@@ -717,6 +727,12 @@ PyArchiveStream_iternext(PyArchiveStream *self)
     return (PyObject *)pae;
 }
 
+static PyMemberDef PyArchiveStream_members[] = {
+    {"header_position", T_PYSSIZET, offsetof(PyArchiveStream, header_position),
+        READONLY},
+    {NULL}
+};
+
 static PyTypeObject PyArchiveStreamType = {
     PyObject_HEAD_INIT(NULL)
     0,                                /* ob_size */
@@ -747,7 +763,7 @@ static PyTypeObject PyArchiveStreamType = {
     (getiterfunc)PyObject_SelfIter,   /* tp_iter */
     (iternextfunc)PyArchiveStream_iternext, /* tp_iternext */
     0,                                /* tp_methods */
-    0,                                /* tp_members */
+    PyArchiveStream_members,          /* tp_members */
     0,                                /* tp_getset */
     0,                                /* tp_base */
     0,                                /* tp_dict */
