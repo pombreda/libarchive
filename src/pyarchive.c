@@ -31,6 +31,11 @@ PyArchiveEntry_dealloc(PyArchiveEntry *pae)
     pae->ob_type->tp_free((PyObject *)pae);
 }
 
+static PyObject *
+PyArchiveEntry_str(PyArchiveEntry *self)
+{
+    return PyString_FromString(archive_entry_pathname(self->archive_entry));
+}
 
 static PyTypeObject PyArchiveEntryType = {
     PyObject_HEAD_INIT(NULL)
@@ -50,7 +55,7 @@ static PyTypeObject PyArchiveEntryType = {
     0,                                /* tp_as_mapping */
     0,                                /* tp_hash */
     0,                                /* tp_call */
-    0,                                /* tp_str */
+    (reprfunc)PyArchiveEntry_str,     /* tp_str */
     0,                                /* tp_getattro */
     0,                                /* tp_setattro */
     0,                                /* tp_as_buffer */
