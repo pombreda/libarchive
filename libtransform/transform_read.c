@@ -313,8 +313,6 @@ build_stream(struct archive_read *a)
 
 		/* If no bidder, we're done. */
 		if (best_bidder == NULL) {
-			a->archive.compression_name = a->filter->name;
-			a->archive.compression_code = a->filter->code;
 			return (ARCHIVE_OK);
 		}
 
