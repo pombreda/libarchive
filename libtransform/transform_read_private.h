@@ -131,11 +131,7 @@ struct transform_read {
 	 * data to client buffers, filling gaps with zero bytes.
 	 */
 	const char	 *read_data_block;
-#if ARCHIVE_VERSION_NUMBER < 3000000
-	off_t		  read_data_offset;
-#else
 	int64_t		  read_data_offset;
-#endif
 	off_t		  read_data_output_offset;
 	size_t		  read_data_remaining;
 

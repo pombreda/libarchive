@@ -42,9 +42,6 @@
 #endif
 
 #include <sys/stat.h>
-#if ARCHIVE_VERSION_NUMBER < 3000000
-#include <sys/types.h>  /* Linux needs this for off_t; 3.0+ doesn't need it */
-#endif
 #ifdef __LA_STDINT_H
 # include __LA_STDINT_H /* int64_t, etc. */
 #endif
@@ -120,25 +117,6 @@ extern "C" {
  * strangeness.  Don't do that.
  */
 
-/*
- * The version number is expressed as a single integer that makes it
- * easy to compare versions at build time: for version a.b.c, the
- * version number is printf("%d%03d%03d",a,b,c).  For example, if you
- * know your application requires version 2.12.108 or later, you can
- * assert that ARCHIVE_VERSION >= 2012108.
- *
- * This single-number format was introduced with libarchive 1.9.0 in
- * the libarchive 1.x family and libarchive 2.2.4 in the libarchive
- * 2.x family.  The following may be useful if you really want to do
- * feature detection for earlier libarchive versions (which defined
- * ARCHIVE_API_VERSION and ARCHIVE_API_FEATURE instead):
- *
- * #ifndef ARCHIVE_VERSION_NUMBER
- * #define ARCHIVE_VERSION_NUMBER	\
- *             (ARCHIVE_API_VERSION * 1000000 + ARCHIVE_API_FEATURE * 1000)
- * #endif
- */
-/* Note: Compiler will complain if this does not match archive_entry.h! */
 #define	ARCHIVE_VERSION_NUMBER 2008900
 __LA_DECL int		archive_version_number(void);
 
@@ -147,21 +125,6 @@ __LA_DECL int		archive_version_number(void);
  */
 #define	ARCHIVE_VERSION_STRING "libtransform 2.8.900a"
 __LA_DECL const char *	archive_version_string(void);
-
-#if ARCHIVE_VERSION_NUMBER < 3000000
-/*
- * Deprecated; these are older names that will be removed in favor of
- * the simpler definitions above.
- */
-#define	ARCHIVE_VERSION_STAMP	ARCHIVE_VERSION_NUMBER
-__LA_DECL int		archive_version_stamp(void);
-#define	ARCHIVE_LIBRARY_VERSION	ARCHIVE_VERSION_STRING
-__LA_DECL const char *	archive_version(void);
-#define	ARCHIVE_API_VERSION	(ARCHIVE_VERSION_NUMBER / 1000000)
-__LA_DECL int		archive_api_version(void);
-#define	ARCHIVE_API_FEATURE	((ARCHIVE_VERSION_NUMBER / 1000) % 1000)
-__LA_DECL int		archive_api_feature(void);
-#endif
 
 /* Declare our basic types. */
 struct transform;
@@ -206,17 +169,10 @@ typedef __LA_SSIZE_T	transform_read_callback(struct transform *,
 			    void *_client_data, const void **_buffer);
 
 /* Skips at most request bytes from archive and returns the skipped amount */
-#if ARCHIVE_VERSION_NUMBER < 3000000
-/* Libarchive 2.0 used off_t here, but that is a bad idea on Linux and a
- * few other platforms where off_t varies with build settings. */
-typedef off_t		archive_skip_callback(struct transform *,
-			    void *_client_data, off_t request);
-#else
 /* Libarchive 3.0 uses int64_t here, which is actually guaranteed to be
  * 64 bits on every platform. */
 typedef __LA_INT64_T	archive_skip_callback(struct transform *,
 			    void *_client_data, __LA_INT64_T request);
-#endif
 
 /* Returns size actually written, zero on EOF, -1 on error. */
 typedef __LA_SSIZE_T	transform_write_callback(struct transform *,
@@ -323,20 +279,6 @@ __LA_DECL __LA_INT64_T		 transform_read_header_position(struct transform *);
 __LA_DECL __LA_SSIZE_T		 transform_read_data(struct transform *,
 				    void *, size_t);
 
-/*
- * A zero-copy version of transform_read_data that also exposes the file offset
- * of each returned block.  Note that the client has no way to specify
- * the desired size of the block.  The API does guarantee that offsets will
- * be strictly increasing and that returned blocks will not overlap.
- */
-#if ARCHIVE_VERSION_NUMBER < 3000000
-__LA_DECL int transform_read_data_block(struct transform *a,
-		    const void **buff, size_t *size, off_t *offset);
-#else
-__LA_DECL int transform_read_data_block(struct transform *a,
-		    const void **buff, size_t *size, __LA_INT64_T *offset);
-#endif
-
 /*-
  * Some convenience functions that are built on transform_read_data:
  *  'skip': skips entire entry
@@ -404,10 +346,6 @@ __LA_DECL int		 transform_read_close(struct transform *);
 /* Release all resources and destroy the object. */
 /* Note that transform_read_free will call transform_read_close for you. */
 __LA_DECL int		 transform_read_free(struct transform *);
-#if ARCHIVE_VERSION_NUMBER < 4000000
-/* Synonym for transform_read_free() for backwards compatibility. */
-__LA_DECL int		 transform_read_finish(struct transform *);
-#endif
 
 /*-
  * To create an archive:
@@ -435,23 +373,8 @@ __LA_DECL int transform_write_get_bytes_in_last_block(struct transform *);
 
 /* The dev/ino of a file that won't be archived.  This is used
  * to avoid recursively adding an archive to itself. */
-#if ARCHIVE_VERSION_NUMBER < 3000000
-__LA_DECL int transform_write_set_skip_file(struct transform *, dev_t, ino_t);
-#else
 __LA_DECL int transform_write_set_skip_file(struct transform *,
     __LA_INT64_T, __LA_INT64_T);
-#endif
-
-#if ARCHIVE_VERSION_NUMBER < 4000000
-__LA_DECL int transform_write_set_compression_bzip2(struct transform *);
-__LA_DECL int transform_write_set_compression_compress(struct transform *);
-__LA_DECL int transform_write_set_compression_gzip(struct transform *);
-__LA_DECL int transform_write_set_compression_lzma(struct transform *);
-__LA_DECL int transform_write_set_compression_none(struct transform *);
-__LA_DECL int transform_write_set_compression_program(struct transform *,
-		     const char *cmd);
-__LA_DECL int transform_write_set_compression_xz(struct transform *);
-#endif
 
 __LA_DECL int transform_write_add_filter_bzip2(struct transform *);
 __LA_DECL int transform_write_add_filter_compress(struct transform *);
@@ -483,25 +406,14 @@ __LA_DECL int transform_write_open_memory(struct transform *,
 __LA_DECL __LA_SSIZE_T	transform_write_data(struct transform *,
 			    const void *, size_t);
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-/* Libarchive 1.x and 2.x use off_t for the argument, but that's not
- * stable on Linux. */
-__LA_DECL __LA_SSIZE_T	 transform_write_data_block(struct transform *,
-				    const void *, size_t, off_t);
-#else
 /* Libarchive 3.0 uses explicit int64_t to ensure consistent 64-bit support. */
 __LA_DECL __LA_SSIZE_T	 transform_write_data_block(struct transform *,
 				    const void *, size_t, __LA_INT64_T);
-#endif
 __LA_DECL int		 transform_write_finish_entry(struct transform *);
 __LA_DECL int		 transform_write_close(struct transform *);
 /* This can fail if the archive wasn't already closed, in which case
  * transform_write_free() will implicitly call transform_write_close(). */
 __LA_DECL int		 transform_write_free(struct transform *);
-#if ARCHIVE_VERSION_NUMBER < 4000000
-/* Synonym for transform_write_free() for backwards compatibility. */
-__LA_DECL int		 transform_write_finish(struct transform *);
-#endif
 
 /*
  * Set write options.  Note that there's really no reason to use
@@ -514,11 +426,6 @@ __LA_DECL int		transform_write_set_options(struct transform *_a,
 /* Apply option string to all matching filters. */
 __LA_DECL int		transform_write_set_filter_options(struct transform *_a,
 			    const char *s);
-#if ARCHIVE_VERSION_NUMBER < 4000000
-/* Deprecated synonym for transform_write_set_filter_options. */
-__LA_DECL int		transform_write_set_compressor_options(struct transform *_a,
-			    const char *s);
-#endif
 
 /*
  * Accessor functions to read/set various information in
@@ -533,19 +440,6 @@ __LA_DECL int		 archive_filter_count(struct transform *);
 __LA_DECL __LA_INT64_T	 archive_filter_bytes(struct transform *, int);
 __LA_DECL int		 archive_filter_code(struct transform *, int);
 __LA_DECL const char *	 archive_filter_name(struct transform *, int);
-
-#if ARCHIVE_VERSION_NUMBER < 4000000
-/* These don't properly handle multiple filters, so are deprecated and
- * will eventually be removed. */
-/* As of libarchive 3.0, this is an alias for archive_filter_bytes(a, -1); */
-__LA_DECL __LA_INT64_T	 archive_position_compressed(struct transform *);
-/* As of libarchive 3.0, this is an alias for archive_filter_bytes(a, 0); */
-__LA_DECL __LA_INT64_T	 archive_position_uncompressed(struct transform *);
-/* As of libarchive 3.0, this is an alias for archive_filter_name(a, 0); */
-__LA_DECL const char	*archive_compression_name(struct transform *);
-/* As of libarchive 3.0, this is an alias for archive_filter_code(a, 0); */
-__LA_DECL int		 archive_compression(struct transform *);
-#endif
 
 __LA_DECL int		 archive_errno(struct transform *);
 __LA_DECL const char	*archive_error_string(struct transform *);

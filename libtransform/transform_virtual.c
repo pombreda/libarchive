@@ -71,29 +71,11 @@ transform_write_free(struct transform *a)
 	return ((a->vtable->archive_free)(a));
 }
 
-#if ARCHIVE_VERSION_NUMBER < 4000000
-/* For backwards compatibility; will be removed with libarchive 4.0. */
-int
-transform_write_finish(struct transform *a)
-{
-	return ((a->vtable->archive_free)(a));
-}
-#endif
-
 int
 transform_read_free(struct transform *a)
 {
 	return ((a->vtable->archive_free)(a));
 }
-
-#if ARCHIVE_VERSION_NUMBER < 4000000
-/* For backwards compatibility; will be removed with libarchive 4.0. */
-int
-transform_read_finish(struct transform *a)
-{
-	return ((a->vtable->archive_free)(a));
-}
-#endif
 
 int
 transform_write_finish_entry(struct transform *a)
@@ -107,13 +89,8 @@ transform_write_data(struct transform *a, const void *buff, size_t s)
 	return ((a->vtable->transform_write_data)(a, buff, s));
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-ssize_t
-transform_write_data_block(struct transform *a, const void *buff, size_t s, off_t o)
-#else
 ssize_t
 transform_write_data_block(struct transform *a, const void *buff, size_t s, int64_t o)
-#endif
 {
 	return ((a->vtable->transform_write_data_block)(a, buff, s, o));
 }

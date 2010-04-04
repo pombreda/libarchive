@@ -138,14 +138,8 @@ __archive_check_magic(struct transform *a, unsigned int magic,
 			    write_all_states(states1, a->state),
 			    write_all_states(states2, state));
 		a->state = ARCHIVE_STATE_FATAL;
-#if ARCHIVE_VERSION_NUMBER < 3000000
-		// XXXX This should be identical to the old behavior.
-		errmsg(archive_error_string(a));
-		diediedie();
-#else
 		// XXXX This is the proposed new behavior.
 		return (ARCHIVE_FATAL);
-#endif
 	}
 	return ARCHIVE_OK;
 }
