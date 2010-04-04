@@ -4,6 +4,14 @@
 #include <Python.h>
 #include <archive.h>
 #include <archive_entry.h>
+#include <unistd.h> /* gid_t, uid_t */
+
+/*
+todo
+
+wide char gname/uname support
+*/
+
 
 #define GETSET_HELPER(type, doc, attr)          \
     {doc, (getter)type##_get_##attr ,           \
@@ -79,13 +87,17 @@ PyArchiveEntry_set_name(PyArchiveEntry *self, void *closure)
 }
 
 static PyObject *
-PyArchive_Entry_generic_time_setter(PyArchiveEntry *self, void *closure)
+PyArchive_Entry_generic_immutable(PyArchiveEntry *self, void *closure)
 {
     PyErr_SetString(PyExc_AttributeError, "immutable attribute");
 }
 
-/* yes this is redundant code... avoiding gcc macro tricks since it may 
- not work under windows... check w/ tim re: that */
+/* XXX
+ yes this is redundant code... avoiding gcc macro tricks since it may 
+ not work under windows... check w/ tim re: that 
+
+---time funcs---
+*/
 
 static PyObject *
 PyArchive_Entry_get_ctime_is_set(PyArchiveEntry *self, void *closure)
@@ -123,16 +135,56 @@ PyArchive_Entry_get_birthtime_is_set(PyArchiveEntry *self, void *closure)
     Py_RETURN_FALSE;
 }
 
+/* 
+---gid/uid/groups/user funcs--
+wide char support was skipped; revisit
+ */
+
+static PyObject *
+PyArchive_Entry_get_gid(PyArchiveEntry *self, void *closure)
+{
+    long l = archive_entry_gid(self->archive_entry);
+    return PyLong_FromLong(l);
+}
+
+static PyObject *
+PyArchive_Entry_get_uid(PyArchiveEntry *self, void *closure)
+{
+    long l = archive_entry_uid(self->archive_entry);
+    return PyLong_FromLong(l);
+}
+
+static PyObject *
+PyArchive_Entry_get_gname(PyArchiveEntry *self, void *closure)
+{
+    return PyString_FromString(archive_entry_gname(self->archive_entry));
+}
+
+static PyObject *
+PyArchive_Entry_get_uname(PyArchiveEntry *self, void *closure)
+{
+    return PyString_FromString(archive_entry_uname(self->archive_entry));
+}
+
+
 static PyGetSetDef PyArchiveEntry_getsetters[] = {
     GETSET_HELPER(PyArchiveEntry, "name", name),
     {"ctime_is_set", (getter)PyArchive_Entry_get_ctime_is_set,
-        (setter)PyArchive_Entry_generic_time_setter, NULL},
+        (setter)PyArchive_Entry_generic_immutable, NULL},
     {"atime_is_set", (getter)PyArchive_Entry_get_atime_is_set,
-        (setter)PyArchive_Entry_generic_time_setter, NULL},
+        (setter)PyArchive_Entry_generic_immutable, NULL},
     {"mtime_is_set", (getter)PyArchive_Entry_get_mtime_is_set,
-        (setter)PyArchive_Entry_generic_time_setter, NULL},
+        (setter)PyArchive_Entry_generic_immutable, NULL},
     {"birthtime_is_set", (getter)PyArchive_Entry_get_mtime_is_set,
-        (setter)PyArchive_Entry_generic_time_setter, NULL},
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"gid", (getter)PyArchive_Entry_get_gid,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"uid", (getter)PyArchive_Entry_get_uid,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"uname", (getter)PyArchive_Entry_get_uname,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"gname", (getter)PyArchive_Entry_get_gname,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
     {NULL}
 };
 
