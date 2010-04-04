@@ -90,6 +90,7 @@ libtransform_la_SOURCES = 									\
 	libtransform/filters/transform_read_uu.c	\
 	libtransform/filters/transform_read_xz.c	\
 	libtransform/transform_write.c							\
+	libtransform/transform_write_set_options.c		\
 	libtransform/filters/transform_write_bzip2.c	\
 	libtransform/filters/transform_write_compress.c	\
 	libtransform/filters/transform_write_gzip.c		\
@@ -120,7 +121,8 @@ libtransform_la_LDFLAGS= -no-undefined
 # Manpages to install
 libtransform_man_MANS=						\
 	libtransform/libtransform.3					\
-	libtransform/libtransform_internals.3
+	libtransform/libtransform_internals.3	\
+	libtransform/transform_write_set_options.3
 
 # Additional libtransform files to include in the distribution
 libtransform_EXTRA_DIST=			\
