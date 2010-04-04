@@ -6,7 +6,7 @@ ACLOCAL_AMFLAGS = -I build/autoconf
 #
 # What to build and install
 #
-lib_LTLIBRARIES=	libarchive.la
+lib_LTLIBRARIES=	libarchive.la libstransform.la
 noinst_LTLIBRARIES=	libarchive_fe.la
 bin_PROGRAMS=	$(bsdtar_programs) $(bsdcpio_programs)
 man_MANS= $(libarchive_man_MANS) $(bsdtar_man_MANS) $(bsdcpio_man_MANS)
@@ -119,15 +119,6 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_read_open_filename.c			\
 	libarchive/archive_read_open_memory.c			\
 	libarchive/archive_read_private.h			\
-	libarchive/archive_read_support_compression_all.c	\
-	libarchive/archive_read_support_compression_bzip2.c	\
-	libarchive/archive_read_support_compression_compress.c	\
-	libarchive/archive_read_support_compression_gzip.c	\
-	libarchive/archive_read_support_compression_none.c	\
-	libarchive/archive_read_support_compression_program.c	\
-	libarchive/archive_read_support_compression_rpm.c	\
-	libarchive/archive_read_support_compression_uu.c	\
-	libarchive/archive_read_support_compression_xz.c	\
 	libarchive/archive_read_support_format_all.c		\
 	libarchive/archive_read_support_format_ar.c		\
 	libarchive/archive_read_support_format_cpio.c		\
@@ -152,12 +143,6 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_write_open_filename.c		\
 	libarchive/archive_write_open_memory.c			\
 	libarchive/archive_write_private.h			\
-	libarchive/archive_write_add_filter_bzip2.c	\
-	libarchive/archive_write_add_filter_compress.c	\
-	libarchive/archive_write_add_filter_gzip.c		\
-	libarchive/archive_write_add_filter_none.c		\
-	libarchive/archive_write_add_filter_program.c	\
-	libarchive/archive_write_add_filter_xz.c		\
 	libarchive/archive_write_set_format.c			\
 	libarchive/archive_write_set_format_ar.c		\
 	libarchive/archive_write_set_format_by_name.c		\
@@ -170,8 +155,27 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_write_set_format_ustar.c		\
 	libarchive/archive_write_set_format_zip.c		\
 	libarchive/archive_write_set_options.c			\
-	libarchive/config_freebsd.h				\
-	libarchive/filter_fork.c				\
+	libarchive/config_freebsd.h
+
+libarchive_la_LIBADD = libstransform.la
+
+libstransform_la_SOURCES = 									\
+	libarchive/archive_read_support_compression_all.c	\
+	libarchive/archive_read_support_compression_bzip2.c	\
+	libarchive/archive_read_support_compression_compress.c	\
+	libarchive/archive_read_support_compression_gzip.c	\
+	libarchive/archive_read_support_compression_none.c	\
+	libarchive/archive_read_support_compression_program.c	\
+	libarchive/archive_read_support_compression_rpm.c	\
+	libarchive/archive_read_support_compression_uu.c	\
+	libarchive/archive_read_support_compression_xz.c	\
+	libarchive/archive_write_add_filter_bzip2.c	\
+	libarchive/archive_write_add_filter_compress.c	\
+	libarchive/archive_write_add_filter_gzip.c		\
+	libarchive/archive_write_add_filter_none.c		\
+	libarchive/archive_write_add_filter_program.c	\
+	libarchive/archive_write_add_filter_xz.c		\
+	libarchive/filter_fork.c						\
 	libarchive/filter_fork.h
 
 if INC_WINDOWS_FILES
@@ -185,6 +189,7 @@ endif
 # -no-undefined marks that libarchive doesn't rely on symbols
 # defined in the application.  This is mandatory for cygwin.
 libarchive_la_LDFLAGS= -no-undefined -version-info $(ARCHIVE_LIBTOOL_VERSION)
+libstransform_la_LDFLAGS= -no-undefined
 
 # Manpages to install
 libarchive_man_MANS=						\
