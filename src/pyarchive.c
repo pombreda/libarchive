@@ -4,7 +4,7 @@
 #include <Python.h>
 #include <archive.h>
 #include <archive_entry.h>
-#include <unistd.h> /* gid_t, uid_t */
+#include <unistd.h> /* gid_t, uid_t, time_t */
 
 /*
 todo
@@ -74,13 +74,15 @@ PyArchiveEntry_dealloc(PyArchiveEntry *pae)
 static PyObject *
 PyArchiveEntry_str(PyArchiveEntry *self)
 {
-    return PyString_FromString(archive_entry_pathname(self->archive_entry));
+    return PyObject_GetAttrString((PyObject*)self, "name");
 }
+
+/* get/setters */
 
 static PyObject *
 PyArchiveEntry_get_name(PyArchiveEntry *self, void *closure)
 {
-    return PyArchiveEntry_str(self);
+    return PyString_FromString(archive_entry_pathname(self->archive_entry));
 }
 
 static int
@@ -139,6 +141,30 @@ PyArchive_Entry_get_birthtime_is_set(PyArchiveEntry *self, void *closure)
     Py_RETURN_FALSE;
 }
 
+static PyObject *
+PyArchive_Entry_get_ctime(PyArchiveEntry *self, void *closure)
+{
+    return PyLong_FromLong((long)archive_entry_ctime(self->archive_entry));
+}
+
+static PyObject *
+PyArchive_Entry_get_mtime(PyArchiveEntry *self, void *closure)
+{
+    return PyLong_FromLong((long)archive_entry_mtime(self->archive_entry));
+}
+
+static PyObject *
+PyArchive_Entry_get_atime(PyArchiveEntry *self, void *closure)
+{
+    return PyLong_FromLong((long)archive_entry_atime(self->archive_entry));
+}
+
+static PyObject *
+PyArchive_Entry_get_birthtime(PyArchiveEntry *self, void *closure)
+{
+    return PyLong_FromLong((long)archive_entry_birthtime(self->archive_entry));
+}
+
 /* 
 ---gid/uid/groups/user funcs--
 wide char support was skipped; revisit
@@ -180,6 +206,14 @@ static PyGetSetDef PyArchiveEntry_getsetters[] = {
     {"mtime_is_set", (getter)PyArchive_Entry_get_mtime_is_set,
         (setter)PyArchive_Entry_generic_immutable, NULL},
     {"birthtime_is_set", (getter)PyArchive_Entry_get_mtime_is_set,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"ctime", (getter)PyArchive_Entry_get_ctime,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"mtime", (getter)PyArchive_Entry_get_mtime,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"atime", (getter)PyArchive_Entry_get_atime,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"birthtime", (getter)PyArchive_Entry_get_birthtime,
         (setter)PyArchive_Entry_generic_immutable, NULL},
     {"gid", (getter)PyArchive_Entry_get_gid,
         (setter)PyArchive_Entry_generic_immutable, NULL},
