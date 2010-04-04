@@ -165,7 +165,6 @@ __LA_DECL int		archive_api_feature(void);
 
 /* Declare our basic types. */
 struct archive;
-struct archive_entry;
 
 /*
  * Error codes: Use archive_errno() and archive_error_string()
@@ -326,14 +325,6 @@ __LA_DECL int archive_read_open_fd(struct archive *, int _fd,
 /* Note: DO NOT use this with tape drives. */
 __LA_DECL int archive_read_open_FILE(struct archive *, FILE *_file);
 
-/* Parses and returns next entry header. */
-__LA_DECL int archive_read_next_header(struct archive *,
-		     struct archive_entry **);
-
-/* Parses and returns next entry header using the archive_entry passed in */
-__LA_DECL int archive_read_next_header2(struct archive *,
-		     struct archive_entry *);
-
 /*
  * Retrieve the byte offset in UNCOMPRESSED data where last-read
  * header started.
@@ -420,13 +411,6 @@ __LA_DECL int archive_read_set_options(struct archive *_a,
 /* Detect blocks of 0 and write holes instead. */
 #define	ARCHIVE_EXTRACT_SPARSE			(0x1000)
 
-__LA_DECL int archive_read_extract(struct archive *, struct archive_entry *,
-		     int flags);
-__LA_DECL int archive_read_extract2(struct archive *, struct archive_entry *,
-		     struct archive * /* dest */);
-__LA_DECL void	 archive_read_extract_set_progress_callback(struct archive *,
-		     void (*_progress_func)(void *), void *_user_data);
-
 /* Close the file and release most resources. */
 __LA_DECL int		 archive_read_close(struct archive *);
 /* Release all resources and destroy the object. */
@@ -508,8 +492,6 @@ __LA_DECL int archive_write_open_memory(struct archive *,
  * Note that the library will truncate writes beyond the size provided
  * to archive_write_header or pad if the provided data is short.
  */
-__LA_DECL int archive_write_header(struct archive *,
-		     struct archive_entry *);
 __LA_DECL __LA_SSIZE_T	archive_write_data(struct archive *,
 			    const void *, size_t);
 

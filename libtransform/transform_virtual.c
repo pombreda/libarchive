@@ -27,7 +27,6 @@
 __FBSDID("$FreeBSD: head/lib/libarchive/archive_virtual.c 201098 2009-12-28 02:58:14Z kientzle $");
 
 #include "transform.h"
-#include "archive_entry.h"
 #include "transform_private.h"
 
 int
@@ -95,13 +94,6 @@ archive_read_finish(struct archive *a)
 	return ((a->vtable->archive_free)(a));
 }
 #endif
-
-int
-archive_write_header(struct archive *a, struct archive_entry *entry)
-{
-	++a->file_count;
-	return ((a->vtable->archive_write_header)(a, entry));
-}
 
 int
 archive_write_finish_entry(struct archive *a)

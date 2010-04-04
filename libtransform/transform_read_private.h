@@ -162,7 +162,6 @@ struct archive_read {
 		int	(*bid)(struct archive_read *);
 		int	(*options)(struct archive_read *, const char *key,
 		    const char *value);
-		int	(*read_header)(struct archive_read *, struct archive_entry *);
 #if ARCHIVE_VERSION_NUMBER < 3000000
 		int	(*read_data)(struct archive_read *, const void **, size_t *, off_t *);
 #else

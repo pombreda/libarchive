@@ -116,26 +116,10 @@ struct archive_write {
 	int	(*format_options)(struct archive_write *,
 		    const char *key, const char *value);
 	int	(*format_finish_entry)(struct archive_write *);
-	int 	(*format_write_header)(struct archive_write *,
-		    struct archive_entry *);
 	ssize_t	(*format_write_data)(struct archive_write *,
 		    const void *buff, size_t);
 	int	(*format_close)(struct archive_write *);
 	int	(*format_free)(struct archive_write *);
 };
-
-/*
- * Utility function to format a USTAR header into a buffer.  If
- * "strict" is set, this tries to create the absolutely most portable
- * version of a ustar header.  If "strict" is set to 0, then it will
- * relax certain requirements.
- *
- * Generally, format-specific declarations don't belong in this
- * header; this is a rare example of a function that is shared by
- * two very similar formats (ustar and pax).
- */
-int
-__archive_write_format_header_ustar(struct archive_write *, char buff[512],
-    struct archive_entry *, int tartype, int strict);
 
 #endif
