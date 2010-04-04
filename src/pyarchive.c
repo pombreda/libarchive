@@ -9,7 +9,11 @@
 /*
 todo
 
-wide char gname/uname support
+wide char:
+  gname/uname support
+  pathname
+  symlink
+  hardlink
 */
 
 
