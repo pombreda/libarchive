@@ -123,8 +123,8 @@ transform_write_add_filter_compress(struct transform *_a)
 	struct transform_write *a = (struct transform_write *)_a;
 	struct transform_write_filter *f = __transform_write_allocate_filter(_a);
 
-	archive_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "transform_write_add_filter_compress");
+	transform_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
+	    TRANSFORM_STATE_NEW, "transform_write_add_filter_compress");
 	f->open = &archive_compressor_compress_open;
 	f->code = ARCHIVE_FILTER_COMPRESS;
 	f->name = "compress";

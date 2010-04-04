@@ -312,7 +312,7 @@ child_read(struct transform_read_filter *self, char *buf, size_t buf_len)
 
 		if (state->child_stdin == -1) {
 			/* Block until child has some I/O ready. */
-			__archive_check_child(state->child_stdin,
+			__transform_check_child(state->child_stdin,
 			    state->child_stdout);
 			continue;
 		}
@@ -337,7 +337,7 @@ child_read(struct transform_read_filter *self, char *buf, size_t buf_len)
 			__transform_read_filter_consume(self->upstream, ret);
 		} else if (ret == -1 && errno == EAGAIN) {
 			/* Block until child has some I/O ready. */
-			__archive_check_child(state->child_stdin,
+			__transform_check_child(state->child_stdin,
 			    state->child_stdout);
 		} else {
 			/* Write failed. */

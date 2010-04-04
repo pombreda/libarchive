@@ -47,13 +47,13 @@
 #define	TRANSFORM_WRITE_DISK_MAGIC (0xc001b0c5U)
 #define	TRANSFORM_READ_DISK_MAGIC (0xbadb0c5U)
 
-#define	ARCHIVE_STATE_NEW	1U
-#define	ARCHIVE_STATE_HEADER	2U
-#define	ARCHIVE_STATE_DATA	4U
-#define	ARCHIVE_STATE_EOF	0x10U
-#define	ARCHIVE_STATE_CLOSED	0x20U
-#define	ARCHIVE_STATE_FATAL	0x8000U
-#define	ARCHIVE_STATE_ANY	(0xFFFFU & ~ARCHIVE_STATE_FATAL)
+#define	TRANSFORM_STATE_NEW	1U
+#define	TRANSFORM_STATE_HEADER	2U
+#define	TRANSFORM_STATE_DATA	4U
+#define	TRANSFORM_STATE_EOF	0x10U
+#define	TRANSFORM_STATE_CLOSED	0x20U
+#define	TRANSFORM_STATE_FATAL	0x8000U
+#define	TRANSFORM_STATE_ANY	(0xFFFFU & ~TRANSFORM_STATE_FATAL)
 
 struct transform_vtable {
 	int	(*archive_close)(struct transform *);
@@ -92,11 +92,11 @@ struct transform {
 };
 
 /* Check magic value and state; return(ARCHIVE_FATAL) if it isn't valid. */
-int	__archive_check_magic(struct transform *, unsigned int magic,
+int	__transform_check_magic(struct transform *, unsigned int magic,
 	    unsigned int state, const char *func);
-#define	archive_check_magic(a, expected_magic, allowed_states, function_name) \
+#define	transform_check_magic(a, expected_magic, allowed_states, function_name) \
 	do { \
-		int magic_test = __archive_check_magic((a), (expected_magic), \
+		int magic_test = __transform_check_magic((a), (expected_magic), \
 			(allowed_states), (function_name)); \
 		if (magic_test == ARCHIVE_FATAL) \
 			return ARCHIVE_FATAL; \

@@ -36,6 +36,6 @@ pid_t
 __archive_create_child(const char *path, int *child_stdin, int *child_stdout);
 
 void
-__archive_check_child(int in, int out);
+__transform_check_child(int in, int out);
 
 #endif

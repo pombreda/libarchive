@@ -119,7 +119,7 @@ state_allocated:
 }
 
 void
-__archive_check_child(int in, int out)
+__transform_check_child(int in, int out)
 {
 #if defined(HAVE_POLL)
 	struct pollfd fds[2];

@@ -24,7 +24,7 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_check_magic.c 201089 2009-12-28 02:20:23Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libarchive/transform_check_magic.c 201089 2009-12-28 02:20:23Z kientzle $");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -76,12 +76,12 @@ static const char *
 state_name(unsigned s)
 {
 	switch (s) {
-	case ARCHIVE_STATE_NEW:		return ("new");
-	case ARCHIVE_STATE_HEADER:	return ("header");
-	case ARCHIVE_STATE_DATA:	return ("data");
-	case ARCHIVE_STATE_EOF:		return ("eof");
-	case ARCHIVE_STATE_CLOSED:	return ("closed");
-	case ARCHIVE_STATE_FATAL:	return ("fatal");
+	case TRANSFORM_STATE_NEW:		return ("new");
+	case TRANSFORM_STATE_HEADER:	return ("header");
+	case TRANSFORM_STATE_DATA:	return ("data");
+	case TRANSFORM_STATE_EOF:		return ("eof");
+	case TRANSFORM_STATE_CLOSED:	return ("closed");
+	case TRANSFORM_STATE_FATAL:	return ("fatal");
 	default:			return ("??");
 	}
 }
@@ -114,7 +114,7 @@ write_all_states(char *buff, unsigned int states)
  * the libarchive API.
  */
 int
-__archive_check_magic(struct transform *a, unsigned int magic,
+__transform_check_magic(struct transform *a, unsigned int magic,
     unsigned int state, const char *function)
 {
 	char states1[64];
@@ -129,7 +129,7 @@ __archive_check_magic(struct transform *a, unsigned int magic,
 
 	if ((a->state & state) == 0) {
 		/* If we're already FATAL, don't overwrite the error. */
-		if (a->state != ARCHIVE_STATE_FATAL)
+		if (a->state != TRANSFORM_STATE_FATAL)
 			archive_set_error(a, -1,
 			    "INTERNAL ERROR: Function '%s' invoked with"
 			    " archive structure in state '%s',"
@@ -137,7 +137,7 @@ __archive_check_magic(struct transform *a, unsigned int magic,
 			    function,
 			    write_all_states(states1, a->state),
 			    write_all_states(states2, state));
-		a->state = ARCHIVE_STATE_FATAL;
+		a->state = TRANSFORM_STATE_FATAL;
 		// XXXX This is the proposed new behavior.
 		return (ARCHIVE_FATAL);
 	}

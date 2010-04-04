@@ -108,7 +108,7 @@ transform_write_new(void)
 		return (NULL);
 	memset(a, 0, sizeof(*a));
 	a->archive.magic = TRANSFORM_WRITE_MAGIC;
-	a->archive.state = ARCHIVE_STATE_NEW;
+	a->archive.state = TRANSFORM_STATE_NEW;
 	a->archive.vtable = transform_write_vtable();
 	/*
 	 * The value 10240 here matches the traditional tar default,
@@ -137,8 +137,8 @@ int
 transform_write_set_bytes_per_block(struct transform *_a, int bytes_per_block)
 {
 	struct transform_write *a = (struct transform_write *)_a;
-	archive_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "transform_write_set_bytes_per_block");
+	transform_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
+	    TRANSFORM_STATE_NEW, "transform_write_set_bytes_per_block");
 	a->bytes_per_block = bytes_per_block;
 	return (ARCHIVE_OK);
 }
@@ -150,8 +150,8 @@ int
 transform_write_get_bytes_per_block(struct transform *_a)
 {
 	struct transform_write *a = (struct transform_write *)_a;
-	archive_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
-	    ARCHIVE_STATE_ANY, "transform_write_get_bytes_per_block");
+	transform_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
+	    TRANSFORM_STATE_ANY, "transform_write_get_bytes_per_block");
 	return (a->bytes_per_block);
 }
 
@@ -163,8 +163,8 @@ int
 transform_write_set_bytes_in_last_block(struct transform *_a, int bytes)
 {
 	struct transform_write *a = (struct transform_write *)_a;
-	archive_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
-	    ARCHIVE_STATE_ANY, "transform_write_set_bytes_in_last_block");
+	transform_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
+	    TRANSFORM_STATE_ANY, "transform_write_set_bytes_in_last_block");
 	a->bytes_in_last_block = bytes;
 	return (ARCHIVE_OK);
 }
@@ -176,8 +176,8 @@ int
 transform_write_get_bytes_in_last_block(struct transform *_a)
 {
 	struct transform_write *a = (struct transform_write *)_a;
-	archive_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
-	    ARCHIVE_STATE_ANY, "transform_write_get_bytes_in_last_block");
+	transform_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
+	    TRANSFORM_STATE_ANY, "transform_write_get_bytes_in_last_block");
 	return (a->bytes_in_last_block);
 }
 
@@ -404,8 +404,8 @@ transform_write_open(struct transform *_a, void *client_data,
 	struct transform_write_filter *client_filter;
 	int ret;
 
-	archive_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "transform_write_open");
+	transform_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
+	    TRANSFORM_STATE_NEW, "transform_write_open");
 	archive_clear_error(&a->archive);
 
 	a->client_writer = writer;
@@ -420,7 +420,7 @@ transform_write_open(struct transform *_a, void *client_data,
 
 	ret = __transform_write_open_filter(a->filter_first);
 
-	a->archive.state = ARCHIVE_STATE_HEADER;
+	a->archive.state = TRANSFORM_STATE_HEADER;
 
 	if (a->format_init && ret == ARCHIVE_OK)
 		ret = (a->format_init)(a);
@@ -436,17 +436,17 @@ _transform_write_close(struct transform *_a)
 	struct transform_write *a = (struct transform_write *)_a;
 	int r = ARCHIVE_OK, r1 = ARCHIVE_OK;
 
-	archive_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
-	    ARCHIVE_STATE_ANY | ARCHIVE_STATE_FATAL,
+	transform_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
+	    TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL,
 	    "transform_write_close");
-	if (a->archive.state == ARCHIVE_STATE_NEW
-	    || a->archive.state == ARCHIVE_STATE_CLOSED)
+	if (a->archive.state == TRANSFORM_STATE_NEW
+	    || a->archive.state == TRANSFORM_STATE_CLOSED)
 		return (ARCHIVE_OK); // Okay to close() when not open.
 
 	archive_clear_error(&a->archive);
 
 	/* Finish the last entry. */
-	if (a->archive.state == ARCHIVE_STATE_DATA)
+	if (a->archive.state == TRANSFORM_STATE_DATA)
 		r = ((a->format_finish_entry)(a));
 
 	/* Finish off the archive. */
@@ -462,8 +462,8 @@ _transform_write_close(struct transform *_a)
 	if (r1 < r)
 		r = r1;
 
-	if (a->archive.state != ARCHIVE_STATE_FATAL)
-		a->archive.state = ARCHIVE_STATE_CLOSED;
+	if (a->archive.state != TRANSFORM_STATE_FATAL)
+		a->archive.state = TRANSFORM_STATE_CLOSED;
 	return (r);
 }
 
@@ -503,9 +503,9 @@ _transform_write_free(struct transform *_a)
 	if (_a == NULL)
 		return (ARCHIVE_OK);
 	/* It is okay to call free() in state FATAL. */
-	archive_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
-	    ARCHIVE_STATE_ANY | ARCHIVE_STATE_FATAL, "transform_write_free");
-	if (a->archive.state != ARCHIVE_STATE_FATAL)
+	transform_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
+	    TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL, "transform_write_free");
+	if (a->archive.state != TRANSFORM_STATE_FATAL)
 		r = transform_write_close(&a->archive);
 
 	/* Release format resources. */
@@ -531,12 +531,12 @@ _transform_write_finish_entry(struct transform *_a)
 	struct transform_write *a = (struct transform_write *)_a;
 	int ret = ARCHIVE_OK;
 
-	archive_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
-	    ARCHIVE_STATE_HEADER | ARCHIVE_STATE_DATA,
+	transform_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
+	    TRANSFORM_STATE_HEADER | TRANSFORM_STATE_DATA,
 	    "transform_write_finish_entry");
-	if (a->archive.state & ARCHIVE_STATE_DATA)
+	if (a->archive.state & TRANSFORM_STATE_DATA)
 		ret = (a->format_finish_entry)(a);
-	a->archive.state = ARCHIVE_STATE_HEADER;
+	a->archive.state = TRANSFORM_STATE_HEADER;
 	return (ret);
 }
 
@@ -547,8 +547,8 @@ static ssize_t
 _transform_write_data(struct transform *_a, const void *buff, size_t s)
 {
 	struct transform_write *a = (struct transform_write *)_a;
-	archive_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
-	    ARCHIVE_STATE_DATA, "transform_write_data");
+	transform_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
+	    TRANSFORM_STATE_DATA, "transform_write_data");
 	archive_clear_error(&a->archive);
 	return ((a->format_write_data)(a, buff, s));
 }

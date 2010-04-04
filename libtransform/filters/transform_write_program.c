@@ -93,8 +93,8 @@ transform_write_add_filter_program(struct transform *_a, const char *cmd)
 	struct transform_write *a = (struct transform_write *)_a;
 	struct private_data *data;
 	static const char *prefix = "Program: ";
-	archive_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "transform_write_add_filter_program");
+	transform_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
+	    TRANSFORM_STATE_NEW, "transform_write_add_filter_program");
 	data = calloc(1, sizeof(*data));
 	if (data == NULL) {
 		archive_set_error(&a->archive, ENOMEM, "Out of memory");
@@ -180,7 +180,7 @@ restart_write:
 
 	if (data->child_stdout == -1) {
 		fcntl(data->child_stdin, F_SETFL, 0);
-		__archive_check_child(data->child_stdin, data->child_stdout);
+		__transform_check_child(data->child_stdin, data->child_stdout);
 		goto restart_write;
 	}
 
@@ -197,7 +197,7 @@ restart_write:
 		goto restart_write;
 	}
 	if (ret == -1 && errno == EAGAIN) {
-		__archive_check_child(data->child_stdin, data->child_stdout);
+		__transform_check_child(data->child_stdin, data->child_stdout);
 		goto restart_write;
 	}
 	if (ret == -1)

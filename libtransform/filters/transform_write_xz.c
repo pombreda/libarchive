@@ -114,8 +114,8 @@ transform_write_add_filter_xz(struct transform *_a)
 	struct transform_write_filter *f;
 	int r;
 
-	archive_check_magic(_a, TRANSFORM_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "transform_write_add_filter_xz");
+	transform_check_magic(_a, TRANSFORM_WRITE_MAGIC,
+	    TRANSFORM_STATE_NEW, "transform_write_add_filter_xz");
 	f = __transform_write_allocate_filter(_a);
 	r = common_setup(f);
 	if (r == ARCHIVE_OK) {
@@ -134,8 +134,8 @@ transform_write_add_filter_lzma(struct transform *_a)
 	struct transform_write_filter *f;
 	int r;
 
-	archive_check_magic(_a, TRANSFORM_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "transform_write_add_filter_lzma");
+	transform_check_magic(_a, TRANSFORM_WRITE_MAGIC,
+	    TRANSFORM_STATE_NEW, "transform_write_add_filter_lzma");
 	f = __transform_write_allocate_filter(_a);
 	r = common_setup(f);
 	if (r == ARCHIVE_OK) {

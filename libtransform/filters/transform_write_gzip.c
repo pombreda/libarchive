@@ -92,8 +92,8 @@ transform_write_add_filter_gzip(struct transform *_a)
 	struct transform_write *a = (struct transform_write *)_a;
 	struct transform_write_filter *f = __transform_write_allocate_filter(_a);
 	struct private_data *data;
-	archive_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "transform_write_add_filter_gzip");
+	transform_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
+	    TRANSFORM_STATE_NEW, "transform_write_add_filter_gzip");
 
 	data = calloc(1, sizeof(*data));
 	if (data == NULL) {
