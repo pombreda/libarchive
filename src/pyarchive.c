@@ -503,34 +503,6 @@ PyArchive_Entry_issym(PyArchiveEntry *self)
     Py_RETURN_FALSE;
 }
 
-/* XXX bloody hack */
-static PyObject *
-PyArchive_Entry_data(PyArchiveEntry *self)
-{
-    Py_ssize_t len = 0;
-    PyObject *str = NULL, *obj = NULL;
-    if(self->archive_header_position != self->archive->header_position) {
-        _usage_error(NULL, self->archive, "stream isn't positioned to allow for data access");
-        return NULL;
-    }
-    if(!(PyArchive_Entry_raw_isreg(self))) {
-        PyErr_SetString(PyExc_TypeError, "data() is only usable on files");
-        return NULL;
-    }
-    len = archive_entry_size(self->archive_entry);
-    if(!(str = PyString_FromStringAndSize(NULL, len))) {
-        return NULL;
-    }
-    if(len != archive_read_data(self->archive->archive, 
-        PyString_AS_STRING(str), len)) {
-        _convert_and_set_archive_error(NULL, self->archive->archive);
-    } else {
-        obj = PyObject_CallFunction(StringIO_kls, "O", str);
-    }
-    Py_DECREF(str);
-    return obj;
-}
-
 
 static PyMethodDef PyArchiveEntry_methods[] = {
     {"isblk", (PyCFunction)PyArchive_Entry_isblk, METH_NOARGS},
@@ -541,7 +513,6 @@ static PyMethodDef PyArchiveEntry_methods[] = {
     {"isreg", (PyCFunction)PyArchive_Entry_isreg, METH_NOARGS},
     {"isfile", (PyCFunction)PyArchive_Entry_isreg, METH_NOARGS},
     {"issym", (PyCFunction)PyArchive_Entry_issym, METH_NOARGS},
-    {"data", (PyCFunction)PyArchive_Entry_data, METH_NOARGS},
     {NULL},
 };
 
@@ -725,9 +696,47 @@ PyArchiveStream_iternext(PyArchiveStream *self)
     return NULL;
 }
 
+/* XXX bloody hack */
+static PyObject *
+PyArchiveStream_extractfile(PyArchiveStream *self, PyObject *instance)
+{
+    if(Py_TYPE(instance) != &PyArchiveEntryType) {
+        _usage_error(NULL, self, "non PyArchiveEntry instance passed in");
+        return NULL;
+    }
+    Py_ssize_t len = 0;
+    PyObject *str = NULL, *obj = NULL;
+    PyArchiveEntry *pae = (PyArchiveEntry *)instance;
+    if(pae->archive_header_position != self->header_position) {
+        _usage_error(NULL, self, "stream isn't positioned to allow for data access");
+        return NULL;
+    }
+    if(!(PyArchive_Entry_raw_isreg(pae))) {
+        PyErr_SetString(PyExc_TypeError, "data() is only usable on files");
+        return NULL;
+    }
+    len = archive_entry_size(pae->archive_entry);
+    if(!(str = PyString_FromStringAndSize(NULL, len))) {
+        return NULL;
+    }
+    if(len != archive_read_data(self->archive, 
+        PyString_AS_STRING(str), len)) {
+        _convert_and_set_archive_error(NULL, self->archive);
+    } else {
+        obj = PyObject_CallFunction(StringIO_kls, "O", str);
+    }
+    Py_DECREF(str);
+    return obj;
+}
+
 static PyMemberDef PyArchiveStream_members[] = {
     {"header_position", T_PYSSIZET, offsetof(PyArchiveStream, header_position),
         READONLY},
+    {NULL}
+};
+
+static PyMethodDef PyArchiveStream_methods[] = {
+    {"extractfile", (PyCFunction)PyArchiveStream_extractfile, METH_O},
     {NULL}
 };
 
@@ -760,7 +769,7 @@ static PyTypeObject PyArchiveStreamType = {
     0,                                /* tp_weaklistoffset */
     (getiterfunc)PyObject_SelfIter,   /* tp_iter */
     (iternextfunc)PyArchiveStream_iternext, /* tp_iternext */
-    0,                                /* tp_methods */
+    PyArchiveStream_methods,          /* tp_methods */
     PyArchiveStream_members,          /* tp_members */
     0,                                /* tp_getset */
     0,                                /* tp_base */
