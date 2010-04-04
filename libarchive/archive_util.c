@@ -522,5 +522,20 @@ exit_tmpfile:
 	return (fd);
 }
 
+int
+convert_transform_error_to_archive_error(int error)
+{
+	if (TRANSFORM_OK == error)
+		return (ARCHIVE_OK);
+	if (TRANSFORM_WARN == error)
+		return (ARCHIVE_WARN);
+	if (TRANSFORM_FATAL == error)
+		return (TRANSFORM_FATAL);
+
+	/* XXX implement proper storing of the errno here */
+	return (TRANSFORM_FATAL);
+}
+
+
 #endif /* HAVE_MKSTEMP */
 #endif /* !_WIN32 || __CYGWIN__ */
