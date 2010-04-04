@@ -163,13 +163,6 @@ __LA_DECL int		archive_api_version(void);
 __LA_DECL int		archive_api_feature(void);
 #endif
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-/* This should never have been here in the first place. */
-/* Legacy of old tar assumptions, will be removed in libarchive 3.0. */
-#define	ARCHIVE_BYTES_PER_RECORD	  512
-#define	ARCHIVE_DEFAULT_BYTES_PER_BLOCK	10240
-#endif
-
 /* Declare our basic types. */
 struct archive;
 struct archive_entry;
@@ -259,49 +252,6 @@ typedef int	archive_close_callback(struct archive *, void *_client_data);
 #define	ARCHIVE_COMPRESSION_UU		ARCHIVE_FILTER_UU
 #define	ARCHIVE_COMPRESSION_RPM		ARCHIVE_FILTER_RPM
 #endif
-
-/*
- * Codes returned by archive_format.
- *
- * Top 16 bits identifies the format family (e.g., "tar"); lower
- * 16 bits indicate the variant.  This is updated by read_next_header.
- * Note that the lower 16 bits will often vary from entry to entry.
- * In some cases, this variation occurs as libarchive learns more about
- * the archive (for example, later entries might utilize extensions that
- * weren't necessary earlier in the archive; in this case, libarchive
- * will change the format code to indicate the extended format that
- * was used).  In other cases, it's because different tools have
- * modified the archive and so different parts of the archive
- * actually have slightly different formts.  (Both tar and cpio store
- * format codes in each entry, so it is quite possible for each
- * entry to be in a different format.)
- */
-#define	ARCHIVE_FORMAT_BASE_MASK		0xff0000
-#define	ARCHIVE_FORMAT_CPIO			0x10000
-#define	ARCHIVE_FORMAT_CPIO_POSIX		(ARCHIVE_FORMAT_CPIO | 1)
-#define	ARCHIVE_FORMAT_CPIO_BIN_LE		(ARCHIVE_FORMAT_CPIO | 2)
-#define	ARCHIVE_FORMAT_CPIO_BIN_BE		(ARCHIVE_FORMAT_CPIO | 3)
-#define	ARCHIVE_FORMAT_CPIO_SVR4_NOCRC		(ARCHIVE_FORMAT_CPIO | 4)
-#define	ARCHIVE_FORMAT_CPIO_SVR4_CRC		(ARCHIVE_FORMAT_CPIO | 5)
-#define	ARCHIVE_FORMAT_CPIO_AFIO_LARGE		(ARCHIVE_FORMAT_CPIO | 6)
-#define	ARCHIVE_FORMAT_SHAR			0x20000
-#define	ARCHIVE_FORMAT_SHAR_BASE		(ARCHIVE_FORMAT_SHAR | 1)
-#define	ARCHIVE_FORMAT_SHAR_DUMP		(ARCHIVE_FORMAT_SHAR | 2)
-#define	ARCHIVE_FORMAT_TAR			0x30000
-#define	ARCHIVE_FORMAT_TAR_USTAR		(ARCHIVE_FORMAT_TAR | 1)
-#define	ARCHIVE_FORMAT_TAR_PAX_INTERCHANGE	(ARCHIVE_FORMAT_TAR | 2)
-#define	ARCHIVE_FORMAT_TAR_PAX_RESTRICTED	(ARCHIVE_FORMAT_TAR | 3)
-#define	ARCHIVE_FORMAT_TAR_GNUTAR		(ARCHIVE_FORMAT_TAR | 4)
-#define	ARCHIVE_FORMAT_ISO9660			0x40000
-#define	ARCHIVE_FORMAT_ISO9660_ROCKRIDGE	(ARCHIVE_FORMAT_ISO9660 | 1)
-#define	ARCHIVE_FORMAT_ZIP			0x50000
-#define	ARCHIVE_FORMAT_EMPTY			0x60000
-#define	ARCHIVE_FORMAT_AR			0x70000
-#define	ARCHIVE_FORMAT_AR_GNU			(ARCHIVE_FORMAT_AR | 1)
-#define	ARCHIVE_FORMAT_AR_BSD			(ARCHIVE_FORMAT_AR | 2)
-#define	ARCHIVE_FORMAT_MTREE			0x80000
-#define	ARCHIVE_FORMAT_RAW			0x90000
-#define	ARCHIVE_FORMAT_XAR			0xA0000
 
 /*-
  * Basic outline for reading an archive:
@@ -647,128 +597,6 @@ __LA_DECL int		archive_write_set_filter_options(struct archive *_a,
 /* Deprecated synonym for archive_write_set_filter_options. */
 __LA_DECL int		archive_write_set_compressor_options(struct archive *_a,
 			    const char *s);
-#endif
-
-/*-
- * ARCHIVE_WRITE_DISK API
- *
- * To create objects on disk:
- *   1) Ask archive_write_disk_new for a new archive_write_disk object.
- *   2) Set any global properties.  In particular, you probably
- *      want to set the options.
- *   3) For each entry:
- *      - construct an appropriate struct archive_entry structure
- *      - archive_write_header to create the file/dir/etc on disk
- *      - archive_write_data to write the entry data
- *   4) archive_write_free to cleanup the writer and release resources
- *
- * In particular, you can use this in conjunction with archive_read()
- * to pull entries out of an archive and create them on disk.
- */
-__LA_DECL struct archive	*archive_write_disk_new(void);
-/* This file will not be overwritten. */
-#if ARCHIVE_VERSION_NUMBER < 3000000
-__LA_DECL int		 archive_write_disk_set_skip_file(struct archive *,
-		     dev_t, ino_t);
-#else
-__LA_DECL int archive_write_disk_set_skip_file(struct archive *,
-    __LA_INT64_T, __LA_INT64_T);
-#endif
-/* Set flags to control how the next item gets created.
- * This accepts a bitmask of ARCHIVE_EXTRACT_XXX flags defined above. */
-__LA_DECL int		 archive_write_disk_set_options(struct archive *,
-		     int flags);
-/*
- * The lookup functions are given uname/uid (or gname/gid) pairs and
- * return a uid (gid) suitable for this system.  These are used for
- * restoring ownership and for setting ACLs.  The default functions
- * are naive, they just return the uid/gid.  These are small, so reasonable
- * for applications that don't need to preserve ownership; they
- * are probably also appropriate for applications that are doing
- * same-system backup and restore.
- */
-/*
- * The "standard" lookup functions use common system calls to lookup
- * the uname/gname, falling back to the uid/gid if the names can't be
- * found.  They cache lookups and are reasonably fast, but can be very
- * large, so they are not used unless you ask for them.  In
- * particular, these match the specifications of POSIX "pax" and old
- * POSIX "tar".
- */
-__LA_DECL int	 archive_write_disk_set_standard_lookup(struct archive *);
-/*
- * If neither the default (naive) nor the standard (big) functions suit
- * your needs, you can write your own and register them.  Be sure to
- * include a cleanup function if you have allocated private data.
- */
-#if ARCHIVE_VERSION_NUMBER < 3000000
-__LA_DECL int	 archive_write_disk_set_group_lookup(struct archive *,
-			    void * /* private_data */,
-			    __LA_GID_T (*)(void *, const char *, __LA_GID_T),
-			    void (* /* cleanup */)(void *));
-__LA_DECL int	 archive_write_disk_set_user_lookup(struct archive *,
-			    void * /* private_data */,
-			    __LA_UID_T (*)(void *, const char *, __LA_UID_T),
-			    void (* /* cleanup */)(void *));
-#else
-__LA_DECL int archive_write_disk_set_group_lookup(struct archive *,
-    void * /* private_data */,
-    __LA_INT64_T (*)(void *, const char *, __LA_INT64_T),
-    void (* /* cleanup */)(void *));
-__LA_DECL int archive_write_disk_set_user_lookup(struct archive *,
-    void * /* private_data */,
-    __LA_INT64_T (*)(void *, const char *, __LA_INT64_T),
-    void (* /* cleanup */)(void *));
-#endif
-
-/*
- * ARCHIVE_READ_DISK API
- *
- * This is still evolving and somewhat experimental.
- */
-__LA_DECL struct archive *archive_read_disk_new(void);
-/* The names for symlink modes here correspond to an old BSD
- * command-line argument convention: -L, -P, -H */
-/* Follow all symlinks. */
-__LA_DECL int archive_read_disk_set_symlink_logical(struct archive *);
-/* Follow no symlinks. */
-__LA_DECL int archive_read_disk_set_symlink_physical(struct archive *);
-/* Follow symlink initially, then not. */
-__LA_DECL int archive_read_disk_set_symlink_hybrid(struct archive *);
-/* TODO: Handle Linux stat32/stat64 ugliness. <sigh> */
-__LA_DECL int archive_read_disk_entry_from_file(struct archive *,
-    struct archive_entry *, int /* fd */, const struct stat *);
-/* Look up gname for gid or uname for uid. */
-/* Default implementations are very, very stupid. */
-#if ARCHIVE_VERSION_NUMBER < 3000000
-__LA_DECL const char *archive_read_disk_gname(struct archive *, __LA_GID_T);
-__LA_DECL const char *archive_read_disk_uname(struct archive *, __LA_UID_T);
-#else
-__LA_DECL const char *archive_read_disk_gname(struct archive *, __LA_INT64_T);
-__LA_DECL const char *archive_read_disk_uname(struct archive *, __LA_INT64_T);
-#endif
-/* "Standard" implementation uses getpwuid_r, getgrgid_r and caches the
- * results for performance. */
-__LA_DECL int	archive_read_disk_set_standard_lookup(struct archive *);
-/* You can install your own lookups if you like. */
-#if ARCHIVE_VERSION_NUMBER < 3000000
-__LA_DECL int	archive_read_disk_set_gname_lookup(struct archive *,
-    void * /* private_data */,
-    const char *(* /* lookup_fn */)(void *, __LA_GID_T),
-    void (* /* cleanup_fn */)(void *));
-__LA_DECL int	archive_read_disk_set_uname_lookup(struct archive *,
-    void * /* private_data */,
-    const char *(* /* lookup_fn */)(void *, __LA_UID_T),
-    void (* /* cleanup_fn */)(void *));
-#else
-__LA_DECL int	archive_read_disk_set_gname_lookup(struct archive *,
-    void * /* private_data */,
-    const char *(* /* lookup_fn */)(void *, __LA_INT64_T),
-    void (* /* cleanup_fn */)(void *));
-__LA_DECL int	archive_read_disk_set_uname_lookup(struct archive *,
-    void * /* private_data */,
-    const char *(* /* lookup_fn */)(void *, __LA_INT64_T),
-    void (* /* cleanup_fn */)(void *));
 #endif
 
 /*
