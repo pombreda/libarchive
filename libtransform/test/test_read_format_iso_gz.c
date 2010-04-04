@@ -27,8 +27,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_iso_gz.c 201247 20
 
 DEFINE_TEST(test_read_format_iso_gz)
 {
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	const char *name = "test_read_format_iso.iso.Z";
 
 	extract_reference_file(name);

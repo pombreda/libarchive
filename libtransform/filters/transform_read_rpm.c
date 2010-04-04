@@ -55,19 +55,19 @@ struct rpm {
 };
 #define RPM_LEAD_SIZE	96	/* Size of 'Lead' section. */
 
-static int	rpm_bidder_bid(struct archive_read_filter_bidder *,
-		    struct archive_read_filter *);
-static int	rpm_bidder_init(struct archive_read_filter *);
+static int	rpm_bidder_bid(struct transform_read_filter_bidder *,
+		    struct transform_read_filter *);
+static int	rpm_bidder_init(struct transform_read_filter *);
 
-static ssize_t	rpm_filter_read(struct archive_read_filter *,
+static ssize_t	rpm_filter_read(struct transform_read_filter *,
 		    const void **);
-static int	rpm_filter_close(struct archive_read_filter *);
+static int	rpm_filter_close(struct transform_read_filter *);
 
 int
-archive_read_support_compression_rpm(struct archive *_a)
+archive_read_support_compression_rpm(struct transform *_a)
 {
-	struct archive_read *a = (struct archive_read *)_a;
-	struct archive_read_filter_bidder *bidder;
+	struct transform_read *a = (struct transform_read *)_a;
+	struct transform_read_filter_bidder *bidder;
 
 	bidder = __archive_read_get_bidder(a);
 	archive_clear_error(_a);
@@ -83,8 +83,8 @@ archive_read_support_compression_rpm(struct archive *_a)
 }
 
 static int
-rpm_bidder_bid(struct archive_read_filter_bidder *self,
-    struct archive_read_filter *filter)
+rpm_bidder_bid(struct transform_read_filter_bidder *self,
+    struct transform_read_filter *filter)
 {
 	const unsigned char *b;
 	ssize_t avail;
@@ -132,7 +132,7 @@ rpm_bidder_bid(struct archive_read_filter_bidder *self,
 }
 
 static int
-rpm_bidder_init(struct archive_read_filter *self)
+rpm_bidder_init(struct transform_read_filter *self)
 {
 	struct rpm   *rpm;
 
@@ -156,7 +156,7 @@ rpm_bidder_init(struct archive_read_filter *self)
 }
 
 static ssize_t
-rpm_filter_read(struct archive_read_filter *self, const void **buff)
+rpm_filter_read(struct transform_read_filter *self, const void **buff)
 {
 	struct rpm *rpm;
 	const unsigned char *b;
@@ -275,7 +275,7 @@ rpm_filter_read(struct archive_read_filter *self, const void **buff)
 }
 
 static int
-rpm_filter_close(struct archive_read_filter *self)
+rpm_filter_close(struct transform_read_filter *self)
 {
 	struct rpm *rpm;
 

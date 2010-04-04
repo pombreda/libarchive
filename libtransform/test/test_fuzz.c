@@ -84,8 +84,8 @@ DEFINE_TEST(test_fuzz)
 	for (n = 0; files[n].name != NULL; ++n) {
 		const size_t buffsize = 30000000;
 		const char *filename = files[n].name;
-		struct archive_entry *ae;
-		struct archive *a;
+		struct transform_entry *ae;
+		struct transform *a;
 		char *rawimage, *image;
 		size_t size;
 		int i;

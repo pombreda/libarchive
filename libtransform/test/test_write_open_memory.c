@@ -31,8 +31,8 @@ static unsigned char buff[16384];
 DEFINE_TEST(test_write_open_memory)
 {
 	unsigned int i;
-	struct archive *a;
-	struct archive_entry *ae;
+	struct transform *a;
+	struct transform_entry *ae;
 	const char *name="/tmp/test";
 
 	/* Create a simple archive_entry. */

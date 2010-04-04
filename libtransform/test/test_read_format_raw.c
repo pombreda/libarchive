@@ -31,8 +31,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_raw.c 191594 2009-
 DEFINE_TEST(test_read_format_raw)
 {
 	char buff[512];
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	const char *reffile1 = "test_read_format_raw.data";
 	const char *reffile2 = "test_read_format_raw.data.Z";
 

@@ -90,8 +90,8 @@ static void
 _test_write_format_iso9660_boot(int write_info_tbl)
 {
 	unsigned char nullb[2048];
-	struct archive *a;
-	struct archive_entry *ae;
+	struct transform *a;
+	struct transform_entry *ae;
 	unsigned char *buff;
 	size_t buffsize = 39 * 2048;
 	size_t used;

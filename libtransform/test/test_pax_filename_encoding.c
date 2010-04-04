@@ -49,8 +49,8 @@ test_pax_filename_encoding_1(void)
 	 * \374 is invalid in UTF-8.
 	 */
 	char filename[] = "abc\314\214mno\374xyz";
-	struct archive *a;
-	struct archive_entry *entry;
+	struct transform *a;
+	struct transform_entry *entry;
 
 	/*
 	 * Read an archive that has non-UTF8 pax filenames in it.
@@ -89,8 +89,8 @@ static void
 test_pax_filename_encoding_2(void)
 {
 	char filename[] = "abc\314\214mno\374xyz";
-	struct archive *a;
-	struct archive_entry *entry;
+	struct transform *a;
+	struct transform_entry *entry;
 	char buff[65536];
 	char longname[] = "abc\314\214mno\374xyz"
 	    "/abc\314\214mno\374xyz/abcdefghijklmnopqrstuvwxyz"
@@ -191,8 +191,8 @@ test_pax_filename_encoding_3(void)
 {
 	wchar_t badname[] = L"xxxAyyyBzzz";
 	const char badname_utf8[] = "xxx\xE1\x88\xB4yyy\xE5\x99\xB8zzz";
-	struct archive *a;
-	struct archive_entry *entry;
+	struct transform *a;
+	struct transform_entry *entry;
 	char buff[65536];
 	size_t used;
 

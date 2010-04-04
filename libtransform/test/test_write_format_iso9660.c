@@ -31,8 +31,8 @@ DEFINE_TEST(test_write_format_iso9660)
 {
 	size_t buffsize = 1000000;
 	char *buff;
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	char dirname[1024];
 	char dir[6];
 	char longname[] =

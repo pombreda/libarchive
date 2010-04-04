@@ -61,8 +61,8 @@ char buff2[1024];
 DEFINE_TEST(test_write_format_iso9660_zisofs)
 {
 	unsigned char nullb[1024];
-	struct archive *a;
-	struct archive_entry *ae;
+	struct transform *a;
+	struct transform_entry *ae;
 	unsigned char *buff;
 	size_t buffsize = 36 * 2048;
 	size_t used;

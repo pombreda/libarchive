@@ -222,11 +222,11 @@ create_sparse_file(const char *path, const struct sparse *s)
 #endif
 
 static void
-verify_sparse_file(struct archive *a, const char *path,
+verify_sparse_file(struct transform *a, const char *path,
     const struct sparse *sparse, int blocks)
 {
 	struct stat stb, *st;
-	struct archive_entry *ae;
+	struct transform_entry *ae;
 
 	st = &stb;
 	create_sparse_file(path, sparse);
@@ -252,7 +252,7 @@ DEFINE_TEST(test_sparse_basic)
 	char cwd[PATH_MAX+1];
 	char path[PATH_MAX+1];
 	char *p;
-	struct archive *a;
+	struct transform *a;
 	/*
 	 * The alignment of the hole of sparse files deeply depends
 	 * on filesystem. In my experience, sparse_file2 test with

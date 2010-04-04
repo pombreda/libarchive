@@ -41,8 +41,8 @@ static void
 compat_xz(const char *name)
 {
 	const char *n[7] = { "f1", "f2", "f3", "d1/f1", "d1/f2", "d1/f3", NULL };
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	int i, r;
 
 	assert((a = archive_read_new()) != NULL);

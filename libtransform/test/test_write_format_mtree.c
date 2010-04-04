@@ -52,8 +52,8 @@ static struct {
 static void
 test_write_format_mtree_sub(int use_set, int dironly)
 {
-	struct archive_entry *ae;
-	struct archive* a;
+	struct transform_entry *ae;
+	struct transform* a;
 	size_t used;
 	int i;
 

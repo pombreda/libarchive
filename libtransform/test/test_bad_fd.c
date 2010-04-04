@@ -28,7 +28,7 @@ __FBSDID("$FreeBSD: src/lib/libarchive/test/test_bad_fd.c,v 1.2 2008/09/01 05:38
 /* Verify that attempting to open an invalid fd returns correct error. */
 DEFINE_TEST(test_bad_fd)
 {
-	struct archive *a;
+	struct transform *a;
 	assert((a = archive_read_new()) != NULL);
 	assertA(0 == archive_read_support_compression_all(a));
 	assertA(ARCHIVE_FATAL == archive_read_open_fd(a, -1, 1024));

@@ -116,7 +116,7 @@ More detailed information can be found in the individual manual
 pages for each API or utility function.
 .Sh READING AN ARCHIVE
 To read an archive, you must first obtain an initialized
-.Tn struct archive
+.Tn struct transform
 object from
 .Fn archive_read_new .
 You can then modify this object for the desired operations with the
@@ -141,7 +141,7 @@ to enable auto-detect for all formats and compression types
 currently supported by the library.
 .Pp
 Once you have prepared the
-.Tn struct archive
+.Tn struct transform
 object, you call
 .Fn archive_read_open
 to actually open the archive and prepare it for reading.
@@ -162,7 +162,7 @@ amount of data.
 You can obtain the next header with
 .Fn archive_read_next_header ,
 which returns a pointer to an
-.Tn struct archive_entry
+.Tn struct transform_entry
 structure with information about the current archive element.
 If the entry is a regular file, then the header will be followed
 by the file data.
@@ -185,7 +185,7 @@ from the archive.
 In particular, note that
 .Fn archive_read_extract
 uses the
-.Tn struct archive_entry
+.Tn struct transform_entry
 structure that you provide it, which may differ from the
 entry just read from the archive.
 In particular, many applications will want to override the
@@ -215,7 +215,7 @@ completes the setup and opens the archive for writing.
 Individual archive entries are written in a three-step
 process:
 You first initialize a
-.Tn struct archive_entry
+.Tn struct transform_entry
 structure with information about the new entry.
 At a minimum, you should set the pathname of the
 entry and provide a
@@ -266,11 +266,11 @@ Detailed descriptions of each function are provided by the
 corresponding manual pages.
 .Pp
 All of the functions utilize an opaque
-.Tn struct archive
+.Tn struct transform
 datatype that provides access to the archive contents.
 .Pp
 The
-.Tn struct archive_entry
+.Tn struct transform_entry
 structure contains a complete description of a single archive
 entry.
 It uses an opaque interface that is fully documented in
@@ -307,7 +307,7 @@ returns a textual error message suitable for display.
 and
 .Fn archive_write_new
 return pointers to an allocated and initialized
-.Tn struct archive
+.Tn struct transform
 object.
 .Pp
 .Fn archive_read_data
@@ -344,7 +344,7 @@ library was written by
 .An Tim Kientzle Aq kientzle@acm.org .
 .Sh BUGS
 Some archive formats support information that is not supported by
-.Tn struct archive_entry .
+.Tn struct transform_entry .
 Such information cannot be fully archived or restored using this library.
 This includes, for example, comments, character sets,
 or the arbitrary key/value pairs that can appear in
@@ -352,7 +352,7 @@ pax interchange format archives.
 .Pp
 Conversely, of course, not all of the information that can be
 stored in an
-.Tn struct archive_entry
+.Tn struct transform_entry
 is supported by all formats.
 For example, cpio formats do not support nanosecond timestamps;
 old tar formats do not support large device numbers.

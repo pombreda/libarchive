@@ -127,7 +127,7 @@ static void	create(const char *filename, int compress, const char **argv);
 #endif
 static void	errmsg(const char *);
 static void	extract(const char *filename, int do_extract, int flags);
-static int	copy_data(struct archive *, struct archive *);
+static int	copy_data(struct transform *, struct transform *);
 static void	msg(const char *);
 static void	usage(void);
 
@@ -227,9 +227,9 @@ static char buff[16384];
 static void
 create(const char *filename, int compress, const char **argv)
 {
-	struct archive *a;
-	struct archive *disk;
-	struct archive_entry *entry;
+	struct transform *a;
+	struct transform *disk;
+	struct transform_entry *entry;
 	ssize_t len;
 	int fd;
 
@@ -296,9 +296,9 @@ create(const char *filename, int compress, const char **argv)
 static void
 extract(const char *filename, int do_extract, int flags)
 {
-	struct archive *a;
-	struct archive *ext;
-	struct archive_entry *entry;
+	struct transform *a;
+	struct transform *ext;
+	struct transform_entry *entry;
 	int r;
 
 	a = archive_read_new();
@@ -358,7 +358,7 @@ extract(const char *filename, int do_extract, int flags)
 }
 
 static int
-copy_data(struct archive *ar, struct archive *aw)
+copy_data(struct transform *ar, struct transform *aw)
 {
 	int r;
 	const void *buff;

@@ -56,7 +56,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_program
 #include "transform_read_private.h"
 
 int
-archive_read_support_compression_program(struct archive *a, const char *cmd)
+archive_read_support_compression_program(struct transform *a, const char *cmd)
 {
 	return (archive_read_support_compression_program_signature(a, cmd, NULL, 0));
 }
@@ -71,7 +71,7 @@ archive_read_support_compression_program(struct archive *a, const char *cmd)
  * this function is actually invoked.
  */
 int
-archive_read_support_compression_program_signature(struct archive *_a,
+archive_read_support_compression_program_signature(struct transform *_a,
     const char *cmd, void *signature, size_t signature_len)
 {
 	(void)_a; /* UNUSED */
@@ -85,7 +85,7 @@ archive_read_support_compression_program_signature(struct archive *_a,
 }
 
 int
-__archive_read_program(struct archive_read_filter *self, const char *cmd)
+__archive_read_program(struct transform_read_filter *self, const char *cmd)
 {
 	(void)self; /* UNUSED */
 	(void)cmd; /* UNUSED */
@@ -111,10 +111,10 @@ struct program_bidder {
 	int inhibit;
 };
 
-static int	program_bidder_bid(struct archive_read_filter_bidder *,
-		    struct archive_read_filter *upstream);
-static int	program_bidder_init(struct archive_read_filter *);
-static int	program_bidder_free(struct archive_read_filter_bidder *);
+static int	program_bidder_bid(struct transform_read_filter_bidder *,
+		    struct transform_read_filter *upstream);
+static int	program_bidder_init(struct transform_read_filter *);
+static int	program_bidder_free(struct transform_read_filter_bidder *);
 
 /*
  * The actual filter needs to track input and output data.
@@ -130,16 +130,16 @@ struct program_filter {
 	size_t		 out_buf_len;
 };
 
-static ssize_t	program_filter_read(struct archive_read_filter *,
+static ssize_t	program_filter_read(struct transform_read_filter *,
 		    const void **);
-static int	program_filter_close(struct archive_read_filter *);
+static int	program_filter_close(struct transform_read_filter *);
 
 int
-archive_read_support_compression_program_signature(struct archive *_a,
+archive_read_support_compression_program_signature(struct transform *_a,
     const char *cmd, const void *signature, size_t signature_len)
 {
-	struct archive_read *a = (struct archive_read *)_a;
-	struct archive_read_filter_bidder *bidder;
+	struct transform_read *a = (struct transform_read *)_a;
+	struct transform_read_filter_bidder *bidder;
 	struct program_bidder *state;
 
 	/*
@@ -174,7 +174,7 @@ archive_read_support_compression_program_signature(struct archive *_a,
 }
 
 static int
-program_bidder_free(struct archive_read_filter_bidder *self)
+program_bidder_free(struct transform_read_filter_bidder *self)
 {
 	struct program_bidder *state = (struct program_bidder *)self->data;
 	free(state->cmd);
@@ -190,8 +190,8 @@ program_bidder_free(struct archive_read_filter_bidder *self)
  * we're called, then never bid again.
  */
 static int
-program_bidder_bid(struct archive_read_filter_bidder *self,
-    struct archive_read_filter *upstream)
+program_bidder_bid(struct transform_read_filter_bidder *self,
+    struct transform_read_filter *upstream)
 {
 	struct program_bidder *state = self->data;
 	const char *p;
@@ -223,7 +223,7 @@ program_bidder_bid(struct archive_read_filter_bidder *self,
  * (including error message if the child came to a bad end).
  */
 static int
-child_stop(struct archive_read_filter *self, struct program_filter *state)
+child_stop(struct transform_read_filter *self, struct program_filter *state)
 {
 	/* Close our side of the I/O with the child. */
 	if (state->child_stdin != -1) {
@@ -288,7 +288,7 @@ child_stop(struct archive_read_filter *self, struct program_filter *state)
  * Use select() to decide whether the child is ready for read or write.
  */
 static ssize_t
-child_read(struct archive_read_filter *self, char *buf, size_t buf_len)
+child_read(struct transform_read_filter *self, char *buf, size_t buf_len)
 {
 	struct program_filter *state = self->data;
 	ssize_t ret, requested, avail;
@@ -354,7 +354,7 @@ child_read(struct archive_read_filter *self, char *buf, size_t buf_len)
 }
 
 int
-__archive_read_program(struct archive_read_filter *self, const char *cmd)
+__archive_read_program(struct transform_read_filter *self, const char *cmd)
 {
 	struct program_filter	*state;
 	static const size_t out_buf_len = 65536;
@@ -402,7 +402,7 @@ __archive_read_program(struct archive_read_filter *self, const char *cmd)
 }
 
 static int
-program_bidder_init(struct archive_read_filter *self)
+program_bidder_init(struct transform_read_filter *self)
 {
 	struct program_bidder   *bidder_state;
 
@@ -411,7 +411,7 @@ program_bidder_init(struct archive_read_filter *self)
 }
 
 static ssize_t
-program_filter_read(struct archive_read_filter *self, const void **buff)
+program_filter_read(struct transform_read_filter *self, const void **buff)
 {
 	struct program_filter *state;
 	ssize_t bytes;
@@ -440,7 +440,7 @@ program_filter_read(struct archive_read_filter *self, const void **buff)
 }
 
 static int
-program_filter_close(struct archive_read_filter *self)
+program_filter_close(struct transform_read_filter *self)
 {
 	struct program_filter	*state;
 	int e;

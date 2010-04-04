@@ -31,8 +31,8 @@ __FBSDID("$FreeBSD: src/lib/libarchive/test/test_read_format_tar_empty_filename.
 DEFINE_TEST(test_read_format_tar_empty_filename)
 {
 	char name[] = "test_read_format_tar_empty_filename.tar";
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));

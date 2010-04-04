@@ -35,8 +35,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_compress_bzip2.c 191183 
 
 DEFINE_TEST(test_write_compress_bzip2)
 {
-	struct archive_entry *ae;
-	struct archive* a;
+	struct transform_entry *ae;
+	struct transform* a;
 	char *buff, *data;
 	size_t buffsize, datasize;
 	char path[16];

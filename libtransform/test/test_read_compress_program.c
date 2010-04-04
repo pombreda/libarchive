@@ -35,8 +35,8 @@ static unsigned char archive[] = {
 DEFINE_TEST(test_read_compress_program)
 {
 	int r;
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 
 	/*
 	 * First, test handling when a non-existent compression

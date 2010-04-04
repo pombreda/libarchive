@@ -36,8 +36,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_zip.c 201247 2009
 DEFINE_TEST(test_write_format_zip)
 {
 	char filedata[64];
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	size_t used;
 	size_t buffsize = 1000000;
 	char *buff;

@@ -79,7 +79,7 @@ static unsigned char archive1[] = {
 0x5c,0x00,0x00,0x00,0x00,0xff,0xff,0x03,0x00,0x37,0xf7,0x06,0x47
 };
 
-static void verify0(struct archive *a, struct archive_entry *ae)
+static void verify0(struct transform *a, struct transform_entry *ae)
 {
 	const void *p;
 	size_t size;
@@ -106,7 +106,7 @@ static void verify0(struct archive *a, struct archive_entry *ae)
 	assertEqualInt(memcmp(p, "hellohellohello\n", 16), 0);
 }
 
-static void verify1(struct archive *a, struct archive_entry *ae)
+static void verify1(struct transform *a, struct transform_entry *ae)
 {
 	(void)a; /* UNUSED */
 	/* A hardlink is not a symlink. */
@@ -175,7 +175,7 @@ static unsigned char archive2[] = {
 0x80,0x13,0x5c,0x00,0x00,0x00,0x00,0xff,0xff,0x03,0x00,0x37,0xf7,0x06,0x47
 };
 
-static void verify2(struct archive *a, struct archive_entry *ae)
+static void verify2(struct transform *a, struct transform_entry *ae)
 {
 	(void)a; /* UNUSED */
 	assertEqualInt(archive_entry_filetype(ae), AE_IFLNK);
@@ -224,7 +224,7 @@ static unsigned char archive3[] = {
 0x16,0xa1,0x56,0x99,0x1f,0x83,0x77,0x41
 };
 
-static void verify3(struct archive *a, struct archive_entry *ae)
+static void verify3(struct transform *a, struct transform_entry *ae)
 {
 	(void)a; /* UNUSED */
 	assertEqualInt(archive_entry_filetype(ae), AE_IFCHR);
@@ -274,7 +274,7 @@ static unsigned char archive4[] = {
 0x7a,0x5d,0x21,0xde
 };
 
-static void verify4(struct archive *a, struct archive_entry *ae)
+static void verify4(struct transform *a, struct transform_entry *ae)
 {
 	(void)a; /* UNUSED */
 	assertEqualInt(archive_entry_filetype(ae), AE_IFBLK);
@@ -322,7 +322,7 @@ static unsigned char archive5[] = {
 0x70,0x64,0xa3,0xff,0xb9,0x35
 };
 
-static void verify5(struct archive *a, struct archive_entry *ae)
+static void verify5(struct transform *a, struct transform_entry *ae)
 {
 	(void)a; /* UNUSED */
 	assertEqualInt(archive_entry_filetype(ae), AE_IFDIR);
@@ -365,7 +365,7 @@ static unsigned char archive6[] = {
 0x7d,0x65,0xa5,0x82,0xdb,0xaa,0xc2,0xcb,0xbe,0xf0,0x1f,0xd1,0xf9,0x56
 };
 
-static void verify6(struct archive *a, struct archive_entry *ae)
+static void verify6(struct transform *a, struct transform_entry *ae)
 {
 	(void)a; /* UNUSED */
 	assertEqualInt(archive_entry_filetype(ae), AE_IFIFO);
@@ -427,7 +427,7 @@ static unsigned char archive7[] = {
 0x06,0x47
 };
 
-static void verify7(struct archive *a, struct archive_entry *ae)
+static void verify7(struct transform *a, struct transform_entry *ae)
 {
 	(void)a; /* UNUSED */
 	assert(archive_entry_filetype(ae) == AE_IFREG);
@@ -624,12 +624,12 @@ enum enc {
 };
 
 static void verify(unsigned char *d, size_t s,
-    void (*f1)(struct archive *, struct archive_entry *),
-    void (*f2)(struct archive *, struct archive_entry *),
+    void (*f1)(struct transform *, struct transform_entry *),
+    void (*f2)(struct transform *, struct transform_entry *),
     enum enc etype)
 {
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	unsigned char *buff;
 	int r;
 

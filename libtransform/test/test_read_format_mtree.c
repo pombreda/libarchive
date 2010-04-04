@@ -30,8 +30,8 @@ test_read_format_mtree1(void)
 {
 	const char reffile[] = "test_read_format_mtree.mtree";
 	char buff[16];
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	FILE *f;
 
 	extract_reference_file(reffile);
@@ -115,8 +115,8 @@ test_read_format_mtree2(void)
 	static char archive[] =
 	    "#mtree\n"
 	    "d type=dir content=.\n";
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK,

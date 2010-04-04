@@ -27,7 +27,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_entry_strmode.c 201247 2009-12
 
 DEFINE_TEST(test_entry_strmode)
 {
-	struct archive_entry *entry;
+	struct transform_entry *entry;
 
 	assert((entry = archive_entry_new()) != NULL);
 

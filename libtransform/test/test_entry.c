@@ -43,7 +43,7 @@ DEFINE_TEST(test_entry)
 	char buff[128];
 	wchar_t wbuff[128];
 	struct stat st;
-	struct archive_entry *e, *e2;
+	struct transform_entry *e, *e2;
 	const struct stat *pst;
 	unsigned long set, clear; /* For fflag testing. */
 	int type, permset, tag, qual; /* For ACL testing. */

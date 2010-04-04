@@ -27,8 +27,8 @@ __FBSDID("$FreeBSD: src/lib/libarchive/test/test_link_resolver.c,v 1.2 2008/06/1
 
 static void test_linkify_tar(void)
 {
-	struct archive_entry *entry, *e2;
-	struct archive_entry_linkresolver *resolver;
+	struct transform_entry *entry, *e2;
+	struct transform_entry_linkresolver *resolver;
 
 	/* Initialize the resolver. */
 	assert(NULL != (resolver = archive_entry_linkresolver_new()));
@@ -92,8 +92,8 @@ static void test_linkify_tar(void)
 
 static void test_linkify_old_cpio(void)
 {
-	struct archive_entry *entry, *e2;
-	struct archive_entry_linkresolver *resolver;
+	struct transform_entry *entry, *e2;
+	struct transform_entry_linkresolver *resolver;
 
 	/* Initialize the resolver. */
 	assert(NULL != (resolver = archive_entry_linkresolver_new()));
@@ -127,8 +127,8 @@ static void test_linkify_old_cpio(void)
 
 static void test_linkify_new_cpio(void)
 {
-	struct archive_entry *entry, *e2;
-	struct archive_entry_linkresolver *resolver;
+	struct transform_entry *entry, *e2;
+	struct transform_entry_linkresolver *resolver;
 
 	/* Initialize the resolver. */
 	assert(NULL != (resolver = archive_entry_linkresolver_new()));

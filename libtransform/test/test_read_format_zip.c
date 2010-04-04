@@ -34,8 +34,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_zip.c 189482 2009-
 DEFINE_TEST(test_read_format_zip)
 {
 	const char *refname = "test_read_format_zip.zip";
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	char *buff[128];
 	const void *pv;
 	size_t s;

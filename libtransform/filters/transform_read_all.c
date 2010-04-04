@@ -29,7 +29,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_all.c 2
 #include "transform.h"
 
 int
-archive_read_support_compression_all(struct archive *a)
+archive_read_support_compression_all(struct transform *a)
 {
 	/* Bzip falls back to "bunzip2" command-line */
 	archive_read_support_compression_bzip2(a);

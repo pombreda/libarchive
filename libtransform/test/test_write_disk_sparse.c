@@ -32,11 +32,11 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk_sparse.c 201247 200
  * if ARCHIVE_EXTRACT_SPARSE is enabled.
  */
 static void
-verify_write_data(struct archive *a, int sparse)
+verify_write_data(struct transform *a, int sparse)
 {
 	static const char data[]="abcdefghijklmnopqrstuvwxyz";
 	struct stat st;
-	struct archive_entry *ae;
+	struct transform_entry *ae;
 	size_t buff_size = 64 * 1024;
 	char *buff, *p;
 	const char *msg = sparse ? "sparse" : "non-sparse";
@@ -124,11 +124,11 @@ verify_write_data(struct archive *a, int sparse)
  * As above, but using the archive_write_data_block() call.
  */
 static void
-verify_write_data_block(struct archive *a, int sparse)
+verify_write_data_block(struct transform *a, int sparse)
 {
 	static const char data[]="abcdefghijklmnopqrstuvwxyz";
 	struct stat st;
-	struct archive_entry *ae;
+	struct transform_entry *ae;
 	size_t buff_size = 64 * 1024;
 	char *buff, *p;
 	const char *msg = sparse ? "sparse" : "non-sparse";
@@ -255,7 +255,7 @@ verify_write_data_block(struct archive *a, int sparse)
 
 DEFINE_TEST(test_write_disk_sparse)
 {
-	struct archive *ad;
+	struct transform *ad;
 
 
 	/*

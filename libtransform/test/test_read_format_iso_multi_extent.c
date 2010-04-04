@@ -29,8 +29,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_iso_multi_extent.c
 DEFINE_TEST(test_read_format_iso_multi_extent)
 {
 	const char *refname = "test_read_format_iso_multi_extent.iso.Z";
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	const void *p;
 	size_t size;
 #if ARCHIVE_VERSION_NUMBER < 3000000

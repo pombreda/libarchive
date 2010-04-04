@@ -27,11 +27,11 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_cpio.c 185672 200
 
 /* The version stamp macro was introduced after cpio write support. */
 static void
-test_format(int	(*set_format)(struct archive *))
+test_format(int	(*set_format)(struct transform *))
 {
 	char filedata[64];
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	char *p;
 	size_t used;
 	size_t buffsize = 1000000;

@@ -68,7 +68,7 @@ __FBSDID("$FreeBSD$");
 static void	errmsg(const char *);
 static void	extract(const char *filename, int do_extract, int flags);
 static void	fail(const char *, const char *, int);
-static int	copy_data(struct archive *, struct archive *);
+static int	copy_data(struct transform *, struct transform *);
 static void	msg(const char *);
 static void	usage(void);
 static void	warn(const char *, const char *);
@@ -136,9 +136,9 @@ main(int argc, const char **argv)
 static void
 extract(const char *filename, int do_extract, int flags)
 {
-	struct archive *a;
-	struct archive *ext;
-	struct archive_entry *entry;
+	struct transform *a;
+	struct transform *ext;
+	struct transform_entry *entry;
 	int r;
 
 	a = archive_read_new();
@@ -195,7 +195,7 @@ extract(const char *filename, int do_extract, int flags)
 }
 
 static int
-copy_data(struct archive *ar, struct archive *aw)
+copy_data(struct transform *ar, struct transform *aw)
 {
 	int r;
 	const void *buff;

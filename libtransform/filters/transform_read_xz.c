@@ -63,9 +63,9 @@ struct private_data {
 };
 
 /* Combined lzma/xz filter */
-static ssize_t	xz_filter_read(struct archive_read_filter *, const void **);
-static int	xz_filter_close(struct archive_read_filter *);
-static int	xz_lzma_bidder_init(struct archive_read_filter *);
+static ssize_t	xz_filter_read(struct transform_read_filter *, const void **);
+static int	xz_filter_close(struct transform_read_filter *);
+static int	xz_lzma_bidder_init(struct transform_read_filter *);
 
 #elif HAVE_LZMADEC_H && HAVE_LIBLZMADEC
 
@@ -78,8 +78,8 @@ struct private_data {
 };
 
 /* Lzma-only filter */
-static ssize_t	lzma_filter_read(struct archive_read_filter *, const void **);
-static int	lzma_filter_close(struct archive_read_filter *);
+static ssize_t	lzma_filter_read(struct transform_read_filter *, const void **);
+static int	lzma_filter_close(struct transform_read_filter *);
 #endif
 
 /*
@@ -88,18 +88,18 @@ static int	lzma_filter_close(struct archive_read_filter *);
  * can give better error messages.)  So the bid framework here gets
  * compiled even if no lzma library is available.
  */
-static int	xz_bidder_bid(struct archive_read_filter_bidder *,
-		    struct archive_read_filter *);
-static int	xz_bidder_init(struct archive_read_filter *);
-static int	lzma_bidder_bid(struct archive_read_filter_bidder *,
-		    struct archive_read_filter *);
-static int	lzma_bidder_init(struct archive_read_filter *);
+static int	xz_bidder_bid(struct transform_read_filter_bidder *,
+		    struct transform_read_filter *);
+static int	xz_bidder_init(struct transform_read_filter *);
+static int	lzma_bidder_bid(struct transform_read_filter_bidder *,
+		    struct transform_read_filter *);
+static int	lzma_bidder_init(struct transform_read_filter *);
 
 int
-archive_read_support_compression_xz(struct archive *_a)
+archive_read_support_compression_xz(struct transform *_a)
 {
-	struct archive_read *a = (struct archive_read *)_a;
-	struct archive_read_filter_bidder *bidder = __archive_read_get_bidder(a);
+	struct transform_read *a = (struct transform_read *)_a;
+	struct transform_read_filter_bidder *bidder = __archive_read_get_bidder(a);
 
 	archive_clear_error(_a);
 	if (bidder == NULL)
@@ -120,10 +120,10 @@ archive_read_support_compression_xz(struct archive *_a)
 }
 
 int
-archive_read_support_compression_lzma(struct archive *_a)
+archive_read_support_compression_lzma(struct transform *_a)
 {
-	struct archive_read *a = (struct archive_read *)_a;
-	struct archive_read_filter_bidder *bidder = __archive_read_get_bidder(a);
+	struct transform_read *a = (struct transform_read *)_a;
+	struct transform_read_filter_bidder *bidder = __archive_read_get_bidder(a);
 
 	archive_clear_error(_a);
 	if (bidder == NULL)
@@ -149,8 +149,8 @@ archive_read_support_compression_lzma(struct archive *_a)
  * Test whether we can handle this data.
  */
 static int
-xz_bidder_bid(struct archive_read_filter_bidder *self,
-    struct archive_read_filter *filter)
+xz_bidder_bid(struct transform_read_filter_bidder *self,
+    struct transform_read_filter *filter)
 {
 	const unsigned char *buffer;
 	ssize_t avail;
@@ -201,8 +201,8 @@ xz_bidder_bid(struct archive_read_filter_bidder *self,
  * they have other evidence (file name, command-line option) to go on.
  */
 static int
-lzma_bidder_bid(struct archive_read_filter_bidder *self,
-    struct archive_read_filter *filter)
+lzma_bidder_bid(struct transform_read_filter_bidder *self,
+    struct transform_read_filter *filter)
 {
 	const unsigned char *buffer;
 	ssize_t avail;
@@ -313,7 +313,7 @@ lzma_bidder_bid(struct archive_read_filter_bidder *self,
  * liblzma 4.999.7 and later support both lzma and xz streams.
  */
 static int
-xz_bidder_init(struct archive_read_filter *self)
+xz_bidder_init(struct transform_read_filter *self)
 {
 	self->code = ARCHIVE_FILTER_XZ;
 	self->name = "xz";
@@ -321,7 +321,7 @@ xz_bidder_init(struct archive_read_filter *self)
 }
 
 static int
-lzma_bidder_init(struct archive_read_filter *self)
+lzma_bidder_init(struct transform_read_filter *self)
 {
 	self->code = ARCHIVE_FILTER_LZMA;
 	self->name = "lzma";
@@ -332,7 +332,7 @@ lzma_bidder_init(struct archive_read_filter *self)
  * Setup the callbacks.
  */
 static int
-xz_lzma_bidder_init(struct archive_read_filter *self)
+xz_lzma_bidder_init(struct transform_read_filter *self)
 {
 	static const size_t out_block_size = 64 * 1024;
 	void *out_block;
@@ -406,7 +406,7 @@ xz_lzma_bidder_init(struct archive_read_filter *self)
  * Return the next block of decompressed data.
  */
 static ssize_t
-xz_filter_read(struct archive_read_filter *self, const void **p)
+xz_filter_read(struct transform_read_filter *self, const void **p)
 {
 	struct private_data *state;
 	size_t decompressed;
@@ -488,7 +488,7 @@ xz_filter_read(struct archive_read_filter *self, const void **p)
  * Clean up the decompressor.
  */
 static int
-xz_filter_close(struct archive_read_filter *self)
+xz_filter_close(struct transform_read_filter *self)
 {
 	struct private_data *state;
 
@@ -512,7 +512,7 @@ xz_filter_close(struct archive_read_filter *self)
  * Setup the callbacks.
  */
 static int
-lzma_bidder_init(struct archive_read_filter *self)
+lzma_bidder_init(struct transform_read_filter *self)
 {
 	static const size_t out_block_size = 64 * 1024;
 	void *out_block;
@@ -584,7 +584,7 @@ lzma_bidder_init(struct archive_read_filter *self)
  * Return the next block of decompressed data.
  */
 static ssize_t
-lzma_filter_read(struct archive_read_filter *self, const void **p)
+lzma_filter_read(struct transform_read_filter *self, const void **p)
 {
 	struct private_data *state;
 	size_t decompressed;
@@ -641,7 +641,7 @@ lzma_filter_read(struct archive_read_filter *self, const void **p)
  * Clean up the decompressor.
  */
 static int
-lzma_filter_close(struct archive_read_filter *self)
+lzma_filter_close(struct transform_read_filter *self)
 {
 	struct private_data *state;
 	int ret;
@@ -674,7 +674,7 @@ lzma_filter_close(struct archive_read_filter *self)
  *
  */
 static int
-lzma_bidder_init(struct archive_read_filter *self)
+lzma_bidder_init(struct transform_read_filter *self)
 {
 	int r;
 
@@ -691,7 +691,7 @@ lzma_bidder_init(struct archive_read_filter *self)
 
 
 static int
-xz_bidder_init(struct archive_read_filter *self)
+xz_bidder_init(struct transform_read_filter *self)
 {
 	int r;
 

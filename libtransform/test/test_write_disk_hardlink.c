@@ -47,8 +47,8 @@ DEFINE_TEST(test_write_disk_hardlink)
 	skipping("archive_write_disk_hardlink; hardlinks are not supported on bfs");
 #else
 	static const char data[]="abcdefghijklmnopqrstuvwxyz";
-	struct archive *ad;
-	struct archive_entry *ae;
+	struct transform *ad;
+	struct transform_entry *ae;
 	int r;
 
 	/* Force the umask to something predictable. */

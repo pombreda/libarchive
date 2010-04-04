@@ -49,7 +49,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_string_sprintf.c 189435 2009-03-
  * them to an archive_string.
  */
 static void
-append_uint(struct archive_string *as, uintmax_t d, unsigned base)
+append_uint(struct transform_string *as, uintmax_t d, unsigned base)
 {
 	static const char *digits = "0123456789abcdef";
 	if (d >= base)
@@ -58,7 +58,7 @@ append_uint(struct archive_string *as, uintmax_t d, unsigned base)
 }
 
 static void
-append_int(struct archive_string *as, intmax_t d, unsigned base)
+append_int(struct transform_string *as, intmax_t d, unsigned base)
 {
 	if (d < 0) {
 		archive_strappend_char(as, '-');
@@ -69,7 +69,7 @@ append_int(struct archive_string *as, intmax_t d, unsigned base)
 
 
 void
-__archive_string_sprintf(struct archive_string *as, const char *fmt, ...)
+__archive_string_sprintf(struct transform_string *as, const char *fmt, ...)
 {
 	va_list ap;
 
@@ -83,7 +83,7 @@ __archive_string_sprintf(struct archive_string *as, const char *fmt, ...)
  * necessary.
  */
 void
-__archive_string_vsprintf(struct archive_string *as, const char *fmt,
+__archive_string_vsprintf(struct transform_string *as, const char *fmt,
     va_list ap)
 {
 	char long_flag;

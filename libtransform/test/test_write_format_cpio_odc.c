@@ -44,8 +44,8 @@ is_octal(const char *p, size_t l)
  */
 DEFINE_TEST(test_write_format_cpio_odc)
 {
-	struct archive *a;
-	struct archive_entry *entry;
+	struct transform *a;
+	struct transform_entry *entry;
 	char *buff, *e, *file;
 	size_t buffsize = 100000;
 	size_t used;

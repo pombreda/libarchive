@@ -59,27 +59,27 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write.c 201099 2009-12-28 03:03:
 #include "transform_private.h"
 #include "transform_write_private.h"
 
-static struct archive_vtable *archive_write_vtable(void);
+static struct transform_vtable *archive_write_vtable(void);
 
-static int	_archive_filter_code(struct archive *, int);
-static const char *_archive_filter_name(struct archive *, int);
-static int64_t	_archive_filter_bytes(struct archive *, int);
-static int	_archive_write_close(struct archive *);
-static int	_archive_write_free(struct archive *);
-static int	_archive_write_finish_entry(struct archive *);
-static ssize_t	_archive_write_data(struct archive *, const void *, size_t);
+static int	_archive_filter_code(struct transform *, int);
+static const char *_archive_filter_name(struct transform *, int);
+static int64_t	_archive_filter_bytes(struct transform *, int);
+static int	_archive_write_close(struct transform *);
+static int	_archive_write_free(struct transform *);
+static int	_archive_write_finish_entry(struct transform *);
+static ssize_t	_archive_write_data(struct transform *, const void *, size_t);
 
-struct archive_none {
+struct transform_none {
 	size_t buffer_size;
 	size_t avail;
 	char *buffer;
 	char *next;
 };
 
-static struct archive_vtable *
+static struct transform_vtable *
 archive_write_vtable(void)
 {
-	static struct archive_vtable av;
+	static struct transform_vtable av;
 	static int inited = 0;
 
 	if (!inited) {
@@ -97,13 +97,13 @@ archive_write_vtable(void)
 /*
  * Allocate, initialize and return an archive object.
  */
-struct archive *
+struct transform *
 archive_write_new(void)
 {
-	struct archive_write *a;
+	struct transform_write *a;
 	unsigned char *nulls;
 
-	a = (struct archive_write *)malloc(sizeof(*a));
+	a = (struct transform_write *)malloc(sizeof(*a));
 	if (a == NULL)
 		return (NULL);
 	memset(a, 0, sizeof(*a));
@@ -134,9 +134,9 @@ archive_write_new(void)
  * Set the block size.  Returns 0 if successful.
  */
 int
-archive_write_set_bytes_per_block(struct archive *_a, int bytes_per_block)
+archive_write_set_bytes_per_block(struct transform *_a, int bytes_per_block)
 {
-	struct archive_write *a = (struct archive_write *)_a;
+	struct transform_write *a = (struct transform_write *)_a;
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
 	    ARCHIVE_STATE_NEW, "archive_write_set_bytes_per_block");
 	a->bytes_per_block = bytes_per_block;
@@ -147,9 +147,9 @@ archive_write_set_bytes_per_block(struct archive *_a, int bytes_per_block)
  * Get the current block size.  -1 if it has never been set.
  */
 int
-archive_write_get_bytes_per_block(struct archive *_a)
+archive_write_get_bytes_per_block(struct transform *_a)
 {
-	struct archive_write *a = (struct archive_write *)_a;
+	struct transform_write *a = (struct transform_write *)_a;
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
 	    ARCHIVE_STATE_ANY, "archive_write_get_bytes_per_block");
 	return (a->bytes_per_block);
@@ -160,9 +160,9 @@ archive_write_get_bytes_per_block(struct archive *_a)
  * Returns 0 if successful.
  */
 int
-archive_write_set_bytes_in_last_block(struct archive *_a, int bytes)
+archive_write_set_bytes_in_last_block(struct transform *_a, int bytes)
 {
-	struct archive_write *a = (struct archive_write *)_a;
+	struct transform_write *a = (struct transform_write *)_a;
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
 	    ARCHIVE_STATE_ANY, "archive_write_set_bytes_in_last_block");
 	a->bytes_in_last_block = bytes;
@@ -173,9 +173,9 @@ archive_write_set_bytes_in_last_block(struct archive *_a, int bytes)
  * Return the value set above.  -1 indicates it has not been set.
  */
 int
-archive_write_get_bytes_in_last_block(struct archive *_a)
+archive_write_get_bytes_in_last_block(struct transform *_a)
 {
-	struct archive_write *a = (struct archive_write *)_a;
+	struct transform_write *a = (struct transform_write *)_a;
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
 	    ARCHIVE_STATE_ANY, "archive_write_get_bytes_in_last_block");
 	return (a->bytes_in_last_block);
@@ -188,13 +188,13 @@ archive_write_get_bytes_in_last_block(struct archive *_a)
  */
 #if ARCHIVE_VERSION_NUMBER < 3000000
 int
-archive_write_set_skip_file(struct archive *_a, dev_t d, ino_t i)
+archive_write_set_skip_file(struct transform *_a, dev_t d, ino_t i)
 #else
 int
-archive_write_set_skip_file(struct archive *_a, int64_t d, int64_t i)
+archive_write_set_skip_file(struct transform *_a, int64_t d, int64_t i)
 #endif
 {
-	struct archive_write *a = (struct archive_write *)_a;
+	struct transform_write *a = (struct transform_write *)_a;
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
 	    ARCHIVE_STATE_ANY, "archive_write_set_skip_file");
 	a->skip_file_dev = d;
@@ -205,11 +205,11 @@ archive_write_set_skip_file(struct archive *_a, int64_t d, int64_t i)
 /*
  * Allocate and return the next filter structure.
  */
-struct archive_write_filter *
-__archive_write_allocate_filter(struct archive *_a)
+struct transform_write_filter *
+__archive_write_allocate_filter(struct transform *_a)
 {
-	struct archive_write *a = (struct archive_write *)_a;
-	struct archive_write_filter *f;
+	struct transform_write *a = (struct transform_write *)_a;
+	struct transform_write_filter *f;
 
 	f = calloc(1, sizeof(*f));
 	f->archive = _a;
@@ -225,7 +225,7 @@ __archive_write_allocate_filter(struct archive *_a)
  * Write data to a particular filter.
  */
 int
-__archive_write_filter(struct archive_write_filter *f,
+__archive_write_filter(struct transform_write_filter *f,
     const void *buff, size_t length)
 {
 	int r;
@@ -240,7 +240,7 @@ __archive_write_filter(struct archive_write_filter *f,
  * Open a filter.
  */
 int
-__archive_write_open_filter(struct archive_write_filter *f)
+__archive_write_open_filter(struct transform_write_filter *f)
 {
 	if (f->open == NULL)
 		return (ARCHIVE_OK);
@@ -251,7 +251,7 @@ __archive_write_open_filter(struct archive_write_filter *f)
  * Close a filter.
  */
 int
-__archive_write_close_filter(struct archive_write_filter *f)
+__archive_write_close_filter(struct transform_write_filter *f)
 {
 	if (f->close == NULL)
 		return (ARCHIVE_OK);
@@ -259,16 +259,16 @@ __archive_write_close_filter(struct archive_write_filter *f)
 }
 
 int
-__archive_write_output(struct archive_write *a, const void *buff, size_t length)
+__archive_write_output(struct transform_write *a, const void *buff, size_t length)
 {
 	return (__archive_write_filter(a->filter_first, buff, length));
 }
 
 static int
-archive_write_client_open(struct archive_write_filter *f)
+archive_write_client_open(struct transform_write_filter *f)
 {
-	struct archive_write *a = (struct archive_write *)f->archive;
-	struct archive_none *state;
+	struct transform_write *a = (struct transform_write *)f->archive;
+	struct transform_none *state;
 	void *buffer;
 	size_t buffer_size;
 
@@ -277,7 +277,7 @@ archive_write_client_open(struct archive_write_filter *f)
 	    archive_write_get_bytes_in_last_block(f->archive);
 	buffer_size = f->bytes_per_block;
 
-	state = (struct archive_none *)calloc(1, sizeof(*state));
+	state = (struct transform_none *)calloc(1, sizeof(*state));
 	buffer = (char *)malloc(buffer_size);
 	if (state == NULL || buffer == NULL) {
 		free(state);
@@ -299,11 +299,11 @@ archive_write_client_open(struct archive_write_filter *f)
 }
 
 static int
-archive_write_client_write(struct archive_write_filter *f,
+archive_write_client_write(struct transform_write_filter *f,
     const void *_buff, size_t length)
 {
-	struct archive_write *a = (struct archive_write *)f->archive;
-        struct archive_none *state = (struct archive_none *)f->data;
+	struct transform_write *a = (struct transform_write *)f->archive;
+        struct transform_none *state = (struct transform_none *)f->data;
         const char *buff = (const char *)_buff;
         ssize_t remaining, to_copy;
         ssize_t bytes_written;
@@ -371,10 +371,10 @@ archive_write_client_write(struct archive_write_filter *f,
 }
 
 static int
-archive_write_client_close(struct archive_write_filter *f)
+archive_write_client_close(struct transform_write_filter *f)
 {
-	struct archive_write *a = (struct archive_write *)f->archive;
-        struct archive_none *state = (struct archive_none *)f->data;
+	struct transform_write *a = (struct transform_write *)f->archive;
+        struct transform_none *state = (struct transform_none *)f->data;
         ssize_t block_length;
         ssize_t target_block_length;
         ssize_t bytes_written;
@@ -416,12 +416,12 @@ archive_write_client_close(struct archive_write_filter *f)
  * Open the archive using the current settings.
  */
 int
-archive_write_open(struct archive *_a, void *client_data,
+archive_write_open(struct transform *_a, void *client_data,
     archive_open_callback *opener, archive_write_callback *writer,
     archive_close_callback *closer)
 {
-	struct archive_write *a = (struct archive_write *)_a;
-	struct archive_write_filter *client_filter;
+	struct transform_write *a = (struct transform_write *)_a;
+	struct transform_write_filter *client_filter;
 	int ret;
 
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
@@ -451,9 +451,9 @@ archive_write_open(struct archive *_a, void *client_data,
  * Close out the archive.
  */
 static int
-_archive_write_close(struct archive *_a)
+_archive_write_close(struct transform *_a)
 {
-	struct archive_write *a = (struct archive_write *)_a;
+	struct transform_write *a = (struct transform_write *)_a;
 	int r = ARCHIVE_OK, r1 = ARCHIVE_OK;
 
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
@@ -488,13 +488,13 @@ _archive_write_close(struct archive *_a)
 }
 
 void
-__archive_write_filters_free(struct archive *_a)
+__archive_write_filters_free(struct transform *_a)
 {
-	struct archive_write *a = (struct archive_write *)_a;
+	struct transform_write *a = (struct transform_write *)_a;
 	int r = ARCHIVE_OK, r1;
 
 	while (a->filter_first != NULL) {
-		struct archive_write_filter *next
+		struct transform_write_filter *next
 		    = a->filter_first->next_filter;
 		if (a->filter_first->free != NULL) {
 			r1 = (*a->filter_first->free)(a->filter_first);
@@ -515,9 +515,9 @@ __archive_write_filters_free(struct archive *_a)
  * initialization.
  */
 static int
-_archive_write_free(struct archive *_a)
+_archive_write_free(struct transform *_a)
 {
-	struct archive_write *a = (struct archive_write *)_a;
+	struct transform_write *a = (struct transform_write *)_a;
 	int r = ARCHIVE_OK, r1;
 
 	if (_a == NULL)
@@ -546,9 +546,9 @@ _archive_write_free(struct archive *_a)
 }
 
 static int
-_archive_write_finish_entry(struct archive *_a)
+_archive_write_finish_entry(struct transform *_a)
 {
-	struct archive_write *a = (struct archive_write *)_a;
+	struct transform_write *a = (struct transform_write *)_a;
 	int ret = ARCHIVE_OK;
 
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
@@ -564,20 +564,20 @@ _archive_write_finish_entry(struct archive *_a)
  * Note that the compressor is responsible for blocking.
  */
 static ssize_t
-_archive_write_data(struct archive *_a, const void *buff, size_t s)
+_archive_write_data(struct transform *_a, const void *buff, size_t s)
 {
-	struct archive_write *a = (struct archive_write *)_a;
+	struct transform_write *a = (struct transform_write *)_a;
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
 	    ARCHIVE_STATE_DATA, "archive_write_data");
 	archive_clear_error(&a->archive);
 	return ((a->format_write_data)(a, buff, s));
 }
 
-static struct archive_write_filter *
-filter_lookup(struct archive *_a, int n)
+static struct transform_write_filter *
+filter_lookup(struct transform *_a, int n)
 {
-	struct archive_write *a = (struct archive_write *)_a;
-	struct archive_write_filter *f = a->filter_first;
+	struct transform_write *a = (struct transform_write *)_a;
+	struct transform_write_filter *f = a->filter_first;
 	if (n == -1)
 		return a->filter_last;
 	if (n < 0)
@@ -590,22 +590,22 @@ filter_lookup(struct archive *_a, int n)
 }
 
 static int
-_archive_filter_code(struct archive *_a, int n)
+_archive_filter_code(struct transform *_a, int n)
 {
-	struct archive_write_filter *f = filter_lookup(_a, n);
+	struct transform_write_filter *f = filter_lookup(_a, n);
 	return f == NULL ? -1 : f->code;
 }
 
 static const char *
-_archive_filter_name(struct archive *_a, int n)
+_archive_filter_name(struct transform *_a, int n)
 {
-	struct archive_write_filter *f = filter_lookup(_a, n);
+	struct transform_write_filter *f = filter_lookup(_a, n);
 	return f == NULL ? NULL : f->name;
 }
 
 static int64_t
-_archive_filter_bytes(struct archive *_a, int n)
+_archive_filter_bytes(struct transform *_a, int n)
 {
-	struct archive_write_filter *f = filter_lookup(_a, n);
+	struct transform_write_filter *f = filter_lookup(_a, n);
 	return f == NULL ? -1 : f->bytes_written;
 }

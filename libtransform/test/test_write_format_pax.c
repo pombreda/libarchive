@@ -31,8 +31,8 @@ DEFINE_TEST(test_write_format_pax)
 {
 	size_t buffsize = 1000000;
 	char *buff;
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	size_t used;
 	int i;
 	char nulls[1024];

@@ -72,8 +72,8 @@ static const char extradata[] = {
 static void
 test_read_uu_sub(const char *uudata, size_t uusize)
 {
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	char *buff;
 	int extra;
 

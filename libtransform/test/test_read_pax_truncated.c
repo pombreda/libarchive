@@ -27,8 +27,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_pax_truncated.c 189483 20
 
 DEFINE_TEST(test_read_pax_truncated)
 {
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	size_t used, i, buff_size = 1000000;
 	size_t filedata_size = 100000;
 	char *buff = malloc(buff_size);

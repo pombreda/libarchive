@@ -48,14 +48,14 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_compression_xz.c 20110
 
 #if ARCHIVE_VERSION_NUMBER < 4000000
 int
-archive_write_set_compression_lzma(struct archive *a)
+archive_write_set_compression_lzma(struct transform *a)
 {
 	__archive_write_filters_free(a);
 	return (archive_write_add_filter_lzma(a));
 }
 
 int
-archive_write_set_compression_xz(struct archive *a)
+archive_write_set_compression_xz(struct transform *a)
 {
 	__archive_write_filters_free(a);
 	return (archive_write_add_filter_xz(a));
@@ -64,7 +64,7 @@ archive_write_set_compression_xz(struct archive *a)
 
 #ifndef HAVE_LZMA_H
 int
-archive_write_add_filter_xz(struct archive *a)
+archive_write_add_filter_xz(struct transform *a)
 {
 	archive_set_error(a, ARCHIVE_ERRNO_MISC,
 	    "xz compression not supported on this platform");
@@ -72,7 +72,7 @@ archive_write_add_filter_xz(struct archive *a)
 }
 
 int
-archive_write_add_filter_lzma(struct archive *a)
+archive_write_add_filter_lzma(struct transform *a)
 {
 	archive_set_error(a, ARCHIVE_ERRNO_MISC,
 	    "lzma compression not supported on this platform");
@@ -91,22 +91,22 @@ struct private_data {
 	size_t		 compressed_buffer_size;
 };
 
-static int	archive_compressor_xz_options(struct archive_write_filter *,
+static int	archive_compressor_xz_options(struct transform_write_filter *,
 		    const char *, const char *);
-static int	archive_compressor_xz_open(struct archive_write_filter *);
-static int	archive_compressor_xz_write(struct archive_write_filter *,
+static int	archive_compressor_xz_open(struct transform_write_filter *);
+static int	archive_compressor_xz_write(struct transform_write_filter *,
 		    const void *, size_t);
-static int	archive_compressor_xz_close(struct archive_write_filter *);
-static int	archive_compressor_xz_free(struct archive_write_filter *);
-static int	drive_compressor(struct archive_write_filter *,
+static int	archive_compressor_xz_close(struct transform_write_filter *);
+static int	archive_compressor_xz_free(struct transform_write_filter *);
+static int	drive_compressor(struct transform_write_filter *,
 		    struct private_data *, int finishing);
 
 
 static int
-common_setup(struct archive_write_filter *f)
+common_setup(struct transform_write_filter *f)
 {
 	struct private_data *data;
-	struct archive_write *a = (struct archive_write *)f->archive;
+	struct transform_write *a = (struct transform_write *)f->archive;
 	data = calloc(1, sizeof(*data));
 	if (data == NULL) {
 		archive_set_error(&a->archive, ENOMEM, "Out of memory");
@@ -125,9 +125,9 @@ common_setup(struct archive_write_filter *f)
  * Add an xz compression filter to this write handle.
  */
 int
-archive_write_add_filter_xz(struct archive *_a)
+archive_write_add_filter_xz(struct transform *_a)
 {
-	struct archive_write_filter *f;
+	struct transform_write_filter *f;
 	int r;
 
 	archive_check_magic(_a, ARCHIVE_WRITE_MAGIC,
@@ -145,9 +145,9 @@ archive_write_add_filter_xz(struct archive *_a)
  * code set.  (The liblzma setup looks at the code to determine
  * the one place that XZ and LZMA require different handling.) */
 int
-archive_write_add_filter_lzma(struct archive *_a)
+archive_write_add_filter_lzma(struct transform *_a)
 {
-	struct archive_write_filter *f;
+	struct transform_write_filter *f;
 	int r;
 
 	archive_check_magic(_a, ARCHIVE_WRITE_MAGIC,
@@ -162,7 +162,7 @@ archive_write_add_filter_lzma(struct archive *_a)
 }
 
 static int
-archive_compressor_xz_init_stream(struct archive_write_filter *f,
+archive_compressor_xz_init_stream(struct transform_write_filter *f,
     struct private_data *data)
 {
 	int ret;
@@ -197,7 +197,7 @@ archive_compressor_xz_init_stream(struct archive_write_filter *f,
  * Setup callback.
  */
 static int
-archive_compressor_xz_open(struct archive_write_filter *f)
+archive_compressor_xz_open(struct transform_write_filter *f)
 {
 	struct private_data *data = f->data;
 	int ret;
@@ -239,7 +239,7 @@ archive_compressor_xz_open(struct archive_write_filter *f)
  * Set write options.
  */
 static int
-archive_compressor_xz_options(struct archive_write_filter *f,
+archive_compressor_xz_options(struct transform_write_filter *f,
     const char *key, const char *value)
 {
 	struct private_data *data = (struct private_data *)f->data;
@@ -261,7 +261,7 @@ archive_compressor_xz_options(struct archive_write_filter *f,
  * Write data to the compressed stream.
  */
 static int
-archive_compressor_xz_write(struct archive_write_filter *f,
+archive_compressor_xz_write(struct transform_write_filter *f,
     const void *buff, size_t length)
 {
 	struct private_data *data = (struct private_data *)f->data;
@@ -284,7 +284,7 @@ archive_compressor_xz_write(struct archive_write_filter *f,
  * Finish the compression...
  */
 static int
-archive_compressor_xz_close(struct archive_write_filter *f)
+archive_compressor_xz_close(struct transform_write_filter *f)
 {
 	struct private_data *data = (struct private_data *)f->data;
 	int ret, r1;
@@ -301,7 +301,7 @@ archive_compressor_xz_close(struct archive_write_filter *f)
 }
 
 static int
-archive_compressor_xz_free(struct archive_write_filter *f)
+archive_compressor_xz_free(struct transform_write_filter *f)
 {
 	struct private_data *data = (struct private_data *)f->data;
 	free(data->compressed);
@@ -318,7 +318,7 @@ archive_compressor_xz_free(struct archive_write_filter *f)
  * false) and the end-of-archive case (finishing == true).
  */
 static int
-drive_compressor(struct archive_write_filter *f,
+drive_compressor(struct transform_write_filter *f,
     struct private_data *data, int finishing)
 {
 	int ret;

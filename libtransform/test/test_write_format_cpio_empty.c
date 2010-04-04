@@ -46,7 +46,7 @@ static char ref[] =
 
 DEFINE_TEST(test_write_format_cpio_empty)
 {
-	struct archive *a;
+	struct transform *a;
 	char buff[2048];
 	size_t used;
 

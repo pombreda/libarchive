@@ -165,7 +165,7 @@ struct contents archive_contents_nonsparse[] = {
  *   * contains a single byte 'a'
  */
 
-struct archive_contents {
+struct transform_contents {
 	const char *filename;
 	struct contents *contents;
 } files[] = {
@@ -176,16 +176,16 @@ struct archive_contents {
 };
 
 static void
-verify_archive_file(const char *name, struct archive_contents *ac)
+verify_archive_file(const char *name, struct transform_contents *ac)
 {
-	struct archive_entry *ae;
+	struct transform_entry *ae;
 	int err;
 	/* data, size, offset of next expected block. */
 	struct contents expect;
 	/* data, size, offset of block read from archive. */
 	struct contents actual;
 	const void *p;
-	struct archive *a;
+	struct transform *a;
 
 	extract_reference_file(name);
 

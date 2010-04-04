@@ -46,41 +46,41 @@
 .Sh SYNOPSIS
 .In transform.h
 .Ft void
-.Fn archive_clear_error "struct archive *"
+.Fn archive_clear_error "struct transform *"
 .Ft int
-.Fn archive_compression "struct archive *"
+.Fn archive_compression "struct transform *"
 .Ft const char *
-.Fn archive_compression_name "struct archive *"
+.Fn archive_compression_name "struct transform *"
 .Ft void
-.Fn archive_copy_error "struct archive *" "struct archive *"
+.Fn archive_copy_error "struct transform *" "struct transform *"
 .Ft int
-.Fn archive_errno "struct archive *"
+.Fn archive_errno "struct transform *"
 .Ft const char *
-.Fn archive_error_string "struct archive *"
+.Fn archive_error_string "struct transform *"
 .Ft int
-.Fn archive_file_count "struct archive *"
+.Fn archive_file_count "struct transform *"
 .Ft int
-.Fn archive_filter_code "struct archive *" "int"
+.Fn archive_filter_code "struct transform *" "int"
 .Ft int
-.Fn archive_filter_count "struct archive *" "int"
+.Fn archive_filter_count "struct transform *" "int"
 .Ft const char *
-.Fn archive_filter_name "struct archive *" "int"
+.Fn archive_filter_name "struct transform *" "int"
 .Ft int
-.Fn archive_format "struct archive *"
+.Fn archive_format "struct transform *"
 .Ft const char *
-.Fn archive_format_name "struct archive *"
+.Fn archive_format_name "struct transform *"
 .Ft int64_t
-.Fn archive_position "struct archive *" "int"
+.Fn archive_position "struct transform *" "int"
 .Ft void
 .Fo archive_set_error
-.Fa "struct archive *"
+.Fa "struct transform *"
 .Fa "int error_code"
 .Fa "const char *fmt"
 .Fa "..."
 .Fc
 .Sh DESCRIPTION
 These functions provide access to various information about the
-.Tn struct archive
+.Tn struct transform
 object used in the
 .Xr libarchive 3
 library.

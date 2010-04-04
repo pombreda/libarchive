@@ -35,8 +35,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_compat_solaris_tar_acl.c 20124
 
 DEFINE_TEST(test_compat_solaris_tar_acl)
 {
-	struct archive *a;
-	struct archive_entry *ae;
+	struct transform *a;
+	struct transform_entry *ae;
 	const char *reference1 = "test_compat_solaris_tar_acl.tar";
 	int type, permset, tag, qual;
 	const char *name;

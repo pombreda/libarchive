@@ -41,8 +41,8 @@ DEFINE_TEST(test_read_large)
 	int tmpfilefd;
 	char tmpfilename[] = "test-read_large.XXXXXX";
 	size_t used;
-	struct archive *a;
-	struct archive_entry *entry;
+	struct transform *a;
+	struct transform_entry *entry;
 	FILE *f;
 
 	for (i = 0; i < sizeof(testdata); i++)

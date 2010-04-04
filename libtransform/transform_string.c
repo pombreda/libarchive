@@ -47,8 +47,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_string.c 201095 2009-12-28 02:33
 #include "transform_private.h"
 #include "transform_string.h"
 
-struct archive_string *
-__archive_string_append(struct archive_string *as, const char *p, size_t s)
+struct transform_string *
+__archive_string_append(struct transform_string *as, const char *p, size_t s)
 {
 	if (__archive_string_ensure(as, as->length + s + 1) == NULL)
 		__archive_errx(1, "Out of memory");
@@ -59,7 +59,7 @@ __archive_string_append(struct archive_string *as, const char *p, size_t s)
 }
 
 void
-__archive_string_copy(struct archive_string *dest, struct archive_string *src)
+__archive_string_copy(struct transform_string *dest, struct transform_string *src)
 {
 	if (src->length == 0)
 		dest->length = 0;
@@ -73,7 +73,7 @@ __archive_string_copy(struct archive_string *dest, struct archive_string *src)
 }
 
 void
-__archive_string_concat(struct archive_string *dest, struct archive_string *src)
+__archive_string_concat(struct transform_string *dest, struct transform_string *src)
 {
 	if (src->length > 0) {
 		if (__archive_string_ensure(dest, dest->length + src->length + 1) == NULL)
@@ -85,7 +85,7 @@ __archive_string_concat(struct archive_string *dest, struct archive_string *src)
 }
 
 void
-__archive_string_free(struct archive_string *as)
+__archive_string_free(struct transform_string *as)
 {
 	as->length = 0;
 	as->buffer_length = 0;
@@ -96,8 +96,8 @@ __archive_string_free(struct archive_string *as)
 }
 
 /* Returns NULL on any allocation failure. */
-struct archive_string *
-__archive_string_ensure(struct archive_string *as, size_t s)
+struct transform_string *
+__archive_string_ensure(struct transform_string *as, size_t s)
 {
 	/* If buffer is already big enough, don't reallocate. */
 	if (as->s && (s <= as->buffer_length))
@@ -141,8 +141,8 @@ __archive_string_ensure(struct archive_string *as, size_t s)
 	return (as);
 }
 
-struct archive_string *
-__archive_strncat(struct archive_string *as, const void *_p, size_t n)
+struct transform_string *
+__archive_strncat(struct transform_string *as, const void *_p, size_t n)
 {
 	size_t s;
 	const char *p, *pp;
@@ -159,8 +159,8 @@ __archive_strncat(struct archive_string *as, const void *_p, size_t n)
 	return (__archive_string_append(as, p, s));
 }
 
-struct archive_string *
-__archive_strappend_char(struct archive_string *as, char c)
+struct transform_string *
+__archive_strappend_char(struct transform_string *as, char c)
 {
 	return (__archive_string_append(as, &c, 1));
 }
@@ -170,13 +170,13 @@ __archive_strappend_char(struct archive_string *as, char c)
  * to the archive_string.  Note: returns NULL if conversion fails,
  * but still leaves a best-effort conversion in the argument as.
  */
-struct archive_string *
-__archive_strappend_w_utf8(struct archive_string *as, const wchar_t *w)
+struct transform_string *
+__archive_strappend_w_utf8(struct transform_string *as, const wchar_t *w)
 {
 	char *p;
 	unsigned wc;
 	char buff[256];
-	struct archive_string *return_val = as;
+	struct transform_string *return_val = as;
 
 	/*
 	 * Convert one wide char at a time into 'buff', whenever that
@@ -285,7 +285,7 @@ utf8_to_unicode(int *pwc, const char *s, size_t n)
  * UTF16 and systems with 32-bit wchar_t can accept UCS4.
  */
 wchar_t *
-__archive_string_utf8_w(struct archive_string *as)
+__archive_string_utf8_w(struct transform_string *as)
 {
 	wchar_t *ws, *dest;
 	int wc, wc2;/* Must be large enough for a 21-bit Unicode code point. */
@@ -358,8 +358,8 @@ __archive_string_utf8_w(struct archive_string *as)
  * lot more about local character encodings than the wcrtomb()
  * wrapper is going to know.)
  */
-struct archive_string *
-__archive_strappend_w_mbs(struct archive_string *as, const wchar_t *w)
+struct transform_string *
+__archive_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
 {
 	char *p;
 	int l, wl;
@@ -397,8 +397,8 @@ __archive_strappend_w_mbs(struct archive_string *as, const wchar_t *w)
  * one character at a time.  If a non-Windows platform doesn't have
  * either of these, fall back to the built-in UTF8 conversion.
  */
-struct archive_string *
-__archive_strappend_w_mbs(struct archive_string *as, const wchar_t *w)
+struct transform_string *
+__archive_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
 {
 #if !defined(HAVE_WCTOMB) && !defined(HAVE_WCRTOMB)
 	/* If there's no built-in locale support, fall back to UTF8 always. */

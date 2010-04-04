@@ -91,13 +91,13 @@ archive_version_string(void)
 }
 
 int
-archive_errno(struct archive *a)
+archive_errno(struct transform *a)
 {
 	return (a->archive_error_number);
 }
 
 const char *
-archive_error_string(struct archive *a)
+archive_error_string(struct transform *a)
 {
 
 	if (a->error != NULL  &&  *a->error != '\0')
@@ -107,13 +107,13 @@ archive_error_string(struct archive *a)
 }
 
 int
-archive_compression(struct archive *a)
+archive_compression(struct transform *a)
 {
 	return archive_filter_code(a, 0);
 }
 
 const char *
-archive_compression_name(struct archive *a)
+archive_compression_name(struct transform *a)
 {
 	return archive_filter_name(a, 0);
 }
@@ -123,7 +123,7 @@ archive_compression_name(struct archive *a)
  * Return a count of the number of compressed bytes processed.
  */
 int64_t
-archive_position_compressed(struct archive *a)
+archive_position_compressed(struct transform *a)
 {
 	return archive_filter_bytes(a, -1);
 }
@@ -132,13 +132,13 @@ archive_position_compressed(struct archive *a)
  * Return a count of the number of uncompressed bytes processed.
  */
 int64_t
-archive_position_uncompressed(struct archive *a)
+archive_position_uncompressed(struct transform *a)
 {
 	return archive_filter_bytes(a, 0);
 }
 
 void
-archive_clear_error(struct archive *a)
+archive_clear_error(struct transform *a)
 {
 	archive_string_empty(&a->error_string);
 	a->error = NULL;
@@ -146,7 +146,7 @@ archive_clear_error(struct archive *a)
 }
 
 void
-archive_set_error(struct archive *a, int error_number, const char *fmt, ...)
+archive_set_error(struct transform *a, int error_number, const char *fmt, ...)
 {
 	va_list ap;
 
@@ -163,7 +163,7 @@ archive_set_error(struct archive *a, int error_number, const char *fmt, ...)
 }
 
 void
-archive_copy_error(struct archive *dest, struct archive *src)
+archive_copy_error(struct transform *dest, struct transform *src)
 {
 	dest->archive_error_number = src->archive_error_number;
 
@@ -384,7 +384,7 @@ complete:
 #if !defined(_WIN32) || defined(__CYGWIN__)
 
 static int
-get_tempdir(struct archive_string *temppath)
+get_tempdir(struct transform_string *temppath)
 {
 	const char *tmp;
 
@@ -410,7 +410,7 @@ get_tempdir(struct archive_string *temppath)
 int
 __archive_mktemp(const char *tmpdir)
 {
-	struct archive_string temp_name;
+	struct transform_string temp_name;
 	int fd;
 
 	archive_string_init(&temp_name);
@@ -451,7 +451,7 @@ __archive_mktemp(const char *tmpdir)
 		'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
 		'u', 'v', 'w', 'x', 'y', 'z'
         };
-	struct archive_string temp_name;
+	struct transform_string temp_name;
 	struct stat st;
 	int fd;
 	char *tp, *ep;

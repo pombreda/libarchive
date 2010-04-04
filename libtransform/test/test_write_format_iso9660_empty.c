@@ -49,8 +49,8 @@ static const unsigned char terminator_id[] = {
 
 DEFINE_TEST(test_write_format_iso9660_empty)
 {
-	struct archive *a;
-	struct archive_entry *ae;
+	struct transform *a;
+	struct transform_entry *ae;
 	unsigned char *buff;
 	size_t buffsize = 190 * 2048;
 	size_t used;

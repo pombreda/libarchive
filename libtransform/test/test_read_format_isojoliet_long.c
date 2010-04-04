@@ -60,8 +60,8 @@ DEFINE_TEST(test_read_format_isojoliet_long)
 {
 	const char *refname = "test_read_format_iso_joliet_long.iso.Z";
 	char pathname[104];
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	const void *p;
 	size_t size;
 #if ARCHIVE_VERSION_NUMBER < 3000000

@@ -40,7 +40,7 @@ Guide to Documentation installed by this system:
  * archive_read.3, archive_write.3, archive_write_disk.3, and
    archive_read_disk.3 provide detailed calling sequences for the read
    and write APIs
- * archive_entry.3 details the "struct archive_entry" utility class
+ * archive_entry.3 details the "struct transform_entry" utility class
  * archive_internals.3 provides some insight into libarchive's
    internal structure and operation.
  * libarchive-formats.5 documents the file formats supported by the library

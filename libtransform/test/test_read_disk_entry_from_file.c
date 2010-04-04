@@ -53,8 +53,8 @@ uname_lookup(void *d, int64_t u)
 
 DEFINE_TEST(test_read_disk_entry_from_file)
 {
-	struct archive *a;
-	struct archive_entry *entry;
+	struct transform *a;
+	struct transform_entry *entry;
 	FILE *f;
 
 	assert((a = archive_read_disk_new()) != NULL);

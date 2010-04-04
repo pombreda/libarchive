@@ -31,7 +31,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_tar_empty.c 18930
 
 DEFINE_TEST(test_write_format_tar_empty)
 {
-	struct archive *a;
+	struct transform *a;
 	char buff[2048];
 	size_t used;
 	unsigned int i;

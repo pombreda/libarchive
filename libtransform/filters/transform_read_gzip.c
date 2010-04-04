@@ -60,8 +60,8 @@ struct private_data {
 };
 
 /* Gzip Filter. */
-static ssize_t	gzip_filter_read(struct archive_read_filter *, const void **);
-static int	gzip_filter_close(struct archive_read_filter *);
+static ssize_t	gzip_filter_read(struct transform_read_filter *, const void **);
+static int	gzip_filter_close(struct transform_read_filter *);
 #endif
 
 /*
@@ -74,15 +74,15 @@ static int	gzip_filter_close(struct archive_read_filter *);
  * use the compress_program framework to try to fire up an external
  * gunzip program.
  */
-static int	gzip_bidder_bid(struct archive_read_filter_bidder *,
-		    struct archive_read_filter *);
-static int	gzip_bidder_init(struct archive_read_filter *);
+static int	gzip_bidder_bid(struct transform_read_filter_bidder *,
+		    struct transform_read_filter *);
+static int	gzip_bidder_init(struct transform_read_filter *);
 
 int
-archive_read_support_compression_gzip(struct archive *_a)
+archive_read_support_compression_gzip(struct transform *_a)
 {
-	struct archive_read *a = (struct archive_read *)_a;
-	struct archive_read_filter_bidder *bidder = __archive_read_get_bidder(a);
+	struct transform_read *a = (struct transform_read *)_a;
+	struct transform_read_filter_bidder *bidder = __archive_read_get_bidder(a);
 
 	if (bidder == NULL)
 		return (ARCHIVE_FATAL);
@@ -110,7 +110,7 @@ archive_read_support_compression_gzip(struct archive *_a)
  * count of bits verified, suitable for use by bidder.
  */
 static int
-peek_at_header(struct archive_read_filter *filter, int *pbits)
+peek_at_header(struct transform_read_filter *filter, int *pbits)
 {
 	const unsigned char *p;
 	ssize_t avail, len;
@@ -199,8 +199,8 @@ peek_at_header(struct archive_read_filter *filter, int *pbits)
  * Bidder just verifies the header and returns the number of verified bits.
  */
 static int
-gzip_bidder_bid(struct archive_read_filter_bidder *self,
-    struct archive_read_filter *filter)
+gzip_bidder_bid(struct transform_read_filter_bidder *self,
+    struct transform_read_filter *filter)
 {
 	int bits_checked;
 
@@ -220,7 +220,7 @@ gzip_bidder_bid(struct archive_read_filter_bidder *self,
  * in case that's available.
  */
 static int
-gzip_bidder_init(struct archive_read_filter *self)
+gzip_bidder_init(struct transform_read_filter *self)
 {
 	int r;
 
@@ -239,7 +239,7 @@ gzip_bidder_init(struct archive_read_filter *self)
  * Initialize the filter object.
  */
 static int
-gzip_bidder_init(struct archive_read_filter *self)
+gzip_bidder_init(struct transform_read_filter *self)
 {
 	struct private_data *state;
 	static const size_t out_block_size = 64 * 1024;
@@ -271,7 +271,7 @@ gzip_bidder_init(struct archive_read_filter *self)
 }
 
 static int
-consume_header(struct archive_read_filter *self)
+consume_header(struct transform_read_filter *self)
 {
 	struct private_data *state;
 	ssize_t avail;
@@ -329,7 +329,7 @@ consume_header(struct archive_read_filter *self)
 }
 
 static int
-consume_trailer(struct archive_read_filter *self)
+consume_trailer(struct transform_read_filter *self)
 {
 	struct private_data *state;
 	const unsigned char *p;
@@ -362,7 +362,7 @@ consume_trailer(struct archive_read_filter *self)
 }
 
 static ssize_t
-gzip_filter_read(struct archive_read_filter *self, const void **p)
+gzip_filter_read(struct transform_read_filter *self, const void **p)
 {
 	struct private_data *state;
 	size_t decompressed;
@@ -437,7 +437,7 @@ gzip_filter_read(struct archive_read_filter *self, const void **p)
  * Clean up the decompressor.
  */
 static int
-gzip_filter_close(struct archive_read_filter *self)
+gzip_filter_close(struct transform_read_filter *self)
 {
 	struct private_data *state;
 	int ret;

@@ -33,8 +33,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk_times.c 201247 2009
 
 DEFINE_TEST(test_write_disk_times)
 {
-	struct archive *a;
-	struct archive_entry *ae;
+	struct transform *a;
+	struct transform_entry *ae;
 
 	/* Create an archive_write_disk object. */
 	assert((a = archive_write_disk_new()) != NULL);

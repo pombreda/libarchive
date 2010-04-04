@@ -34,8 +34,8 @@ static unsigned char archive[] = {
 
 DEFINE_TEST(test_read_format_cpio_svr4_gzip)
 {
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	int r;
 
 	assert((a = archive_read_new()) != NULL);

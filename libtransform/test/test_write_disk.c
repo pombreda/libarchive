@@ -35,9 +35,9 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk.c 201247 2009-12-30
  */
 #define MODE_MASK 0777777
 
-static void create(struct archive_entry *ae, const char *msg)
+static void create(struct transform_entry *ae, const char *msg)
 {
-	struct archive *ad;
+	struct transform *ad;
 	struct stat st;
 
 	/* Write the entry to disk. */
@@ -61,10 +61,10 @@ static void create(struct archive_entry *ae, const char *msg)
 #endif
 }
 
-static void create_reg_file(struct archive_entry *ae, const char *msg)
+static void create_reg_file(struct transform_entry *ae, const char *msg)
 {
 	static const char data[]="abcdefghijklmnopqrstuvwxyz";
-	struct archive *ad;
+	struct transform *ad;
 
 	/* Write the entry to disk. */
 	assert((ad = archive_write_disk_new()) != NULL);
@@ -103,11 +103,11 @@ static void create_reg_file(struct archive_entry *ae, const char *msg)
 	assertFileAtimeRecent(archive_entry_pathname(ae));
 }
 
-static void create_reg_file2(struct archive_entry *ae, const char *msg)
+static void create_reg_file2(struct transform_entry *ae, const char *msg)
 {
 	const int datasize = 100000;
 	char *data;
-	struct archive *ad;
+	struct transform *ad;
 	int i;
 
 	data = malloc(datasize);
@@ -137,10 +137,10 @@ static void create_reg_file2(struct archive_entry *ae, const char *msg)
 	free(data);
 }
 
-static void create_reg_file3(struct archive_entry *ae, const char *msg)
+static void create_reg_file3(struct transform_entry *ae, const char *msg)
 {
 	static const char data[]="abcdefghijklmnopqrstuvwxyz";
-	struct archive *ad;
+	struct transform *ad;
 	struct stat st;
 
 	/* Write the entry to disk. */
@@ -164,10 +164,10 @@ static void create_reg_file3(struct archive_entry *ae, const char *msg)
 }
 
 
-static void create_reg_file4(struct archive_entry *ae, const char *msg)
+static void create_reg_file4(struct transform_entry *ae, const char *msg)
 {
 	static const char data[]="abcdefghijklmnopqrstuvwxyz";
-	struct archive *ad;
+	struct transform *ad;
 	struct stat st;
 
 	/* Write the entry to disk. */
@@ -191,10 +191,10 @@ static void create_reg_file4(struct archive_entry *ae, const char *msg)
 }
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
-static void create_reg_file_win(struct archive_entry *ae, const char *msg)
+static void create_reg_file_win(struct transform_entry *ae, const char *msg)
 {
 	static const char data[]="abcdefghijklmnopqrstuvwxyz";
-	struct archive *ad;
+	struct transform *ad;
 	struct stat st;
 	char *p, *fname;
 	size_t l;
@@ -229,7 +229,7 @@ static void create_reg_file_win(struct archive_entry *ae, const char *msg)
 
 DEFINE_TEST(test_write_disk)
 {
-	struct archive_entry *ae;
+	struct transform_entry *ae;
 
 	/* Force the umask to something predictable. */
 	assertUmask(UMASK);

@@ -65,8 +65,8 @@ static int i4(const char *p) { return (i2(p) | (i2(p + 2) << 16)); }
 DEFINE_TEST(test_write_format_zip_no_compression)
 {
 	/* Buffer data */
-	struct archive *a;
-	struct archive_entry *entry;
+	struct transform *a;
+	struct transform_entry *entry;
 	char buff[100000];
 	const char *buffend;
 	/* p is the pointer to walk over the central directory,

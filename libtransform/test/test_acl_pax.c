@@ -303,7 +303,7 @@ static struct acl_t acls2[] = {
 };
 
 static void
-set_acls(struct archive_entry *ae, struct acl_t *acls, int n)
+set_acls(struct transform_entry *ae, struct acl_t *acls, int n)
 {
 	int i;
 
@@ -340,7 +340,7 @@ acl_match(struct acl_t *acl, int type, int permset, int tag, int qual, const cha
 }
 
 static void
-compare_acls(struct archive_entry *ae, struct acl_t *acls, int n, int mode)
+compare_acls(struct transform_entry *ae, struct acl_t *acls, int n, int mode)
 {
 	int *marker = malloc(sizeof(marker[0]) * n);
 	int i;
@@ -398,8 +398,8 @@ compare_acls(struct archive_entry *ae, struct acl_t *acls, int n, int mode)
 
 DEFINE_TEST(test_acl_pax)
 {
-	struct archive *a;
-	struct archive_entry *ae;
+	struct transform *a;
+	struct transform_entry *ae;
 	size_t used;
 	FILE *f;
 

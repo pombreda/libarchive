@@ -37,8 +37,8 @@ DEFINE_TEST(test_write_disk_secure)
 #if defined(_WIN32) && !defined(__CYGWIN__)
 	skipping("archive_write_disk security checks not supported on Windows");
 #else
-	struct archive *a;
-	struct archive_entry *ae;
+	struct transform *a;
+	struct transform_entry *ae;
 	struct stat st;
 
 	/* Start with a known umask. */

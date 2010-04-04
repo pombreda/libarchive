@@ -30,8 +30,8 @@ char buff2[100000];
 
 DEFINE_TEST(test_read_truncated)
 {
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	unsigned int i;
 	size_t used;
 

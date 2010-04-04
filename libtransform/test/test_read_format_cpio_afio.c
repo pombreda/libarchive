@@ -79,8 +79,8 @@ DEFINE_TEST(test_read_format_cpio_afio)
 {
 	unsigned char *p;
 	size_t size;
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 
 	/* The default block size of afio is 5120. we simulate it */
 	size = (sizeof(archive) + 5120 -1 / 5120) * 5120;

@@ -88,8 +88,8 @@ DEFINE_TEST(test_read_format_isorr_ce)
 	char path1[160];
 	char path2[160];
 	char path3[160];
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	const void *p;
 	size_t size;
 #if ARCHIVE_VERSION_NUMBER < 3000000

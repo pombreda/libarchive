@@ -35,8 +35,8 @@ static unsigned char archive[] = {
 
 DEFINE_TEST(test_read_format_cpio_svr4c_Z)
 {
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 /*	printf("Archive address: start=%X, end=%X\n", archive, archive+sizeof(archive)); */
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK,

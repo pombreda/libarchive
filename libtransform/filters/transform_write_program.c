@@ -48,7 +48,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_compression_program.c 
 
 #if ARCHIVE_VERSION_NUMBER < 4000000
 int
-archive_write_set_compression_program(struct archive *a, const char *cmd)
+archive_write_set_compression_program(struct transform *a, const char *cmd)
 {
 	__archive_write_filters_free(a);
 	return (archive_write_add_filter_program(a, cmd));
@@ -64,7 +64,7 @@ archive_write_set_compression_program(struct archive *a, const char *cmd)
  * this function is actually invoked.
  */
 int
-archive_write_add_filter_program(struct archive *_a, const char *cmd)
+archive_write_add_filter_program(struct transform *_a, const char *cmd)
 {
 	archive_set_error(_a, -1,
 	    "External compression programs not supported on this platform");
@@ -85,21 +85,21 @@ struct private_data {
 	size_t		 child_buf_len, child_buf_avail;
 };
 
-static int archive_compressor_program_open(struct archive_write_filter *);
-static int archive_compressor_program_write(struct archive_write_filter *,
+static int archive_compressor_program_open(struct transform_write_filter *);
+static int archive_compressor_program_write(struct transform_write_filter *,
 		    const void *, size_t);
-static int archive_compressor_program_close(struct archive_write_filter *);
-static int archive_compressor_program_free(struct archive_write_filter *);
+static int archive_compressor_program_close(struct transform_write_filter *);
+static int archive_compressor_program_free(struct transform_write_filter *);
 
 /*
  * Add a filter to this write handle that passes all data through an
  * external program.
  */
 int
-archive_write_add_filter_program(struct archive *_a, const char *cmd)
+archive_write_add_filter_program(struct transform *_a, const char *cmd)
 {
-	struct archive_write_filter *f = __archive_write_allocate_filter(_a);
-	struct archive_write *a = (struct archive_write *)_a;
+	struct transform_write_filter *f = __archive_write_allocate_filter(_a);
+	struct transform_write *a = (struct transform_write *)_a;
 	struct private_data *data;
 	static const char *prefix = "Program: ";
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
@@ -125,7 +125,7 @@ archive_write_add_filter_program(struct archive *_a, const char *cmd)
  * Setup callback.
  */
 static int
-archive_compressor_program_open(struct archive_write_filter *f)
+archive_compressor_program_open(struct transform_write_filter *f)
 {
 	struct private_data *data = (struct private_data *)f->data;
 	int ret;
@@ -160,7 +160,7 @@ archive_compressor_program_open(struct archive_write_filter *f)
 }
 
 static ssize_t
-child_write(struct archive_write_filter *f, const char *buf, size_t buf_len)
+child_write(struct transform_write_filter *f, const char *buf, size_t buf_len)
 {
 	struct private_data *data = f->data;
 	ssize_t ret;
@@ -231,7 +231,7 @@ restart_write:
  * Write data to the compressed stream.
  */
 static int
-archive_compressor_program_write(struct archive_write_filter *f,
+archive_compressor_program_write(struct transform_write_filter *f,
     const void *buff, size_t length)
 {
 	ssize_t ret;
@@ -256,7 +256,7 @@ archive_compressor_program_write(struct archive_write_filter *f,
  * Finish the compression...
  */
 static int
-archive_compressor_program_close(struct archive_write_filter *f)
+archive_compressor_program_close(struct transform_write_filter *f)
 {
 	struct private_data *data = (struct private_data *)f->data;
 	int ret, r1, status;
@@ -313,7 +313,7 @@ cleanup:
 }
 
 static int
-archive_compressor_program_free(struct archive_write_filter *f)
+archive_compressor_program_free(struct transform_write_filter *f)
 {
 	struct private_data *data = (struct private_data *)f->data;
 	free(data->cmd);

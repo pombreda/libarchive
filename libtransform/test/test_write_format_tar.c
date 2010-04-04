@@ -30,8 +30,8 @@ char buff2[64];
 
 DEFINE_TEST(test_write_format_tar)
 {
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	char *p;
 	size_t used;
 	size_t blocksize;

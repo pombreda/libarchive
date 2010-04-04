@@ -28,8 +28,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_empty_write.c 189308 2009-03-0
 DEFINE_TEST(test_empty_write)
 {
 	char buff[32768];
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	size_t used;
 	int r;
 

@@ -31,8 +31,8 @@ static unsigned char  buff[10000000];
 /* Check that header_position tracks correctly on read. */
 DEFINE_TEST(test_read_position)
 {
-	struct archive *a;
-	struct archive_entry *ae;
+	struct transform *a;
+	struct transform_entry *ae;
 	size_t write_pos;
 	intmax_t read_position;
 	size_t i, j;

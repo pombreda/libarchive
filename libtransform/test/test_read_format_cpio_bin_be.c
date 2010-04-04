@@ -27,8 +27,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_cpio_bin_be.c 1915
 
 DEFINE_TEST(test_read_format_cpio_bin_be)
 {
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	const char *reference = "test_read_format_cpio_bin_be.cpio";
 
 	extract_reference_file(reference);

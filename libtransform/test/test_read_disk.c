@@ -84,7 +84,7 @@ static const char *zero_groups[] = {
 
 DEFINE_TEST(test_read_disk)
 {
-	struct archive *a;
+	struct transform *a;
 	int gmagic = 0x13579, umagic = 0x1234;
 	const char *p;
 	size_t i;

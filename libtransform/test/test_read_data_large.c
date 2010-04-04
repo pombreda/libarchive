@@ -44,8 +44,8 @@ char buff3[10000000];
 
 DEFINE_TEST(test_read_data_large)
 {
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	char tmpfilename[] = "largefile";
 	int tmpfilefd;
 	FILE *f;

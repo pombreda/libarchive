@@ -33,8 +33,8 @@ DEFINE_TEST(test_read_format_ar)
 {
 	char buff[64];
 	const char reffile[] = "test_read_format_ar.ar";
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 
 	extract_reference_file(reffile);
 	assert((a = archive_read_new()) != NULL);

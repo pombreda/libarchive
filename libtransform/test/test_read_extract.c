@@ -30,8 +30,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_extract.c 201247 2009-12-
 
 DEFINE_TEST(test_read_extract)
 {
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	size_t used;
 	int i, numEntries = 0;
 	char *buff, *file_buff;

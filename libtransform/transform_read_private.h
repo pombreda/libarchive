@@ -36,9 +36,9 @@
 #include "transform_string.h"
 #include "transform_private.h"
 
-struct archive_read;
-struct archive_read_filter_bidder;
-struct archive_read_filter;
+struct transform_read;
+struct transform_read_filter_bidder;
+struct transform_read_filter;
 
 /*
  * How bidding works for filters:
@@ -55,19 +55,19 @@ struct archive_read_filter;
  * This ends only when no bidder provides a non-zero bid.  Then
  * we perform a similar dance with the registered format handlers.
  */
-struct archive_read_filter_bidder {
+struct transform_read_filter_bidder {
 	/* Configuration data for the bidder. */
 	void *data;
 	/* Taste the upstream filter to see if we handle this. */
-	int (*bid)(struct archive_read_filter_bidder *,
-	    struct archive_read_filter *);
+	int (*bid)(struct transform_read_filter_bidder *,
+	    struct transform_read_filter *);
 	/* Initialize a newly-created filter. */
-	int (*init)(struct archive_read_filter *);
+	int (*init)(struct transform_read_filter *);
 	/* Set an option for the filter bidder. */
-	int (*options)(struct archive_read_filter_bidder *,
+	int (*options)(struct transform_read_filter_bidder *,
 	    const char *key, const char *value);
 	/* Release the bidder's configuration data. */
-	int (*free)(struct archive_read_filter_bidder *);
+	int (*free)(struct transform_read_filter_bidder *);
 };
 
 /*
@@ -75,19 +75,19 @@ struct archive_read_filter_bidder {
  * and initialized by archive_read and the init() method of the
  * corresponding bidder above.
  */
-struct archive_read_filter {
+struct transform_read_filter {
 	int64_t bytes_consumed;
 	/* Essentially all filters will need these values, so
 	 * just declare them here. */
-	struct archive_read_filter_bidder *bidder; /* My bidder. */
-	struct archive_read_filter *upstream; /* Who I read from. */
-	struct archive_read *archive; /* Associated archive. */
+	struct transform_read_filter_bidder *bidder; /* My bidder. */
+	struct transform_read_filter *upstream; /* Who I read from. */
+	struct transform_read *archive; /* Associated archive. */
 	/* Return next block. */
-	ssize_t (*read)(struct archive_read_filter *, const void **);
+	ssize_t (*read)(struct transform_read_filter *, const void **);
 	/* Skip forward this many bytes. */
-	int64_t (*skip)(struct archive_read_filter *self, int64_t request);
+	int64_t (*skip)(struct transform_read_filter *self, int64_t request);
 	/* Close (just this filter) and free(self). */
-	int (*close)(struct archive_read_filter *self);
+	int (*close)(struct transform_read_filter *self);
 	/* My private data. */
 	void *data;
 
@@ -116,14 +116,14 @@ struct archive_read_filter {
  * transformation filters.  This will probably break the API/ABI and
  * so should be deferred at least until libarchive 3.0.
  */
-struct archive_read_client {
+struct transform_read_client {
 	archive_read_callback	*reader;
 	archive_skip_callback	*skipper;
 	archive_close_callback	*closer;
 };
 
-struct archive_read {
-	struct archive	archive;
+struct transform_read {
+	struct transform	archive;
 
 
 	/*
@@ -140,13 +140,13 @@ struct archive_read {
 	size_t		  read_data_remaining;
 
 	/* Callbacks to open/read/write/close client archive stream. */
-	struct archive_read_client client;
+	struct transform_read_client client;
 
 	/* Registered filter bidders. */
-	struct archive_read_filter_bidder bidders[8];
+	struct transform_read_filter_bidder bidders[8];
 
 	/* Last filter in chain */
-	struct archive_read_filter *filter;
+	struct transform_read_filter *filter;
 
 	/*
 	 * Format detection is mostly the same as compression
@@ -156,39 +156,39 @@ struct archive_read {
 	 * examine.
 	 */
 
-	struct archive_format_descriptor {
+	struct transform_format_descriptor {
 		void	 *data;
 		const char *name;
-		int	(*bid)(struct archive_read *);
-		int	(*options)(struct archive_read *, const char *key,
+		int	(*bid)(struct transform_read *);
+		int	(*options)(struct transform_read *, const char *key,
 		    const char *value);
 #if ARCHIVE_VERSION_NUMBER < 3000000
-		int	(*read_data)(struct archive_read *, const void **, size_t *, off_t *);
+		int	(*read_data)(struct transform_read *, const void **, size_t *, off_t *);
 #else
-		int	(*read_data)(struct archive_read *, const void **, size_t *, int64_t *);
+		int	(*read_data)(struct transform_read *, const void **, size_t *, int64_t *);
 #endif
-		int	(*read_data_skip)(struct archive_read *);
-		int	(*cleanup)(struct archive_read *);
+		int	(*read_data_skip)(struct transform_read *);
+		int	(*cleanup)(struct transform_read *);
 	}	formats[9];
-	struct archive_format_descriptor	*format; /* Active format. */
+	struct transform_format_descriptor	*format; /* Active format. */
 
 	/*
 	 * Various information needed by archive_extract.
 	 */
 	struct extract		 *extract;
-	int			(*cleanup_archive_extract)(struct archive_read *);
+	int			(*cleanup_archive_extract)(struct transform_read *);
 };
 
-struct archive_read_filter_bidder
-	*__archive_read_get_bidder(struct archive_read *a);
+struct transform_read_filter_bidder
+	*__archive_read_get_bidder(struct transform_read *a);
 
-const void *__archive_read_ahead(struct archive_read *, size_t, ssize_t *);
-const void *__archive_read_filter_ahead(struct archive_read_filter *,
+const void *__archive_read_ahead(struct transform_read *, size_t, ssize_t *);
+const void *__archive_read_filter_ahead(struct transform_read_filter *,
     size_t, ssize_t *);
-ssize_t	__archive_read_consume(struct archive_read *, size_t);
-ssize_t	__archive_read_filter_consume(struct archive_read_filter *, size_t);
-int64_t	__archive_read_skip(struct archive_read *, int64_t);
-int64_t	__archive_read_skip_lenient(struct archive_read *, int64_t);
-int64_t	__archive_read_filter_skip(struct archive_read_filter *, int64_t);
-int __archive_read_program(struct archive_read_filter *, const char *);
+ssize_t	__archive_read_consume(struct transform_read *, size_t);
+ssize_t	__archive_read_filter_consume(struct transform_read_filter *, size_t);
+int64_t	__archive_read_skip(struct transform_read *, int64_t);
+int64_t	__archive_read_skip_lenient(struct transform_read *, int64_t);
+int64_t	__archive_read_filter_skip(struct transform_read_filter *, int64_t);
+int __archive_read_program(struct transform_read_filter *, const char *);
 #endif

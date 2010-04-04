@@ -28,8 +28,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_open_filename.c 191183 2009-04
 DEFINE_TEST(test_open_filename)
 {
 	char buff[64];
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 
 	/* Write an archive through this FILE *. */
 	assert((a = archive_write_new()) != NULL);

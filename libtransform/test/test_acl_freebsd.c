@@ -57,7 +57,7 @@ static struct myacl_t acls2[] = {
 };
 
 static void
-set_acls(struct archive_entry *ae, struct myacl_t *acls)
+set_acls(struct transform_entry *ae, struct myacl_t *acls)
 {
 	int i;
 
@@ -193,8 +193,8 @@ DEFINE_TEST(test_acl_freebsd)
 	skipping("ACL restore supported only on FreeBSD 5.0 and later");
 #else
 	struct stat st;
-	struct archive *a;
-	struct archive_entry *ae;
+	struct transform *a;
+	struct transform_entry *ae;
 	int n, fd;
 	acl_t acl;
 

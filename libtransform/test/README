@@ -35,7 +35,7 @@ Each test function can rely on the following:
     free to do so.  The current macro set includes assertEqualInt() and
     assertEqualString() that print out additional detail about their
     arguments if the assertion does fail.  'A' versions also accept
-    a struct archive * and display any error message from there on
+    a struct transform * and display any error message from there on
     failure.
 
   * You are encouraged to document each assertion with a failure() call

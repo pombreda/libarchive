@@ -31,8 +31,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk_symlink.c 201247 20
 DEFINE_TEST(test_write_disk_symlink)
 {
 	static const char data[]="abcdefghijklmnopqrstuvwxyz";
-	struct archive *ad;
-	struct archive_entry *ae;
+	struct transform *ad;
+	struct transform_entry *ae;
 	int r;
 
 	if (!canSymlink()) {

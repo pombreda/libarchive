@@ -55,19 +55,19 @@ struct uudecode {
 #define ST_READ_BASE64	3
 };
 
-static int	uudecode_bidder_bid(struct archive_read_filter_bidder *,
-		    struct archive_read_filter *filter);
-static int	uudecode_bidder_init(struct archive_read_filter *);
+static int	uudecode_bidder_bid(struct transform_read_filter_bidder *,
+		    struct transform_read_filter *filter);
+static int	uudecode_bidder_init(struct transform_read_filter *);
 
-static ssize_t	uudecode_filter_read(struct archive_read_filter *,
+static ssize_t	uudecode_filter_read(struct transform_read_filter *,
 		    const void **);
-static int	uudecode_filter_close(struct archive_read_filter *);
+static int	uudecode_filter_close(struct transform_read_filter *);
 
 int
-archive_read_support_compression_uu(struct archive *_a)
+archive_read_support_compression_uu(struct transform *_a)
 {
-	struct archive_read *a = (struct archive_read *)_a;
-	struct archive_read_filter_bidder *bidder;
+	struct transform_read *a = (struct transform_read *)_a;
+	struct transform_read_filter_bidder *bidder;
 
 	bidder = __archive_read_get_bidder(a);
 	archive_clear_error(_a);
@@ -193,7 +193,7 @@ get_line(const unsigned char *b, ssize_t avail, ssize_t *nlsize)
 }
 
 static ssize_t
-bid_get_line(struct archive_read_filter *filter,
+bid_get_line(struct transform_read_filter *filter,
     const unsigned char **b, ssize_t *avail, ssize_t *ravail, ssize_t *nl)
 {
 	ssize_t len;
@@ -230,8 +230,8 @@ bid_get_line(struct archive_read_filter *filter,
 #define UUDECODE(c) (((c) - 0x20) & 0x3f)
 
 static int
-uudecode_bidder_bid(struct archive_read_filter_bidder *self,
-    struct archive_read_filter *filter)
+uudecode_bidder_bid(struct transform_read_filter_bidder *self,
+    struct transform_read_filter *filter)
 {
 	const unsigned char *b;
 	ssize_t avail, ravail;
@@ -338,7 +338,7 @@ uudecode_bidder_bid(struct archive_read_filter_bidder *self,
 }
 
 static int
-uudecode_bidder_init(struct archive_read_filter *self)
+uudecode_bidder_init(struct transform_read_filter *self)
 {
 	struct uudecode   *uudecode;
 	void *out_buff;
@@ -373,7 +373,7 @@ uudecode_bidder_init(struct archive_read_filter *self)
 }
 
 static int
-ensure_in_buff_size(struct archive_read_filter *self,
+ensure_in_buff_size(struct transform_read_filter *self,
     struct uudecode *uudecode, size_t size)
 {
 
@@ -402,7 +402,7 @@ ensure_in_buff_size(struct archive_read_filter *self,
 }
 
 static ssize_t
-uudecode_filter_read(struct archive_read_filter *self, const void **buff)
+uudecode_filter_read(struct transform_read_filter *self, const void **buff)
 {
 	struct uudecode *uudecode;
 	const unsigned char *b, *d;
@@ -613,7 +613,7 @@ read_more:
 }
 
 static int
-uudecode_filter_close(struct archive_read_filter *self)
+uudecode_filter_close(struct transform_read_filter *self)
 {
 	struct uudecode *uudecode;
 

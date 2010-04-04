@@ -84,8 +84,8 @@ exit 1
 
 DEFINE_TEST(test_read_format_cpio_svr4_bzip2_rpm)
 {
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	const char *name = "test_read_format_cpio_svr4_bzip2_rpm.rpm";
 	int r;
 

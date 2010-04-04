@@ -34,8 +34,8 @@ static char strtab[] = "abcdefghijklmn.o/\nggghhhjjjrrrttt.o/\niiijjjdddsssppp.o
 
 DEFINE_TEST(test_write_format_ar)
 {
-	struct archive_entry *ae;
-	struct archive* a;
+	struct transform_entry *ae;
+	struct transform* a;
 	size_t used;
 
 	/*

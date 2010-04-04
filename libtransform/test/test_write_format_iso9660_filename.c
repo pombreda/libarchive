@@ -28,9 +28,9 @@
  * Check that an ISO 9660 image is correctly created.
  */
 static void
-add_entry(struct archive *a, const char *fname, const char *sym)
+add_entry(struct transform *a, const char *fname, const char *sym)
 {
-	struct archive_entry *ae;
+	struct transform_entry *ae;
 
 	assert((ae = archive_entry_new()) != NULL);
 	archive_entry_set_birthtime(ae, 2, 20);
@@ -70,9 +70,9 @@ enum vtype {
  * Verify file
  */
 static void
-verify_file(struct archive *a, enum vtype type, struct fns *fns)
+verify_file(struct transform *a, enum vtype type, struct fns *fns)
 {
-	struct archive_entry *ae;
+	struct transform_entry *ae;
 	int i;
 
 	assertEqualIntA(a, 0, archive_read_next_header(a, &ae));
@@ -139,8 +139,8 @@ verify_file(struct archive *a, enum vtype type, struct fns *fns)
 static void
 verify(unsigned char *buff, size_t used, enum vtype type, struct fns *fns)
 {
-	struct archive *a;
-	struct archive_entry *ae;
+	struct transform *a;
+	struct transform_entry *ae;
 	size_t i;
 
 	/*
@@ -198,7 +198,7 @@ static int
 create_iso_image(unsigned char *buff, size_t buffsize, size_t *used,
     const char *opt)
 {
-	struct archive *a;
+	struct transform *a;
 	int i, l, fcnt;
 	const int lens[] = {
 	    0, 1, 3, 5, 7, 8, 9, 29, 30, 31, 32,

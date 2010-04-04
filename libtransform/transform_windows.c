@@ -1302,7 +1302,7 @@ __archive_mktemp(const char *tmpdir)
 		'u', 'v', 'w', 'x', 'y', 'z'
 	};
 	HCRYPTPROV hProv;
-	struct archive_string temp_name;
+	struct transform_string temp_name;
 	wchar_t *ws;
 	DWORD attr;
 	BYTE *xp, *ep;

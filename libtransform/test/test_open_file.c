@@ -28,8 +28,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_open_file.c 201247 2009-12-30 
 DEFINE_TEST(test_open_file)
 {
 	char buff[64];
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	FILE *f;
 
 	f = fopen("test.tar", "wb");

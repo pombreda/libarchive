@@ -35,8 +35,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_compress.c 189308 2009-0
 
 DEFINE_TEST(test_write_compress)
 {
-	struct archive_entry *ae;
-	struct archive* a;
+	struct transform_entry *ae;
+	struct transform* a;
 	char *buff, *data;
 	size_t buffsize, datasize;
 	char path[16];

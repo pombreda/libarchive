@@ -36,8 +36,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_open_fd.c 201247 2009-12-30 05
 DEFINE_TEST(test_open_fd)
 {
 	char buff[64];
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	int fd;
 
 #if defined(__BORLANDC__)

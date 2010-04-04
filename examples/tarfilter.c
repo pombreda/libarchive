@@ -41,9 +41,9 @@ main(int argc, char **argv)
 	ssize_t len;
 	int r;
 	mode_t m;
-	struct archive *ina;
-	struct archive *outa;
-	struct archive_entry *entry;
+	struct transform *ina;
+	struct transform *outa;
+	struct transform_entry *entry;
 
 	/* Read an archive from stdin, with automatic format detection. */
 	ina = archive_read_new();

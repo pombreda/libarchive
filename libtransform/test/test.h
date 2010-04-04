@@ -286,9 +286,9 @@ void extract_reference_file(const char *);
 #include "archive_entry.h"
 
 /* Special customized read-from-memory interface. */
-int read_open_memory(struct archive *, void *, size_t, size_t);
+int read_open_memory(struct transform *, void *, size_t, size_t);
 /* "2" version exercises a slightly different set of libarchive APIs. */
-int read_open_memory2(struct archive *, void *, size_t, size_t);
+int read_open_memory2(struct transform *, void *, size_t, size_t);
 
 /* Versions of above that accept an archive argument for additional info. */
 #define assertA(e)   assertion_assert(__FILE__, __LINE__, (e), #e, (a))

@@ -48,8 +48,8 @@ static unsigned char archive[] = {
 
 DEFINE_TEST(test_read_format_cpio_odc)
 {
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	assert((a = archive_read_new()) != NULL);
 	assertA(0 == archive_read_support_compression_all(a));
 	assertA(0 == archive_read_support_format_all(a));

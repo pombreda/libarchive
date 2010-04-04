@@ -108,15 +108,15 @@ struct private_data {
 	size_t		 compressed_offset;
 };
 
-static int archive_compressor_compress_open(struct archive_write_filter *);
-static int archive_compressor_compress_write(struct archive_write_filter *,
+static int archive_compressor_compress_open(struct transform_write_filter *);
+static int archive_compressor_compress_write(struct transform_write_filter *,
 		    const void *, size_t);
-static int archive_compressor_compress_close(struct archive_write_filter *);
-static int archive_compressor_compress_free(struct archive_write_filter *);
+static int archive_compressor_compress_close(struct transform_write_filter *);
+static int archive_compressor_compress_free(struct transform_write_filter *);
 
 #if ARCHIVE_VERSION_NUMBER < 4000000
 int
-archive_write_set_compression_compress(struct archive *a)
+archive_write_set_compression_compress(struct transform *a)
 {
 	__archive_write_filters_free(a);
 	return (archive_write_add_filter_compress(a));
@@ -127,10 +127,10 @@ archive_write_set_compression_compress(struct archive *a)
  * Add a compress filter to this write handle.
  */
 int
-archive_write_add_filter_compress(struct archive *_a)
+archive_write_add_filter_compress(struct transform *_a)
 {
-	struct archive_write *a = (struct archive_write *)_a;
-	struct archive_write_filter *f = __archive_write_allocate_filter(_a);
+	struct transform_write *a = (struct transform_write *)_a;
+	struct transform_write_filter *f = __archive_write_allocate_filter(_a);
 
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
 	    ARCHIVE_STATE_NEW, "archive_write_add_filter_compress");
@@ -144,7 +144,7 @@ archive_write_add_filter_compress(struct archive *_a)
  * Setup callback.
  */
 static int
-archive_compressor_compress_open(struct archive_write_filter *f)
+archive_compressor_compress_open(struct transform_write_filter *f)
 {
 	int ret;
 	struct private_data *state;
@@ -219,7 +219,7 @@ static unsigned char rmask[9] =
 	{0x00, 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff};
 
 static int
-output_byte(struct archive_write_filter *f, unsigned char c)
+output_byte(struct transform_write_filter *f, unsigned char c)
 {
 	struct private_data *state = f->data;
 	ssize_t bytes_written;
@@ -239,7 +239,7 @@ output_byte(struct archive_write_filter *f, unsigned char c)
 }
 
 static int
-output_code(struct archive_write_filter *f, int ocode)
+output_code(struct transform_write_filter *f, int ocode)
 {
 	struct private_data *state = f->data;
 	int bits, ret, clear_flg, bit_offset;
@@ -305,7 +305,7 @@ output_code(struct archive_write_filter *f, int ocode)
 }
 
 static int
-output_flush(struct archive_write_filter *f)
+output_flush(struct transform_write_filter *f)
 {
 	struct private_data *state = f->data;
 	int ret;
@@ -325,7 +325,7 @@ output_flush(struct archive_write_filter *f)
  * Write data to the compressed stream.
  */
 static int
-archive_compressor_compress_write(struct archive_write_filter *f,
+archive_compressor_compress_write(struct transform_write_filter *f,
     const void *buff, size_t length)
 {
 	struct private_data *state = (struct private_data *)f->data;
@@ -414,7 +414,7 @@ archive_compressor_compress_write(struct archive_write_filter *f,
  * Finish the compression...
  */
 static int
-archive_compressor_compress_close(struct archive_write_filter *f)
+archive_compressor_compress_close(struct transform_write_filter *f)
 {
 	struct private_data *state = (struct private_data *)f->data;
 	int ret;
@@ -437,7 +437,7 @@ cleanup:
 }
 
 static int
-archive_compressor_compress_free(struct archive_write_filter *f)
+archive_compressor_compress_free(struct transform_write_filter *f)
 {
 	(void)f; /* UNUSED */
 	return (ARCHIVE_OK);

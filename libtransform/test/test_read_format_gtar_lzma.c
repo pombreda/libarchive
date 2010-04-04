@@ -41,8 +41,8 @@ DEFINE_TEST(test_read_format_gtar_lzma)
 {
 	int r;
 
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_support_compression_all(a));

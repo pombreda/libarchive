@@ -30,43 +30,43 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_virtual.c 201098 2009-12-28 02:5
 #include "transform_private.h"
 
 int
-archive_filter_code(struct archive *a, int n)
+archive_filter_code(struct transform *a, int n)
 {
 	return ((a->vtable->archive_filter_code)(a, n));
 }
 
 int
-archive_filter_count(struct archive *a)
+archive_filter_count(struct transform *a)
 {
 	return ((a->vtable->archive_filter_count)(a));
 }
 
 const char *
-archive_filter_name(struct archive *a, int n)
+archive_filter_name(struct transform *a, int n)
 {
 	return ((a->vtable->archive_filter_name)(a, n));
 }
 
 int64_t
-archive_filter_bytes(struct archive *a, int n)
+archive_filter_bytes(struct transform *a, int n)
 {
 	return ((a->vtable->archive_filter_bytes)(a, n));
 }
 
 int
-archive_write_close(struct archive *a)
+archive_write_close(struct transform *a)
 {
 	return ((a->vtable->archive_close)(a));
 }
 
 int
-archive_read_close(struct archive *a)
+archive_read_close(struct transform *a)
 {
 	return ((a->vtable->archive_close)(a));
 }
 
 int
-archive_write_free(struct archive *a)
+archive_write_free(struct transform *a)
 {
 	return ((a->vtable->archive_free)(a));
 }
@@ -74,14 +74,14 @@ archive_write_free(struct archive *a)
 #if ARCHIVE_VERSION_NUMBER < 4000000
 /* For backwards compatibility; will be removed with libarchive 4.0. */
 int
-archive_write_finish(struct archive *a)
+archive_write_finish(struct transform *a)
 {
 	return ((a->vtable->archive_free)(a));
 }
 #endif
 
 int
-archive_read_free(struct archive *a)
+archive_read_free(struct transform *a)
 {
 	return ((a->vtable->archive_free)(a));
 }
@@ -89,30 +89,30 @@ archive_read_free(struct archive *a)
 #if ARCHIVE_VERSION_NUMBER < 4000000
 /* For backwards compatibility; will be removed with libarchive 4.0. */
 int
-archive_read_finish(struct archive *a)
+archive_read_finish(struct transform *a)
 {
 	return ((a->vtable->archive_free)(a));
 }
 #endif
 
 int
-archive_write_finish_entry(struct archive *a)
+archive_write_finish_entry(struct transform *a)
 {
 	return ((a->vtable->archive_write_finish_entry)(a));
 }
 
 ssize_t
-archive_write_data(struct archive *a, const void *buff, size_t s)
+archive_write_data(struct transform *a, const void *buff, size_t s)
 {
 	return ((a->vtable->archive_write_data)(a, buff, s));
 }
 
 #if ARCHIVE_VERSION_NUMBER < 3000000
 ssize_t
-archive_write_data_block(struct archive *a, const void *buff, size_t s, off_t o)
+archive_write_data_block(struct transform *a, const void *buff, size_t s, off_t o)
 #else
 ssize_t
-archive_write_data_block(struct archive *a, const void *buff, size_t s, int64_t o)
+archive_write_data_block(struct transform *a, const void *buff, size_t s, int64_t o)
 #endif
 {
 	return ((a->vtable->archive_write_data_block)(a, buff, s, o));

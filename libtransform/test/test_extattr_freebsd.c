@@ -45,8 +45,8 @@ DEFINE_TEST(test_extattr_freebsd)
 	const void *xval;
 	size_t xsize;
 	struct stat st;
-	struct archive *a;
-	struct archive_entry *ae;
+	struct transform *a;
+	struct transform_entry *ae;
 	int n, fd;
 	int extattr_privilege_bug = 0;
 

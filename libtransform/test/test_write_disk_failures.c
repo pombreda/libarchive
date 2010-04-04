@@ -30,8 +30,8 @@ DEFINE_TEST(test_write_disk_failures)
 #if defined(_WIN32) && !defined(__CYGWIN__)
 	skipping("archive_write_disk interface");
 #else
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	int fd;
 
 	/* Force the umask to something predictable. */

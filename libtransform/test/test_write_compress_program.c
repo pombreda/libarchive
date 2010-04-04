@@ -30,8 +30,8 @@ char buff2[64];
 
 DEFINE_TEST(test_write_compress_program)
 {
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	size_t used;
 	int blocksize = 1024;
 	int r;

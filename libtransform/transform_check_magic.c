@@ -114,7 +114,7 @@ write_all_states(char *buff, unsigned int states)
  * the libarchive API.
  */
 int
-__archive_check_magic(struct archive *a, unsigned int magic,
+__archive_check_magic(struct transform *a, unsigned int magic,
     unsigned int state, const char *function)
 {
 	char states1[64];

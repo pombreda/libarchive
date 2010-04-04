@@ -35,8 +35,8 @@ test_filename(const char *prefix, int dlen, int flen)
 	char buff[8192];
 	char filename[400];
 	char dirname[400];
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	size_t used;
 	int separator = 0;
 	int i = 0;

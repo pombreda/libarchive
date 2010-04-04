@@ -130,21 +130,21 @@ struct private_data {
 	unsigned char		 stack[65300];
 };
 
-static int	compress_bidder_bid(struct archive_read_filter_bidder *, struct archive_read_filter *);
-static int	compress_bidder_init(struct archive_read_filter *);
-static int	compress_bidder_free(struct archive_read_filter_bidder *);
+static int	compress_bidder_bid(struct transform_read_filter_bidder *, struct transform_read_filter *);
+static int	compress_bidder_init(struct transform_read_filter *);
+static int	compress_bidder_free(struct transform_read_filter_bidder *);
 
-static ssize_t	compress_filter_read(struct archive_read_filter *, const void **);
-static int	compress_filter_close(struct archive_read_filter *);
+static ssize_t	compress_filter_read(struct transform_read_filter *, const void **);
+static int	compress_filter_close(struct transform_read_filter *);
 
-static int	getbits(struct archive_read_filter *, int n);
-static int	next_code(struct archive_read_filter *);
+static int	getbits(struct transform_read_filter *, int n);
+static int	next_code(struct transform_read_filter *);
 
 int
-archive_read_support_compression_compress(struct archive *_a)
+archive_read_support_compression_compress(struct transform *_a)
 {
-	struct archive_read *a = (struct archive_read *)_a;
-	struct archive_read_filter_bidder *bidder = __archive_read_get_bidder(a);
+	struct transform_read *a = (struct transform_read *)_a;
+	struct transform_read_filter_bidder *bidder = __archive_read_get_bidder(a);
 
 	if (bidder == NULL)
 		return (ARCHIVE_FATAL);
@@ -165,8 +165,8 @@ archive_read_support_compression_compress(struct archive *_a)
  * from verifying as much as we would like.
  */
 static int
-compress_bidder_bid(struct archive_read_filter_bidder *self,
-    struct archive_read_filter *filter)
+compress_bidder_bid(struct transform_read_filter_bidder *self,
+    struct transform_read_filter *filter)
 {
 	const unsigned char *buffer;
 	ssize_t avail;
@@ -199,7 +199,7 @@ compress_bidder_bid(struct archive_read_filter_bidder *self,
  * Setup the callbacks.
  */
 static int
-compress_bidder_init(struct archive_read_filter *self)
+compress_bidder_init(struct transform_read_filter *self)
 {
 	struct private_data *state;
 	static const size_t out_block_size = 64 * 1024;
@@ -259,7 +259,7 @@ compress_bidder_init(struct archive_read_filter *self)
  * as necessary.
  */
 static ssize_t
-compress_filter_read(struct archive_read_filter *self, const void **pblock)
+compress_filter_read(struct transform_read_filter *self, const void **pblock)
 {
 	struct private_data *state;
 	unsigned char *p, *start, *end;
@@ -293,7 +293,7 @@ compress_filter_read(struct archive_read_filter *self, const void **pblock)
  * Clean up the reader.
  */
 static int
-compress_bidder_free(struct archive_read_filter_bidder *self)
+compress_bidder_free(struct transform_read_filter_bidder *self)
 {
 	self->data = NULL;
 	return (ARCHIVE_OK);
@@ -303,7 +303,7 @@ compress_bidder_free(struct archive_read_filter_bidder *self)
  * Close and release the filter.
  */
 static int
-compress_filter_close(struct archive_read_filter *self)
+compress_filter_close(struct transform_read_filter *self)
 {
 	struct private_data *state = (struct private_data *)self->data;
 
@@ -318,7 +318,7 @@ compress_filter_close(struct archive_read_filter *self)
  * format error, ARCHIVE_EOF if we hit end of data, ARCHIVE_OK otherwise.
  */
 static int
-next_code(struct archive_read_filter *self)
+next_code(struct transform_read_filter *self)
 {
 	struct private_data *state = (struct private_data *)self->data;
 	int code, newcode;
@@ -408,7 +408,7 @@ next_code(struct archive_read_filter *self)
  * -1 indicates end of available data.
  */
 static int
-getbits(struct archive_read_filter *self, int n)
+getbits(struct transform_read_filter *self, int n)
 {
 	struct private_data *state = (struct private_data *)self->data;
 	int code;

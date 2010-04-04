@@ -62,10 +62,10 @@ usage(void)
 /*
  * Initialize archive structure and create a shar archive.
  */
-static struct archive *
+static struct transform *
 shar_create(void)
 {
-	struct archive *a;
+	struct transform *a;
 
 	if ((a = archive_write_new()) == NULL)
 		errx(EXIT_FAILURE, "%s", archive_error_string(a));
@@ -89,7 +89,7 @@ static char buffer[32768];
  * Write file data to an archive entry.
  */
 static int
-shar_write_entry_data(struct archive *a, const int fd)
+shar_write_entry_data(struct transform *a, const int fd)
 {
 	ssize_t bytes_read, bytes_written;
 
@@ -115,10 +115,10 @@ shar_write_entry_data(struct archive *a, const int fd)
  * Write a file to the archive. We have special handling for symbolic links.
  */
 static int
-shar_write_entry(struct archive *a, const char *pathname, const char *accpath,
+shar_write_entry(struct transform *a, const char *pathname, const char *accpath,
     const struct stat *st)
 {
-	struct archive_entry *entry;
+	struct transform_entry *entry;
 	int fd = -1;
 	int ret = ARCHIVE_OK;
 
@@ -174,7 +174,7 @@ out:
  * or device. Symbolic links are followed.
  */
 static int
-shar_write_path(struct archive *a, const char *pathname)
+shar_write_path(struct transform *a, const char *pathname)
 {
 	struct stat st;
 
@@ -194,7 +194,7 @@ shar_write_path(struct archive *a, const char *pathname)
  * followed. Other symbolic links are stored as such to the archive.
  */
 static int
-shar_write_tree(struct archive *a, const char *pathname)
+shar_write_tree(struct transform *a, const char *pathname)
 {
 	struct tree *t;
 	const struct stat *lst, *st;
@@ -250,7 +250,7 @@ shar_write_tree(struct archive *a, const char *pathname)
 static int
 shar_write(char **fn, size_t nfn)
 {
-	struct archive *a;
+	struct transform *a;
 	size_t i;
 	int error = 0;
 

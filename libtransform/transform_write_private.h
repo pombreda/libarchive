@@ -36,18 +36,18 @@
 #include "transform_string.h"
 #include "transform_private.h"
 
-struct archive_write;
+struct transform_write;
 
-struct archive_write_filter {
+struct transform_write_filter {
 	int64_t bytes_written;
-	struct archive *archive; /* Associated archive. */
-	struct archive_write_filter *next_filter; /* Who I write to. */
-	int	(*options)(struct archive_write_filter *,
+	struct transform *archive; /* Associated archive. */
+	struct transform_write_filter *next_filter; /* Who I write to. */
+	int	(*options)(struct transform_write_filter *,
 	    const char *key, const char *value);
-	int	(*open)(struct archive_write_filter *);
-	int	(*write)(struct archive_write_filter *, const void *, size_t);
-	int	(*close)(struct archive_write_filter *);
-	int	(*free)(struct archive_write_filter *);
+	int	(*open)(struct transform_write_filter *);
+	int	(*write)(struct transform_write_filter *, const void *, size_t);
+	int	(*close)(struct transform_write_filter *);
+	int	(*free)(struct transform_write_filter *);
 	void	 *data;
 	const char *name;
 	int	  code;
@@ -56,18 +56,18 @@ struct archive_write_filter {
 };
 
 #if ARCHIVE_VERSION < 4000000
-void __archive_write_filters_free(struct archive *);
+void __archive_write_filters_free(struct transform *);
 #endif
 
-struct archive_write_filter *__archive_write_allocate_filter(struct archive *);
+struct transform_write_filter *__archive_write_allocate_filter(struct transform *);
 
-int __archive_write_output(struct archive_write *, const void *, size_t);
-int __archive_write_filter(struct archive_write_filter *, const void *, size_t);
-int __archive_write_open_filter(struct archive_write_filter *);
-int __archive_write_close_filter(struct archive_write_filter *);
+int __archive_write_output(struct transform_write *, const void *, size_t);
+int __archive_write_filter(struct transform_write_filter *, const void *, size_t);
+int __archive_write_open_filter(struct transform_write_filter *);
+int __archive_write_close_filter(struct transform_write_filter *);
 
-struct archive_write {
-	struct archive	archive;
+struct transform_write {
+	struct transform	archive;
 
 	/* Dev/ino of the archive being written. */
 	dev_t		  skip_file_dev;
@@ -105,21 +105,21 @@ struct archive_write {
 	/*
 	 * First and last write filters in the pipeline.
 	 */
-	struct archive_write_filter *filter_first;
-	struct archive_write_filter *filter_last;
+	struct transform_write_filter *filter_first;
+	struct transform_write_filter *filter_last;
 
 	/*
 	 * Pointers to format-specific functions for writing.  They're
 	 * initialized by archive_write_set_format_XXX() calls.
 	 */
-	int	(*format_init)(struct archive_write *);
-	int	(*format_options)(struct archive_write *,
+	int	(*format_init)(struct transform_write *);
+	int	(*format_options)(struct transform_write *,
 		    const char *key, const char *value);
-	int	(*format_finish_entry)(struct archive_write *);
-	ssize_t	(*format_write_data)(struct archive_write *,
+	int	(*format_finish_entry)(struct transform_write *);
+	ssize_t	(*format_write_data)(struct transform_write *,
 		    const void *buff, size_t);
-	int	(*format_close)(struct archive_write *);
-	int	(*format_free)(struct archive_write *);
+	int	(*format_close)(struct transform_write *);
+	int	(*format_free)(struct transform_write *);
 };
 
 #endif

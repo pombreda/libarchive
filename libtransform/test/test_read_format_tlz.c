@@ -37,8 +37,8 @@ static unsigned char archive[] = {
 
 DEFINE_TEST(test_read_format_tlz)
 {
-	struct archive_entry *ae;
-	struct archive *a;
+	struct transform_entry *ae;
+	struct transform *a;
 	int r;
 
 	assert((a = archive_read_new()) != NULL);
