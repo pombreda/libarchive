@@ -51,9 +51,9 @@ struct write_memory_data {
 	unsigned char * buff;
 };
 
-static int	memory_write_close(struct archive *, void *);
-static int	memory_write_open(struct archive *, void *);
-static ssize_t	memory_write(struct archive *, void *, const void *buff, size_t);
+static int	memory_write_close(struct transform *, void *);
+static int	memory_write_open(struct transform *, void *);
+static ssize_t	memory_write(struct transform *, void *, const void *buff, size_t);
 
 /*
  * Client provides a pointer to a block of memory to receive
@@ -79,7 +79,7 @@ archive_write_open_memory(struct archive *a, void *buff, size_t buffSize, size_t
 }
 
 static int
-memory_write_open(struct archive *a, void *client_data)
+memory_write_open(struct transform *t, void *client_data)
 {
 	struct write_memory_data *mine;
 	mine = client_data;
@@ -87,9 +87,9 @@ memory_write_open(struct archive *a, void *client_data)
 	if (mine->client_size != NULL)
 		*mine->client_size = mine->used;
 	/* Disable padding if it hasn't been set explicitly. */
-	if (-1 == archive_write_get_bytes_in_last_block(a))
-		archive_write_set_bytes_in_last_block(a, 1);
-	return (ARCHIVE_OK);
+	if (-1 == transform_write_get_bytes_in_last_block(t))
+		return transform_write_set_bytes_in_last_block(t, 1);
+	return (TRANSFORM_OK);
 }
 
 /*
@@ -99,14 +99,14 @@ memory_write_open(struct archive *a, void *client_data)
  * how much has been written into their buffer at any time.
  */
 static ssize_t
-memory_write(struct archive *a, void *client_data, const void *buff, size_t length)
+memory_write(struct transform *a, void *client_data, const void *buff, size_t length)
 {
 	struct write_memory_data *mine;
 	mine = client_data;
 
 	if (mine->used + length > mine->size) {
-		archive_set_error(a, ENOMEM, "Buffer exhausted");
-		return (ARCHIVE_FATAL);
+		transform_set_error(a, ENOMEM, "Buffer exhausted");
+		return (TRANSFORM_FATAL);
 	}
 	memcpy(mine->buff + mine->used, buff, length);
 	mine->used += length;
@@ -116,11 +116,11 @@ memory_write(struct archive *a, void *client_data, const void *buff, size_t leng
 }
 
 static int
-memory_write_close(struct archive *a, void *client_data)
+memory_write_close(struct transform *a, void *client_data)
 {
 	struct write_memory_data *mine;
 	(void)a; /* UNUSED */
 	mine = client_data;
 	free(mine);
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }

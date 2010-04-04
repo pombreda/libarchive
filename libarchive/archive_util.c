@@ -430,6 +430,15 @@ __archive_set_error_from_transform(struct archive *a, struct transform *t)
 }
 
 int
+__convert_transform_fatal_error(struct archive *a, int result)
+{
+	if (TRANSFORM_FATAL != result)
+		return (result);
+	__archive_set_error_from_transform(a, a->transform);
+	return (ARCHIVE_FATAL);
+}
+
+int
 __convert_transform_error_to_archive_error(struct archive *a,
     struct transform *t, int error)
 {

@@ -51,13 +51,14 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_open_fd.c 201093 2009-12-2
 #include "archive.h"
 
 struct write_fd_data {
+	struct archive *archive;
 	off_t		offset;
 	int		fd;
 };
 
-static int	file_close(struct archive *, void *);
-static int	file_open(struct archive *, void *);
-static ssize_t	file_write(struct archive *, void *, const void *buff, size_t);
+static int	file_close(struct transform *, void *);
+static int	file_open(struct transform *, void *);
+static ssize_t	file_write(struct transform *, void *, const void *buff, size_t);
 
 int
 archive_write_open_fd(struct archive *a, int fd)
@@ -69,6 +70,7 @@ archive_write_open_fd(struct archive *a, int fd)
 		archive_set_error(a, ENOMEM, "No memory");
 		return (ARCHIVE_FATAL);
 	}
+	mine->archive = a;
 	mine->fd = fd;
 #if defined(__CYGWIN__) || defined(_WIN32)
 	setmode(mine->fd, O_BINARY);
@@ -78,7 +80,7 @@ archive_write_open_fd(struct archive *a, int fd)
 }
 
 static int
-file_open(struct archive *a, void *client_data)
+file_open(struct transform *t, void *client_data)
 {
 	struct write_fd_data *mine;
 	struct stat st;
@@ -86,37 +88,37 @@ file_open(struct archive *a, void *client_data)
 	mine = (struct write_fd_data *)client_data;
 
 	if (fstat(mine->fd, &st) != 0) {
-		archive_set_error(a, errno, "Couldn't stat fd %d", mine->fd);
-		return (ARCHIVE_FATAL);
+		transform_set_error(t, errno, "Couldn't stat fd %d", mine->fd);
+		return (TRANSFORM_FATAL);
 	}
 
 	/*
 	 * If this is a regular file, don't add it to itself.
 	 */
 	if (S_ISREG(st.st_mode))
-		archive_write_set_skip_file(a, st.st_dev, st.st_ino);
+		archive_write_set_skip_file(mine->archive, st.st_dev, st.st_ino);
 
 	/*
 	 * If client hasn't explicitly set the last block handling,
 	 * then set it here.
 	 */
-	if (archive_write_get_bytes_in_last_block(a) < 0) {
+	if (transform_write_get_bytes_in_last_block(t) < 0) {
 		/* If the output is a block or character device, fifo,
 		 * or stdout, pad the last block, otherwise leave it
 		 * unpadded. */
 		if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode) ||
 		    S_ISFIFO(st.st_mode) || (mine->fd == 1))
 			/* Last block will be fully padded. */
-			archive_write_set_bytes_in_last_block(a, 0);
+			transform_write_set_bytes_in_last_block(t, 0);
 		else
-			archive_write_set_bytes_in_last_block(a, 1);
+			transform_write_set_bytes_in_last_block(t, 1);
 	}
 
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 static ssize_t
-file_write(struct archive *a, void *client_data, const void *buff, size_t length)
+file_write(struct transform *t, void *client_data, const void *buff, size_t length)
 {
 	struct write_fd_data	*mine;
 	ssize_t	bytesWritten;
@@ -124,14 +126,15 @@ file_write(struct archive *a, void *client_data, const void *buff, size_t length
 	mine = (struct write_fd_data *)client_data;
 	bytesWritten = write(mine->fd, buff, length);
 	if (bytesWritten <= 0) {
-		archive_set_error(a, errno, "Write error");
+		transform_set_error(t, errno, "Write error");
+		/* XXX this won't fly */
 		return (-1);
 	}
 	return (bytesWritten);
 }
 
 static int
-file_close(struct archive *a, void *client_data)
+file_close(struct transform *a, void *client_data)
 {
 	struct write_fd_data	*mine = (struct write_fd_data *)client_data;
 

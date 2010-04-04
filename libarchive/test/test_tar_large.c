@@ -79,16 +79,16 @@ static off_t	memory_read_skip(struct archive *, void *, off_t request);
 static int64_t	memory_read_skip(struct archive *, void *, int64_t request);
 #endif
 static ssize_t	memory_read(struct archive *, void *, const void **buff);
-static ssize_t	memory_write(struct archive *, void *, const void *, size_t);
+static ssize_t	memory_write(struct transform *, void *, const void *, size_t);
 
 
 static ssize_t
-memory_write(struct archive *a, void *_private, const void *buff, size_t size)
+memory_write(struct transform *t, void *_private, const void *buff, size_t size)
 {
 	struct memdata *private = _private;
 	struct memblock *block;
 
-	(void)a;
+	(void)t;
 
 	/*
 	 * Since libarchive tries to behave in a zero-copy manner, if

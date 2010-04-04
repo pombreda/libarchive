@@ -51,9 +51,9 @@ struct write_FILE_data {
 	FILE		*f;
 };
 
-static int	file_close(struct archive *, void *);
-static int	file_open(struct archive *, void *);
-static ssize_t	file_write(struct archive *, void *, const void *buff, size_t);
+static int	file_close(struct transform *, void *);
+static int	file_open(struct transform *, void *);
+static ssize_t	file_write(struct transform *, void *, const void *buff, size_t);
 
 int
 archive_write_open_FILE(struct archive *a, FILE *f)
@@ -71,16 +71,16 @@ archive_write_open_FILE(struct archive *a, FILE *f)
 }
 
 static int
-file_open(struct archive *a, void *client_data)
+file_open(struct transform *t, void *client_data)
 {
-	(void)a; /* UNUSED */
+	(void)t; /* UNUSED */
 	(void)client_data; /* UNUSED */
 
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }
 
 static ssize_t
-file_write(struct archive *a, void *client_data, const void *buff, size_t length)
+file_write(struct transform *t, void *client_data, const void *buff, size_t length)
 {
 	struct write_FILE_data	*mine;
 	size_t	bytesWritten;
@@ -88,18 +88,19 @@ file_write(struct archive *a, void *client_data, const void *buff, size_t length
 	mine = client_data;
 	bytesWritten = fwrite(buff, 1, length, mine->f);
 	if (bytesWritten < length) {
-		archive_set_error(a, errno, "Write error");
+		transform_set_error(t, errno, "Write error");
+		/* XXX this won't fly, use proper error code */
 		return (-1);
 	}
 	return (bytesWritten);
 }
 
 static int
-file_close(struct archive *a, void *client_data)
+file_close(struct transform *t, void *client_data)
 {
 	struct write_FILE_data	*mine = client_data;
 
-	(void)a; /* UNUSED */
+	(void)t; /* UNUSED */
 	free(mine);
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }

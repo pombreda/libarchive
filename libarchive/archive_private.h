@@ -94,9 +94,6 @@ struct archive {
 
 	struct transform *transform;
 
-	int	  compression_code;	/* Currently active compression. */
-	const char *compression_name;
-
 	/* Number of file entries processed. */
 	int		  file_count;
 
@@ -122,6 +119,7 @@ int	__archive_parse_options(const char *p, const char *fn,
 	    int keysize, char *key, int valsize, char *val);
 
 int	__archive_mktemp(const char *tmpdir);
+int __convert_transform_fatal_error(struct archive *, int);
 int __convert_transform_error_to_archive_error(struct archive *, struct transform *, 
 		int);
 void __archive_set_error_from_transform(struct archive *, struct transform *);

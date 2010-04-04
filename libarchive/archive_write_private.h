@@ -38,33 +38,7 @@
 
 struct archive_write;
 
-struct archive_write_filter {
-	int64_t bytes_written;
-	struct archive *archive; /* Associated archive. */
-	struct archive_write_filter *next_filter; /* Who I write to. */
-	int	(*options)(struct archive_write_filter *,
-	    const char *key, const char *value);
-	int	(*open)(struct archive_write_filter *);
-	int	(*write)(struct archive_write_filter *, const void *, size_t);
-	int	(*close)(struct archive_write_filter *);
-	int	(*free)(struct archive_write_filter *);
-	void	 *data;
-	const char *name;
-	int	  code;
-	int	  bytes_per_block;
-	int	  bytes_in_last_block;
-};
-
-#if ARCHIVE_VERSION < 4000000
-void __archive_write_filters_free(struct archive *);
-#endif
-
-struct archive_write_filter *__archive_write_allocate_filter(struct archive *);
-
 int __archive_write_output(struct archive_write *, const void *, size_t);
-int __archive_write_filter(struct archive_write_filter *, const void *, size_t);
-int __archive_write_open_filter(struct archive_write_filter *);
-int __archive_write_close_filter(struct archive_write_filter *);
 
 struct archive_write {
 	struct archive	archive;
@@ -77,21 +51,6 @@ struct archive_write {
 	const unsigned char	*nulls;
 	size_t			 null_length;
 
-	/* Callbacks to open/read/write/close archive stream. */
-	archive_open_callback	*client_opener;
-	archive_write_callback	*client_writer;
-	archive_close_callback	*client_closer;
-	void			*client_data;
-
-	/*
-	 * Blocking information.  Note that bytes_in_last_block is
-	 * misleadingly named; I should find a better name.  These
-	 * control the final output from all compressors, including
-	 * compression_none.
-	 */
-	int		  bytes_per_block;
-	int		  bytes_in_last_block;
-
 	/*
 	 * These control whether data within a gzip/bzip2 compressed
 	 * stream gets padded or not.  If pad_uncompressed is set,
@@ -101,12 +60,6 @@ struct archive_write {
 	 * effect on compression "none."
 	 */
 	int		  pad_uncompressed;
-
-	/*
-	 * First and last write filters in the pipeline.
-	 */
-	struct archive_write_filter *filter_first;
-	struct archive_write_filter *filter_last;
 
 	/*
 	 * Pointers to format-specific functions for writing.  They're

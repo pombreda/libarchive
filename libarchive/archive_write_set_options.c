@@ -37,6 +37,23 @@ __FBSDID("$FreeBSD$");
 #include "archive_write_private.h"
 
 /*
+ * just a shim for handing the option over to transform, and converting
+ * the error code back to archives error enumerations
+ */
+
+static int
+__transform_option_shim(struct archive_write *a, const char *name,
+	const char *key, const char *value)
+{
+	int ret;
+	ret = transform_write_set_filter_option(a->archive.transform, name, key,
+		value);
+	ret = __convert_transform_error_to_archive_error(&a->archive,
+		a->archive.transform, ret);
+	return ret;
+}
+
+/*
  * Like strdup, but takes start and end pointers.
  */
 static char *
@@ -158,31 +175,6 @@ apply_format_option(struct archive_write *a, const char *name,
 }
 
 /*
- * See if a filter can handle this option.
- */
-static int
-apply_filter_option(struct archive_write *a, const char *name,
-    const char *key, const char *value)
-{
-	struct archive_write_filter *filter;
-	int r, handled = 0;
-
-	for (filter = a->filter_first; filter != NULL; filter = filter->next_filter) {
-		if (filter->options == NULL)
-			continue;
-		if (name != NULL && strcmp(name, filter->name) != 0)
-			continue;
-		r = filter->options(filter, key, value);
-		if (r == ARCHIVE_FATAL)
-			return (r);
-		if (r == ARCHIVE_OK)
-			++handled;
-	}
-	return (handled > 0 ? ARCHIVE_OK : ARCHIVE_WARN);
-}
-
-
-/*
  * See if a format or filter can handle this option.
  * Returns ARCHIVE_OK if it is handled by anyone.
  */
@@ -195,7 +187,7 @@ apply_option(struct archive_write *a, const char *name,
 	r1 = apply_format_option(a, name, key, value);
 	if (r1 == ARCHIVE_FATAL)
 		return (r1);
-	r2 = apply_filter_option(a, name, key, value);
+	r2 = __transform_option_shim(a, name, key, value);
 	if (r2 == ARCHIVE_FATAL)
 		return (r2);
 	if (r1 < ARCHIVE_OK && r2 < ARCHIVE_OK)
@@ -275,7 +267,7 @@ archive_write_set_compressor_options(struct archive *a, const char *s)
 {
 	archive_check_magic(a, ARCHIVE_WRITE_MAGIC,
 	    ARCHIVE_STATE_NEW, "archive_write_set_compressor_options");
-	return (process_options(a, s, apply_filter_option));
+	return (process_options(a, s, __transform_option_shim));
 }
 #endif
 
@@ -287,7 +279,7 @@ archive_write_set_filter_options(struct archive *a, const char *s)
 {
 	archive_check_magic(a, ARCHIVE_WRITE_MAGIC,
 	    ARCHIVE_STATE_NEW, "archive_write_set_compressor_options");
-	return (process_options(a, s, apply_filter_option));
+	return (process_options(a, s, __transform_option_shim));
 }
 
 /*

@@ -50,6 +50,8 @@
 #endif
 #include <stdio.h> /* For FILE * */
 
+#include <transform.h>
+
 /* Get appropriate definitions of standard POSIX-style types. */
 /* These should match the types used in 'struct stat' */
 #if defined(_WIN32) && !defined(__CYGWIN__)
@@ -588,8 +590,8 @@ __LA_DECL int archive_write_set_format_shar_dump(struct archive *);
 __LA_DECL int archive_write_set_format_ustar(struct archive *);
 __LA_DECL int archive_write_set_format_zip(struct archive *);
 __LA_DECL int archive_write_open(struct archive *, void *,
-		     archive_open_callback *, archive_write_callback *,
-		     archive_close_callback *);
+		     transform_open_callback *, transform_write_callback *,
+		     transform_close_callback *);
 __LA_DECL int archive_write_open_fd(struct archive *, int _fd);
 __LA_DECL int archive_write_open_filename(struct archive *, const char *_file);
 /* A deprecated synonym for archive_write_open_filename() */
