@@ -92,7 +92,7 @@ transform_read_new(void)
 	if (a == NULL)
 		return (NULL);
 	memset(a, 0, sizeof(*a));
-	a->archive.magic = ARCHIVE_READ_MAGIC;
+	a->archive.magic = TRANSFORM_READ_MAGIC;
 
 	a->archive.state = ARCHIVE_STATE_NEW;
 	a->archive.vtable = transform_read_vtable();
@@ -112,7 +112,7 @@ transform_read_set_filter_options(struct transform *_a, const char *s)
 	char key[64], val[64];
 	int len, r;
 
-	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
+	archive_check_magic(_a, TRANSFORM_READ_MAGIC, ARCHIVE_STATE_NEW,
 	    "transform_read_set_filter_options");
 
 	if (s == NULL || *s == '\0')
@@ -153,7 +153,7 @@ transform_read_set_options(struct transform *_a, const char *s)
 {
 	int r;
 
-	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
+	archive_check_magic(_a, TRANSFORM_READ_MAGIC, ARCHIVE_STATE_NEW,
 	    "transform_read_set_options");
 	archive_clear_error(_a);
 
@@ -234,7 +234,7 @@ transform_read_open2(struct transform *_a, void *client_data,
 	struct transform_read_filter *filter;
 	int e;
 
-	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
+	archive_check_magic(_a, TRANSFORM_READ_MAGIC, ARCHIVE_STATE_NEW,
 	    "transform_read_open");
 	archive_clear_error(&a->archive);
 
@@ -441,7 +441,7 @@ transform_read_data_block(struct transform *_a,
 #endif
 {
 	struct transform_read *a = (struct transform_read *)_a;
-	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_DATA,
+	archive_check_magic(_a, TRANSFORM_READ_MAGIC, ARCHIVE_STATE_DATA,
 	    "transform_read_data_block");
 
 	if (a->format->read_data == NULL) {
@@ -493,7 +493,7 @@ _transform_read_close(struct transform *_a)
 	struct transform_read *a = (struct transform_read *)_a;
 	int r = ARCHIVE_OK, r1 = ARCHIVE_OK;
 
-	archive_check_magic(&a->archive, ARCHIVE_READ_MAGIC,
+	archive_check_magic(&a->archive, TRANSFORM_READ_MAGIC,
 	    ARCHIVE_STATE_ANY | ARCHIVE_STATE_FATAL, "transform_read_close");
 	archive_clear_error(&a->archive);
 	if (a->archive.state != ARCHIVE_STATE_FATAL)
@@ -522,7 +522,7 @@ _transform_read_free(struct transform *_a)
 
 	if (_a == NULL)
 		return (ARCHIVE_OK);
-	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
+	archive_check_magic(_a, TRANSFORM_READ_MAGIC,
 	    ARCHIVE_STATE_ANY | ARCHIVE_STATE_FATAL, "transform_read_free");
 	if (a->archive.state != ARCHIVE_STATE_CLOSED
 	    && a->archive.state != ARCHIVE_STATE_FATAL)

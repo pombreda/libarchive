@@ -100,7 +100,7 @@ transform_write_add_filter_bzip2(struct transform *_a)
 	struct transform_write_filter *f = __transform_write_allocate_filter(_a);
 	struct private_data *data;
 
-	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
+	archive_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
 	    ARCHIVE_STATE_NEW, "transform_write_add_filter_bzip2");
 
 	data = calloc(1, sizeof(*data));

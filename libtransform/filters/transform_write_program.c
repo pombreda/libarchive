@@ -102,7 +102,7 @@ transform_write_add_filter_program(struct transform *_a, const char *cmd)
 	struct transform_write *a = (struct transform_write *)_a;
 	struct private_data *data;
 	static const char *prefix = "Program: ";
-	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
+	archive_check_magic(&a->archive, TRANSFORM_WRITE_MAGIC,
 	    ARCHIVE_STATE_NEW, "transform_write_add_filter_program");
 	data = calloc(1, sizeof(*data));
 	if (data == NULL) {

@@ -29,8 +29,8 @@
 #error This header is only to be used internally to libarchive.
 #endif
 
-#ifndef ARCHIVE_READ_PRIVATE_H_INCLUDED
-#define	ARCHIVE_READ_PRIVATE_H_INCLUDED
+#ifndef TRANSFORM_READ_PRIVATE_H_INCLUDED
+#define	TRANSFORM_READ_PRIVATE_H_INCLUDED
 
 #include "transform.h"
 #include "transform_string.h"
