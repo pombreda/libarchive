@@ -100,7 +100,7 @@ static void verify0(struct transform *a, struct transform_entry *ae)
 	assert(archive_entry_symlink(ae) == NULL);
 	assertEqualInt(archive_entry_mtime(ae), 86401);
 	assertEqualInt(archive_entry_size(ae), 16);
-	assertEqualInt(archive_read_data_block(a, &p, &size, &offset), 0);
+	assertEqualInt(transform_read_data_block(a, &p, &size, &offset), 0);
 	assertEqualInt((int)size, 16);
 	assertEqualInt((int)offset, 0);
 	assertEqualInt(memcmp(p, "hellohellohello\n", 16), 0);
@@ -633,27 +633,27 @@ static void verify(unsigned char *d, size_t s,
 	unsigned char *buff;
 	int r;
 
-	assert((a = archive_read_new()) != NULL);
+	assert((a = transform_read_new()) != NULL);
 	switch (etype) {
 	case BZIP2:
 		/* This is only check whether bzip is supported or not.
 		 * This filter won't be used this test.  */
-		if (ARCHIVE_OK != archive_read_support_compression_bzip2(a)) {
+		if (ARCHIVE_OK != transform_read_support_compression_bzip2(a)) {
 			skipping("Unsupported bzip2");
-			assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+			assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 			return;
 		}
 		break;
 	case GZIP:
-		/* This gzip must be needed. archive_read_support_format_xar()
+		/* This gzip must be needed. transform_read_support_format_xar()
 		 * will return a warning if gzip is unsupported. */
 		break;
 	}
-	assertA(0 == archive_read_support_compression_all(a));
-	r = archive_read_support_format_xar(a);
+	assertA(0 == transform_read_support_compression_all(a));
+	r = transform_read_support_format_xar(a);
 	if (r == ARCHIVE_WARN) {
 		skipping("xar reading not fully supported on this platform");
-		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 		return;
 	}
 	assert((buff = malloc(100000)) != NULL);
@@ -662,25 +662,25 @@ static void verify(unsigned char *d, size_t s,
 	memcpy(buff, d, s);
 	memset(buff + s, 0, 2048);
 
-	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_open_memory(a, buff, s + 1024));
-	assertA(0 == archive_read_next_header(a, &ae));
+	assertA(0 == transform_read_support_format_all(a));
+	assertA(0 == transform_read_open_memory(a, buff, s + 1024));
+	assertA(0 == transform_read_next_header(a, &ae));
 	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_NONE);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_XAR);
 	/* Verify the only entry. */
 	f1(a, ae);
 	if (f2) {
-		assertA(0 == archive_read_next_header(a, &ae));
+		assertA(0 == transform_read_next_header(a, &ae));
 		assertEqualInt(archive_compression(a), ARCHIVE_FILTER_NONE);
 		assertEqualInt(archive_format(a), ARCHIVE_FORMAT_XAR);
 		/* Verify the only entry. */
 		f2(a, ae);
 	}
 	/* End of archive. */
-	assertEqualInt(ARCHIVE_EOF, archive_read_next_header(a, &ae));
+	assertEqualInt(ARCHIVE_EOF, transform_read_next_header(a, &ae));
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 	free(buff);
 }
 

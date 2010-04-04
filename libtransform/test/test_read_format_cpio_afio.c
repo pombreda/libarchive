@@ -88,28 +88,28 @@ DEFINE_TEST(test_read_format_cpio_afio)
 		return;
 	memset(p, 0, size);
 	memcpy(p, archive, sizeof(archive));
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_memory(a, p, size));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_memory(a, p, size));
 	/*
 	 * First entry is odc format.
 	 */
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
 	assertEqualInt(17, archive_entry_size(ae));
 	assertA(archive_compression(a) == ARCHIVE_FILTER_NONE);
 	assertA(archive_format(a) == ARCHIVE_FORMAT_CPIO_POSIX);
 	/*
 	 * Second entry is afio large ASCII format.
 	 */
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
 	assertEqualInt(17, archive_entry_size(ae));
 	if (uid_size() > 4)
 		assertEqualInt(65536, archive_entry_uid(ae));
 	assertA(archive_compression(a) == ARCHIVE_FILTER_NONE);
 	assertA(archive_format(a) == ARCHIVE_FORMAT_CPIO_AFIO_LARGE);
-	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 
 	free(p);
 }

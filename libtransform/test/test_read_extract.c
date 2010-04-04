@@ -115,25 +115,25 @@ DEFINE_TEST(test_read_extract)
 	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/* Extract the entries to disk. */
-	assert((a = archive_read_new()) != NULL);
-	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_support_compression_all(a));
-	assertA(0 == archive_read_open_memory(a, buff, BUFF_SIZE));
+	assert((a = transform_read_new()) != NULL);
+	assertA(0 == transform_read_support_format_all(a));
+	assertA(0 == transform_read_support_compression_all(a));
+	assertA(0 == transform_read_open_memory(a, buff, BUFF_SIZE));
 	/* Restore first entry with _EXTRACT_PERM. */
 	failure("Error reading first entry", i);
-	assertA(0 == archive_read_next_header(a, &ae));
-	assertA(0 == archive_read_extract(a, ae, ARCHIVE_EXTRACT_PERM));
+	assertA(0 == transform_read_next_header(a, &ae));
+	assertA(0 == transform_read_extract(a, ae, ARCHIVE_EXTRACT_PERM));
 	/* Rest of entries get restored with no flags. */
 	for (i = 1; i < numEntries; i++) {
 		failure("Error reading entry %d", i);
-		assertA(0 == archive_read_next_header(a, &ae));
+		assertA(0 == transform_read_next_header(a, &ae));
 		failure("Failed to extract entry %d: %s", i,
 			archive_entry_pathname(ae));
-		assertA(0 == archive_read_extract(a, ae, 0));
+		assertA(0 == transform_read_extract(a, ae, 0));
 	}
-	assertA(ARCHIVE_EOF == archive_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertA(ARCHIVE_EOF == transform_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 
 	/* Test the entries on disk. */
 	/* This first entry was extracted with ARCHIVE_EXTRACT_PERM,

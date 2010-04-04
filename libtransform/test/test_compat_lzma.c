@@ -106,36 +106,36 @@ compat_lzma(const char *name)
 	struct transform *a;
 	int i, r;
 
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	r = archive_read_support_compression_lzma(a);
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	r = transform_read_support_compression_lzma(a);
 	if (r == ARCHIVE_WARN) {
 		skipping("lzma reading not fully supported on this platform");
-		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 		return;
 	}
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
 	extract_reference_file(name);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_filename(a, name, 2));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_filename(a, name, 2));
 
 	/* Read entries, match up names with list above. */
 	for (i = 0; i < 6; ++i) {
 		failure("Could not read file %d (%s) from %s", i, n[i], name);
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_read_next_header(a, &ae));
+		    transform_read_next_header(a, &ae));
 		assertEqualString(n[i], archive_entry_pathname(ae));
 	}
 
 	/* Verify the end-of-archive. */
-	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
 
 	/* Verify that the format detection worked. */
 	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_LZMA);
 	assertEqualString(archive_compression_name(a), "lzma");
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
 
-	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 

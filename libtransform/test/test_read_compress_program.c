@@ -42,20 +42,20 @@ DEFINE_TEST(test_read_compress_program)
 	 * First, test handling when a non-existent compression
 	 * program is requested.
 	 */
-	assert((a = archive_read_new()) != NULL);
-	r = archive_read_support_compression_program(a, "nonexistent");
+	assert((a = transform_read_new()) != NULL);
+	r = transform_read_support_compression_program(a, "nonexistent");
 	if (r == ARCHIVE_FATAL) {
-		skipping("archive_read_support_compression_program() "
+		skipping("transform_read_support_compression_program() "
 		    "unsupported on this platform");
 		return;
 	}
 	assertEqualIntA(a, ARCHIVE_OK, r);
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_support_format_all(a));
+	    transform_read_support_format_all(a));
 	assertEqualIntA(a, ARCHIVE_FATAL,
-	    archive_read_open_memory(a, archive, sizeof(archive)));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	    transform_read_open_memory(a, archive, sizeof(archive)));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 
 	/*
 	 * If we have "gzip -d", try using that.
@@ -64,21 +64,21 @@ DEFINE_TEST(test_read_compress_program)
 		skipping("Can't run gunzip program on this platform");
 		return;
 	}
-	assert((a = archive_read_new()) != NULL);
+	assert((a = transform_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_support_compression_none(a));
+	    transform_read_support_compression_none(a));
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_support_compression_program(a, "gunzip"));
+	    transform_read_support_compression_program(a, "gunzip"));
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_support_format_all(a));
+	    transform_read_support_format_all(a));
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_open_memory(a, archive, sizeof(archive)));
+	    transform_read_open_memory(a, archive, sizeof(archive)));
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_next_header(a, &ae));
+	    transform_read_next_header(a, &ae));
 	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_PROGRAM);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 

@@ -270,28 +270,28 @@ DEFINE_TEST(test_tar_large)
 	/*
 	 * Open the same archive for reading.
 	 */
-	a = archive_read_new();
-	archive_read_support_format_tar(a);
-	archive_read_open2(a, &memdata, NULL,
+	a = transform_read_new();
+	transform_read_support_format_tar(a);
+	transform_read_open2(a, &memdata, NULL,
 	    memory_read, memory_read_skip, NULL);
 
 	/*
 	 * Read entries back.
 	 */
 	for (i = 0; tests[i] > 0; i++) {
-		assertEqualIntA(a, 0, archive_read_next_header(a, &ae));
+		assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
 		sprintf(namebuff, "file_%d", i);
 		assertEqualString(namebuff, archive_entry_pathname(ae));
 		assert(tests[i] == archive_entry_size(ae));
 	}
-	assertEqualIntA(a, 0, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
 	assertEqualString("lastfile", archive_entry_pathname(ae));
 
-	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 
 	free(memdata.buff);
 	free(filedata);

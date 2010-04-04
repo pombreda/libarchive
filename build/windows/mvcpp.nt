@@ -67,23 +67,23 @@ OBJS=\
   $(OBJ_DIR)\archive_check_magic.obm      $(OBJ_DIR)\archive_entry.obm \
   $(OBJ_DIR)\archive_entry_copy_stat.obm  $(OBJ_DIR)\archive_entry_link_resolver.obm \
   $(OBJ_DIR)\archive_entry_stat.obm       $(OBJ_DIR)\archive_entry_strmode.obm \
-  $(OBJ_DIR)\archive_read.obm             $(OBJ_DIR)\archive_read_data_into_fd.obm \
-  $(OBJ_DIR)\archive_read_extract.obm     $(OBJ_DIR)\archive_read_open_fd.obm \
-  $(OBJ_DIR)\archive_read_open_file.obm   $(OBJ_DIR)\archive_read_open_filename.obm \
-  $(OBJ_DIR)\archive_read_open_memory.obm $(OBJ_DIR)\archive_read_support_compression_all.obm \
-  $(OBJ_DIR)\archive_read_support_compression_bzip2.obm \
-  $(OBJ_DIR)\archive_read_support_compression_compress.obm \
-  $(OBJ_DIR)\archive_read_support_compression_gzip.obm \
-  $(OBJ_DIR)\archive_read_support_compression_none.obm \
-  $(OBJ_DIR)\archive_read_support_compression_program.obm \
-  $(OBJ_DIR)\archive_read_support_format_all.obm \
-  $(OBJ_DIR)\archive_read_support_format_ar.obm \
-  $(OBJ_DIR)\archive_read_support_format_cpio.obm \
-  $(OBJ_DIR)\archive_read_support_format_empty.obm \
-  $(OBJ_DIR)\archive_read_support_format_iso9660.obm \
-  $(OBJ_DIR)\archive_read_support_format_mtree.obm \
-  $(OBJ_DIR)\archive_read_support_format_tar.obm \
-  $(OBJ_DIR)\archive_read_support_format_zip.obm \
+  $(OBJ_DIR)\transform_read.obm             $(OBJ_DIR)\transform_read_data_into_fd.obm \
+  $(OBJ_DIR)\transform_read_extract.obm     $(OBJ_DIR)\transform_read_open_fd.obm \
+  $(OBJ_DIR)\transform_read_open_file.obm   $(OBJ_DIR)\transform_read_open_filename.obm \
+  $(OBJ_DIR)\transform_read_open_memory.obm $(OBJ_DIR)\transform_read_support_compression_all.obm \
+  $(OBJ_DIR)\transform_read_support_compression_bzip2.obm \
+  $(OBJ_DIR)\transform_read_support_compression_compress.obm \
+  $(OBJ_DIR)\transform_read_support_compression_gzip.obm \
+  $(OBJ_DIR)\transform_read_support_compression_none.obm \
+  $(OBJ_DIR)\transform_read_support_compression_program.obm \
+  $(OBJ_DIR)\transform_read_support_format_all.obm \
+  $(OBJ_DIR)\transform_read_support_format_ar.obm \
+  $(OBJ_DIR)\transform_read_support_format_cpio.obm \
+  $(OBJ_DIR)\transform_read_support_format_empty.obm \
+  $(OBJ_DIR)\transform_read_support_format_iso9660.obm \
+  $(OBJ_DIR)\transform_read_support_format_mtree.obm \
+  $(OBJ_DIR)\transform_read_support_format_tar.obm \
+  $(OBJ_DIR)\transform_read_support_format_zip.obm \
   $(OBJ_DIR)\archive_string.obm                        $(OBJ_DIR)\archive_string_sprintf.obm \
   $(OBJ_DIR)\archive_util.obm                          $(OBJ_DIR)\archive_virtual.obm \
   $(OBJ_DIR)\archive_write.obm                         $(OBJ_DIR)\archive_write_disk.obm \

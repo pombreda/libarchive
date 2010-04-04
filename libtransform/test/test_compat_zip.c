@@ -34,18 +34,18 @@ test_compat_zip_1(void)
 	struct transform *a;
 	int r;
 
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_zip(a));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_zip(a));
 	extract_reference_file(name);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_filename(a, name, 10240));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_filename(a, name, 10240));
 
 	/* Read first entry. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
 	assertEqualString("META-INF/MANIFEST.MF", archive_entry_pathname(ae));
 
 	/* Read second entry. */
-	r = archive_read_next_header(a, &ae);
+	r = transform_read_next_header(a, &ae);
 	if (r != ARCHIVE_OK) {
 		if (strcmp(archive_error_string(a),
 		    "libarchive compiled without deflate support (no libz)") == 0) {
@@ -57,14 +57,14 @@ test_compat_zip_1(void)
 	assertEqualIntA(a, ARCHIVE_OK, r);
 	assertEqualString("tmp.class", archive_entry_pathname(ae));
 
-	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
 
 	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_NONE);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_ZIP);
 
-	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_close(a));
 finish:
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 

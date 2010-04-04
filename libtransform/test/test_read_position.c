@@ -62,33 +62,33 @@ DEFINE_TEST(test_read_position)
 	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/* Read the archive back. */
-	assert(NULL != (a = archive_read_new()));
-	assertA(0 == archive_read_support_format_tar(a));
-	assertA(0 == archive_read_open_memory2(a, buff, sizeof(buff), 512));
+	assert(NULL != (a = transform_read_new()));
+	assertA(0 == transform_read_support_format_tar(a));
+	assertA(0 == transform_read_open_memory2(a, buff, sizeof(buff), 512));
 
 	read_position = 0;
 	/* Initial header position is zero. */
-	assert(read_position == (intmax_t)archive_read_header_position(a));
+	assert(read_position == (intmax_t)transform_read_header_position(a));
 	for (j = 0; j < i; ++j) {
-		assertA(0 == archive_read_next_header(a, &ae));
+		assertA(0 == transform_read_next_header(a, &ae));
 		assert(read_position
-		    == (intmax_t)archive_read_header_position(a));
+		    == (intmax_t)transform_read_header_position(a));
 		/* Every other entry: read, then skip */
 		if (j & 1)
 			assertEqualInt(ARCHIVE_OK,
-			    archive_read_data_into_buffer(a, buff, 1));
-		assertA(0 == archive_read_data_skip(a));
+			    transform_read_data_into_buffer(a, buff, 1));
+		assertA(0 == transform_read_data_skip(a));
 		/* read_data_skip() doesn't change header_position */
 		assert(read_position
-		    == (intmax_t)archive_read_header_position(a));
+		    == (intmax_t)transform_read_header_position(a));
 
 		read_position += 512; /* Size of header. */
 		read_position += (data_sizes[j] + 511) & ~511;
 	}
 
-	assertA(1 == archive_read_next_header(a, &ae));
-	assert(read_position == (intmax_t)archive_read_header_position(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assert(read_position == (intmax_t)archive_read_header_position(a));
-	archive_read_free(a);
+	assertA(1 == transform_read_next_header(a, &ae));
+	assert(read_position == (intmax_t)transform_read_header_position(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assert(read_position == (intmax_t)transform_read_header_position(a));
+	transform_read_free(a);
 }

@@ -29,9 +29,9 @@ __FBSDID("$FreeBSD: src/lib/libarchive/test/test_bad_fd.c,v 1.2 2008/09/01 05:38
 DEFINE_TEST(test_bad_fd)
 {
 	struct transform *a;
-	assert((a = archive_read_new()) != NULL);
-	assertA(0 == archive_read_support_compression_all(a));
-	assertA(ARCHIVE_FATAL == archive_read_open_fd(a, -1, 1024));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assert((a = transform_read_new()) != NULL);
+	assertA(0 == transform_read_support_compression_all(a));
+	assertA(ARCHIVE_FATAL == transform_read_open_fd(a, -1, 1024));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }

@@ -460,13 +460,13 @@ DEFINE_TEST(test_acl_pax)
 	assertEqualInt((int)used, sizeof(reference));
 
 	/* Read back each entry and check that the ACL data is right. */
-	assert(NULL != (a = archive_read_new()));
-	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_support_compression_all(a));
-	assertA(0 == archive_read_open_memory(a, buff, used));
+	assert(NULL != (a = transform_read_new()));
+	assertA(0 == transform_read_support_format_all(a));
+	assertA(0 == transform_read_support_compression_all(a));
+	assertA(0 == transform_read_open_memory(a, buff, used));
 
 	/* First item has no ACLs */
-	assertA(0 == archive_read_next_header(a, &ae));
+	assertA(0 == transform_read_next_header(a, &ae));
 	failure("Basic ACLs shouldn't be stored as extended ACLs");
 	assert(0 == archive_entry_acl_reset(ae, ARCHIVE_ENTRY_ACL_TYPE_ACCESS));
 	failure("Basic ACLs should set mode to 0142, not %04o",
@@ -474,7 +474,7 @@ DEFINE_TEST(test_acl_pax)
 	assert((archive_entry_mode(ae) & 0777) == 0142);
 
 	/* Second item has a few ACLs */
-	assertA(0 == archive_read_next_header(a, &ae));
+	assertA(0 == transform_read_next_header(a, &ae));
 	failure("One extended ACL should flag all ACLs to be returned.");
 	assert(4 == archive_entry_acl_reset(ae, ARCHIVE_ENTRY_ACL_TYPE_ACCESS));
 	compare_acls(ae, acls1, sizeof(acls1)/sizeof(acls1[0]), 0142);
@@ -483,7 +483,7 @@ DEFINE_TEST(test_acl_pax)
 	assert((archive_entry_mode(ae) & 0777) == 0142);
 
 	/* Third item has pretty extensive ACLs */
-	assertA(0 == archive_read_next_header(a, &ae));
+	assertA(0 == transform_read_next_header(a, &ae));
 	assertEqualInt(6, archive_entry_acl_reset(ae, ARCHIVE_ENTRY_ACL_TYPE_ACCESS));
 	compare_acls(ae, acls2, sizeof(acls2)/sizeof(acls2[0]), 0543);
 	failure("Basic ACLs should set mode to 0543, not %04o",
@@ -491,7 +491,7 @@ DEFINE_TEST(test_acl_pax)
 	assert((archive_entry_mode(ae) & 0777) == 0543);
 
 	/* Fourth item has no ACLs */
-	assertA(0 == archive_read_next_header(a, &ae));
+	assertA(0 == transform_read_next_header(a, &ae));
 	failure("Basic ACLs shouldn't be stored as extended ACLs");
 	assert(0 == archive_entry_acl_reset(ae, ARCHIVE_ENTRY_ACL_TYPE_ACCESS));
 	failure("Basic ACLs should set mode to 0142, not %04o",
@@ -499,6 +499,6 @@ DEFINE_TEST(test_acl_pax)
 	assert((archive_entry_mode(ae) & 0777) == 0142);
 
 	/* Close the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }

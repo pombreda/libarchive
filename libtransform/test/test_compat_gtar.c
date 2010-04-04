@@ -45,16 +45,16 @@ test_compat_gtar_1(void)
 	struct transform *a;
 	int r;
 
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
 	extract_reference_file(name);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_filename(a, name, 10240));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_filename(a, name, 10240));
 
 	/* Read first entry. */
-	assertEqualIntA(a, ARCHIVE_OK, r = archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, r = transform_read_next_header(a, &ae));
 	if (r != ARCHIVE_OK) {
-		archive_read_free(a);
+		transform_read_free(a);
 		return;
 	}
 	assertEqualString(
@@ -71,9 +71,9 @@ test_compat_gtar_1(void)
 	assertEqualInt(0100644, archive_entry_mode(ae));
 
 	/* Read second entry. */
-	assertEqualIntA(a, ARCHIVE_OK, r = archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, r = transform_read_next_header(a, &ae));
 	if (r != ARCHIVE_OK) {
-		archive_read_free(a);
+		transform_read_free(a);
 		return;
 	}
 	assertEqualString(
@@ -96,14 +96,14 @@ test_compat_gtar_1(void)
 	assertEqualInt(0120755, archive_entry_mode(ae));
 
 	/* Verify the end-of-archive. */
-	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
 
 	/* Verify that the format detection worked. */
 	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_NONE);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_GNUTAR);
 
-	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 

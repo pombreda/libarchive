@@ -141,7 +141,7 @@ extract(const char *filename, int do_extract, int flags)
 	struct transform_entry *entry;
 	int r;
 
-	a = archive_read_new();
+	a = transform_read_new();
 	ext = archive_write_disk_new();
 	archive_write_disk_set_options(ext, flags);
 	/*
@@ -149,7 +149,7 @@ extract(const char *filename, int do_extract, int flags)
 	 * here, but it requires library routines that can add 500k or
 	 * more to a static executable.
 	 */
-	archive_read_support_format_tar(a);
+	transform_read_support_format_tar(a);
 	/*
 	 * On my system, enabling other archive formats adds 20k-30k
 	 * each.  Enabling gzip decompression adds about 20k.
@@ -158,15 +158,15 @@ extract(const char *filename, int do_extract, int flags)
 	 */
 	if (filename != NULL && strcmp(filename, "-") == 0)
 		filename = NULL;
-	if ((r = archive_read_open_file(a, filename, 10240)))
-		fail("archive_read_open_file()",
+	if ((r = transform_read_open_file(a, filename, 10240)))
+		fail("transform_read_open_file()",
 		    archive_error_string(a), r);
 	for (;;) {
-		r = archive_read_next_header(a, &entry);
+		r = transform_read_next_header(a, &entry);
 		if (r == ARCHIVE_EOF)
 			break;
 		if (r != ARCHIVE_OK)
-			fail("archive_read_next_header()",
+			fail("transform_read_next_header()",
 			    archive_error_string(a), 1);
 		if (verbose && do_extract)
 			msg("x ");
@@ -189,8 +189,8 @@ extract(const char *filename, int do_extract, int flags)
 		if (verbose || !do_extract)
 			msg("\n");
 	}
-	archive_read_close(a);
-	archive_read_free(a);
+	transform_read_close(a);
+	transform_read_free(a);
 	exit(0);
 }
 
@@ -203,7 +203,7 @@ copy_data(struct transform *ar, struct transform *aw)
 	off_t offset;
 
 	for (;;) {
-		r = archive_read_data_block(ar, &buff, &size, &offset);
+		r = transform_read_data_block(ar, &buff, &size, &offset);
 		if (r == ARCHIVE_EOF)
 			return (ARCHIVE_OK);
 		if (r != ARCHIVE_OK)

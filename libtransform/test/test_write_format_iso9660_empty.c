@@ -115,16 +115,16 @@ DEFINE_TEST(test_write_format_iso9660_empty)
 	/*
 	 * Read ISO image.
 	 */
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, 0, archive_read_support_format_all(a));
-	assertEqualIntA(a, 0, archive_read_support_compression_all(a));
-	assertEqualIntA(a, 0, archive_read_open_memory(a, buff, used));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, 0, transform_read_support_format_all(a));
+	assertEqualIntA(a, 0, transform_read_support_compression_all(a));
+	assertEqualIntA(a, 0, transform_read_open_memory(a, buff, used));
 
 	/*
 	 * Read Root Directory
 	 * Root Directory entry must be in ISO image.
 	 */
-	assertEqualIntA(a, 0, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
 	assertEqualInt(archive_entry_atime(ae), archive_entry_ctime(ae));
 	assertEqualInt(archive_entry_atime(ae), archive_entry_mtime(ae));
 	assertEqualString(".", archive_entry_pathname(ae));
@@ -134,9 +134,9 @@ DEFINE_TEST(test_write_format_iso9660_empty)
 	/*
 	 * Verify the end of the archive.
 	 */
-	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_free(a));
 
 	free(buff);
 }

@@ -106,37 +106,37 @@ DEFINE_TEST(test_write_format_ar)
 	/*
 	 * Now, read the data back.
 	 */
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_memory(a, buff, used));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_memory(a, buff, used));
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
 	assertEqualInt(0, archive_entry_mtime(ae));
 	assertEqualString("//", archive_entry_pathname(ae));
 	assertEqualInt(0, archive_entry_size(ae));
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
 	assertEqualInt(1, archive_entry_mtime(ae));
 	assertEqualString("abcdefghijklmn.o", archive_entry_pathname(ae));
 	assertEqualInt(8, archive_entry_size(ae));
-	assertEqualIntA(a, 8, archive_read_data(a, buff2, 10));
+	assertEqualIntA(a, 8, transform_read_data(a, buff2, 10));
 	assertEqualMem(buff2, "87654321", 8);
 
-	assertEqualInt(ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualInt(ARCHIVE_OK, transform_read_next_header(a, &ae));
 	assertEqualString("ggghhhjjjrrrttt.o", archive_entry_pathname(ae));
 	assertEqualInt(7, archive_entry_size(ae));
-	assertEqualIntA(a, 7, archive_read_data(a, buff2, 11));
+	assertEqualIntA(a, 7, transform_read_data(a, buff2, 11));
 	assertEqualMem(buff2, "7777777", 7);
 
-	assertEqualIntA(a, 0, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
 	assertEqualString("iiijjjdddsssppp.o", archive_entry_pathname(ae));
 	assertEqualInt(8, archive_entry_size(ae));
-	assertEqualIntA(a, 8, archive_read_data(a, buff2, 17));
+	assertEqualIntA(a, 8, transform_read_data(a, buff2, 17));
 	assertEqualMem(buff2, "88877766", 8);
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 
 	/*
 	 * Then, we try to create a BSD format archive.
@@ -168,25 +168,25 @@ DEFINE_TEST(test_write_format_ar)
 	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/* Now, Read the data back */
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_memory(a, buff, used));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_memory(a, buff, used));
 
-	assertEqualIntA(a, 0, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
 	assertEqualString("ttttyyyyuuuuiiii.o", archive_entry_pathname(ae));
 	assertEqualInt(5, archive_entry_size(ae));
-	assertEqualIntA(a, 5, archive_read_data(a, buff2, 10));
+	assertEqualIntA(a, 5, transform_read_data(a, buff2, 10));
 	assertEqualMem(buff2, "12345", 5);
 
-	assertEqualIntA(a, 0, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
 	assertEqualString("ttyy.o", archive_entry_pathname(ae));
 	assertEqualInt(6, archive_entry_size(ae));
-	assertEqualIntA(a, 6, archive_read_data(a, buff2, 10));
+	assertEqualIntA(a, 6, transform_read_data(a, buff2, 10));
 	assertEqualMem(buff2, "555555", 6);
 
 	/* Test EOF */
-	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }

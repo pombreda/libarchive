@@ -178,99 +178,99 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read.c"
+				RelativePath="..\..\libtransform\transform_read.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_data_into_fd.c"
+				RelativePath="..\..\libtransform\transform_read_data_into_fd.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_disk.c"
+				RelativePath="..\..\libtransform\transform_read_disk.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_disk_set_standard_lookup.c"
+				RelativePath="..\..\libtransform\transform_read_disk_set_standard_lookup.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_extract.c"
+				RelativePath="..\..\libtransform\transform_read_extract.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_open_fd.c"
+				RelativePath="..\..\libtransform\transform_read_open_fd.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_open_file.c"
+				RelativePath="..\..\libtransform\transform_read_open_file.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_open_filename.c"
+				RelativePath="..\..\libtransform\transform_read_open_filename.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_open_memory.c"
+				RelativePath="..\..\libtransform\transform_read_open_memory.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_support_compression_all.c"
+				RelativePath="..\..\libtransform\transform_read_support_compression_all.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_support_compression_bzip2.c"
+				RelativePath="..\..\libtransform\transform_read_support_compression_bzip2.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_support_compression_compress.c"
+				RelativePath="..\..\libtransform\transform_read_support_compression_compress.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_support_compression_gzip.c"
+				RelativePath="..\..\libtransform\transform_read_support_compression_gzip.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_support_compression_lzma.c"
+				RelativePath="..\..\libtransform\transform_read_support_compression_lzma.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_support_compression_none.c"
+				RelativePath="..\..\libtransform\transform_read_support_compression_none.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_support_compression_program.c"
+				RelativePath="..\..\libtransform\transform_read_support_compression_program.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_support_format_all.c"
+				RelativePath="..\..\libtransform\transform_read_support_format_all.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_support_format_ar.c"
+				RelativePath="..\..\libtransform\transform_read_support_format_ar.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_support_format_cpio.c"
+				RelativePath="..\..\libtransform\transform_read_support_format_cpio.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_support_format_empty.c"
+				RelativePath="..\..\libtransform\transform_read_support_format_empty.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_support_format_iso9660.c"
+				RelativePath="..\..\libtransform\transform_read_support_format_iso9660.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_support_format_mtree.c"
+				RelativePath="..\..\libtransform\transform_read_support_format_mtree.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_support_format_tar.c"
+				RelativePath="..\..\libtransform\transform_read_support_format_tar.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_support_format_zip.c"
+				RelativePath="..\..\libtransform\transform_read_support_format_zip.c"
 				>
 			</File>
 			<File
@@ -412,11 +412,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_disk_private.h"
+				RelativePath="..\..\libtransform\transform_read_disk_private.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_read_private.h"
+				RelativePath="..\..\libtransform\transform_read_private.h"
 				>
 			</File>
 			<File

@@ -25,7 +25,7 @@
 
 #include "transform_platform.h"
 
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_bzip2.c 201108 2009-12-28 03:28:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libarchive/transform_read_support_compression_bzip2.c 201108 2009-12-28 03:28:21Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -73,10 +73,10 @@ static int	bzip2_reader_init(struct transform_read_filter *);
 static int	bzip2_reader_free(struct transform_read_filter_bidder *);
 
 int
-archive_read_support_compression_bzip2(struct transform *_a)
+transform_read_support_compression_bzip2(struct transform *_a)
 {
 	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter_bidder *reader = __archive_read_get_bidder(a);
+	struct transform_read_filter_bidder *reader = __transform_read_get_bidder(a);
 
 	if (reader == NULL)
 		return (ARCHIVE_FATAL);
@@ -118,7 +118,7 @@ bzip2_reader_bid(struct transform_read_filter_bidder *self, struct transform_rea
 	(void)self; /* UNUSED */
 
 	/* Minimal bzip2 archive is 14 bytes. */
-	buffer = __archive_read_filter_ahead(filter, 14, &avail);
+	buffer = __transform_read_filter_ahead(filter, 14, &avail);
 	if (buffer == NULL)
 		return (0);
 
@@ -158,8 +158,8 @@ bzip2_reader_init(struct transform_read_filter *self)
 {
 	int r;
 
-	r = __archive_read_program(self, "bunzip2");
-	/* Note: We set the format here even if __archive_read_program()
+	r = __transform_read_program(self, "bunzip2");
+	/* Note: We set the format here even if __transform_read_program()
 	 * above fails.  We do, after all, know what the format is
 	 * even if we weren't able to read it. */
 	self->code = ARCHIVE_FILTER_BZIP2;
@@ -273,7 +273,7 @@ bzip2_filter_read(struct transform_read_filter *self, const void **p)
 		/* stream.next_in is really const, but bzlib
 		 * doesn't declare it so. <sigh> */
 		read_buf =
-		    __archive_read_filter_ahead(self->upstream, 1, &ret);
+		    __transform_read_filter_ahead(self->upstream, 1, &ret);
 		if (read_buf == NULL)
 			return (ARCHIVE_FATAL);
 		state->stream.next_in = (char *)(uintptr_t)read_buf;
@@ -289,7 +289,7 @@ bzip2_filter_read(struct transform_read_filter *self, const void **p)
 
 		/* Decompress as much as we can in one pass. */
 		ret = BZ2_bzDecompress(&(state->stream));
-		__archive_read_filter_consume(self->upstream,
+		__transform_read_filter_consume(self->upstream,
 		    state->stream.next_in - read_buf);
 
 		switch (ret) {

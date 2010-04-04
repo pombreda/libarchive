@@ -87,16 +87,16 @@ DEFINE_TEST(test_write_format_tar)
 		/*
 		 * Now, read the data back.
 		 */
-		assert((a = archive_read_new()) != NULL);
+		assert((a = transform_read_new()) != NULL);
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_read_support_format_all(a));
+		    transform_read_support_format_all(a));
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_read_support_compression_all(a));
+		    transform_read_support_compression_all(a));
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_read_open_memory(a, buff, used));
+		    transform_read_open_memory(a, buff, used));
 
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_read_next_header(a, &ae));
+		    transform_read_next_header(a, &ae));
 
 		assertEqualInt(1, archive_entry_mtime(ae));
 		/* Not the same as above: ustar doesn't store hi-res times. */
@@ -107,13 +107,13 @@ DEFINE_TEST(test_write_format_tar)
 		assertEqualInt(AE_IFREG, archive_entry_filetype(ae));
 		assertEqualInt(AE_IFREG | 0755, archive_entry_mode(ae));
 		assertEqualInt(8, archive_entry_size(ae));
-		assertEqualInt(8, archive_read_data(a, buff2, 10));
+		assertEqualInt(8, transform_read_data(a, buff2, 10));
 		assertEqualMem(buff2, "12345678", 8);
 
 		/* Verify the end of the archive. */
 		assertEqualIntA(a, ARCHIVE_EOF,
-		    archive_read_next_header(a, &ae));
-		assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+		    transform_read_next_header(a, &ae));
+		assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 	}
 }

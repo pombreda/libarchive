@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/archive_read_private.h 201088 2009-12-28 02:18:55Z kientzle $
+ * $FreeBSD: head/lib/libarchive/transform_read_private.h 201088 2009-12-28 02:18:55Z kientzle $
  */
 
 #ifndef __LIBARCHIVE_BUILD
@@ -46,7 +46,7 @@ struct transform_read_filter;
  *     first filter.
  *   * It invokes the bidder for each registered filter with the
  *     current head filter.
- *   * The bidders can use archive_read_filter_ahead() to peek ahead
+ *   * The bidders can use transform_read_filter_ahead() to peek ahead
  *     at the incoming data to compose their bids.
  *   * The bid manager creates a new filter structure for the winning
  *     bidder and gives the winning bidder a chance to initialize it.
@@ -71,8 +71,8 @@ struct transform_read_filter_bidder {
 };
 
 /*
- * This structure is allocated within the archive_read core
- * and initialized by archive_read and the init() method of the
+ * This structure is allocated within the transform_read core
+ * and initialized by transform_read and the init() method of the
  * corresponding bidder above.
  */
 struct transform_read_filter {
@@ -111,13 +111,13 @@ struct transform_read_filter {
 /*
  * The client looks a lot like a filter, so we just wrap it here.
  *
- * TODO: Make archive_read_filter and archive_read_client identical so
+ * TODO: Make transform_read_filter and transform_read_client identical so
  * that users of the library can easily register their own
  * transformation filters.  This will probably break the API/ABI and
  * so should be deferred at least until libarchive 3.0.
  */
 struct transform_read_client {
-	archive_read_callback	*reader;
+	transform_read_callback	*reader;
 	archive_skip_callback	*skipper;
 	archive_close_callback	*closer;
 };
@@ -127,7 +127,7 @@ struct transform_read {
 
 
 	/*
-	 * Used by archive_read_data() to track blocks and copy
+	 * Used by transform_read_data() to track blocks and copy
 	 * data to client buffers, filling gaps with zero bytes.
 	 */
 	const char	 *read_data_block;
@@ -180,15 +180,15 @@ struct transform_read {
 };
 
 struct transform_read_filter_bidder
-	*__archive_read_get_bidder(struct transform_read *a);
+	*__transform_read_get_bidder(struct transform_read *a);
 
-const void *__archive_read_ahead(struct transform_read *, size_t, ssize_t *);
-const void *__archive_read_filter_ahead(struct transform_read_filter *,
+const void *__transform_read_ahead(struct transform_read *, size_t, ssize_t *);
+const void *__transform_read_filter_ahead(struct transform_read_filter *,
     size_t, ssize_t *);
-ssize_t	__archive_read_consume(struct transform_read *, size_t);
-ssize_t	__archive_read_filter_consume(struct transform_read_filter *, size_t);
-int64_t	__archive_read_skip(struct transform_read *, int64_t);
-int64_t	__archive_read_skip_lenient(struct transform_read *, int64_t);
-int64_t	__archive_read_filter_skip(struct transform_read_filter *, int64_t);
-int __archive_read_program(struct transform_read_filter *, const char *);
+ssize_t	__transform_read_consume(struct transform_read *, size_t);
+ssize_t	__transform_read_filter_consume(struct transform_read_filter *, size_t);
+int64_t	__transform_read_skip(struct transform_read *, int64_t);
+int64_t	__transform_read_skip_lenient(struct transform_read *, int64_t);
+int64_t	__transform_read_filter_skip(struct transform_read_filter *, int64_t);
+int __transform_read_program(struct transform_read_filter *, const char *);
 #endif

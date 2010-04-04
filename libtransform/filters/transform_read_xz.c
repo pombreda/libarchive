@@ -26,7 +26,7 @@
 
 #include "transform_platform.h"
 
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_xz.c 201167 2009-12-29 06:06:20Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libarchive/transform_read_support_compression_xz.c 201167 2009-12-29 06:06:20Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -96,10 +96,10 @@ static int	lzma_bidder_bid(struct transform_read_filter_bidder *,
 static int	lzma_bidder_init(struct transform_read_filter *);
 
 int
-archive_read_support_compression_xz(struct transform *_a)
+transform_read_support_compression_xz(struct transform *_a)
 {
 	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter_bidder *bidder = __archive_read_get_bidder(a);
+	struct transform_read_filter_bidder *bidder = __transform_read_get_bidder(a);
 
 	archive_clear_error(_a);
 	if (bidder == NULL)
@@ -120,10 +120,10 @@ archive_read_support_compression_xz(struct transform *_a)
 }
 
 int
-archive_read_support_compression_lzma(struct transform *_a)
+transform_read_support_compression_lzma(struct transform *_a)
 {
 	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter_bidder *bidder = __archive_read_get_bidder(a);
+	struct transform_read_filter_bidder *bidder = __transform_read_get_bidder(a);
 
 	archive_clear_error(_a);
 	if (bidder == NULL)
@@ -158,7 +158,7 @@ xz_bidder_bid(struct transform_read_filter_bidder *self,
 
 	(void)self; /* UNUSED */
 
-	buffer = __archive_read_filter_ahead(filter, 6, &avail);
+	buffer = __transform_read_filter_ahead(filter, 6, &avail);
 	if (buffer == NULL)
 		return (0);
 
@@ -212,7 +212,7 @@ lzma_bidder_bid(struct transform_read_filter_bidder *self,
 
 	(void)self; /* UNUSED */
 
-	buffer = __archive_read_filter_ahead(filter, 14, &avail);
+	buffer = __transform_read_filter_ahead(filter, 14, &avail);
 	if (buffer == NULL)
 		return (0);
 
@@ -422,7 +422,7 @@ xz_filter_read(struct transform_read_filter *self, const void **p)
 	/* Try to fill the output buffer. */
 	while (state->stream.avail_out > 0 && !state->eof) {
 		state->stream.next_in =
-		    __archive_read_filter_ahead(self->upstream, 1, &avail_in);
+		    __transform_read_filter_ahead(self->upstream, 1, &avail_in);
 		if (state->stream.next_in == NULL && avail_in < 0)
 			return (ARCHIVE_FATAL);
 		state->stream.avail_in = avail_in;
@@ -435,7 +435,7 @@ xz_filter_read(struct transform_read_filter *self, const void **p)
 			state->eof = 1;
 			/* FALL THROUGH */
 		case LZMA_OK: /* Decompressor made some progress. */
-			__archive_read_filter_consume(self->upstream,
+			__transform_read_filter_consume(self->upstream,
 			    avail_in - state->stream.avail_in);
 			break;
 		case LZMA_MEM_ERROR:
@@ -541,7 +541,7 @@ lzma_bidder_init(struct transform_read_filter *self)
 
 	/* Prime the lzma library with 18 bytes of input. */
 	state->stream.next_in = (unsigned char *)(uintptr_t)
-	    __archive_read_filter_ahead(self->upstream, 18, &avail_in);
+	    __transform_read_filter_ahead(self->upstream, 18, &avail_in);
 	if (state->stream.next_in == NULL)
 		return (ARCHIVE_FATAL);
 	state->stream.avail_in = avail_in;
@@ -550,7 +550,7 @@ lzma_bidder_init(struct transform_read_filter *self)
 
 	/* Initialize compression library. */
 	ret = lzmadec_init(&(state->stream));
-	__archive_read_filter_consume(self->upstream,
+	__transform_read_filter_consume(self->upstream,
 	    avail_in - state->stream.avail_in);
 	if (ret == LZMADEC_OK)
 		return (ARCHIVE_OK);
@@ -599,7 +599,7 @@ lzma_filter_read(struct transform_read_filter *self, const void **p)
 	/* Try to fill the output buffer. */
 	while (state->stream.avail_out > 0 && !state->eof) {
 		state->stream.next_in = (unsigned char *)(uintptr_t)
-		    __archive_read_filter_ahead(self->upstream, 1, &avail_in);
+		    __transform_read_filter_ahead(self->upstream, 1, &avail_in);
 		if (state->stream.next_in == NULL && avail_in < 0)
 			return (ARCHIVE_FATAL);
 		state->stream.avail_in = avail_in;
@@ -611,7 +611,7 @@ lzma_filter_read(struct transform_read_filter *self, const void **p)
 			state->eof = 1;
 			/* FALL THROUGH */
 		case LZMADEC_OK: /* Decompressor made some progress. */
-			__archive_read_filter_consume(self->upstream,
+			__transform_read_filter_consume(self->upstream,
 			    avail_in - state->stream.avail_in);
 			break;
 		case LZMADEC_BUF_ERROR: /* Insufficient input data? */
@@ -678,8 +678,8 @@ lzma_bidder_init(struct transform_read_filter *self)
 {
 	int r;
 
-	r = __archive_read_program(self, "unlzma");
-	/* Note: We set the format here even if __archive_read_program()
+	r = __transform_read_program(self, "unlzma");
+	/* Note: We set the format here even if __transform_read_program()
 	 * above fails.  We do, after all, know what the format is
 	 * even if we weren't able to read it. */
 	self->code = ARCHIVE_FILTER_LZMA;
@@ -695,8 +695,8 @@ xz_bidder_init(struct transform_read_filter *self)
 {
 	int r;
 
-	r = __archive_read_program(self, "unxz");
-	/* Note: We set the format here even if __archive_read_program()
+	r = __transform_read_program(self, "unxz");
+	/* Note: We set the format here even if __transform_read_program()
 	 * above fails.  We do, after all, know what the format is
 	 * even if we weren't able to read it. */
 	self->code = ARCHIVE_FILTER_XZ;

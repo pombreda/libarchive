@@ -78,23 +78,23 @@ DEFINE_TEST(test_write_compress_program)
 	/*
 	 * Now, read the data back through the built-in gzip support.
 	 */
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	r = archive_read_support_compression_gzip(a);
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	r = transform_read_support_compression_gzip(a);
 	/* The compression_gzip() handler will fall back to gunzip
 	 * automatically, but if we know gunzip isn't available, then
 	 * skip the rest. */
 	if (r != ARCHIVE_OK && !canGunzip()) {
 		skipping("No libz and no gunzip program, "
 		    "unable to verify gzip compression");
-		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 		return;
 	}
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_memory(a, buff, used));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_memory(a, buff, used));
 
-	if (!assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae))) {
-		archive_read_free(a);
+	if (!assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae))) {
+		transform_read_free(a);
 		return;
 	}
 
@@ -104,11 +104,11 @@ DEFINE_TEST(test_write_compress_program)
 	assertEqualString("file", archive_entry_pathname(ae));
 	assertEqualInt((S_IFREG | 0755), archive_entry_mode(ae));
 	assertEqualInt(8, archive_entry_size(ae));
-	assertEqualIntA(a, 8, archive_read_data(a, buff2, 10));
+	assertEqualIntA(a, 8, transform_read_data(a, buff2, 10));
 	assertEqualMem(buff2, "12345678", 8);
 
 	/* Verify the end of the archive. */
-	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }

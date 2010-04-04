@@ -105,7 +105,7 @@ if test "$st_lib_archive_ENABLED" = "yes" ; then
 	if test "x$st_lib_archive_LOCATION" = "xdefined" ; then
 		CPPFLAGS="-I$st_lib_archive_DIR/include $st_lib_archive_SAVECPPFLAGS"
 		LDFLAGS="-L$st_lib_archive_DIR/$st_lib_archive_LIB $st_lib_archive_SAVELDFLAGS"
-		AC_CHECK_LIB(archive, archive_read_new, [st_lib_archive_found_lib=yes], [st_lib_archive_found_lib=no])
+		AC_CHECK_LIB(archive, transform_read_new, [st_lib_archive_found_lib=yes], [st_lib_archive_found_lib=no])
 		AC_CHECK_HEADER(archive.h, [st_lib_archive_found_hdr=yes], [st_lib_archive_found_hdr=no])
 		if test "x$st_lib_archive_found_lib" = "xyes" && test "x$st_lib_archive_found_hdr" = "xyes"; then
 			LIBARCHIVE_CPPFLAGS="-I$dir/include"
@@ -122,7 +122,7 @@ if test "$st_lib_archive_ENABLED" = "yes" ; then
 			if test -d "$dir" ; then
 				CPPFLAGS="-I$dir/include $st_lib_archive_SAVECPPFLAGS"
 				LDFLAGS="-L$dir/$st_lib_archive_LIB $st_lib_archive_SAVELDFLAGS"
-				AC_CHECK_LIB(archive, archive_read_new, [st_lib_archive_found_lib=yes], [st_lib_archive_found_lib=no])
+				AC_CHECK_LIB(archive, transform_read_new, [st_lib_archive_found_lib=yes], [st_lib_archive_found_lib=no])
 				AC_CHECK_HEADER(archive.h, [st_lib_archive_found_hdr=yes], [st_lib_archive_found_hdr=no])
 				if test "x$st_lib_archive_found_lib" = "xyes" && test "x$st_lib_archive_found_hdr" = "xyes"; then
 					LIBARCHIVE_CPPFLAGS="-I$dir/include"

@@ -28,8 +28,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_data_large.c 201247 2009-
 /*
  * Test read/write of a 10M block of data in a single operation.
  * Uses an in-memory archive with a single 10M entry.  Exercises
- * archive_read_data() to ensure it can handle large blocks like
- * this and also exercises archive_read_data_into_fd() (which
+ * transform_read_data() to ensure it can handle large blocks like
+ * this and also exercises transform_read_data_into_fd() (which
  * had a bug relating to this, fixed in Nov 2006).
  */
 
@@ -75,34 +75,34 @@ DEFINE_TEST(test_read_data_large)
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
 	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
-	/* Check that archive_read_data can handle 10*10^6 at a pop. */
-	assert((a = archive_read_new()) != NULL);
-	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_support_compression_all(a));
-	assertA(0 == archive_read_open_memory(a, buff1, sizeof(buff1)));
-	assertA(0 == archive_read_next_header(a, &ae));
+	/* Check that transform_read_data can handle 10*10^6 at a pop. */
+	assert((a = transform_read_new()) != NULL);
+	assertA(0 == transform_read_support_format_all(a));
+	assertA(0 == transform_read_support_compression_all(a));
+	assertA(0 == transform_read_open_memory(a, buff1, sizeof(buff1)));
+	assertA(0 == transform_read_next_header(a, &ae));
 	failure("Wrote 10MB, but didn't read the same amount");
-	assertEqualIntA(a, sizeof(buff2),archive_read_data(a, buff3, sizeof(buff3)));
+	assertEqualIntA(a, sizeof(buff2),transform_read_data(a, buff3, sizeof(buff3)));
 	failure("Read expected 10MB, but data read didn't match what was written");
 	assert(0 == memcmp(buff2, buff3, sizeof(buff3)));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 
-	/* Check archive_read_data_into_fd */
-	assert((a = archive_read_new()) != NULL);
-	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_support_compression_all(a));
-	assertA(0 == archive_read_open_memory(a, buff1, sizeof(buff1)));
-	assertA(0 == archive_read_next_header(a, &ae));
+	/* Check transform_read_data_into_fd */
+	assert((a = transform_read_new()) != NULL);
+	assertA(0 == transform_read_support_format_all(a));
+	assertA(0 == transform_read_support_compression_all(a));
+	assertA(0 == transform_read_open_memory(a, buff1, sizeof(buff1)));
+	assertA(0 == transform_read_next_header(a, &ae));
 #if defined(__BORLANDC__)
 	tmpfilefd = open(tmpfilename, O_WRONLY | O_CREAT | O_BINARY);
 #else
 	tmpfilefd = open(tmpfilename, O_WRONLY | O_CREAT | O_BINARY, 0777);
 #endif
 	assert(tmpfilefd != 0);
-	assertEqualIntA(a, 0, archive_read_data_into_fd(a, tmpfilefd));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, 0, transform_read_data_into_fd(a, tmpfilefd));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 	close(tmpfilefd);
 
 	f = fopen(tmpfilename, "rb");

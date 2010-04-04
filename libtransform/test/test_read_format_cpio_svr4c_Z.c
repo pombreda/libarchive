@@ -38,21 +38,21 @@ DEFINE_TEST(test_read_format_cpio_svr4c_Z)
 	struct transform_entry *ae;
 	struct transform *a;
 /*	printf("Archive address: start=%X, end=%X\n", archive, archive+sizeof(archive)); */
-	assert((a = archive_read_new()) != NULL);
+	assert((a = transform_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_support_compression_all(a));
+	    transform_read_support_compression_all(a));
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_support_format_all(a));
+	    transform_read_support_format_all(a));
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_open_memory(a, archive, sizeof(archive)));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	    transform_read_open_memory(a, archive, sizeof(archive)));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
 	failure("archive_compression_name(a)=\"%s\"",
 	    archive_compression_name(a));
 	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_COMPRESS);
 	failure("archive_format_name(a)=\"%s\"", archive_format_name(a));
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_CPIO_SVR4_CRC);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 

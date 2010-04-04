@@ -94,25 +94,25 @@ DEFINE_TEST(test_fuzz)
 		if (files[n].uncompress) {
 			int r;
 			/* Use format_raw to decompress the data. */
-			assert((a = archive_read_new()) != NULL);
+			assert((a = transform_read_new()) != NULL);
 			assertEqualIntA(a, ARCHIVE_OK,
-			    archive_read_support_compression_all(a));
+			    transform_read_support_compression_all(a));
 			assertEqualIntA(a, ARCHIVE_OK,
-			    archive_read_support_format_raw(a));
-			r = archive_read_open_filename(a, filename, 16384);
+			    transform_read_support_format_raw(a));
+			r = transform_read_open_filename(a, filename, 16384);
 			if (r != ARCHIVE_OK) {
-				archive_read_free(a);
+				transform_read_free(a);
 				skipping("Cannot uncompress %s", filename);
 				continue;
 			}
 			assertEqualIntA(a, ARCHIVE_OK,
-			    archive_read_next_header(a, &ae));
+			    transform_read_next_header(a, &ae));
 			rawimage = malloc(buffsize);
-			size = archive_read_data(a, rawimage, buffsize);
+			size = transform_read_data(a, rawimage, buffsize);
 			assertEqualIntA(a, ARCHIVE_EOF,
-			    archive_read_next_header(a, &ae));
+			    transform_read_next_header(a, &ae));
 			assertEqualInt(ARCHIVE_OK,
-			    archive_read_free(a));
+			    transform_read_free(a));
 			assert(size > 0);
 			failure("Internal buffer is not big enough for "
 			    "uncompressed test file: %s", filename);
@@ -146,21 +146,21 @@ DEFINE_TEST(test_fuzz)
 			fwrite(image, 1, (size_t)size, f);
 			fclose(f);
 
-			assert((a = archive_read_new()) != NULL);
+			assert((a = transform_read_new()) != NULL);
 			assertEqualIntA(a, ARCHIVE_OK,
-			    archive_read_support_compression_all(a));
+			    transform_read_support_compression_all(a));
 			assertEqualIntA(a, ARCHIVE_OK,
-			    archive_read_support_format_all(a));
+			    transform_read_support_format_all(a));
 
-			if (0 == archive_read_open_memory(a, image, size)) {
-				while(0 == archive_read_next_header(a, &ae)) {
-					while (0 == archive_read_data_block(a,
+			if (0 == transform_read_open_memory(a, image, size)) {
+				while(0 == transform_read_next_header(a, &ae)) {
+					while (0 == transform_read_data_block(a,
 						&blk, &blk_size, &blk_offset))
 						continue;
 				}
-				archive_read_close(a);
+				transform_read_close(a);
 			}
-			archive_read_free(a);
+			transform_read_free(a);
 		}
 		free(image);
 		free(rawimage);

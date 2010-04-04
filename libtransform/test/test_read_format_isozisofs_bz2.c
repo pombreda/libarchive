@@ -66,16 +66,16 @@ DEFINE_TEST(test_read_format_isozisofs_bz2)
 	int i;
 
 	extract_reference_file(refname);
-	assert((a = archive_read_new()) != NULL);
-	assertEqualInt(0, archive_read_support_compression_all(a));
-	assertEqualInt(0, archive_read_support_format_all(a));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualInt(0, transform_read_support_compression_all(a));
+	assertEqualInt(0, transform_read_support_format_all(a));
 	assertEqualInt(ARCHIVE_OK,
-	    archive_read_open_filename(a, refname, 10240));
+	    transform_read_open_filename(a, refname, 10240));
 
 	/* Retrieve each of the 8 files on the ISO image and
 	 * verify that each one is what we expect. */
 	for (i = 0; i < 8; ++i) {
-		assertEqualInt(0, archive_read_next_header(a, &ae));
+		assertEqualInt(0, transform_read_next_header(a, &ae));
 
 		if (strcmp(".", archive_entry_pathname(ae)) == 0) {
 			/* '.' root directory. */
@@ -88,7 +88,7 @@ DEFINE_TEST(test_read_format_isozisofs_bz2)
 			assertEqualInt(3, archive_entry_stat(ae)->st_nlink);
 			assertEqualInt(1, archive_entry_uid(ae));
 			assertEqualIntA(a, ARCHIVE_EOF,
-			    archive_read_data_block(a, &p, &size, &offset));
+			    transform_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
 		} else if (strcmp("dir", archive_entry_pathname(ae)) == 0) {
 			/* A directory. */
@@ -106,7 +106,7 @@ DEFINE_TEST(test_read_format_isozisofs_bz2)
 			assertEqualString("hardlink", archive_entry_pathname(ae));
 			assertEqualInt(AE_IFREG, archive_entry_filetype(ae));
 			assertEqualInt(12345684, archive_entry_size(ae));
-			r = archive_read_data_block(a, &p, &size, &offset);
+			r = transform_read_data_block(a, &p, &size, &offset);
 			if (r == ARCHIVE_FAILED) {
 			  skipping("Can't read body of ZISOFS entry.");
 			} else {
@@ -177,15 +177,15 @@ DEFINE_TEST(test_read_format_isozisofs_bz2)
 	}
 
 	/* End of archive. */
-	assertEqualInt(ARCHIVE_EOF, archive_read_next_header(a, &ae));
+	assertEqualInt(ARCHIVE_EOF, transform_read_next_header(a, &ae));
 
 	/* Verify archive format. */
 	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_COMPRESS);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_ISO9660_ROCKRIDGE);
 
 	/* Close the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 

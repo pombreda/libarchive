@@ -127,7 +127,7 @@
 /*
  * If this platform has <sys/acl.h>, acl_create(), acl_init(),
  * acl_set_file(), and ACL_USER, we assume it has the rest of the
- * POSIX.1e draft functions used in archive_read_extract.c.
+ * POSIX.1e draft functions used in transform_read_extract.c.
  */
 #if HAVE_SYS_ACL_H && HAVE_ACL_CREATE_ENTRY && HAVE_ACL_INIT && HAVE_ACL_SET_FILE && HAVE_ACL_USER
 #define	HAVE_POSIX_ACL	1

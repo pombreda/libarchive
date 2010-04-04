@@ -61,23 +61,23 @@ DEFINE_TEST(test_read_truncated)
 	/* Now, read back a truncated version of the archive and
 	 * verify that we get an appropriate error. */
 	for (i = 1; i < used + 100; i += 100) {
-		assert((a = archive_read_new()) != NULL);
-		assertA(0 == archive_read_support_format_all(a));
-		assertA(0 == archive_read_support_compression_all(a));
-		assertA(0 == archive_read_open_memory(a, buff, i));
+		assert((a = transform_read_new()) != NULL);
+		assertA(0 == transform_read_support_format_all(a));
+		assertA(0 == transform_read_support_compression_all(a));
+		assertA(0 == transform_read_open_memory(a, buff, i));
 
 		if (i < 512) {
-			assertA(ARCHIVE_FATAL == archive_read_next_header(a, &ae));
+			assertA(ARCHIVE_FATAL == transform_read_next_header(a, &ae));
 			goto wrap_up;
 		} else {
-			assertA(0 == archive_read_next_header(a, &ae));
+			assertA(0 == transform_read_next_header(a, &ae));
 		}
 
 		if (i < 512 + sizeof(buff2)) {
-			assertA(ARCHIVE_FATAL == archive_read_data(a, buff2, sizeof(buff2)));
+			assertA(ARCHIVE_FATAL == transform_read_data(a, buff2, sizeof(buff2)));
 			goto wrap_up;
 		} else {
-			assertA((int)sizeof(buff2) == archive_read_data(a, buff2, sizeof(buff2)));
+			assertA((int)sizeof(buff2) == transform_read_data(a, buff2, sizeof(buff2)));
 		}
 
 		/* Verify the end of the archive. */
@@ -87,36 +87,36 @@ DEFINE_TEST(test_read_truncated)
 		 * does not return an error if it can't consume
 		 * it.) */
 		if (i < 512 + 512*((sizeof(buff2) + 511)/512) + 512) {
-			assertA(ARCHIVE_FATAL == archive_read_next_header(a, &ae));
+			assertA(ARCHIVE_FATAL == transform_read_next_header(a, &ae));
 		} else {
-			assertA(ARCHIVE_EOF == archive_read_next_header(a, &ae));
+			assertA(ARCHIVE_EOF == transform_read_next_header(a, &ae));
 		}
 	wrap_up:
-		assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+		assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 	}
 
 
 
 	/* Same as above, except skip the body instead of reading it. */
 	for (i = 1; i < used + 100; i += 100) {
-		assert((a = archive_read_new()) != NULL);
-		assertA(0 == archive_read_support_format_all(a));
-		assertA(0 == archive_read_support_compression_all(a));
-		assertA(0 == archive_read_open_memory(a, buff, i));
+		assert((a = transform_read_new()) != NULL);
+		assertA(0 == transform_read_support_format_all(a));
+		assertA(0 == transform_read_support_compression_all(a));
+		assertA(0 == transform_read_open_memory(a, buff, i));
 
 		if (i < 512) {
-			assertA(ARCHIVE_FATAL == archive_read_next_header(a, &ae));
+			assertA(ARCHIVE_FATAL == transform_read_next_header(a, &ae));
 			goto wrap_up2;
 		} else {
-			assertA(0 == archive_read_next_header(a, &ae));
+			assertA(0 == transform_read_next_header(a, &ae));
 		}
 
 		if (i < 512 + 512*((sizeof(buff2)+511)/512)) {
-			assertA(ARCHIVE_FATAL == archive_read_data_skip(a));
+			assertA(ARCHIVE_FATAL == transform_read_data_skip(a));
 			goto wrap_up2;
 		} else {
-			assertA(ARCHIVE_OK == archive_read_data_skip(a));
+			assertA(ARCHIVE_OK == transform_read_data_skip(a));
 		}
 
 		/* Verify the end of the archive. */
@@ -126,12 +126,12 @@ DEFINE_TEST(test_read_truncated)
 		 * does not return an error if it can't consume
 		 * it.) */
 		if (i < 512 + 512*((sizeof(buff2) + 511)/512) + 512) {
-			assertA(ARCHIVE_FATAL == archive_read_next_header(a, &ae));
+			assertA(ARCHIVE_FATAL == transform_read_next_header(a, &ae));
 		} else {
-			assertA(ARCHIVE_EOF == archive_read_next_header(a, &ae));
+			assertA(ARCHIVE_EOF == transform_read_next_header(a, &ae));
 		}
 	wrap_up2:
-		assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+		assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+		assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 	}
 }

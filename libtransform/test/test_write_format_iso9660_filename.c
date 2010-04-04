@@ -75,7 +75,7 @@ verify_file(struct transform *a, enum vtype type, struct fns *fns)
 	struct transform_entry *ae;
 	int i;
 
-	assertEqualIntA(a, 0, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
 	if (type == ROCKRIDGE) {
 		assertEqualInt(2, archive_entry_birthtime(ae));
 		assertEqualInt(3, archive_entry_atime(ae));
@@ -146,20 +146,20 @@ verify(unsigned char *buff, size_t used, enum vtype type, struct fns *fns)
 	/*
 	 * Read ISO image.
 	 */
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, 0, archive_read_support_format_all(a));
-	assertEqualIntA(a, 0, archive_read_support_compression_all(a));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, 0, transform_read_support_format_all(a));
+	assertEqualIntA(a, 0, transform_read_support_compression_all(a));
 	if (type >= 1)
-		assertA(0 == archive_read_set_options(a, "!rockridge"));
+		assertA(0 == transform_read_set_options(a, "!rockridge"));
 	if (type >= 2)
-		assertA(0 == archive_read_set_options(a, "!joliet"));
-	assertEqualIntA(a, 0, archive_read_open_memory(a, buff, used));
+		assertA(0 == transform_read_set_options(a, "!joliet"));
+	assertEqualIntA(a, 0, transform_read_open_memory(a, buff, used));
 
 	/*
 	 * Read Root Directory
 	 * Root Directory entry must be in ISO image.
 	 */
-	assertEqualIntA(a, 0, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
 	assertEqualInt(archive_entry_atime(ae), archive_entry_ctime(ae));
 	assertEqualInt(archive_entry_atime(ae), archive_entry_mtime(ae));
 	assertEqualString(".", archive_entry_pathname(ae));
@@ -189,9 +189,9 @@ verify(unsigned char *buff, size_t used, enum vtype type, struct fns *fns)
 	/*
 	 * Verify the end of the archive.
 	 */
-	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_free(a));
 }
 
 static int

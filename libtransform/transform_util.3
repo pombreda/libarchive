@@ -116,7 +116,7 @@ Returns a count of the number of files processed by this archive object.
 The count is incremented by calls to
 .Xr archive_write_header
 or
-.Xr archive_read_next_header .
+.Xr transform_read_next_header .
 .It Fn archive_filter_code
 Returns a numeric code identifying the indicated filter.
 See
@@ -157,7 +157,7 @@ for details of the numbering.
 Returns a numeric code indicating the format of the current
 archive entry.
 This value is set by a successful call to
-.Fn archive_read_next_header .
+.Fn transform_read_next_header .
 Note that it is common for this value to change from
 entry to entry.
 For example, a tar archive might have several entries that
@@ -205,7 +205,7 @@ Field-width specifiers and other printf features are
 not uniformly supported and should not be used.
 .El
 .Sh SEE ALSO
-.Xr archive_read 3 ,
+.Xr transform_read 3 ,
 .Xr archive_write 3 ,
 .Xr libarchive 3 ,
 .Xr printf 3

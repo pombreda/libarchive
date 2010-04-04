@@ -65,22 +65,22 @@ an archive or disk writer, and then use a single set of
 code to select and write entries, regardless of the target.
 .Sh READ ARCHITECTURE
 From the outside, clients use the
-.Xr archive_read 3
+.Xr transform_read 3
 API to manipulate an
 .Nm archive
 object to read entries and bodies from an archive stream.
 Internally, the
 .Nm archive
 object is cast to an
-.Nm archive_read
+.Nm transform_read
 object, which holds all read-specific data.
 The API has four layers:
 The lowest layer is the I/O layer.
 This layer can be overridden by clients, but most clients use
 the packaged I/O callbacks provided, for example, by
-.Xr archive_read_open_memory 3 ,
+.Xr transform_read_open_memory 3 ,
 and
-.Xr archive_read_open_fd 3 .
+.Xr transform_read_open_fd 3 .
 The compression layer calls the I/O layer to
 read bytes and decompresses them for the format layer.
 The format layer unpacks a stream of uncompressed bytes and
@@ -160,7 +160,7 @@ A decompression handler has a specific lifecycle:
 .It Registration/Configuration
 When the client invokes the public support function,
 the decompression handler invokes the internal
-.Fn __archive_read_register_compression
+.Fn __transform_read_register_compression
 function to provide bid and initialization functions.
 This function returns
 .Cm NULL
@@ -175,7 +175,7 @@ The decompressor can access its config data
 through the
 .Va decompressor
 element of the
-.Cm archive_read
+.Cm transform_read
 object.
 The bid function is otherwise stateless.
 In particular, it must not perform any I/O operations.
@@ -198,7 +198,7 @@ This function should initialize the remaining slots of the
 object pointed to by the
 .Va decompressor
 element of the
-.Va archive_read
+.Va transform_read
 object.
 In particular, it should allocate any working data it needs
 in the
@@ -301,7 +301,7 @@ Since it does not handle multiple formats or compression, it
 is not layered internally.
 .Sh GENERAL SERVICES
 The
-.Nm archive_read ,
+.Nm transform_read ,
 .Nm archive_write ,
 and
 .Nm archive_write_disk
@@ -349,7 +349,7 @@ as a dedicated ZIP program.
 .Sh SEE ALSO
 .Xr archive 3 ,
 .Xr archive_entry 3 ,
-.Xr archive_read 3 ,
+.Xr transform_read 3 ,
 .Xr archive_write 3 ,
 .Xr archive_write_disk 3
 .Sh HISTORY

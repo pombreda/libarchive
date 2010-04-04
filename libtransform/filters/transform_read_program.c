@@ -24,7 +24,7 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_program.c 201112 2009-12-28 06:59:35Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libarchive/transform_read_support_compression_program.c 201112 2009-12-28 06:59:35Z kientzle $");
 
 #ifdef HAVE_SYS_WAIT_H
 #  include <sys/wait.h>
@@ -56,9 +56,9 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_program
 #include "transform_read_private.h"
 
 int
-archive_read_support_compression_program(struct transform *a, const char *cmd)
+transform_read_support_compression_program(struct transform *a, const char *cmd)
 {
-	return (archive_read_support_compression_program_signature(a, cmd, NULL, 0));
+	return (transform_read_support_compression_program_signature(a, cmd, NULL, 0));
 }
 
 
@@ -71,7 +71,7 @@ archive_read_support_compression_program(struct transform *a, const char *cmd)
  * this function is actually invoked.
  */
 int
-archive_read_support_compression_program_signature(struct transform *_a,
+transform_read_support_compression_program_signature(struct transform *_a,
     const char *cmd, void *signature, size_t signature_len)
 {
 	(void)_a; /* UNUSED */
@@ -85,7 +85,7 @@ archive_read_support_compression_program_signature(struct transform *_a,
 }
 
 int
-__archive_read_program(struct transform_read_filter *self, const char *cmd)
+__transform_read_program(struct transform_read_filter *self, const char *cmd)
 {
 	(void)self; /* UNUSED */
 	(void)cmd; /* UNUSED */
@@ -135,7 +135,7 @@ static ssize_t	program_filter_read(struct transform_read_filter *,
 static int	program_filter_close(struct transform_read_filter *);
 
 int
-archive_read_support_compression_program_signature(struct transform *_a,
+transform_read_support_compression_program_signature(struct transform *_a,
     const char *cmd, const void *signature, size_t signature_len)
 {
 	struct transform_read *a = (struct transform_read *)_a;
@@ -145,7 +145,7 @@ archive_read_support_compression_program_signature(struct transform *_a,
 	/*
 	 * Get a bidder object from the read core.
 	 */
-	bidder = __archive_read_get_bidder(a);
+	bidder = __transform_read_get_bidder(a);
 	if (bidder == NULL)
 		return (ARCHIVE_FATAL);
 
@@ -198,7 +198,7 @@ program_bidder_bid(struct transform_read_filter_bidder *self,
 
 	/* If we have a signature, use that to match. */
 	if (state->signature_len > 0) {
-		p = __archive_read_filter_ahead(upstream,
+		p = __transform_read_filter_ahead(upstream,
 		    state->signature_len, NULL);
 		if (p == NULL)
 			return (0);
@@ -318,7 +318,7 @@ child_read(struct transform_read_filter *self, char *buf, size_t buf_len)
 		}
 
 		/* Get some more data from upstream. */
-		p = __archive_read_filter_ahead(self->upstream, 1, &avail);
+		p = __transform_read_filter_ahead(self->upstream, 1, &avail);
 		if (p == NULL) {
 			close(state->child_stdin);
 			state->child_stdin = -1;
@@ -334,7 +334,7 @@ child_read(struct transform_read_filter *self, char *buf, size_t buf_len)
 
 		if (ret > 0) {
 			/* Consume whatever we managed to write. */
-			__archive_read_filter_consume(self->upstream, ret);
+			__transform_read_filter_consume(self->upstream, ret);
 		} else if (ret == -1 && errno == EAGAIN) {
 			/* Block until child has some I/O ready. */
 			__archive_check_child(state->child_stdin,
@@ -354,7 +354,7 @@ child_read(struct transform_read_filter *self, char *buf, size_t buf_len)
 }
 
 int
-__archive_read_program(struct transform_read_filter *self, const char *cmd)
+__transform_read_program(struct transform_read_filter *self, const char *cmd)
 {
 	struct program_filter	*state;
 	static const size_t out_buf_len = 65536;
@@ -407,7 +407,7 @@ program_bidder_init(struct transform_read_filter *self)
 	struct program_bidder   *bidder_state;
 
 	bidder_state = (struct program_bidder *)self->bidder->data;
-	return (__archive_read_program(self, bidder_state->cmd));
+	return (__transform_read_program(self, bidder_state->cmd));
 }
 
 static ssize_t

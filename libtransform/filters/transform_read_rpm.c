@@ -64,12 +64,12 @@ static ssize_t	rpm_filter_read(struct transform_read_filter *,
 static int	rpm_filter_close(struct transform_read_filter *);
 
 int
-archive_read_support_compression_rpm(struct transform *_a)
+transform_read_support_compression_rpm(struct transform *_a)
 {
 	struct transform_read *a = (struct transform_read *)_a;
 	struct transform_read_filter_bidder *bidder;
 
-	bidder = __archive_read_get_bidder(a);
+	bidder = __transform_read_get_bidder(a);
 	archive_clear_error(_a);
 	if (bidder == NULL)
 		return (ARCHIVE_FATAL);
@@ -92,7 +92,7 @@ rpm_bidder_bid(struct transform_read_filter_bidder *self,
 
 	(void)self; /* UNUSED */
 
-	b = __archive_read_filter_ahead(filter, 8, &avail);
+	b = __transform_read_filter_ahead(filter, 8, &avail);
 	if (b == NULL)
 		return (0);
 
@@ -172,7 +172,7 @@ rpm_filter_read(struct transform_read_filter *self, const void **buff)
 	used = 0;
 	do {
 		if (b == NULL) {
-			b = __archive_read_filter_ahead(self->upstream, 1,
+			b = __transform_read_filter_ahead(self->upstream, 1,
 			    &avail_in);
 			if (b == NULL) {
 				if (avail_in < 0)
@@ -261,7 +261,7 @@ rpm_filter_read(struct transform_read_filter *self, const void **buff)
 		}
 		if (used == (size_t)avail_in) {
 			rpm->total_in += used;
-			__archive_read_filter_consume(self->upstream, used);
+			__transform_read_filter_consume(self->upstream, used);
 			b = NULL;
 			used = 0;
 		}
@@ -269,7 +269,7 @@ rpm_filter_read(struct transform_read_filter *self, const void **buff)
 
 	if (used > 0 && b != NULL) {
 		rpm->total_in += used;
-		__archive_read_filter_consume(self->upstream, used);
+		__transform_read_filter_consume(self->upstream, used);
 	}
 	return (total);
 }

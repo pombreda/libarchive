@@ -82,19 +82,19 @@ DEFINE_TEST(test_write_compress_bzip2)
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
 	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_memory(a, buff, used1));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_memory(a, buff, used1));
 	for (i = 0; i < 999; i++) {
 		sprintf(path, "file%03d", i);
-		if (!assertEqualInt(0, archive_read_next_header(a, &ae)))
+		if (!assertEqualInt(0, transform_read_next_header(a, &ae)))
 			break;
 		assertEqualString(path, archive_entry_pathname(ae));
 		assertEqualInt((int)datasize, archive_entry_size(ae));
 	}
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 
 	/*
 	 * Repeat the cycle again, this time setting some compression
@@ -135,19 +135,19 @@ DEFINE_TEST(test_write_compress_bzip2)
 	assert(used2 < used1);
 	*/
 
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_memory(a, buff, used2));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_memory(a, buff, used2));
 	for (i = 0; i < 999; i++) {
 		sprintf(path, "file%03d", i);
-		if (!assertEqualInt(0, archive_read_next_header(a, &ae)))
+		if (!assertEqualInt(0, transform_read_next_header(a, &ae)))
 			break;
 		assertEqualString(path, archive_entry_pathname(ae));
 		assertEqualInt((int)datasize, archive_entry_size(ae));
 	}
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 
 	/*
 	 * Repeat again, with much lower compression.
@@ -180,19 +180,19 @@ DEFINE_TEST(test_write_compress_bzip2)
 	    (int)used2, (int)used1);
 	assert(used2 > used1);
 
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_memory(a, buff, used2));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_memory(a, buff, used2));
 	for (i = 0; i < 999; i++) {
 		sprintf(path, "file%03d", i);
-		if (!assertEqualInt(0, archive_read_next_header(a, &ae)))
+		if (!assertEqualInt(0, transform_read_next_header(a, &ae)))
 			break;
 		assertEqualString(path, archive_entry_pathname(ae));
 		assertEqualInt((int)datasize, archive_entry_size(ae));
 	}
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 
 	/*
 	 * Test various premature shutdown scenarios to make sure we

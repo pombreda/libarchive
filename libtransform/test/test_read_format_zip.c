@@ -47,23 +47,23 @@ DEFINE_TEST(test_read_format_zip)
 	int r;
 
 	extract_reference_file(refname);
-	assert((a = archive_read_new()) != NULL);
-	assertA(0 == archive_read_support_compression_all(a));
-	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_open_filename(a, refname, 10240));
-	assertA(0 == archive_read_next_header(a, &ae));
+	assert((a = transform_read_new()) != NULL);
+	assertA(0 == transform_read_support_compression_all(a));
+	assertA(0 == transform_read_support_format_all(a));
+	assertA(0 == transform_read_open_filename(a, refname, 10240));
+	assertA(0 == transform_read_next_header(a, &ae));
 	assertEqualString("dir/", archive_entry_pathname(ae));
 	assertEqualInt(1179604249, archive_entry_mtime(ae));
 	assertEqualInt(0, archive_entry_size(ae));
 	assertEqualIntA(a, ARCHIVE_EOF,
-	    archive_read_data_block(a, &pv, &s, &o));
+	    transform_read_data_block(a, &pv, &s, &o));
 	assertEqualInt((int)s, 0);
-	assertA(0 == archive_read_next_header(a, &ae));
+	assertA(0 == transform_read_next_header(a, &ae));
 	assertEqualString("file1", archive_entry_pathname(ae));
 	assertEqualInt(1179604289, archive_entry_mtime(ae));
 	assertEqualInt(18, archive_entry_size(ae));
-	failure("archive_read_data() returns number of bytes read");
-	r = archive_read_data(a, buff, 19);
+	failure("transform_read_data() returns number of bytes read");
+	r = transform_read_data(a, buff, 19);
 	if (r < ARCHIVE_OK) {
 		if (strcmp(archive_error_string(a),
 		    "libarchive compiled without deflate support (no libz)") == 0) {
@@ -74,19 +74,19 @@ DEFINE_TEST(test_read_format_zip)
 	}
 	assertEqualInt(18, r);
 	assert(0 == memcmp(buff, "hello\nhello\nhello\n", 18));
-	assertA(0 == archive_read_next_header(a, &ae));
+	assertA(0 == transform_read_next_header(a, &ae));
 	assertEqualString("file2", archive_entry_pathname(ae));
 	assertEqualInt(1179605932, archive_entry_mtime(ae));
 	failure("file2 has length-at-end, so we shouldn't see a valid size");
 	assertEqualInt(0, archive_entry_size_is_set(ae));
 	failure("file2 has a bad CRC, so reading to end should fail");
-	assertEqualInt(ARCHIVE_WARN, archive_read_data(a, buff, 19));
+	assertEqualInt(ARCHIVE_WARN, transform_read_data(a, buff, 19));
 	assert(0 == memcmp(buff, "hello\nhello\nhello\n", 18));
 	assertA(archive_compression(a) == ARCHIVE_FILTER_NONE);
 	assertA(archive_format(a) == ARCHIVE_FORMAT_ZIP);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
 finish:
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 

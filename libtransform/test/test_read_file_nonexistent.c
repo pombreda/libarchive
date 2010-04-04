@@ -27,11 +27,11 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_file_nonexistent.c 189473
 
 DEFINE_TEST(test_read_file_nonexistent)
 {
-	struct transform* a = archive_read_new();
-	assertEqualInt(ARCHIVE_OK, archive_read_support_format_all(a));
+	struct transform* a = transform_read_new();
+	assertEqualInt(ARCHIVE_OK, transform_read_support_format_all(a));
 	assertEqualInt(ARCHIVE_FATAL,
-	    archive_read_open_filename(a, "notexistent.tar", 512));
-	archive_read_free(a);
+	    transform_read_open_filename(a, "notexistent.tar", 512));
+	transform_read_free(a);
 }
 
 

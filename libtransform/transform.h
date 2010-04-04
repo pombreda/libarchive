@@ -202,7 +202,7 @@ struct transform;
  */
 
 /* Returns pointer and size of next block of data from archive. */
-typedef __LA_SSIZE_T	archive_read_callback(struct transform *,
+typedef __LA_SSIZE_T	transform_read_callback(struct transform *,
 			    void *_client_data, const void **_buffer);
 
 /* Skips at most request bytes from archive and returns the skipped amount */
@@ -242,20 +242,20 @@ typedef int	archive_close_callback(struct transform *, void *_client_data);
 
 /*-
  * Basic outline for reading an archive:
- *   1) Ask archive_read_new for an archive reader object.
+ *   1) Ask transform_read_new for an archive reader object.
  *   2) Update any global properties as appropriate.
  *      In particular, you'll certainly want to call appropriate
- *      archive_read_support_XXX functions.
- *   3) Call archive_read_open_XXX to open the archive
- *   4) Repeatedly call archive_read_next_header to get information about
- *      successive archive entries.  Call archive_read_data to extract
+ *      transform_read_support_XXX functions.
+ *   3) Call transform_read_open_XXX to open the archive
+ *   4) Repeatedly call transform_read_next_header to get information about
+ *      successive archive entries.  Call transform_read_data to extract
  *      data for entries of interest.
- *   5) Call archive_read_finish to end processing.
+ *   5) Call transform_read_finish to end processing.
  */
-__LA_DECL struct transform	*archive_read_new(void);
+__LA_DECL struct transform	*transform_read_new(void);
 
 /*
- * The archive_read_support_XXX calls enable auto-detect for this
+ * The transform_read_support_XXX calls enable auto-detect for this
  * archive handle.  They also link in the necessary support code.
  * For example, if you don't want bzlib linked in, don't invoke
  * support_compression_bzip2().  The "all" functions provide the
@@ -264,95 +264,95 @@ __LA_DECL struct transform	*archive_read_new(void);
 /* TODO: Rename 'compression' here to 'filter' for libarchive 3.0, deprecate
  * the old names. */
 
-__LA_DECL int archive_read_support_compression_all(struct transform *);
-__LA_DECL int archive_read_support_compression_bzip2(struct transform *);
-__LA_DECL int archive_read_support_compression_compress(struct transform *);
-__LA_DECL int archive_read_support_compression_gzip(struct transform *);
-__LA_DECL int archive_read_support_compression_lzma(struct transform *);
-__LA_DECL int archive_read_support_compression_none(struct transform *);
-__LA_DECL int archive_read_support_compression_program(struct transform *,
+__LA_DECL int transform_read_support_compression_all(struct transform *);
+__LA_DECL int transform_read_support_compression_bzip2(struct transform *);
+__LA_DECL int transform_read_support_compression_compress(struct transform *);
+__LA_DECL int transform_read_support_compression_gzip(struct transform *);
+__LA_DECL int transform_read_support_compression_lzma(struct transform *);
+__LA_DECL int transform_read_support_compression_none(struct transform *);
+__LA_DECL int transform_read_support_compression_program(struct transform *,
 		     const char *command);
-__LA_DECL int archive_read_support_compression_program_signature
+__LA_DECL int transform_read_support_compression_program_signature
 		(struct transform *, const char *,
 				    const void * /* match */, size_t);
 
-__LA_DECL int archive_read_support_compression_rpm(struct transform *);
-__LA_DECL int archive_read_support_compression_uu(struct transform *);
-__LA_DECL int archive_read_support_compression_xz(struct transform *);
+__LA_DECL int transform_read_support_compression_rpm(struct transform *);
+__LA_DECL int transform_read_support_compression_uu(struct transform *);
+__LA_DECL int transform_read_support_compression_xz(struct transform *);
 
 
 /* Open the archive using callbacks for archive I/O. */
-__LA_DECL int archive_read_open(struct transform *, void *_client_data,
-		     archive_open_callback *, archive_read_callback *,
+__LA_DECL int transform_read_open(struct transform *, void *_client_data,
+		     archive_open_callback *, transform_read_callback *,
 		     archive_close_callback *);
-__LA_DECL int archive_read_open2(struct transform *, void *_client_data,
-		     archive_open_callback *, archive_read_callback *,
+__LA_DECL int transform_read_open2(struct transform *, void *_client_data,
+		     archive_open_callback *, transform_read_callback *,
 		     archive_skip_callback *, archive_close_callback *);
 
 /*
- * A variety of shortcuts that invoke archive_read_open() with
+ * A variety of shortcuts that invoke transform_read_open() with
  * canned callbacks suitable for common situations.  The ones that
  * accept a block size handle tape blocking correctly.
  */
 /* Use this if you know the filename.  Note: NULL indicates stdin. */
-__LA_DECL int archive_read_open_filename(struct transform *,
+__LA_DECL int transform_read_open_filename(struct transform *,
 		     const char *_filename, size_t _block_size);
-/* archive_read_open_file() is a deprecated synonym for ..._open_filename(). */
-__LA_DECL int archive_read_open_file(struct transform *,
+/* transform_read_open_file() is a deprecated synonym for ..._open_filename(). */
+__LA_DECL int transform_read_open_file(struct transform *,
 		     const char *_filename, size_t _block_size);
 /* Read an archive that's stored in memory. */
-__LA_DECL int archive_read_open_memory(struct transform *,
+__LA_DECL int transform_read_open_memory(struct transform *,
 		     void * buff, size_t size);
 /* A more involved version that is only used for internal testing. */
-__LA_DECL int archive_read_open_memory2(struct transform *a, void *buff,
+__LA_DECL int transform_read_open_memory2(struct transform *a, void *buff,
 		     size_t size, size_t read_size);
 /* Read an archive that's already open, using the file descriptor. */
-__LA_DECL int archive_read_open_fd(struct transform *, int _fd,
+__LA_DECL int transform_read_open_fd(struct transform *, int _fd,
 		     size_t _block_size);
 /* Read an archive that's already open, using a FILE *. */
 /* Note: DO NOT use this with tape drives. */
-__LA_DECL int archive_read_open_FILE(struct transform *, FILE *_file);
+__LA_DECL int transform_read_open_FILE(struct transform *, FILE *_file);
 
 /*
  * Retrieve the byte offset in UNCOMPRESSED data where last-read
  * header started.
  */
-__LA_DECL __LA_INT64_T		 archive_read_header_position(struct transform *);
+__LA_DECL __LA_INT64_T		 transform_read_header_position(struct transform *);
 
 /* Read data from the body of an entry.  Similar to read(2). */
-__LA_DECL __LA_SSIZE_T		 archive_read_data(struct transform *,
+__LA_DECL __LA_SSIZE_T		 transform_read_data(struct transform *,
 				    void *, size_t);
 
 /*
- * A zero-copy version of archive_read_data that also exposes the file offset
+ * A zero-copy version of transform_read_data that also exposes the file offset
  * of each returned block.  Note that the client has no way to specify
  * the desired size of the block.  The API does guarantee that offsets will
  * be strictly increasing and that returned blocks will not overlap.
  */
 #if ARCHIVE_VERSION_NUMBER < 3000000
-__LA_DECL int archive_read_data_block(struct transform *a,
+__LA_DECL int transform_read_data_block(struct transform *a,
 		    const void **buff, size_t *size, off_t *offset);
 #else
-__LA_DECL int archive_read_data_block(struct transform *a,
+__LA_DECL int transform_read_data_block(struct transform *a,
 		    const void **buff, size_t *size, __LA_INT64_T *offset);
 #endif
 
 /*-
- * Some convenience functions that are built on archive_read_data:
+ * Some convenience functions that are built on transform_read_data:
  *  'skip': skips entire entry
  *  'into_buffer': writes data into memory buffer that you provide
  *  'into_fd': writes data to specified filedes
  */
-__LA_DECL int archive_read_data_into_fd(struct transform *, int fd);
+__LA_DECL int transform_read_data_into_fd(struct transform *, int fd);
 
 /*
  * Set read options.
  */
 /* Apply option string to the filter only. */
-__LA_DECL int archive_read_set_filter_options(struct transform *_a,
+__LA_DECL int transform_read_set_filter_options(struct transform *_a,
 			    const char *s);
 /* Apply option string to both the format and the filter. */
-__LA_DECL int archive_read_set_options(struct transform *_a,
+__LA_DECL int transform_read_set_options(struct transform *_a,
 			    const char *s);
 
 /*-
@@ -400,13 +400,13 @@ __LA_DECL int archive_read_set_options(struct transform *_a,
 #define	ARCHIVE_EXTRACT_SPARSE			(0x1000)
 
 /* Close the file and release most resources. */
-__LA_DECL int		 archive_read_close(struct transform *);
+__LA_DECL int		 transform_read_close(struct transform *);
 /* Release all resources and destroy the object. */
-/* Note that archive_read_free will call archive_read_close for you. */
-__LA_DECL int		 archive_read_free(struct transform *);
+/* Note that transform_read_free will call transform_read_close for you. */
+__LA_DECL int		 transform_read_free(struct transform *);
 #if ARCHIVE_VERSION_NUMBER < 4000000
-/* Synonym for archive_read_free() for backwards compatibility. */
-__LA_DECL int		 archive_read_finish(struct transform *);
+/* Synonym for transform_read_free() for backwards compatibility. */
+__LA_DECL int		 transform_read_finish(struct transform *);
 #endif
 
 /*-

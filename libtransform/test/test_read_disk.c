@@ -89,36 +89,36 @@ DEFINE_TEST(test_read_disk)
 	const char *p;
 	size_t i;
 
-	assert((a = archive_read_disk_new()) != NULL);
+	assert((a = transform_read_disk_new()) != NULL);
 
 	/* Default uname/gname lookups always return NULL. */
-	assert(archive_read_disk_gname(a, 0) == NULL);
-	assert(archive_read_disk_uname(a, 0) == NULL);
+	assert(transform_read_disk_gname(a, 0) == NULL);
+	assert(transform_read_disk_uname(a, 0) == NULL);
 
 	/* Register some weird lookup functions. */
-	assertEqualInt(ARCHIVE_OK, archive_read_disk_set_gname_lookup(a,
+	assertEqualInt(ARCHIVE_OK, transform_read_disk_set_gname_lookup(a,
 			   &gmagic, &gname_lookup, &gname_cleanup));
 	/* Verify that our new function got called. */
-	assertEqualString(archive_read_disk_gname(a, 0), "NOTFOOGROUP");
-	assertEqualString(archive_read_disk_gname(a, 1), "FOOGROUP");
+	assertEqualString(transform_read_disk_gname(a, 0), "NOTFOOGROUP");
+	assertEqualString(transform_read_disk_gname(a, 1), "FOOGROUP");
 
 	/* De-register. */
 	assertEqualInt(ARCHIVE_OK,
-	    archive_read_disk_set_gname_lookup(a, NULL, NULL, NULL));
+	    transform_read_disk_set_gname_lookup(a, NULL, NULL, NULL));
 	/* Ensure our cleanup function got called. */
 	assertEqualInt(gmagic, 0x2468);
 
 	/* Same thing with uname lookup.... */
-	assertEqualInt(ARCHIVE_OK, archive_read_disk_set_uname_lookup(a,
+	assertEqualInt(ARCHIVE_OK, transform_read_disk_set_uname_lookup(a,
 			   &umagic, &uname_lookup, &uname_cleanup));
-	assertEqualString(archive_read_disk_uname(a, 0), "NOTFOO");
-	assertEqualString(archive_read_disk_uname(a, 1), "FOO");
+	assertEqualString(transform_read_disk_uname(a, 0), "NOTFOO");
+	assertEqualString(transform_read_disk_uname(a, 1), "FOO");
 	assertEqualInt(ARCHIVE_OK,
-	    archive_read_disk_set_uname_lookup(a, NULL, NULL, NULL));
+	    transform_read_disk_set_uname_lookup(a, NULL, NULL, NULL));
 	assertEqualInt(umagic, 0x2345);
 
 	/* Try the standard lookup functions. */
-	if (archive_read_disk_set_standard_lookup(a) != ARCHIVE_OK) {
+	if (transform_read_disk_set_standard_lookup(a) != ARCHIVE_OK) {
 		skipping("standard uname/gname lookup");
 	} else {
 #if defined(__CYGWIN__) || defined(__HAIKU__)
@@ -132,10 +132,10 @@ DEFINE_TEST(test_read_disk)
 		 * same way we generalized the group name check below.
 		 * That's needed only if we encounter a system where
 		 * uid 0 is not "root". XXX */
-		assertEqualString(archive_read_disk_uname(a, 0), "root");
+		assertEqualString(transform_read_disk_uname(a, 0), "root");
 
 		/* Get the group name for group 0 and see if it makes sense. */
-		p = archive_read_disk_gname(a, 0);
+		p = transform_read_disk_gname(a, 0);
 		if (assert(p != NULL)) {
 			i = 0;
 			while (i < sizeof(zero_groups)/sizeof(zero_groups[0])) {
@@ -145,7 +145,7 @@ DEFINE_TEST(test_read_disk)
 			}
 			if (i == sizeof(zero_groups)/sizeof(zero_groups[0])) {
 				/* If you get a failure here, either
-				 * archive_read_disk_gname() isn't working or
+				 * transform_read_disk_gname() isn't working or
 				 * your system uses a different name for group
 				 * number zero.  If the latter, please add a
 				 * new entry to the zero_groups[] array above.
@@ -159,22 +159,22 @@ DEFINE_TEST(test_read_disk)
 
 	/* Deregister again and verify the default lookups again. */
 	assertEqualInt(ARCHIVE_OK,
-	    archive_read_disk_set_gname_lookup(a, NULL, NULL, NULL));
+	    transform_read_disk_set_gname_lookup(a, NULL, NULL, NULL));
 	assertEqualInt(ARCHIVE_OK,
-	    archive_read_disk_set_uname_lookup(a, NULL, NULL, NULL));
-	assert(archive_read_disk_gname(a, 0) == NULL);
-	assert(archive_read_disk_uname(a, 0) == NULL);
+	    transform_read_disk_set_uname_lookup(a, NULL, NULL, NULL));
+	assert(transform_read_disk_gname(a, 0) == NULL);
+	assert(transform_read_disk_uname(a, 0) == NULL);
 
 	/* Re-register our custom handlers. */
 	gmagic = 0x13579;
 	umagic = 0x1234;
-	assertEqualInt(ARCHIVE_OK, archive_read_disk_set_gname_lookup(a,
+	assertEqualInt(ARCHIVE_OK, transform_read_disk_set_gname_lookup(a,
 			   &gmagic, &gname_lookup, &gname_cleanup));
-	assertEqualInt(ARCHIVE_OK, archive_read_disk_set_uname_lookup(a,
+	assertEqualInt(ARCHIVE_OK, transform_read_disk_set_uname_lookup(a,
 			   &umagic, &uname_lookup, &uname_cleanup));
 
 	/* Destroy the archive. */
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 
 	/* Verify our cleanup functions got called. */
 	assertEqualInt(gmagic, 0x2468);

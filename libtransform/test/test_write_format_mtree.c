@@ -114,16 +114,16 @@ test_write_format_mtree_sub(int use_set, int dironly)
 	/*
 	 * Read the data and check it.
 	 */
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_memory(a, buff, used));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_memory(a, buff, used));
 
 	/* Read entries */
 	for (i = 0; entries[i].path != NULL; i++) {
 		if (dironly && (entries[i].mode & AE_IFMT) != S_IFDIR)
 			continue;
-		assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+		assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
 		assertEqualInt(entries[i].mtime, archive_entry_mtime(ae));
 		assertEqualInt(entries[i].mode, archive_entry_mode(ae));
 		assertEqualInt(entries[i].uid, archive_entry_uid(ae));
@@ -132,8 +132,8 @@ test_write_format_mtree_sub(int use_set, int dironly)
 		if ((entries[i].mode & AE_IFMT) != S_IFDIR)
 			assertEqualInt(8, archive_entry_size(ae));
 	}
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 DEFINE_TEST(test_write_format_mtree)

@@ -60,30 +60,30 @@ DEFINE_TEST(test_read_large)
 	assertA((int)sizeof(testdata) == archive_write_data(a, testdata, sizeof(testdata)));
 	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
-	assert(NULL != (a = archive_read_new()));
-	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_support_compression_all(a));
-	assertA(0 == archive_read_open_memory(a, buff, sizeof(buff)));
-	assertA(0 == archive_read_next_header(a, &entry));
-	assertA(0 == archive_read_data_into_buffer(a, testdatacopy, sizeof(testdatacopy)));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assert(NULL != (a = transform_read_new()));
+	assertA(0 == transform_read_support_format_all(a));
+	assertA(0 == transform_read_support_compression_all(a));
+	assertA(0 == transform_read_open_memory(a, buff, sizeof(buff)));
+	assertA(0 == transform_read_next_header(a, &entry));
+	assertA(0 == transform_read_data_into_buffer(a, testdatacopy, sizeof(testdatacopy)));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 	assert(0 == memcmp(testdata, testdatacopy, sizeof(testdata)));
 
 
-	assert(NULL != (a = archive_read_new()));
-	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_support_compression_all(a));
-	assertA(0 == archive_read_open_memory(a, buff, sizeof(buff)));
-	assertA(0 == archive_read_next_header(a, &entry));
+	assert(NULL != (a = transform_read_new()));
+	assertA(0 == transform_read_support_format_all(a));
+	assertA(0 == transform_read_support_compression_all(a));
+	assertA(0 == transform_read_open_memory(a, buff, sizeof(buff)));
+	assertA(0 == transform_read_next_header(a, &entry));
 #if defined(__BORLANDC__)
 	tmpfilefd = open(tmpfilename, O_WRONLY | O_CREAT | O_BINARY);
 #else
 	tmpfilefd = open(tmpfilename, O_WRONLY | O_CREAT | O_BINARY, 0755);
 #endif
 	assert(0 < tmpfilefd);
-	assertA(0 == archive_read_data_into_fd(a, tmpfilefd));
+	assertA(0 == transform_read_data_into_fd(a, tmpfilefd));
 	close(tmpfilefd);
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 
 	f = fopen(tmpfilename, "rb");
 	assertEqualInt(sizeof(testdatacopy),

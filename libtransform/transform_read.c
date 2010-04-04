@@ -32,7 +32,7 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read.c 201157 2009-12-29 05:30:23Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libarchive/transform_read.c 201157 2009-12-29 05:30:23Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -57,15 +57,15 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read.c 201157 2009-12-29 05:30:2
 static int	build_stream(struct transform_read *);
 static void	free_filters(struct transform_read *);
 static int	close_filters(struct transform_read *);
-static struct transform_vtable *archive_read_vtable(void);
+static struct transform_vtable *transform_read_vtable(void);
 static int64_t	_archive_filter_bytes(struct transform *, int);
 static int	_archive_filter_code(struct transform *, int);
 static const char *_archive_filter_name(struct transform *, int);
-static int	_archive_read_close(struct transform *);
-static int	_archive_read_free(struct transform *);
+static int	_transform_read_close(struct transform *);
+static int	_transform_read_free(struct transform *);
 
 static struct transform_vtable *
-archive_read_vtable(void)
+transform_read_vtable(void)
 {
 	static struct transform_vtable av;
 	static int inited = 0;
@@ -74,8 +74,8 @@ archive_read_vtable(void)
 		av.archive_filter_bytes = _archive_filter_bytes;
 		av.archive_filter_code = _archive_filter_code;
 		av.archive_filter_name = _archive_filter_name;
-		av.archive_free = _archive_read_free;
-		av.archive_close = _archive_read_close;
+		av.archive_free = _transform_read_free;
+		av.archive_close = _transform_read_close;
 	}
 	return (&av);
 }
@@ -84,7 +84,7 @@ archive_read_vtable(void)
  * Allocate, initialize and return a struct transform object.
  */
 struct transform *
-archive_read_new(void)
+transform_read_new(void)
 {
 	struct transform_read *a;
 
@@ -95,7 +95,7 @@ archive_read_new(void)
 	a->archive.magic = ARCHIVE_READ_MAGIC;
 
 	a->archive.state = ARCHIVE_STATE_NEW;
-	a->archive.vtable = archive_read_vtable();
+	a->archive.vtable = transform_read_vtable();
 
 	return (&a->archive);
 }
@@ -104,7 +104,7 @@ archive_read_new(void)
  * Set read options for the filter.
  */
 int
-archive_read_set_filter_options(struct transform *_a, const char *s)
+transform_read_set_filter_options(struct transform *_a, const char *s)
 {
 	struct transform_read *a;
 	struct transform_read_filter *filter;
@@ -113,7 +113,7 @@ archive_read_set_filter_options(struct transform *_a, const char *s)
 	int len, r;
 
 	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
-	    "archive_read_set_filter_options");
+	    "transform_read_set_filter_options");
 
 	if (s == NULL || *s == '\0')
 		return (ARCHIVE_OK);
@@ -149,15 +149,15 @@ archive_read_set_filter_options(struct transform *_a, const char *s)
  * Set read options for the format and the filter.
  */
 int
-archive_read_set_options(struct transform *_a, const char *s)
+transform_read_set_options(struct transform *_a, const char *s)
 {
 	int r;
 
 	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
-	    "archive_read_set_options");
+	    "transform_read_set_options");
 	archive_clear_error(_a);
 
-	r = archive_read_set_filter_options(_a, s);
+	r = transform_read_set_filter_options(_a, s);
 	if (r != ARCHIVE_OK)
 		return (r);
 	return (ARCHIVE_OK);
@@ -167,13 +167,13 @@ archive_read_set_options(struct transform *_a, const char *s)
  * Open the archive
  */
 int
-archive_read_open(struct transform *a, void *client_data,
-    archive_open_callback *client_opener, archive_read_callback *client_reader,
+transform_read_open(struct transform *a, void *client_data,
+    archive_open_callback *client_opener, transform_read_callback *client_reader,
     archive_close_callback *client_closer)
 {
-	/* Old archive_read_open() is just a thin shell around
-	 * archive_read_open2. */
-	return archive_read_open2(a, client_data, client_opener,
+	/* Old transform_read_open() is just a thin shell around
+	 * transform_read_open2. */
+	return transform_read_open2(a, client_data, client_opener,
 	    client_reader, NULL, client_closer);
 }
 
@@ -224,9 +224,9 @@ client_close_proxy(struct transform_read_filter *self)
 
 
 int
-archive_read_open2(struct transform *_a, void *client_data,
+transform_read_open2(struct transform *_a, void *client_data,
     archive_open_callback *client_opener,
-    archive_read_callback *client_reader,
+    transform_read_callback *client_reader,
     archive_skip_callback *client_skipper,
     archive_close_callback *client_closer)
 {
@@ -235,12 +235,12 @@ archive_read_open2(struct transform *_a, void *client_data,
 	int e;
 
 	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
-	    "archive_read_open");
+	    "transform_read_open");
 	archive_clear_error(&a->archive);
 
 	if (client_reader == NULL)
 		__archive_errx(1,
-		    "No reader function provided to archive_read_open");
+		    "No reader function provided to transform_read_open");
 
 	/* Open data source. */
 	if (client_opener != NULL) {
@@ -330,7 +330,7 @@ build_stream(struct transform_read *a)
 		}
 		a->filter = filter;
 		/* Verify the filter by asking it for some data. */
-		__archive_read_filter_ahead(filter, 1, &avail);
+		__transform_read_filter_ahead(filter, 1, &avail);
 		if (avail < 0) {
 			close_filters(a);
 			free_filters(a);
@@ -342,16 +342,16 @@ build_stream(struct transform_read *a)
 /*
  * Read data from an archive entry, using a read(2)-style interface.
  * This is a convenience routine that just calls
- * archive_read_data_block and copies the results into the client
+ * transform_read_data_block and copies the results into the client
  * buffer, filling any gaps with zero bytes.  Clients using this
  * API can be completely ignorant of sparse-file issues; sparse files
  * will simply be padded with nulls.
  *
- * DO NOT intermingle calls to this function and archive_read_data_block
+ * DO NOT intermingle calls to this function and transform_read_data_block
  * to read a single entry body.
  */
 ssize_t
-archive_read_data(struct transform *_a, void *buff, size_t s)
+transform_read_data(struct transform *_a, void *buff, size_t s)
 {
 	struct transform_read *a = (struct transform_read *)_a;
 	char	*dest;
@@ -366,7 +366,7 @@ archive_read_data(struct transform *_a, void *buff, size_t s)
 	while (s > 0) {
 		if (a->read_data_remaining == 0) {
 			read_buf = a->read_data_block;
-			r = archive_read_data_block(&a->archive, &read_buf,
+			r = transform_read_data_block(&a->archive, &read_buf,
 			    &a->read_data_remaining, &a->read_data_offset);
 			a->read_data_block = read_buf;
 			if (r == ARCHIVE_EOF)
@@ -432,17 +432,17 @@ archive_read_data(struct transform *_a, void *buff, size_t s)
  */
 #if ARCHIVE_VERSION_NUMBER < 3000000
 int
-archive_read_data_block(struct transform *_a,
+transform_read_data_block(struct transform *_a,
     const void **buff, size_t *size, off_t *offset)
 #else
 int
-archive_read_data_block(struct transform *_a,
+transform_read_data_block(struct transform *_a,
     const void **buff, size_t *size, int64_t *offset)
 #endif
 {
 	struct transform_read *a = (struct transform_read *)_a;
 	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_DATA,
-	    "archive_read_data_block");
+	    "transform_read_data_block");
 
 	if (a->format->read_data == NULL) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_PROGRAMMER,
@@ -488,13 +488,13 @@ free_filters(struct transform_read *a)
  * Close the file and all I/O.
  */
 static int
-_archive_read_close(struct transform *_a)
+_transform_read_close(struct transform *_a)
 {
 	struct transform_read *a = (struct transform_read *)_a;
 	int r = ARCHIVE_OK, r1 = ARCHIVE_OK;
 
 	archive_check_magic(&a->archive, ARCHIVE_READ_MAGIC,
-	    ARCHIVE_STATE_ANY | ARCHIVE_STATE_FATAL, "archive_read_close");
+	    ARCHIVE_STATE_ANY | ARCHIVE_STATE_FATAL, "transform_read_close");
 	archive_clear_error(&a->archive);
 	if (a->archive.state != ARCHIVE_STATE_FATAL)
 		a->archive.state = ARCHIVE_STATE_CLOSED;
@@ -513,7 +513,7 @@ _archive_read_close(struct transform *_a)
  * Release memory and other resources.
  */
 static int
-_archive_read_free(struct transform *_a)
+_transform_read_free(struct transform *_a)
 {
 	struct transform_read *a = (struct transform_read *)_a;
 	int i, n;
@@ -523,10 +523,10 @@ _archive_read_free(struct transform *_a)
 	if (_a == NULL)
 		return (ARCHIVE_OK);
 	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
-	    ARCHIVE_STATE_ANY | ARCHIVE_STATE_FATAL, "archive_read_free");
+	    ARCHIVE_STATE_ANY | ARCHIVE_STATE_FATAL, "transform_read_free");
 	if (a->archive.state != ARCHIVE_STATE_CLOSED
 	    && a->archive.state != ARCHIVE_STATE_FATAL)
-		r = archive_read_close(&a->archive);
+		r = transform_read_close(&a->archive);
 
 	/* Call cleanup functions registered by optional components. */
 	if (a->cleanup_archive_extract != NULL)
@@ -600,7 +600,7 @@ _archive_filter_bytes(struct transform *_a, int n)
  * initialization functions.
  */
 struct transform_read_filter_bidder *
-__archive_read_get_bidder(struct transform_read *a)
+__transform_read_get_bidder(struct transform_read *a)
 {
 	int i, number_slots;
 
@@ -624,17 +624,17 @@ __archive_read_get_bidder(struct transform_read *a)
  * zero-copy manner most of the time.
  *
  * In the ideal case, filters generate blocks of data
- * and __archive_read_ahead() just returns pointers directly into
- * those blocks.  Then __archive_read_consume() just bumps those
+ * and __transform_read_ahead() just returns pointers directly into
+ * those blocks.  Then __transform_read_consume() just bumps those
  * pointers.  Only if your request would span blocks does the I/O
  * layer use a copy buffer to provide you with a contiguous block of
- * data.  The __archive_read_skip() is an optimization; it scans ahead
+ * data.  The __transform_read_skip() is an optimization; it scans ahead
  * very quickly (it usually translates into a seek() operation if
  * you're reading uncompressed disk files).
  *
  * A couple of useful idioms:
  *  * "I just want some data."  Ask for 1 byte and pay attention to
- *    the "number of bytes available" from __archive_read_ahead().
+ *    the "number of bytes available" from __transform_read_ahead().
  *    You can consume more than you asked for; you just can't consume
  *    more than is available.  If you consume everything that's
  *    immediately available, the next read_ahead() call will pull
@@ -649,7 +649,7 @@ __archive_read_get_bidder(struct transform_read *a)
  *    technique is used, for example, by some of the format tasting
  *    code that has uncertain look-ahead needs.
  *
- * TODO: Someday, provide a more generic __archive_read_seek() for
+ * TODO: Someday, provide a more generic __transform_read_seek() for
  * those cases where it's useful.  This is tricky because there are lots
  * of cases where seek() is not available (reading gzip data from a
  * network socket, for instance), so there needs to be a good way to
@@ -672,7 +672,7 @@ __archive_read_get_bidder(struct transform_read *a)
  * a NULL return as an error.
  *
  * Important:  This does NOT move the file pointer.  See
- * __archive_read_consume() below.
+ * __transform_read_consume() below.
  */
 
 /*
@@ -686,13 +686,13 @@ __archive_read_get_bidder(struct transform_read *a)
  * into an internal buffer to combine reads.
  */
 const void *
-__archive_read_ahead(struct transform_read *a, size_t min, ssize_t *avail)
+__transform_read_ahead(struct transform_read *a, size_t min, ssize_t *avail)
 {
-	return (__archive_read_filter_ahead(a->filter, min, avail));
+	return (__transform_read_filter_ahead(a->filter, min, avail));
 }
 
 const void *
-__archive_read_filter_ahead(struct transform_read_filter *filter,
+__transform_read_filter_ahead(struct transform_read_filter *filter,
     size_t min, ssize_t *avail)
 {
 	ssize_t bytes_read;
@@ -854,9 +854,9 @@ __archive_read_filter_ahead(struct transform_read_filter *filter,
 
 /*
  * Move the file pointer forward.  This should be called after
- * __archive_read_ahead() returns data to you.  Don't try to move
+ * __transform_read_ahead() returns data to you.  Don't try to move
  * ahead by more than the amount of data available according to
- * __archive_read_ahead().
+ * __transform_read_ahead().
  */
 /*
  * Mark the appropriate data as used.  Note that the request here will
@@ -864,13 +864,13 @@ __archive_read_filter_ahead(struct transform_read_filter *filter,
  * request.
  */
 ssize_t
-__archive_read_consume(struct transform_read *a, size_t request)
+__transform_read_consume(struct transform_read *a, size_t request)
 {
-	return (__archive_read_filter_consume(a->filter, request));
+	return (__transform_read_filter_consume(a->filter, request));
 }
 
 ssize_t
-__archive_read_filter_consume(struct transform_read_filter * filter,
+__transform_read_filter_consume(struct transform_read_filter * filter,
     size_t request)
 {
 	if (filter->avail > 0) {
@@ -894,9 +894,9 @@ __archive_read_filter_consume(struct transform_read_filter * filter,
  * down closer to the data source.
  */
 int64_t
-__archive_read_skip(struct transform_read *a, int64_t request)
+__transform_read_skip(struct transform_read *a, int64_t request)
 {
-	int64_t skipped = __archive_read_skip_lenient(a, request);
+	int64_t skipped = __transform_read_skip_lenient(a, request);
 	if (skipped == request)
 		return (skipped);
 	/* We hit EOF before we satisfied the skip request. */
@@ -910,13 +910,13 @@ __archive_read_skip(struct transform_read *a, int64_t request)
 }
 
 int64_t
-__archive_read_skip_lenient(struct transform_read *a, int64_t request)
+__transform_read_skip_lenient(struct transform_read *a, int64_t request)
 {
-	return (__archive_read_filter_skip(a->filter, request));
+	return (__transform_read_filter_skip(a->filter, request));
 }
 
 int64_t
-__archive_read_filter_skip(struct transform_read_filter *filter, int64_t request)
+__transform_read_filter_skip(struct transform_read_filter *filter, int64_t request)
 {
 	int64_t bytes_skipped, total_bytes_skipped = 0;
 	size_t min;
@@ -928,13 +928,13 @@ __archive_read_filter_skip(struct transform_read_filter *filter, int64_t request
 	 */
 	if (filter->avail > 0) {
 		min = minimum(request, (off_t)filter->avail);
-		bytes_skipped = __archive_read_filter_consume(filter, min);
+		bytes_skipped = __transform_read_filter_consume(filter, min);
 		request -= bytes_skipped;
 		total_bytes_skipped += bytes_skipped;
 	}
 	if (filter->client_avail > 0) {
 		min = minimum(request, (int64_t)filter->client_avail);
-		bytes_skipped = __archive_read_filter_consume(filter, min);
+		bytes_skipped = __transform_read_filter_consume(filter, min);
 		request -= bytes_skipped;
 		total_bytes_skipped += bytes_skipped;
 	}
@@ -966,14 +966,14 @@ __archive_read_filter_skip(struct transform_read_filter *filter, int64_t request
 	 */
 	while (request > 0) {
 		ssize_t bytes_read;
-		(void)__archive_read_filter_ahead(filter, 1, &bytes_read);
+		(void)__transform_read_filter_ahead(filter, 1, &bytes_read);
 		if (bytes_read < 0)
 			return (bytes_read);
 		if (bytes_read == 0) {
 			return (total_bytes_skipped);
 		}
 		min = (size_t)(minimum(bytes_read, request));
-		bytes_read = __archive_read_filter_consume(filter, min);
+		bytes_read = __transform_read_filter_consume(filter, min);
 		total_bytes_skipped += bytes_read;
 		request -= bytes_read;
 	}

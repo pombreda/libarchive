@@ -33,7 +33,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/read_open_memory.c 191183 2009-04-1
 /*
  * Read an archive from a block of memory.
  *
- * This is identical to archive_read_open_memory(), except
+ * This is identical to transform_read_open_memory(), except
  * that it goes out of its way to be a little bit unpleasant,
  * in order to better test the libarchive internals.
  */
@@ -95,10 +95,10 @@ read_open_memory_internal(struct transform *a, void *buff,
 	mine->copy_buff = malloc(mine->copy_buff_size);
 	memset(mine->copy_buff, 0xA5, mine->copy_buff_size);
 	if (fullapi)
-		return (archive_read_open2(a, mine, memory_read_open,
+		return (transform_read_open2(a, mine, memory_read_open,
 			    memory_read, memory_read_skip, memory_read_close));
 	else
-		return (archive_read_open2(a, mine, NULL,
+		return (transform_read_open2(a, mine, NULL,
 			    memory_read, NULL, memory_read_close));
 }
 

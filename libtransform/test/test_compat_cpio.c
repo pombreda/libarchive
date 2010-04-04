@@ -47,14 +47,14 @@ test_compat_cpio_1(void)
 	struct transform_entry *ae;
 	struct transform *a;
 
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
 	extract_reference_file(name);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_filename(a, name, 17));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_filename(a, name, 17));
 
 	/* Read first entry. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
 	assertEqualString("foo1", archive_entry_pathname(ae));
 	assertEqualString(NULL, archive_entry_hardlink(ae));
 	assertEqualInt(1260250228, archive_entry_mtime(ae));
@@ -63,7 +63,7 @@ test_compat_cpio_1(void)
 	assertEqualInt(0100644, archive_entry_mode(ae));
 
 	/* Read second entry. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
 	assertEqualString("foo2", archive_entry_pathname(ae));
 	assertEqualString(NULL, archive_entry_hardlink(ae));
 	assertEqualInt(1260250228, archive_entry_mtime(ae));
@@ -72,7 +72,7 @@ test_compat_cpio_1(void)
 	assertEqualInt(0100644, archive_entry_mode(ae));
 
 	/* Read third entry. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
 	assertEqualString("bar1", archive_entry_pathname(ae));
 	assertEqualString(NULL, archive_entry_hardlink(ae));
 	assertEqualInt(1260250228, archive_entry_mtime(ae));
@@ -81,7 +81,7 @@ test_compat_cpio_1(void)
 	assertEqualInt(0100644, archive_entry_mode(ae));
 
 	/* Read fourth entry. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
 	assertEqualString("bar2", archive_entry_pathname(ae));
 	assertEqualString("bar1", archive_entry_hardlink(ae));
 	assertEqualInt(1260250228, archive_entry_mtime(ae));
@@ -93,8 +93,8 @@ test_compat_cpio_1(void)
 	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_NONE);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_CPIO_SVR4_NOCRC);
 
-	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 

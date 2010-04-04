@@ -37,8 +37,8 @@ Guide to Documentation installed by this system:
  * bsdtar.1 explains the use of the bsdtar program
  * bsdcpio.1 explains the use of the bsdcpio program
  * libarchive.3 gives an overview of the library as a whole
- * archive_read.3, archive_write.3, archive_write_disk.3, and
-   archive_read_disk.3 provide detailed calling sequences for the read
+ * transform_read.3, archive_write.3, archive_write_disk.3, and
+   transform_read_disk.3 provide detailed calling sequences for the read
    and write APIs
  * archive_entry.3 details the "struct transform_entry" utility class
  * archive_internals.3 provides some insight into libarchive's

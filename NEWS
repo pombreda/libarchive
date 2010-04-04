@@ -28,7 +28,7 @@ Apr 01, 2009: Use command-line gunzip, bunzip2, unxz, unlzma for
 	libraries.  The setup functions return ARCHIVE_WARN
 	in this case so clients can adapt if necessary.
 Apr 01, 2009: Use getpw*_r and getgr*_r functions for thread-safety.
-Mar 24, 2009: Add archive_read_next_header2(), which is up to 25%
+Mar 24, 2009: Add transform_read_next_header2(), which is up to 25%
 	more efficient for some clients; from Brian Harring.
 Mar 22, 2009: PDF versions of manpages are now included in the distribution.
 Mar, 2009: Major work to improve Cygwin build by Charles Wilson.
@@ -42,7 +42,7 @@ Feb, 2009: Joliet support by Andreas Henriksson.
 Jan/Feb, 2009: New options framework by Michihiro.
 Feb, 2009: High-res timestamps on Tru64, AIX, and GNU Hurd, by Björn Jacke.
 Jan 18, 2009: Extended attributes work on FreeBSD and Linux now	with pax format.
-Jan 07, 2009: New archive_read_disk_entry_from_file() knows about ACLs,
+Jan 07, 2009: New transform_read_disk_entry_from_file() knows about ACLs,
 	extended attributes, etc so that bsdtar and bsdcpio don't require
 	such system-specific knowledge.
 Jan 03, 2009: Read filter system extensively refactored.  In particular,
@@ -77,8 +77,8 @@ Sep 17, 2008: Pedro Giffuni: birthtime support
 Sep 17, 2008: Miklos Vajna: lzma reader and test.  Note:  I still have
 	some concerns about the auto-detection (LZMA file format
 	doesn't support auto-detection well), so this is not yet
-	enabled under archive_read_support_compression_all().  For
-	now, you must call archive_read_support_compression_lzma() if
+	enabled under transform_read_support_compression_all().  For
+	now, you must call transform_read_support_compression_lzma() if
 	you want LZMA read support.
 Sep 11, 2008: Ivailo Petrov: Many fixes to Windows build, new solution files
 Jul 26, 2008: archive_entry now tracks which values have not been set.
@@ -309,7 +309,7 @@ May 26, 2007: Fix memory leaks in ZIP reader and shar writer, add some
 May 12, 2007: libarchive 2.2.2 released
 May 12, 2007: Fix archive_write_disk permission restore by cloning
 	entry passed into write_header so that permission info is
-	still available at finish_entry time.  (archive_read_extract()
+	still available at finish_entry time.  (transform_read_extract()
 	worked okay because it held onto the passed-in entry, but
 	direct consumers of archive_write_disk would break).  This
 	required fixing archive_entry_clone(), which now works and has
@@ -440,7 +440,7 @@ Jan 31, 2007: Added read support for "empty" archives as a
 
 Jan 22, 2007: libarchive 2.0b6 released
 Jan 22, 2007: archive_write_disk API is now in place.  It provides
-    a finer-grained interface than archive_read_extract.  In particular,
+    a finer-grained interface than transform_read_extract.  In particular,
     you can use it to create objects on disk without having an archive
     around (just feed it archive_entry objects describing what you
     want to create), you can override the uname/gname-to-uid/gid lookups
@@ -468,7 +468,7 @@ Aug 17, 2006: libarchive 1.2.54 released
 Aug 17, 2006: Outline ABI changes for libarchive 2.0; these
    are protected behind #ifdef's until I think I've found everything
    that needs to change.
-Aug 17, 2006: Fix error-handling in archive_read/write_close()
+Aug 17, 2006: Fix error-handling in transform_read/write_close()
    They weren't returning any errors before.
 Aug 17, 2006: Fix recursive-add logic to not trigger if it's not set
    Fixes a bug adding files when writing archive to pipe or when
@@ -496,7 +496,7 @@ Mar 11, 2006: Reorganized distribution package: There is now one tar.gz
 Feb 13, 2006: Minor bug fixes: correctly read cpio device entries, write
    Pax attribute entry names.
 Nov 7, 2005: Experimental 'tp' format support in libarchive.  Feedback
-   appreciated; this is not enabled by archive_read_support_format_all()
+   appreciated; this is not enabled by transform_read_support_format_all()
    yet as I'm not quite content with the format detection heuristics.
 Nov 7, 2005: Some more portability improvements thanks to Darin Broady,
    minor bugfixes.
@@ -506,7 +506,7 @@ Apr 17, 2005: Kees Zeelenberg has ported libarchive and bsdtar to Windows:
    http://gnuwin32.sourceforge.net/
 Apr 11, 2005: Extended Zip/Zip64 support thanks to Dan Nelson.  -L/-h
    fix from Jaakko Heinonen.
-Mar 12, 2005: archive_read_extract can now handle very long
+Mar 12, 2005: transform_read_extract can now handle very long
    pathnames (I've tested with pathnames up to 1MB).
 Mar 12, 2005: Marcus Geiger has written an article about libarchive
    http://xsnil.antbear.org/2005/02/05/archive-mit-libarchive-verarbeiten/

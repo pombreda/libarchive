@@ -106,13 +106,13 @@ test_filename(const char *prefix, int dlen, int flen)
 	/*
 	 * Now, read the data back.
 	 */
-	assert((a = archive_read_new()) != NULL);
-	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_support_compression_all(a));
-	assertA(0 == archive_read_open_memory(a, buff, used));
+	assert((a = transform_read_new()) != NULL);
+	assertA(0 == transform_read_support_format_all(a));
+	assertA(0 == transform_read_support_compression_all(a));
+	assertA(0 == transform_read_open_memory(a, buff, used));
 
 	/* Read the file and check the filename. */
-	assertA(0 == archive_read_next_header(a, &ae));
+	assertA(0 == transform_read_next_header(a, &ae));
 	assertEqualString(filename, archive_entry_pathname(ae));
 	assertEqualInt((S_IFREG | 0755), archive_entry_mode(ae));
 
@@ -124,18 +124,18 @@ test_filename(const char *prefix, int dlen, int flen)
 	 * already have one.  We only report the first such failure
 	 * here.
 	 */
-	assertA(0 == archive_read_next_header(a, &ae));
+	assertA(0 == transform_read_next_header(a, &ae));
 	assertEqualString(dirname, archive_entry_pathname(ae));
 	assert((S_IFDIR | 0755) == archive_entry_mode(ae));
 
-	assertA(0 == archive_read_next_header(a, &ae));
+	assertA(0 == transform_read_next_header(a, &ae));
 	assertEqualString(dirname, archive_entry_pathname(ae));
 	assert((S_IFDIR | 0755) == archive_entry_mode(ae));
 
 	/* Verify the end of the archive. */
-	assert(1 == archive_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assert(1 == transform_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 DEFINE_TEST(test_tar_filenames)

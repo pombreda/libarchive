@@ -126,13 +126,13 @@ test_format(int	(*set_format)(struct transform *))
 	/*
 	 * Now, read the data back.
 	 */
-	assert((a = archive_read_new()) != NULL);
-	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_support_compression_all(a));
-	assertA(0 == archive_read_open_memory(a, buff, used));
+	assert((a = transform_read_new()) != NULL);
+	assertA(0 == transform_read_support_format_all(a));
+	assertA(0 == transform_read_support_compression_all(a));
+	assertA(0 == transform_read_open_memory(a, buff, used));
 
-	if (!assertEqualIntA(a, 0, archive_read_next_header(a, &ae))) {
-		archive_read_free(a);
+	if (!assertEqualIntA(a, 0, transform_read_next_header(a, &ae))) {
+		transform_read_free(a);
 		return;
 	}
 
@@ -144,7 +144,7 @@ test_format(int	(*set_format)(struct transform *))
 	assertEqualString("file", archive_entry_pathname(ae));
 	assertEqualInt((S_IFREG | 0755), archive_entry_mode(ae));
 	assertEqualInt(8, archive_entry_size(ae));
-	assertA(8 == archive_read_data(a, filedata, 10));
+	assertA(8 == transform_read_data(a, filedata, 10));
 	assert(0 == memcmp(filedata, "12345678", 8));
 
 	/*
@@ -155,7 +155,7 @@ test_format(int	(*set_format)(struct transform *))
 	 * Read the dir entry back.
 	 * ARCHIVE_WARN here because the damaged entry was skipped.
 	 */
-	assertEqualIntA(a, ARCHIVE_WARN, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_WARN, transform_read_next_header(a, &ae));
 	assertEqualInt(11, archive_entry_mtime(ae));
 	assert(0 == archive_entry_mtime_nsec(ae));
 	assert(0 == archive_entry_atime(ae));
@@ -163,12 +163,12 @@ test_format(int	(*set_format)(struct transform *))
 	assertEqualString("dir", archive_entry_pathname(ae));
 	assertEqualInt((S_IFDIR | 0755), archive_entry_mode(ae));
 	assertEqualInt(0, archive_entry_size(ae));
-	assertEqualIntA(a, 0, archive_read_data(a, filedata, 10));
+	assertEqualIntA(a, 0, transform_read_data(a, filedata, 10));
 
 	/* Verify the end of the archive. */
-	assertEqualIntA(a, 1, archive_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, 1, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 
 	free(buff);
 }

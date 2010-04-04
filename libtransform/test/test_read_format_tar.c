@@ -65,18 +65,18 @@ static void verifyEmpty(void)
 	struct transform_entry *ae;
 	struct transform *a;
 
-	assert((a = archive_read_new()) != NULL);
-	assertA(0 == archive_read_support_compression_all(a));
-	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_open_memory(a, archiveEmpty, 512));
-	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
+	assert((a = transform_read_new()) != NULL);
+	assertA(0 == transform_read_support_compression_all(a));
+	assertA(0 == transform_read_support_format_all(a));
+	assertA(0 == transform_read_open_memory(a, archiveEmpty, 512));
+	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
 	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_NONE);
 	assertEqualString(archive_compression_name(a), "none");
 	failure("512 zero bytes should be recognized as a tar archive.");
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR);
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 /* Single entry with a hardlink. */
@@ -432,19 +432,19 @@ static void verify(unsigned char *d, size_t s,
 	memcpy(buff, d, s);
 	memset(buff + s, 0, 2048);
 
-	assert((a = archive_read_new()) != NULL);
-	assertA(0 == archive_read_support_compression_all(a));
-	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_open_memory(a, buff, s + 1024));
-	assertA(0 == archive_read_next_header(a, &ae));
+	assert((a = transform_read_new()) != NULL);
+	assertA(0 == transform_read_support_compression_all(a));
+	assertA(0 == transform_read_support_format_all(a));
+	assertA(0 == transform_read_open_memory(a, buff, s + 1024));
+	assertA(0 == transform_read_next_header(a, &ae));
 	assertEqualInt(archive_compression(a), compression);
 	assertEqualInt(archive_format(a), format);
 
 	/* Verify the only entry. */
 	f(ae);
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 	free(buff);
 }
 

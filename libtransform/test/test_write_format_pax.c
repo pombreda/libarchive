@@ -113,15 +113,15 @@ DEFINE_TEST(test_write_format_pax)
 	 * Now, read the data back.
 	 *
 	 */
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, 0, archive_read_support_format_all(a));
-	assertEqualIntA(a, 0, archive_read_support_compression_all(a));
-	assertEqualIntA(a, 0, archive_read_open_memory(a, buff, used));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, 0, transform_read_support_format_all(a));
+	assertEqualIntA(a, 0, transform_read_support_compression_all(a));
+	assertEqualIntA(a, 0, transform_read_open_memory(a, buff, used));
 
 	/*
 	 * Read "file"
 	 */
-	assertEqualIntA(a, 0, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
 	assertEqualInt(2, archive_entry_atime(ae));
 	assertEqualInt(20, archive_entry_atime_nsec(ae));
 	assertEqualInt(3, archive_entry_birthtime(ae));
@@ -133,13 +133,13 @@ DEFINE_TEST(test_write_format_pax)
 	assertEqualString("file", archive_entry_pathname(ae));
 	assert((S_IFREG | 0755) == archive_entry_mode(ae));
 	assertEqualInt(8, archive_entry_size(ae));
-	assertEqualIntA(a, 8, archive_read_data(a, buff2, 10));
+	assertEqualIntA(a, 8, transform_read_data(a, buff2, 10));
 	assertEqualMem(buff2, "12345678", 8);
 
 	/*
 	 * Read "file2"
 	 */
-	assertEqualIntA(a, 0, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
 	assert(archive_entry_atime_is_set(ae));
 	assertEqualInt(2, archive_entry_atime(ae));
 	assertEqualInt(20, archive_entry_atime_nsec(ae));
@@ -156,13 +156,13 @@ DEFINE_TEST(test_write_format_pax)
 	assertEqualString("file2", archive_entry_pathname(ae));
 	assert((S_IFREG | 0755) == archive_entry_mode(ae));
 	assertEqualInt(8, archive_entry_size(ae));
-	assertEqualIntA(a, 8, archive_read_data(a, buff2, 10));
+	assertEqualIntA(a, 8, transform_read_data(a, buff2, 10));
 	assertEqualMem(buff2, "12345678", 8);
 
 	/*
 	 * Read "file3"
 	 */
-	assertEqualIntA(a, 0, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, 0, transform_read_next_header(a, &ae));
 	assertEqualInt(2, archive_entry_atime(ae));
 	assertEqualInt(20, archive_entry_atime_nsec(ae));
 	assertEqualInt(3, archive_entry_birthtime(ae));
@@ -181,19 +181,19 @@ DEFINE_TEST(test_write_format_pax)
 	assertEqualInt(8, length);
 	for (i = 0; i < 1024000; i += 1024) {
 		int j;
-		assertEqualIntA(a, 1024, archive_read_data(a, nulls, 1024));
+		assertEqualIntA(a, 1024, transform_read_data(a, nulls, 1024));
 		for (j = 0; j < 1024; j++)
 			assertEqualInt(0, nulls[j]);
 	}
-	assertEqualIntA(a, 8, archive_read_data(a, buff2, 10));
+	assertEqualIntA(a, 8, transform_read_data(a, buff2, 10));
 	assertEqualMem(buff2, "12345678", 8);
 
 	/*
 	 * Verify the end of the archive.
 	 */
-	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_free(a));
 
 	free(buff);
 }

@@ -189,24 +189,24 @@ verify_archive_file(const char *name, struct transform_contents *ac)
 
 	extract_reference_file(name);
 
-	assert((a = archive_read_new()) != NULL);
-	assert(0 == archive_read_support_compression_all(a));
-	assert(0 == archive_read_support_format_tar(a));
+	assert((a = transform_read_new()) != NULL);
+	assert(0 == transform_read_support_compression_all(a));
+	assert(0 == transform_read_support_format_tar(a));
 	failure("Can't open %s", name);
-	assert(0 == archive_read_open_filename(a, name, 3));
+	assert(0 == transform_read_open_filename(a, name, 3));
 
 	while (ac->filename != NULL) {
 		struct contents *cts = ac->contents;
 
-		if (!assertEqualIntA(a, 0, archive_read_next_header(a, &ae))) {
-			assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+		if (!assertEqualIntA(a, 0, transform_read_next_header(a, &ae))) {
+			assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 			return;
 		}
 		failure("Name mismatch in archive %s", name);
 		assertEqualString(ac->filename, archive_entry_pathname(ae));
 
 		expect = *cts++;
-		while (0 == (err = archive_read_data_block(a,
+		while (0 == (err = transform_read_data_block(a,
 				 &p, &actual.s, &actual.o))) {
 			actual.d = p;
 			while (actual.s > 0) {
@@ -237,7 +237,7 @@ verify_archive_file(const char *name, struct transform_contents *ac)
 					failure("%s: Unexpected trailing data",
 					    name);
 					assert(actual.o <= expect.o);
-					archive_read_free(a);
+					transform_read_free(a);
 					return;
 				}
 				actual.d++;
@@ -255,11 +255,11 @@ verify_archive_file(const char *name, struct transform_contents *ac)
 		++ac;
 	}
 
-	err = archive_read_next_header(a, &ae);
+	err = transform_read_next_header(a, &ae);
 	assertEqualIntA(a, ARCHIVE_EOF, err);
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 

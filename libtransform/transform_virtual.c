@@ -60,7 +60,7 @@ archive_write_close(struct transform *a)
 }
 
 int
-archive_read_close(struct transform *a)
+transform_read_close(struct transform *a)
 {
 	return ((a->vtable->archive_close)(a));
 }
@@ -81,7 +81,7 @@ archive_write_finish(struct transform *a)
 #endif
 
 int
-archive_read_free(struct transform *a)
+transform_read_free(struct transform *a)
 {
 	return ((a->vtable->archive_free)(a));
 }
@@ -89,7 +89,7 @@ archive_read_free(struct transform *a)
 #if ARCHIVE_VERSION_NUMBER < 4000000
 /* For backwards compatibility; will be removed with libarchive 4.0. */
 int
-archive_read_finish(struct transform *a)
+transform_read_finish(struct transform *a)
 {
 	return ((a->vtable->archive_free)(a));
 }

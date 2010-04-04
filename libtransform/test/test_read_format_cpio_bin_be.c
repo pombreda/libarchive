@@ -32,12 +32,12 @@ DEFINE_TEST(test_read_format_cpio_bin_be)
 	const char *reference = "test_read_format_cpio_bin_be.cpio";
 
 	extract_reference_file(reference);
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_open_filename(a, reference, 10));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	    transform_read_open_filename(a, reference, 10));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
 	assertEqualString(archive_entry_pathname(ae), "file1111222233334444");
 	assertEqualInt(archive_entry_size(ae), 5);
 	assertEqualInt(archive_entry_mtime(ae), 1240664175);
@@ -47,9 +47,9 @@ DEFINE_TEST(test_read_format_cpio_bin_be)
 
 	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_NONE);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_CPIO_BIN_BE);
-	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 

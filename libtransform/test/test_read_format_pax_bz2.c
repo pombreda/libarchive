@@ -46,21 +46,21 @@ DEFINE_TEST(test_read_format_pax_bz2)
 	struct transform *a;
 	int r;
 
-	assert((a = archive_read_new()) != NULL);
-	r = archive_read_support_compression_bzip2(a);
+	assert((a = transform_read_new()) != NULL);
+	r = transform_read_support_compression_bzip2(a);
 	if (r != ARCHIVE_OK) {
-		archive_read_close(a);
+		transform_read_close(a);
 		skipping("Bzip2 unavailable");
 		return;
 	}
-	assertEqualIntA(a,ARCHIVE_OK, archive_read_support_format_all(a));
+	assertEqualIntA(a,ARCHIVE_OK, transform_read_support_format_all(a));
 	assertEqualIntA(a,ARCHIVE_OK,
-	    archive_read_open_memory(a, archive, sizeof(archive)));
-	assertEqualIntA(a,ARCHIVE_OK, archive_read_next_header(a, &ae));
+	    transform_read_open_memory(a, archive, sizeof(archive)));
+	assertEqualIntA(a,ARCHIVE_OK, transform_read_next_header(a, &ae));
 	assertEqualInt(archive_compression(a), ARCHIVE_FILTER_BZIP2);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_PAX_INTERCHANGE);
-	assertEqualIntA(a,ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a,ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 

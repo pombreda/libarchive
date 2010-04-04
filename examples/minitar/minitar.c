@@ -259,16 +259,16 @@ create(const char *filename, int compress, const char **argv)
 		filename = NULL;
 	archive_write_open_file(a, filename);
 
-	disk = archive_read_disk_new();
+	disk = transform_read_disk_new();
 #ifndef NO_LOOKUP
-	archive_read_disk_set_standard_lookup(disk);
+	transform_read_disk_set_standard_lookup(disk);
 #endif
 	while (*argv != NULL) {
 		struct tree *t = tree_open(*argv);
 		while (tree_next(t)) {
 			entry = archive_entry_new();
 			archive_entry_set_pathname(entry, tree_current_path(t));
-			archive_read_disk_entry_from_file(disk, entry, -1,
+			transform_read_disk_entry_from_file(disk, entry, -1,
 			    tree_current_stat(t));
 			if (verbose) {
 				msg("a ");
@@ -301,36 +301,36 @@ extract(const char *filename, int do_extract, int flags)
 	struct transform_entry *entry;
 	int r;
 
-	a = archive_read_new();
+	a = transform_read_new();
 	ext = archive_write_disk_new();
 	archive_write_disk_set_options(ext, flags);
 #ifndef NO_BZIP2_EXTRACT
-	archive_read_support_compression_bzip2(a);
+	transform_read_support_compression_bzip2(a);
 #endif
 #ifndef NO_GZIP_EXTRACT
-	archive_read_support_compression_gzip(a);
+	transform_read_support_compression_gzip(a);
 #endif
 #ifndef NO_COMPRESS_EXTRACT
-	archive_read_support_compression_compress(a);
+	transform_read_support_compression_compress(a);
 #endif
 #ifndef NO_TAR_EXTRACT
-	archive_read_support_format_tar(a);
+	transform_read_support_format_tar(a);
 #endif
 #ifndef NO_CPIO_EXTRACT
-	archive_read_support_format_cpio(a);
+	transform_read_support_format_cpio(a);
 #endif
 #ifndef NO_LOOKUP
 	archive_write_disk_set_standard_lookup(ext);
 #endif
 	if (filename != NULL && strcmp(filename, "-") == 0)
 		filename = NULL;
-	if ((r = archive_read_open_file(a, filename, 10240))) {
+	if ((r = transform_read_open_file(a, filename, 10240))) {
 		errmsg(archive_error_string(a));
 		errmsg("\n");
 		exit(r);
 	}
 	for (;;) {
-		r = archive_read_next_header(a, &entry);
+		r = transform_read_next_header(a, &entry);
 		if (r == ARCHIVE_EOF)
 			break;
 		if (r != ARCHIVE_OK) {
@@ -352,8 +352,8 @@ extract(const char *filename, int do_extract, int flags)
 		if (verbose || !do_extract)
 			msg("\n");
 	}
-	archive_read_close(a);
-	archive_read_free(a);
+	transform_read_close(a);
+	transform_read_free(a);
 	exit(0);
 }
 
@@ -366,7 +366,7 @@ copy_data(struct transform *ar, struct transform *aw)
 	off_t offset;
 
 	for (;;) {
-		r = archive_read_data_block(ar, &buff, &size, &offset);
+		r = transform_read_data_block(ar, &buff, &size, &offset);
 		if (r == ARCHIVE_EOF) {
 			errmsg(archive_error_string(ar));
 			return (ARCHIVE_OK);

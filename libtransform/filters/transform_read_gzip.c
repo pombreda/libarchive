@@ -25,7 +25,7 @@
 
 #include "transform_platform.h"
 
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_gzip.c 201082 2009-12-28 02:05:28Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libarchive/transform_read_support_compression_gzip.c 201082 2009-12-28 02:05:28Z kientzle $");
 
 
 #ifdef HAVE_ERRNO_H
@@ -79,10 +79,10 @@ static int	gzip_bidder_bid(struct transform_read_filter_bidder *,
 static int	gzip_bidder_init(struct transform_read_filter *);
 
 int
-archive_read_support_compression_gzip(struct transform *_a)
+transform_read_support_compression_gzip(struct transform *_a)
 {
 	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter_bidder *bidder = __archive_read_get_bidder(a);
+	struct transform_read_filter_bidder *bidder = __transform_read_get_bidder(a);
 
 	if (bidder == NULL)
 		return (ARCHIVE_FATAL);
@@ -120,7 +120,7 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
 	/* Start by looking at the first ten bytes of the header, which
 	 * is all fixed layout. */
 	len = 10;
-	p = __archive_read_filter_ahead(filter, len, &avail);
+	p = __transform_read_filter_ahead(filter, len, &avail);
 	if (p == NULL || avail == 0)
 		return (0);
 	if (p[0] != 037)
@@ -144,7 +144,7 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
 
 	/* Optional extra data:  2 byte length plus variable body. */
 	if (header_flags & 4) {
-		p = __archive_read_filter_ahead(filter, len + 2, &avail);
+		p = __transform_read_filter_ahead(filter, len + 2, &avail);
 		if (p == NULL)
 			return (0);
 		len += ((int)p[len + 1] << 8) | (int)p[len];
@@ -156,7 +156,7 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
 		do {
 			++len;
 			if (avail < len)
-				p = __archive_read_filter_ahead(filter,
+				p = __transform_read_filter_ahead(filter,
 				    len, &avail);
 			if (p == NULL)
 				return (0);
@@ -168,7 +168,7 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
 		do {
 			++len;
 			if (avail < len)
-				p = __archive_read_filter_ahead(filter,
+				p = __transform_read_filter_ahead(filter,
 				    len, &avail);
 			if (p == NULL)
 				return (0);
@@ -177,7 +177,7 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
 
 	/* Optional header CRC */
 	if ((header_flags & 2)) {
-		p = __archive_read_filter_ahead(filter, len + 2, &avail);
+		p = __transform_read_filter_ahead(filter, len + 2, &avail);
 		if (p == NULL)
 			return (0);
 #if 0
@@ -224,8 +224,8 @@ gzip_bidder_init(struct transform_read_filter *self)
 {
 	int r;
 
-	r = __archive_read_program(self, "gunzip");
-	/* Note: We set the format here even if __archive_read_program()
+	r = __transform_read_program(self, "gunzip");
+	/* Note: We set the format here even if __transform_read_program()
 	 * above fails.  We do, after all, know what the format is
 	 * even if we weren't able to read it. */
 	self->code = ARCHIVE_FILTER_GZIP;
@@ -284,14 +284,14 @@ consume_header(struct transform_read_filter *self)
 	len = peek_at_header(self->upstream, NULL);
 	if (len == 0)
 		return (ARCHIVE_EOF);
-	__archive_read_filter_consume(self->upstream, len);
+	__transform_read_filter_consume(self->upstream, len);
 
 	/* Initialize CRC accumulator. */
 	state->crc = crc32(0L, NULL, 0);
 
 	/* Initialize compression library. */
 	state->stream.next_in = (unsigned char *)(uintptr_t)
-	    __archive_read_filter_ahead(self->upstream, 1, &avail);
+	    __transform_read_filter_ahead(self->upstream, 1, &avail);
 	state->stream.avail_in = avail;
 	ret = inflateInit2(&(state->stream),
 	    -15 /* Don't check for zlib header */);
@@ -349,14 +349,14 @@ consume_trailer(struct transform_read_filter *self)
 	}
 
 	/* GZip trailer is a fixed 8 byte structure. */
-	p = __archive_read_filter_ahead(self->upstream, 8, &avail);
+	p = __transform_read_filter_ahead(self->upstream, 8, &avail);
 	if (p == NULL || avail == 0)
 		return (ARCHIVE_FATAL);
 
 	/* XXX TODO: Verify the length and CRC. */
 
 	/* We've verified the trailer, so consume it now. */
-	__archive_read_filter_consume(self->upstream, 8);
+	__transform_read_filter_consume(self->upstream, 8);
 
 	return (ARCHIVE_OK);
 }
@@ -393,7 +393,7 @@ gzip_filter_read(struct transform_read_filter *self, const void **p)
 		/* ZLib treats stream.next_in as const but doesn't declare
 		 * it so, hence this ugly cast. */
 		state->stream.next_in = (unsigned char *)(uintptr_t)
-		    __archive_read_filter_ahead(self->upstream, 1, &avail_in);
+		    __transform_read_filter_ahead(self->upstream, 1, &avail_in);
 		if (state->stream.next_in == NULL)
 			return (ARCHIVE_FATAL);
 		state->stream.avail_in = avail_in;
@@ -402,11 +402,11 @@ gzip_filter_read(struct transform_read_filter *self, const void **p)
 		ret = inflate(&(state->stream), 0);
 		switch (ret) {
 		case Z_OK: /* Decompressor made some progress. */
-			__archive_read_filter_consume(self->upstream,
+			__transform_read_filter_consume(self->upstream,
 			    avail_in - state->stream.avail_in);
 			break;
 		case Z_STREAM_END: /* Found end of stream. */
-			__archive_read_filter_consume(self->upstream,
+			__transform_read_filter_consume(self->upstream,
 			    avail_in - state->stream.avail_in);
 			/* Consume the stream trailer; release the
 			 * decompression library. */

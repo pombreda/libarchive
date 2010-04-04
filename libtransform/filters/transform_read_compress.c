@@ -64,7 +64,7 @@
 
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_compress.c 201094 2009-12-28 02:29:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libarchive/transform_read_support_compression_compress.c 201094 2009-12-28 02:29:21Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -141,10 +141,10 @@ static int	getbits(struct transform_read_filter *, int n);
 static int	next_code(struct transform_read_filter *);
 
 int
-archive_read_support_compression_compress(struct transform *_a)
+transform_read_support_compression_compress(struct transform *_a)
 {
 	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter_bidder *bidder = __archive_read_get_bidder(a);
+	struct transform_read_filter_bidder *bidder = __transform_read_get_bidder(a);
 
 	if (bidder == NULL)
 		return (ARCHIVE_FATAL);
@@ -174,7 +174,7 @@ compress_bidder_bid(struct transform_read_filter_bidder *self,
 
 	(void)self; /* UNUSED */
 
-	buffer = __archive_read_filter_ahead(filter, 2, &avail);
+	buffer = __transform_read_filter_ahead(filter, 2, &avail);
 
 	if (buffer == NULL)
 		return (0);
@@ -421,14 +421,14 @@ getbits(struct transform_read_filter *self, int n)
 	while (state->bits_avail < n) {
 		if (state->avail_in <= 0) {
 			state->next_in
-			    = __archive_read_filter_ahead(self->upstream,
+			    = __transform_read_filter_ahead(self->upstream,
 				1, &ret);
 			if (ret == 0)
 				return (-1);
 			if (ret < 0 || state->next_in == NULL)
 				return (ARCHIVE_FATAL);
 			state->avail_in = ret;
-			__archive_read_filter_consume(self->upstream, ret);
+			__transform_read_filter_consume(self->upstream, ret);
 		}
 		state->bit_buffer |= *state->next_in++ << state->bits_avail;
 		state->avail_in--;

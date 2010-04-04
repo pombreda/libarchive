@@ -77,12 +77,12 @@ DEFINE_TEST(test_open_file)
 	assert(f != NULL);
 	if (f == NULL)
 		return;
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_FILE(a, f));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_open_FILE(a, f));
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
 	assertEqualInt(1, archive_entry_mtime(ae));
 	assertEqualInt(0, archive_entry_mtime_nsec(ae));
 	assertEqualInt(0, archive_entry_atime(ae));
@@ -90,19 +90,19 @@ DEFINE_TEST(test_open_file)
 	assertEqualString("file", archive_entry_pathname(ae));
 	assert((S_IFREG | 0755) == archive_entry_mode(ae));
 	assertEqualInt(8, archive_entry_size(ae));
-	assertEqualIntA(a, 8, archive_read_data(a, buff, 10));
+	assertEqualIntA(a, 8, transform_read_data(a, buff, 10));
 	assertEqualMem(buff, "12345678", 8);
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_next_header(a, &ae));
 	assertEqualString("file2", archive_entry_pathname(ae));
 	assert((S_IFREG | 0755) == archive_entry_mode(ae));
 	assertEqualInt(819200, archive_entry_size(ae));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_data_skip(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_data_skip(a));
 
 	/* Verify the end of the archive. */
-	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_EOF, transform_read_next_header(a, &ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 
 	fclose(f);
 }

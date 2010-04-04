@@ -43,13 +43,13 @@ DEFINE_TEST(test_compat_solaris_tar_acl)
 
 	/* Sample file generated on Solaris 10 */
 	extract_reference_file(reference1);
-	assert(NULL != (a = archive_read_new()));
-	assertA(0 == archive_read_support_format_all(a));
-	assertA(0 == archive_read_support_compression_all(a));
-	assertA(0 == archive_read_open_filename(a, reference1, 512));
+	assert(NULL != (a = transform_read_new()));
+	assertA(0 == transform_read_support_format_all(a));
+	assertA(0 == transform_read_support_compression_all(a));
+	assertA(0 == transform_read_open_filename(a, reference1, 512));
 
 	/* Archive has 1 entry with some ACLs set on it. */
-	assertA(0 == archive_read_next_header(a, &ae));
+	assertA(0 == transform_read_next_header(a, &ae));
 	failure("Basic ACLs should set mode to 0644, not %04o",
 	    archive_entry_mode(ae)&0777);
 	assertEqualInt((archive_entry_mode(ae) & 0777), 0644);
@@ -123,6 +123,6 @@ DEFINE_TEST(test_compat_solaris_tar_acl)
 		&type, &permset, &tag, &qual, &name));
 
 	/* Close the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }

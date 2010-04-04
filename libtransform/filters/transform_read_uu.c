@@ -24,7 +24,7 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_uu.c 201248 2009-12-30 06:12:03Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libarchive/transform_read_support_compression_uu.c 201248 2009-12-30 06:12:03Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -64,12 +64,12 @@ static ssize_t	uudecode_filter_read(struct transform_read_filter *,
 static int	uudecode_filter_close(struct transform_read_filter *);
 
 int
-archive_read_support_compression_uu(struct transform *_a)
+transform_read_support_compression_uu(struct transform *_a)
 {
 	struct transform_read *a = (struct transform_read *)_a;
 	struct transform_read_filter_bidder *bidder;
 
-	bidder = __archive_read_get_bidder(a);
+	bidder = __transform_read_get_bidder(a);
 	archive_clear_error(_a);
 	if (bidder == NULL)
 		return (ARCHIVE_FATAL);
@@ -211,12 +211,12 @@ bid_get_line(struct transform_read_filter *filter,
 	while (*nl == 0 && len == *avail && !quit) {
 		ssize_t diff = *ravail - *avail;
 
-		*b = __archive_read_filter_ahead(filter, 160 + *ravail, avail);
+		*b = __transform_read_filter_ahead(filter, 160 + *ravail, avail);
 		if (*b == NULL) {
 			if (*ravail >= *avail)
 				return (0);
 			/* Reading bytes reaches the end of file. */
-			*b = __archive_read_filter_ahead(filter, *avail, avail);
+			*b = __transform_read_filter_ahead(filter, *avail, avail);
 			quit = 1;
 		}
 		*ravail = *avail;
@@ -241,7 +241,7 @@ uudecode_bidder_bid(struct transform_read_filter_bidder *self,
 
 	(void)self; /* UNUSED */
 
-	b = __archive_read_filter_ahead(filter, 1, &avail);
+	b = __transform_read_filter_ahead(filter, 1, &avail);
 	if (b == NULL)
 		return (0);
 
@@ -415,7 +415,7 @@ uudecode_filter_read(struct transform_read_filter *self, const void **buff)
 	uudecode = (struct uudecode *)self->data;
 
 read_more:
-	d = __archive_read_filter_ahead(self->upstream, 1, &avail_in);
+	d = __transform_read_filter_ahead(self->upstream, 1, &avail_in);
 	if (d == NULL && avail_in < 0)
 		return (ARCHIVE_FATAL);
 	/* Quiet a code analyzer; make sure avail_in must be zero
@@ -467,7 +467,7 @@ read_more:
 			if (total == 0) {
 				/* Do not return 0; it means end-of-file.
 				 * We should try to read bytes more. */
-				__archive_read_filter_consume(
+				__transform_read_filter_consume(
 				    self->upstream, ravail);
 				goto read_more;
 			}
@@ -605,7 +605,7 @@ read_more:
 		}
 	}
 
-	__archive_read_filter_consume(self->upstream, ravail);
+	__transform_read_filter_consume(self->upstream, ravail);
 
 	*buff = uudecode->out_buff;
 	uudecode->total += total;

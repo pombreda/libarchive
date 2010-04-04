@@ -57,14 +57,14 @@ DEFINE_TEST(test_read_disk_entry_from_file)
 	struct transform_entry *entry;
 	FILE *f;
 
-	assert((a = archive_read_disk_new()) != NULL);
+	assert((a = transform_read_disk_new()) != NULL);
 
-	assertEqualInt(ARCHIVE_OK, archive_read_disk_set_uname_lookup(a,
+	assertEqualInt(ARCHIVE_OK, transform_read_disk_set_uname_lookup(a,
 			   NULL, &uname_lookup, NULL));
-	assertEqualInt(ARCHIVE_OK, archive_read_disk_set_gname_lookup(a,
+	assertEqualInt(ARCHIVE_OK, transform_read_disk_set_gname_lookup(a,
 			   NULL, &gname_lookup, NULL));
-	assertEqualString(archive_read_disk_uname(a, 0), "FOO");
-	assertEqualString(archive_read_disk_gname(a, 0), "FOOGROUP");
+	assertEqualString(transform_read_disk_uname(a, 0), "FOO");
+	assertEqualString(transform_read_disk_gname(a, 0), "FOOGROUP");
 
 	/* Create a file on disk. */
 	f = fopen("foo", "wb");
@@ -72,12 +72,12 @@ DEFINE_TEST(test_read_disk_entry_from_file)
 	assertEqualInt(4, fwrite("1234", 1, 4, f));
 	fclose(f);
 
-	/* Use archive_read_disk_entry_from_file to get information about it. */
+	/* Use transform_read_disk_entry_from_file to get information about it. */
 	entry = archive_entry_new();
 	assert(entry != NULL);
 	archive_entry_copy_pathname(entry, "foo");
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_disk_entry_from_file(a, entry, -1, NULL));
+	    transform_read_disk_entry_from_file(a, entry, -1, NULL));
 
 	/* Verify the information we got back. */
 	assertEqualString(archive_entry_uname(entry), "FOO");
@@ -86,5 +86,5 @@ DEFINE_TEST(test_read_disk_entry_from_file)
 
 	/* Destroy the archive. */
 	archive_entry_free(entry);
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }

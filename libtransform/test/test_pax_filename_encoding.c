@@ -56,18 +56,18 @@ test_pax_filename_encoding_1(void)
 	 * Read an archive that has non-UTF8 pax filenames in it.
 	 */
 	extract_reference_file(testname);
-	a = archive_read_new();
-	assertEqualInt(ARCHIVE_OK, archive_read_support_format_tar(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_support_compression_all(a));
+	a = transform_read_new();
+	assertEqualInt(ARCHIVE_OK, transform_read_support_format_tar(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_support_compression_all(a));
 	assertEqualInt(ARCHIVE_OK,
-	    archive_read_open_filename(a, testname, 10240));
+	    transform_read_open_filename(a, testname, 10240));
 	/*
 	 * First entry in this test archive has an invalid UTF-8 sequence
 	 * in it, but the header is not marked as hdrcharset=BINARY, so that
 	 * requires a warning.
 	 */
 	failure("Invalid UTF8 in a pax archive pathname should cause a warning");
-	assertEqualInt(ARCHIVE_WARN, archive_read_next_header(a, &entry));
+	assertEqualInt(ARCHIVE_WARN, transform_read_next_header(a, &entry));
 	assertEqualString(filename, archive_entry_pathname(entry));
 	/*
 	 * Second entry is identical except that it does have
@@ -75,9 +75,9 @@ test_pax_filename_encoding_1(void)
 	 */
 	failure("A pathname with hdrcharset=BINARY can have invalid UTF8\n"
 	    " characters in it without generating a warning");
-	assertEqualInt(ARCHIVE_OK, archive_read_next_header(a, &entry));
+	assertEqualInt(ARCHIVE_OK, transform_read_next_header(a, &entry));
 	assertEqualString(filename, archive_entry_pathname(entry));
-	archive_read_free(a);
+	transform_read_free(a);
 }
 
 /*
@@ -158,27 +158,27 @@ test_pax_filename_encoding_2(void)
 	 * Now read the entries back.
 	 */
 
-	assert((a = archive_read_new()) != NULL);
-	assertEqualInt(0, archive_read_support_format_tar(a));
-	assertEqualInt(0, archive_read_open_memory(a, buff, used));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualInt(0, transform_read_support_format_tar(a));
+	assertEqualInt(0, transform_read_open_memory(a, buff, used));
 
-	assertEqualInt(0, archive_read_next_header(a, &entry));
+	assertEqualInt(0, transform_read_next_header(a, &entry));
 	assertEqualString(filename, archive_entry_pathname(entry));
 	assertEqualString(filename, archive_entry_gname(entry));
 	assertEqualString(filename, archive_entry_uname(entry));
 	assertEqualString(filename, archive_entry_hardlink(entry));
 
-	assertEqualInt(0, archive_read_next_header(a, &entry));
+	assertEqualInt(0, transform_read_next_header(a, &entry));
 	assertEqualString(filename, archive_entry_pathname(entry));
 	assertEqualString(filename, archive_entry_gname(entry));
 	assertEqualString(filename, archive_entry_uname(entry));
 	assertEqualString(filename, archive_entry_symlink(entry));
 
-	assertEqualInt(0, archive_read_next_header(a, &entry));
+	assertEqualInt(0, transform_read_next_header(a, &entry));
 	assertEqualString(longname, archive_entry_pathname(entry));
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 /*
@@ -284,45 +284,45 @@ test_pax_filename_encoding_3(void)
 	 * Now read the entries back.
 	 */
 
-	assert((a = archive_read_new()) != NULL);
-	assertEqualInt(0, archive_read_support_format_tar(a));
-	assertEqualInt(0, archive_read_open_memory(a, buff, used));
+	assert((a = transform_read_new()) != NULL);
+	assertEqualInt(0, transform_read_support_format_tar(a));
+	assertEqualInt(0, transform_read_open_memory(a, buff, used));
 
 	failure("A non-convertible pathname should cause a warning.");
-	assertEqualInt(ARCHIVE_WARN, archive_read_next_header(a, &entry));
+	assertEqualInt(ARCHIVE_WARN, transform_read_next_header(a, &entry));
 	assertEqualWString(badname, archive_entry_pathname_w(entry));
 	failure("If native locale can't convert, we should get UTF-8 back.");
 	assertEqualString(badname_utf8, archive_entry_pathname(entry));
 
 	failure("A non-convertible gname should cause a warning.");
-	assertEqualInt(ARCHIVE_WARN, archive_read_next_header(a, &entry));
+	assertEqualInt(ARCHIVE_WARN, transform_read_next_header(a, &entry));
 	assertEqualWString(badname, archive_entry_gname_w(entry));
 	failure("If native locale can't convert, we should get UTF-8 back.");
 	assertEqualString(badname_utf8, archive_entry_gname(entry));
 
 	failure("A non-convertible uname should cause a warning.");
-	assertEqualInt(ARCHIVE_WARN, archive_read_next_header(a, &entry));
+	assertEqualInt(ARCHIVE_WARN, transform_read_next_header(a, &entry));
 	assertEqualWString(badname, archive_entry_uname_w(entry));
 	failure("If native locale can't convert, we should get UTF-8 back.");
 	assertEqualString(badname_utf8, archive_entry_uname(entry));
 
 	failure("A non-convertible hardlink should cause a warning.");
-	assertEqualInt(ARCHIVE_WARN, archive_read_next_header(a, &entry));
+	assertEqualInt(ARCHIVE_WARN, transform_read_next_header(a, &entry));
 	assertEqualWString(badname, archive_entry_hardlink_w(entry));
 	failure("If native locale can't convert, we should get UTF-8 back.");
 	assertEqualString(badname_utf8, archive_entry_hardlink(entry));
 
 	failure("A non-convertible symlink should cause a warning.");
-	assertEqualInt(ARCHIVE_WARN, archive_read_next_header(a, &entry));
+	assertEqualInt(ARCHIVE_WARN, transform_read_next_header(a, &entry));
 	assertEqualWString(badname, archive_entry_symlink_w(entry));
 	assertEqualWString(NULL, archive_entry_hardlink_w(entry));
 	failure("If native locale can't convert, we should get UTF-8 back.");
 	assertEqualString(badname_utf8, archive_entry_symlink(entry));
 
-	assertEqualInt(ARCHIVE_EOF, archive_read_next_header(a, &entry));
+	assertEqualInt(ARCHIVE_EOF, transform_read_next_header(a, &entry));
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_read_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_read_free(a));
 }
 
 DEFINE_TEST(test_pax_filename_encoding)
