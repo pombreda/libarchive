@@ -165,6 +165,30 @@ PyArchive_Entry_get_birthtime(PyArchiveEntry *self, void *closure)
     return PyLong_FromLong((long)archive_entry_birthtime(self->archive_entry));
 }
 
+static PyObject *
+PyArchive_Entry_get_atime_nsec(PyArchiveEntry *self, void *closure)
+{
+    return PyLong_FromLong((long)archive_entry_atime_nsec(self->archive_entry));
+}
+
+static PyObject *
+PyArchive_Entry_get_mtime_nsec(PyArchiveEntry *self, void *closure)
+{
+    return PyLong_FromLong((long)archive_entry_mtime_nsec(self->archive_entry));
+}
+
+static PyObject *
+PyArchive_Entry_get_ctime_nsec(PyArchiveEntry *self, void *closure)
+{
+    return PyLong_FromLong((long)archive_entry_ctime_nsec(self->archive_entry));
+}
+
+static PyObject *
+PyArchive_Entry_get_birthtime_nsec(PyArchiveEntry *self, void *closure)
+{
+    return PyLong_FromLong((long)archive_entry_birthtime_nsec(self->archive_entry));
+}
+
 /* 
 ---gid/uid/groups/user funcs--
 wide char support was skipped; revisit
@@ -212,6 +236,14 @@ static PyGetSetDef PyArchiveEntry_getsetters[] = {
     {"atime", (getter)PyArchive_Entry_get_atime,
         (setter)PyArchive_Entry_generic_immutable, NULL},
     {"birthtime", (getter)PyArchive_Entry_get_birthtime,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"atime_nsec", (getter)PyArchive_Entry_get_atime_nsec,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"mtime_nsec", (getter)PyArchive_Entry_get_mtime_nsec,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"ctime_nsec", (getter)PyArchive_Entry_get_ctime_nsec,
+        (setter)PyArchive_Entry_generic_immutable, NULL},
+    {"birthtime_nsec", (getter)PyArchive_Entry_get_birthtime_nsec,
         (setter)PyArchive_Entry_generic_immutable, NULL},
     {"gid", (getter)PyArchive_Entry_get_gid,
         (setter)PyArchive_Entry_generic_immutable, NULL},
