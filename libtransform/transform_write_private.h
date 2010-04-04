@@ -64,10 +64,6 @@ int __transform_write_close_filter(struct transform_write_filter *);
 struct transform_write {
 	struct transform	transform;
 
-	/* Utility:  Pointer to a block of nulls. */
-	const unsigned char	*nulls;
-	size_t			 null_length;
-
 	/* Callbacks to open/read/write/close transform stream. */
 	transform_open_callback	*client_opener;
 	transform_write_callback	*client_writer;

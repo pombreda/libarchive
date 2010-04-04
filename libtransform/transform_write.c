@@ -99,7 +99,6 @@ struct transform *
 transform_write_new(void)
 {
 	struct transform_write *a;
-	unsigned char *nulls;
 
 	a = (struct transform_write *)malloc(sizeof(*a));
 	if (a == NULL)
@@ -116,15 +115,6 @@ transform_write_new(void)
 	a->bytes_per_block = 10240;
 	a->bytes_in_last_block = -1;	/* Default */
 
-	/* Initialize a block of nulls for padding purposes. */
-	a->null_length = 1024;
-	nulls = (unsigned char *)malloc(a->null_length);
-	if (nulls == NULL) {
-		free(a);
-		return (NULL);
-	}
-	memset(nulls, 0, a->null_length);
-	a->nulls = nulls;
 	return (&a->transform);
 }
 
@@ -497,8 +487,6 @@ _transform_write_free(struct transform *_a)
 
 	__transform_write_filters_free(_a);
 
-	/* Release various dynamic buffers. */
-	free((void *)(uintptr_t)(const void *)a->nulls);
 	transform_string_free(&a->transform.error_string);
 	a->transform.magic = 0;
 	free(a);
