@@ -36,18 +36,18 @@ DEFINE_TEST(test_write_format_shar_empty)
 	size_t used;
 
 	/* Create a new archive in memory. */
-	assert((a = archive_write_new()) != NULL);
-	assertA(0 == archive_write_set_format_shar(a));
-	assertA(0 == archive_write_set_compression_none(a));
+	assert((a = transform_write_new()) != NULL);
+	assertA(0 == transform_write_set_format_shar(a));
+	assertA(0 == transform_write_set_compression_none(a));
 	/* 1-byte block size ensures we see only the required bytes. */
 	/* We're not testing the padding here. */
-	assertA(0 == archive_write_set_bytes_per_block(a, 1));
-	assertA(0 == archive_write_set_bytes_in_last_block(a, 1));
-	assertA(0 == archive_write_open_memory(a, buff, sizeof(buff), &used));
+	assertA(0 == transform_write_set_bytes_per_block(a, 1));
+	assertA(0 == transform_write_set_bytes_in_last_block(a, 1));
+	assertA(0 == transform_write_open_memory(a, buff, sizeof(buff), &used));
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	failure("Empty shar archive should be exactly 0 bytes, was %d.", used);
 	assert(used == 0);

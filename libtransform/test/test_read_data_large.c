@@ -53,10 +53,10 @@ DEFINE_TEST(test_read_data_large)
 	size_t used;
 
 	/* Create a new archive in memory. */
-	assert((a = archive_write_new()) != NULL);
-	assertA(0 == archive_write_set_format_ustar(a));
-	assertA(0 == archive_write_set_compression_none(a));
-	assertA(0 == archive_write_open_memory(a, buff1, sizeof(buff1), &used));
+	assert((a = transform_write_new()) != NULL);
+	assertA(0 == transform_write_set_format_ustar(a));
+	assertA(0 == transform_write_set_compression_none(a));
+	assertA(0 == transform_write_open_memory(a, buff1, sizeof(buff1), &used));
 
 	/*
 	 * Write a file (with random contents) to it.
@@ -67,13 +67,13 @@ DEFINE_TEST(test_read_data_large)
 	for (i = 0; i < sizeof(buff2); i++)
 		buff2[i] = (unsigned char)rand();
 	archive_entry_set_size(ae, sizeof(buff2));
-	assertA(0 == archive_write_header(a, ae));
+	assertA(0 == transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assertA((int)sizeof(buff2) == archive_write_data(a, buff2, sizeof(buff2)));
+	assertA((int)sizeof(buff2) == transform_write_data(a, buff2, sizeof(buff2)));
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/* Check that transform_read_data can handle 10*10^6 at a pop. */
 	assert((a = transform_read_new()) != NULL);

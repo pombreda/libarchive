@@ -46,18 +46,18 @@ DEFINE_TEST(test_write_format_zip)
 	buff = malloc(buffsize);
 
 	/* Create a new archive in memory. */
-	assert((a = archive_write_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_format_zip(a));
+	assert((a = transform_write_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_set_format_zip(a));
 #ifdef HAVE_ZLIB_H
 	compression_type = "zip:compression=deflate";
 #else
 	compression_type = "zip:compression=store";
 #endif
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_set_format_options(a, compression_type));
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_compression_none(a));
+	    transform_write_set_format_options(a, compression_type));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_set_compression_none(a));
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_open_memory(a, buff, buffsize, &used));
+	    transform_write_open_memory(a, buff, buffsize, &used));
 
 	/*
 	 * Write a file to it.
@@ -72,10 +72,10 @@ DEFINE_TEST(test_write_format_zip)
 	assertEqualInt((S_IFREG | 0755), archive_entry_mode(ae));
 	archive_entry_set_size(ae, 8);
 
-	assertEqualInt(0, archive_write_header(a, ae));
+	assertEqualInt(0, transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assertEqualInt(8, archive_write_data(a, "12345678", 9));
-	assertEqualInt(0, archive_write_data(a, "1", 1));
+	assertEqualInt(8, transform_write_data(a, "12345678", 9));
+	assertEqualInt(0, transform_write_data(a, "1", 1));
 
 	/*
 	 * Write another file to it.
@@ -90,9 +90,9 @@ DEFINE_TEST(test_write_format_zip)
 	assertEqualInt((S_IFREG | 0755), archive_entry_mode(ae));
 	archive_entry_set_size(ae, 4);
 
-	assertEqualInt(ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualInt(ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assertEqualInt(4, archive_write_data(a, "1234", 5));
+	assertEqualInt(4, transform_write_data(a, "1234", 5));
 
 	/*
 	 * Write a directory to it.
@@ -103,15 +103,15 @@ DEFINE_TEST(test_write_format_zip)
 	archive_entry_set_mode(ae, S_IFDIR | 0755);
 	archive_entry_set_size(ae, 512);
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	failure("size should be zero so that applications know not to write");
 	assertEqualInt(0, archive_entry_size(ae));
 	archive_entry_free(ae);
-	assertEqualIntA(a, 0, archive_write_data(a, "12345678", 9));
+	assertEqualIntA(a, 0, transform_write_data(a, "12345678", 9));
 
 	/* Close out the archive. */
-	assertEqualInt(ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/*
 	 * Now, read the data back.

@@ -42,7 +42,7 @@ add_entry(struct transform *a, const char *fname, const char *sym)
 		archive_entry_set_symlink(ae, sym);
 	archive_entry_set_mode(ae, S_IFREG | 0555);
 	archive_entry_set_size(ae, 0);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
 }
 
@@ -213,15 +213,15 @@ create_iso_image(unsigned char *buff, size_t buffsize, size_t *used,
 	char sym255[256];
 
 	/* ISO9660 format: Create a new archive in memory. */
-	assert((a = archive_write_new()) != NULL);
-	assertA(0 == archive_write_set_format_iso9660(a));
-	assertA(0 == archive_write_set_compression_none(a));
-	assertA(0 == archive_write_set_options(a, "!pad"));
+	assert((a = transform_write_new()) != NULL);
+	assertA(0 == transform_write_set_format_iso9660(a));
+	assertA(0 == transform_write_set_compression_none(a));
+	assertA(0 == transform_write_set_options(a, "!pad"));
 	if (opt)
-		assertA(0 == archive_write_set_options(a, opt));
-	assertA(0 == archive_write_set_bytes_per_block(a, 1));
-	assertA(0 == archive_write_set_bytes_in_last_block(a, 1));
-	assertA(0 == archive_write_open_memory(a, buff, buffsize, used));
+		assertA(0 == transform_write_set_options(a, opt));
+	assertA(0 == transform_write_set_bytes_per_block(a, 1));
+	assertA(0 == transform_write_set_bytes_in_last_block(a, 1));
+	assertA(0 == transform_write_open_memory(a, buff, buffsize, used));
 
 	sym1[0] = 'x';
 	sym1[1] = '\0';
@@ -293,8 +293,8 @@ create_iso_image(unsigned char *buff, size_t buffsize, size_t *used,
 	}
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_free(a));
 
 	return (fcnt);
 }

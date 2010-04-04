@@ -74,17 +74,17 @@ DEFINE_TEST(test_write_format_iso9660_zisofs)
 	assert(buff != NULL);
 
 	/* ISO9660 format: Create a new archive in memory. */
-	assert((a = archive_write_new()) != NULL);
-	assertA(0 == archive_write_set_format_iso9660(a));
-	assertA(0 == archive_write_set_compression_none(a));
-	r = archive_write_set_options(a, "zisofs=direct");
+	assert((a = transform_write_new()) != NULL);
+	assertA(0 == transform_write_set_format_iso9660(a));
+	assertA(0 == transform_write_set_compression_none(a));
+	r = transform_write_set_options(a, "zisofs=direct");
 	if (r == ARCHIVE_FATAL) {
 		skipping("zisofs option not supported on this platform");
-		assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+		assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 		return;
 	}
-	assertA(0 == archive_write_set_options(a, "!pad"));
-	assertA(0 == archive_write_open_memory(a, buff, buffsize, &used));
+	assertA(0 == transform_write_set_options(a, "!pad"));
+	assertA(0 == transform_write_open_memory(a, buff, buffsize, &used));
 
 	/*
 	 * "file1" has a bunch of attributes and 256K bytes of null data.
@@ -97,9 +97,9 @@ DEFINE_TEST(test_write_format_iso9660_zisofs)
 	archive_entry_copy_pathname(ae, "file1");
 	archive_entry_set_mode(ae, S_IFREG | 0755);
 	archive_entry_set_size(ae, 256*1024);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assertEqualIntA(a, 1024, archive_write_data(a, nullb, 1024));
+	assertEqualIntA(a, 1024, transform_write_data(a, nullb, 1024));
 
 	/*
 	 * "file2" has a bunch of attributes and 2048 bytes of null data.
@@ -112,9 +112,9 @@ DEFINE_TEST(test_write_format_iso9660_zisofs)
 	archive_entry_copy_pathname(ae, "file2");
 	archive_entry_set_mode(ae, S_IFREG | 0755);
 	archive_entry_set_size(ae, 2048);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assertEqualIntA(a, 1024, archive_write_data(a, nullb, 1024));
+	assertEqualIntA(a, 1024, transform_write_data(a, nullb, 1024));
 
 	/*
 	 * "file3" has a bunch of attributes and 2049 bytes of null data.
@@ -127,9 +127,9 @@ DEFINE_TEST(test_write_format_iso9660_zisofs)
 	archive_entry_copy_pathname(ae, "file3");
 	archive_entry_set_mode(ae, S_IFREG | 0755);
 	archive_entry_set_size(ae, 2049);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assertEqualIntA(a, 1024, archive_write_data(a, nullb, 1024));
+	assertEqualIntA(a, 1024, transform_write_data(a, nullb, 1024));
 
 	/*
 	 * "file4" has a bunch of attributes and 24 bytes of zisofs data
@@ -143,13 +143,13 @@ DEFINE_TEST(test_write_format_iso9660_zisofs)
 	archive_entry_copy_pathname(ae, "file4");
 	archive_entry_set_mode(ae, S_IFREG | 0755);
 	archive_entry_set_size(ae, 24);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assertEqualIntA(a, 24, archive_write_data(a, zisofs_data, 24));
+	assertEqualIntA(a, 24, transform_write_data(a, zisofs_data, 24));
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_free(a));
 
 	assert(used == 2048 * 35);
 	/* Check System Area. */

@@ -114,7 +114,7 @@ to
 .It Fn archive_file_count
 Returns a count of the number of files processed by this archive object.
 The count is incremented by calls to
-.Xr archive_write_header
+.Xr transform_write_header
 or
 .Xr transform_read_next_header .
 .It Fn archive_filter_code
@@ -127,7 +127,7 @@ Returns the number of filters in the current pipeline.
 For read archive handles, these filters are added automatically
 by the automatic format detection.
 For write archive handles, these filters are added by calls to the various
-.Fn archive_write_add_filter_XXX
+.Fn transform_write_add_filter_XXX
 functions.
 Filters in the resulting pipeline are numbered so that filter 0
 is the filter closest to the format handler.
@@ -206,7 +206,7 @@ not uniformly supported and should not be used.
 .El
 .Sh SEE ALSO
 .Xr transform_read 3 ,
-.Xr archive_write 3 ,
+.Xr transform_write 3 ,
 .Xr libarchive 3 ,
 .Xr printf 3
 .Sh HISTORY

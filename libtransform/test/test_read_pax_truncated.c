@@ -36,11 +36,11 @@ DEFINE_TEST(test_read_pax_truncated)
 	char *filedata = malloc(filedata_size);
 
 	/* Create a new archive in memory. */
-	assert((a = archive_write_new()) != NULL);
-	assertA(0 == archive_write_set_format_pax(a));
-	assertA(0 == archive_write_set_compression_none(a));
+	assert((a = transform_write_new()) != NULL);
+	assertA(0 == transform_write_set_format_pax(a));
+	assertA(0 == transform_write_set_compression_none(a));
 	assertEqualIntA(a, ARCHIVE_OK,
-			archive_write_open_memory(a, buff, buff_size, &used));
+			transform_write_open_memory(a, buff, buff_size, &used));
 
 	/*
 	 * Write a file to it.
@@ -54,14 +54,14 @@ DEFINE_TEST(test_read_pax_truncated)
 	archive_entry_set_ctime(ae, 3, 4);
 	archive_entry_set_mtime(ae, 5, 6);
 	archive_entry_set_size(ae, filedata_size);
-	assertA(0 == archive_write_header(a, ae));
+	assertA(0 == transform_write_header(a, ae));
 	archive_entry_free(ae);
 	assertA((ssize_t)filedata_size
-	    == archive_write_data(a, filedata, filedata_size));
+	    == transform_write_data(a, filedata, filedata_size));
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/* Now, read back a truncated version of the archive and
 	 * verify that we get an appropriate error. */

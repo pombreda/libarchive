@@ -54,7 +54,7 @@ archive_filter_bytes(struct transform *a, int n)
 }
 
 int
-archive_write_close(struct transform *a)
+transform_write_close(struct transform *a)
 {
 	return ((a->vtable->archive_close)(a));
 }
@@ -66,7 +66,7 @@ transform_read_close(struct transform *a)
 }
 
 int
-archive_write_free(struct transform *a)
+transform_write_free(struct transform *a)
 {
 	return ((a->vtable->archive_free)(a));
 }
@@ -74,7 +74,7 @@ archive_write_free(struct transform *a)
 #if ARCHIVE_VERSION_NUMBER < 4000000
 /* For backwards compatibility; will be removed with libarchive 4.0. */
 int
-archive_write_finish(struct transform *a)
+transform_write_finish(struct transform *a)
 {
 	return ((a->vtable->archive_free)(a));
 }
@@ -96,24 +96,24 @@ transform_read_finish(struct transform *a)
 #endif
 
 int
-archive_write_finish_entry(struct transform *a)
+transform_write_finish_entry(struct transform *a)
 {
-	return ((a->vtable->archive_write_finish_entry)(a));
+	return ((a->vtable->transform_write_finish_entry)(a));
 }
 
 ssize_t
-archive_write_data(struct transform *a, const void *buff, size_t s)
+transform_write_data(struct transform *a, const void *buff, size_t s)
 {
-	return ((a->vtable->archive_write_data)(a, buff, s));
+	return ((a->vtable->transform_write_data)(a, buff, s));
 }
 
 #if ARCHIVE_VERSION_NUMBER < 3000000
 ssize_t
-archive_write_data_block(struct transform *a, const void *buff, size_t s, off_t o)
+transform_write_data_block(struct transform *a, const void *buff, size_t s, off_t o)
 #else
 ssize_t
-archive_write_data_block(struct transform *a, const void *buff, size_t s, int64_t o)
+transform_write_data_block(struct transform *a, const void *buff, size_t s, int64_t o)
 #endif
 {
-	return ((a->vtable->archive_write_data_block)(a, buff, s, o));
+	return ((a->vtable->transform_write_data_block)(a, buff, s, o));
 }

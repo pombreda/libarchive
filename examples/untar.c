@@ -11,7 +11,7 @@
  * without any special recompilation.  The only functional concession
  * is that this program uses the uid/gid from the archive instead of
  * doing uname/gname lookups.  (Add a call to
- * archive_write_disk_set_standard_lookup() to enable uname/gname
+ * transform_write_disk_set_standard_lookup() to enable uname/gname
  * lookups, but be aware that this can add 500k or more to a static
  * executable, depending on the system libraries, since user/group
  * lookups frequently pull in password, YP/LDAP, networking, and DNS
@@ -142,10 +142,10 @@ extract(const char *filename, int do_extract, int flags)
 	int r;
 
 	a = transform_read_new();
-	ext = archive_write_disk_new();
-	archive_write_disk_set_options(ext, flags);
+	ext = transform_write_disk_new();
+	transform_write_disk_set_options(ext, flags);
 	/*
-	 * Note: archive_write_disk_set_standard_lookup() is useful
+	 * Note: transform_write_disk_set_standard_lookup() is useful
 	 * here, but it requires library routines that can add 500k or
 	 * more to a static executable.
 	 */
@@ -173,15 +173,15 @@ extract(const char *filename, int do_extract, int flags)
 		if (verbose || !do_extract)
 			msg(archive_entry_pathname(entry));
 		if (do_extract) {
-			r = archive_write_header(ext, entry);
+			r = transform_write_header(ext, entry);
 			if (r != ARCHIVE_OK)
-				warn("archive_write_header()",
+				warn("transform_write_header()",
 				    archive_error_string(ext));
 			else {
 				copy_data(a, ext);
-				r = archive_write_finish_entry(ext);
+				r = transform_write_finish_entry(ext);
 				if (r != ARCHIVE_OK)
-					fail("archive_write_finish_entry()",
+					fail("transform_write_finish_entry()",
 					    archive_error_string(ext), 1);
 			}
 
@@ -208,9 +208,9 @@ copy_data(struct transform *ar, struct transform *aw)
 			return (ARCHIVE_OK);
 		if (r != ARCHIVE_OK)
 			return (r);
-		r = archive_write_data_block(aw, buff, size, offset);
+		r = transform_write_data_block(aw, buff, size, offset);
 		if (r != ARCHIVE_OK) {
-			warn("archive_write_data_block()",
+			warn("transform_write_data_block()",
 			    archive_error_string(aw));
 			return (r);
 		}

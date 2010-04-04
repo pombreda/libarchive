@@ -265,14 +265,14 @@ Sep 26, 2007: Test harness for bsdcpio is in place, needs more tests written.
 	that bsdtar has.
 
 Sep 20, 2007: libarchive 2.3.2 released
-Sep 20, 2007: libarchive 2.3.1 broke bsdtar because the archive_write_data()
+Sep 20, 2007: libarchive 2.3.1 broke bsdtar because the transform_write_data()
 	fix was implemented incorrectly.
 
 Sep 16, 2007: libarchive 2.3.1 released
 Sep 16, 2007: Many fixes to bsdcpio 0.3:  handle hardlinks with -p, recognize
 	block size on writing, fix a couple of segfaults.
-Sep 16, 2007: Fixed return value from archive_write_data() when used
-	with archive_write_disk() to match the documentation and other
+Sep 16, 2007: Fixed return value from transform_write_data() when used
+	with transform_write_disk() to match the documentation and other
 	instances of this same function.
 Sep 15, 2007: Add archive_entry_link_resolver, archive_entry_strmode
 
@@ -307,11 +307,11 @@ May 26, 2007: Fix memory leaks in ZIP reader and shar writer, add some
 	EOF anomaly in bzip2 decompression.
 
 May 12, 2007: libarchive 2.2.2 released
-May 12, 2007: Fix archive_write_disk permission restore by cloning
+May 12, 2007: Fix transform_write_disk permission restore by cloning
 	entry passed into write_header so that permission info is
 	still available at finish_entry time.  (transform_read_extract()
 	worked okay because it held onto the passed-in entry, but
-	direct consumers of archive_write_disk would break).  This
+	direct consumers of transform_write_disk would break).  This
 	required fixing archive_entry_clone(), which now works and has
 	a reasonably complete test case.
 May 10, 2007: Skeletal cpio implementation.
@@ -439,7 +439,7 @@ Jan 31, 2007: Added read support for "empty" archives as a
     "touch foo.tar; tar -rf foo.tar"
 
 Jan 22, 2007: libarchive 2.0b6 released
-Jan 22, 2007: archive_write_disk API is now in place.  It provides
+Jan 22, 2007: transform_write_disk API is now in place.  It provides
     a finer-grained interface than transform_read_extract.  In particular,
     you can use it to create objects on disk without having an archive
     around (just feed it archive_entry objects describing what you
@@ -472,7 +472,7 @@ Aug 17, 2006: Fix error-handling in transform_read/write_close()
    They weren't returning any errors before.
 Aug 17, 2006: Fix recursive-add logic to not trigger if it's not set
    Fixes a bug adding files when writing archive to pipe or when
-   using archive_write_open() directly.
+   using transform_write_open() directly.
 Jul 2006: New "skip" handling improves performance extracting
    single files from large uncompressed archives.
 

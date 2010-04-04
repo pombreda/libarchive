@@ -50,10 +50,10 @@ DEFINE_TEST(test_open_fd)
 		return;
 
 	/* Write an archive through this fd. */
-	assert((a = archive_write_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_format_ustar(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_compression_none(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_open_fd(a, fd));
+	assert((a = transform_write_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_set_format_ustar(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_set_compression_none(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_open_fd(a, fd));
 
 	/*
 	 * Write a file to it.
@@ -63,9 +63,9 @@ DEFINE_TEST(test_open_fd)
 	archive_entry_copy_pathname(ae, "file");
 	archive_entry_set_mode(ae, S_IFREG | 0755);
 	archive_entry_set_size(ae, 8);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assertEqualIntA(a, 8, archive_write_data(a, "12345678", 9));
+	assertEqualIntA(a, 8, transform_write_data(a, "12345678", 9));
 
 	/*
 	 * Write a second file to it.
@@ -74,12 +74,12 @@ DEFINE_TEST(test_open_fd)
 	archive_entry_copy_pathname(ae, "file2");
 	archive_entry_set_mode(ae, S_IFREG | 0755);
 	archive_entry_set_size(ae, 819200);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/*
 	 * Now, read the data back.

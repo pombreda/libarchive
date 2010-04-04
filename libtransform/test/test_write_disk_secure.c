@@ -35,7 +35,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk_secure.c 201247 200
 DEFINE_TEST(test_write_disk_secure)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__)
-	skipping("archive_write_disk security checks not supported on Windows");
+	skipping("transform_write_disk security checks not supported on Windows");
 #else
 	struct transform *a;
 	struct transform_entry *ae;
@@ -44,25 +44,25 @@ DEFINE_TEST(test_write_disk_secure)
 	/* Start with a known umask. */
 	assertUmask(UMASK);
 
-	/* Create an archive_write_disk object. */
-	assert((a = archive_write_disk_new()) != NULL);
+	/* Create an transform_write_disk object. */
+	assert((a = transform_write_disk_new()) != NULL);
 
 	/* Write a regular dir to it. */
 	assert((ae = archive_entry_new()) != NULL);
 	archive_entry_copy_pathname(ae, "dir");
 	archive_entry_set_mode(ae, S_IFDIR | 0777);
-	assert(0 == archive_write_header(a, ae));
+	assert(0 == transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assert(0 == archive_write_finish_entry(a));
+	assert(0 == transform_write_finish_entry(a));
 
 	/* Write a symlink to the dir above. */
 	assert((ae = archive_entry_new()) != NULL);
 	archive_entry_copy_pathname(ae, "link_to_dir");
 	archive_entry_set_mode(ae, S_IFLNK | 0777);
 	archive_entry_set_symlink(ae, "dir");
-	archive_write_disk_set_options(a, 0);
-	assert(0 == archive_write_header(a, ae));
-	assert(0 == archive_write_finish_entry(a));
+	transform_write_disk_set_options(a, 0);
+	assert(0 == transform_write_header(a, ae));
+	assert(0 == transform_write_finish_entry(a));
 
 	/*
 	 * Without security checks, we should be able to
@@ -71,27 +71,27 @@ DEFINE_TEST(test_write_disk_secure)
 	assert(archive_entry_clear(ae) != NULL);
 	archive_entry_copy_pathname(ae, "link_to_dir/filea");
 	archive_entry_set_mode(ae, S_IFREG | 0777);
-	assert(0 == archive_write_header(a, ae));
-	assert(0 == archive_write_finish_entry(a));
+	assert(0 == transform_write_header(a, ae));
+	assert(0 == transform_write_finish_entry(a));
 
 	/* But with security checks enabled, this should fail. */
 	assert(archive_entry_clear(ae) != NULL);
 	archive_entry_copy_pathname(ae, "link_to_dir/fileb");
 	archive_entry_set_mode(ae, S_IFREG | 0777);
-	archive_write_disk_set_options(a, ARCHIVE_EXTRACT_SECURE_SYMLINKS);
+	transform_write_disk_set_options(a, ARCHIVE_EXTRACT_SECURE_SYMLINKS);
 	failure("Extracting a file through a symlink should fail here.");
-	assertEqualInt(ARCHIVE_FAILED, archive_write_header(a, ae));
+	assertEqualInt(ARCHIVE_FAILED, transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assert(0 == archive_write_finish_entry(a));
+	assert(0 == transform_write_finish_entry(a));
 
 	/* Create another link. */
 	assert((ae = archive_entry_new()) != NULL);
 	archive_entry_copy_pathname(ae, "link_to_dir2");
 	archive_entry_set_mode(ae, S_IFLNK | 0777);
 	archive_entry_set_symlink(ae, "dir");
-	archive_write_disk_set_options(a, 0);
-	assert(0 == archive_write_header(a, ae));
-	assert(0 == archive_write_finish_entry(a));
+	transform_write_disk_set_options(a, 0);
+	assert(0 == transform_write_header(a, ae));
+	assert(0 == transform_write_finish_entry(a));
 
 	/*
 	 * With symlink check and unlink option, it should remove
@@ -100,10 +100,10 @@ DEFINE_TEST(test_write_disk_secure)
 	assert(archive_entry_clear(ae) != NULL);
 	archive_entry_copy_pathname(ae, "link_to_dir2/filec");
 	archive_entry_set_mode(ae, S_IFREG | 0777);
-	archive_write_disk_set_options(a, ARCHIVE_EXTRACT_SECURE_SYMLINKS | ARCHIVE_EXTRACT_UNLINK);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	transform_write_disk_set_options(a, ARCHIVE_EXTRACT_SECURE_SYMLINKS | ARCHIVE_EXTRACT_UNLINK);
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assert(0 == archive_write_finish_entry(a));
+	assert(0 == transform_write_finish_entry(a));
 
 	/*
 	 * Without security checks, extracting a dir over a link to a
@@ -114,15 +114,15 @@ DEFINE_TEST(test_write_disk_secure)
 	archive_entry_copy_pathname(ae, "link_to_dir3");
 	archive_entry_set_mode(ae, S_IFLNK | 0777);
 	archive_entry_set_symlink(ae, "dir");
-	archive_write_disk_set_options(a, 0);
-	assert(0 == archive_write_header(a, ae));
-	assert(0 == archive_write_finish_entry(a));
+	transform_write_disk_set_options(a, 0);
+	assert(0 == transform_write_header(a, ae));
+	assert(0 == transform_write_finish_entry(a));
 	/* Extract a dir whose name matches the symlink. */
 	assert(archive_entry_clear(ae) != NULL);
 	archive_entry_copy_pathname(ae, "link_to_dir3");
 	archive_entry_set_mode(ae, S_IFDIR | 0777);
-	assert(0 == archive_write_header(a, ae));
-	assert(0 == archive_write_finish_entry(a));
+	assert(0 == transform_write_header(a, ae));
+	assert(0 == transform_write_finish_entry(a));
 	/* Verify link was followed. */
 	assertEqualInt(0, lstat("link_to_dir3", &st));
 	assert(S_ISLNK(st.st_mode));
@@ -136,15 +136,15 @@ DEFINE_TEST(test_write_disk_secure)
 	archive_entry_copy_pathname(ae, "link_to_dir4");
 	archive_entry_set_mode(ae, S_IFLNK | 0777);
 	archive_entry_set_symlink(ae, "nonexistent_dir");
-	archive_write_disk_set_options(a, 0);
-	assert(0 == archive_write_header(a, ae));
-	assert(0 == archive_write_finish_entry(a));
+	transform_write_disk_set_options(a, 0);
+	assert(0 == transform_write_header(a, ae));
+	assert(0 == transform_write_finish_entry(a));
 	/* Extract a dir whose name matches the symlink. */
 	assert(archive_entry_clear(ae) != NULL);
 	archive_entry_copy_pathname(ae, "link_to_dir4");
 	archive_entry_set_mode(ae, S_IFDIR | 0777);
-	assert(0 == archive_write_header(a, ae));
-	assert(0 == archive_write_finish_entry(a));
+	assert(0 == transform_write_header(a, ae));
+	assert(0 == transform_write_finish_entry(a));
 	/* Verify link was replaced. */
 	assertEqualInt(0, lstat("link_to_dir4", &st));
 	assert(S_ISDIR(st.st_mode));
@@ -157,28 +157,28 @@ DEFINE_TEST(test_write_disk_secure)
 	assert((ae = archive_entry_new()) != NULL);
 	archive_entry_copy_pathname(ae, "non_dir");
 	archive_entry_set_mode(ae, S_IFREG | 0777);
-	archive_write_disk_set_options(a, 0);
-	assert(0 == archive_write_header(a, ae));
-	assert(0 == archive_write_finish_entry(a));
+	transform_write_disk_set_options(a, 0);
+	assert(0 == transform_write_header(a, ae));
+	assert(0 == transform_write_finish_entry(a));
 	/* Create symlink to the file. */
 	archive_entry_copy_pathname(ae, "link_to_dir5");
 	archive_entry_set_mode(ae, S_IFLNK | 0777);
 	archive_entry_set_symlink(ae, "non_dir");
-	archive_write_disk_set_options(a, 0);
-	assert(0 == archive_write_header(a, ae));
-	assert(0 == archive_write_finish_entry(a));
+	transform_write_disk_set_options(a, 0);
+	assert(0 == transform_write_header(a, ae));
+	assert(0 == transform_write_finish_entry(a));
 	/* Extract a dir whose name matches the symlink. */
 	assert(archive_entry_clear(ae) != NULL);
 	archive_entry_copy_pathname(ae, "link_to_dir5");
 	archive_entry_set_mode(ae, S_IFDIR | 0777);
-	assert(0 == archive_write_header(a, ae));
-	assert(0 == archive_write_finish_entry(a));
+	assert(0 == transform_write_header(a, ae));
+	assert(0 == transform_write_finish_entry(a));
 	/* Verify link was replaced. */
 	assertEqualInt(0, lstat("link_to_dir5", &st));
 	assert(S_ISDIR(st.st_mode));
 	archive_entry_free(ae);
 
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/* Test the entries on disk. */
 	assert(0 == lstat("dir", &st));

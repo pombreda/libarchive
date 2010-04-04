@@ -24,19 +24,19 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_compression_none.c 201080 2009-12-28 02:03:54Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libarchive/transform_write_set_compression_none.c 201080 2009-12-28 02:03:54Z kientzle $");
 
 #include "transform.h"
 
 int
-archive_write_set_compression_none(struct transform *a)
+transform_write_set_compression_none(struct transform *a)
 {
 	(void)a; /* UNUSED */
 	return (ARCHIVE_OK);
 }
 
 int
-archive_write_add_filter_none(struct transform *a)
+transform_write_add_filter_none(struct transform *a)
 {
 	(void)a; /* UNUSED */
 	return (ARCHIVE_OK);

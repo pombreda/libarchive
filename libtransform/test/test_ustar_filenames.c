@@ -58,11 +58,11 @@ test_filename(const char *prefix, int dlen, int flen)
 	strcpy(dirname, filename);
 
 	/* Create a new archive in memory. */
-	assert((a = archive_write_new()) != NULL);
-	assertA(0 == archive_write_set_format_ustar(a));
-	assertA(0 == archive_write_set_compression_none(a));
-	assertA(0 == archive_write_set_bytes_per_block(a,0));
-	assertA(0 == archive_write_open_memory(a, buff, sizeof(buff), &used));
+	assert((a = transform_write_new()) != NULL);
+	assertA(0 == transform_write_set_format_ustar(a));
+	assertA(0 == transform_write_set_compression_none(a));
+	assertA(0 == transform_write_set_bytes_per_block(a,0));
+	assertA(0 == transform_write_open_memory(a, buff, sizeof(buff), &used));
 
 	/*
 	 * Write a file to it.
@@ -72,9 +72,9 @@ test_filename(const char *prefix, int dlen, int flen)
 	archive_entry_set_mode(ae, S_IFREG | 0755);
 	failure("dlen=%d, flen=%d", dlen, flen);
 	if (flen > 100) {
-		assertEqualIntA(a, ARCHIVE_FAILED, archive_write_header(a, ae));
+		assertEqualIntA(a, ARCHIVE_FAILED, transform_write_header(a, ae));
 	} else {
-		assertEqualIntA(a, 0, archive_write_header(a, ae));
+		assertEqualIntA(a, 0, transform_write_header(a, ae));
 	}
 	archive_entry_free(ae);
 
@@ -86,9 +86,9 @@ test_filename(const char *prefix, int dlen, int flen)
 	archive_entry_set_mode(ae, S_IFDIR | 0755);
 	failure("dlen=%d, flen=%d", dlen, flen);
 	if (flen >= 100) {
-		assertEqualIntA(a, ARCHIVE_FAILED, archive_write_header(a, ae));
+		assertEqualIntA(a, ARCHIVE_FAILED, transform_write_header(a, ae));
 	} else {
-		assertEqualIntA(a, 0, archive_write_header(a, ae));
+		assertEqualIntA(a, 0, transform_write_header(a, ae));
 	}
 	archive_entry_free(ae);
 
@@ -103,15 +103,15 @@ test_filename(const char *prefix, int dlen, int flen)
 	archive_entry_set_mode(ae, S_IFDIR | 0755);
 	failure("dlen=%d, flen=%d", dlen, flen);
 	if (flen >= 100) {
-		assertEqualIntA(a, ARCHIVE_FAILED, archive_write_header(a, ae));
+		assertEqualIntA(a, ARCHIVE_FAILED, transform_write_header(a, ae));
 	} else {
-		assertEqualIntA(a, 0, archive_write_header(a, ae));
+		assertEqualIntA(a, 0, transform_write_header(a, ae));
 	}
 	archive_entry_free(ae);
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/*
 	 * Now, read the data back.

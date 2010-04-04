@@ -48,17 +48,17 @@ DEFINE_TEST(test_read_large)
 	for (i = 0; i < sizeof(testdata); i++)
 		testdata[i] = (unsigned char)(rand());
 
-	assert(NULL != (a = archive_write_new()));
-	assertA(0 == archive_write_set_format_ustar(a));
-	assertA(0 == archive_write_open_memory(a, buff, sizeof(buff), &used));
+	assert(NULL != (a = transform_write_new()));
+	assertA(0 == transform_write_set_format_ustar(a));
+	assertA(0 == transform_write_open_memory(a, buff, sizeof(buff), &used));
 	assert(NULL != (entry = archive_entry_new()));
 	archive_entry_set_size(entry, sizeof(testdata));
 	archive_entry_set_mode(entry, S_IFREG | 0777);
 	archive_entry_set_pathname(entry, "test");
-	assertA(0 == archive_write_header(a, entry));
+	assertA(0 == transform_write_header(a, entry));
 	archive_entry_free(entry);
-	assertA((int)sizeof(testdata) == archive_write_data(a, testdata, sizeof(testdata)));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertA((int)sizeof(testdata) == transform_write_data(a, testdata, sizeof(testdata)));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	assert(NULL != (a = transform_read_new()));
 	assertA(0 == transform_read_support_format_all(a));

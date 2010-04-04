@@ -219,7 +219,7 @@ typedef __LA_INT64_T	archive_skip_callback(struct transform *,
 #endif
 
 /* Returns size actually written, zero on EOF, -1 on error. */
-typedef __LA_SSIZE_T	archive_write_callback(struct transform *,
+typedef __LA_SSIZE_T	transform_write_callback(struct transform *,
 			    void *_client_data,
 			    const void *_buffer, size_t _length);
 
@@ -411,112 +411,112 @@ __LA_DECL int		 transform_read_finish(struct transform *);
 
 /*-
  * To create an archive:
- *   1) Ask archive_write_new for a archive writer object.
+ *   1) Ask transform_write_new for a archive writer object.
  *   2) Set any global properties.  In particular, you should set
  *      the compression and format to use.
- *   3) Call archive_write_open to open the file (most people
- *       will use archive_write_open_file or archive_write_open_fd,
+ *   3) Call transform_write_open to open the file (most people
+ *       will use transform_write_open_file or transform_write_open_fd,
  *       which provide convenient canned I/O callbacks for you).
  *   4) For each entry:
  *      - construct an appropriate struct transform_entry structure
- *      - archive_write_header to write the header
- *      - archive_write_data to write the entry data
- *   5) archive_write_close to close the output
- *   6) archive_write_free to cleanup the writer and release resources
+ *      - transform_write_header to write the header
+ *      - transform_write_data to write the entry data
+ *   5) transform_write_close to close the output
+ *   6) transform_write_free to cleanup the writer and release resources
  */
-__LA_DECL struct transform	*archive_write_new(void);
-__LA_DECL int archive_write_set_bytes_per_block(struct transform *,
+__LA_DECL struct transform	*transform_write_new(void);
+__LA_DECL int transform_write_set_bytes_per_block(struct transform *,
 		     int bytes_per_block);
-__LA_DECL int archive_write_get_bytes_per_block(struct transform *);
+__LA_DECL int transform_write_get_bytes_per_block(struct transform *);
 /* XXX This is badly misnamed; suggestions appreciated. XXX */
-__LA_DECL int archive_write_set_bytes_in_last_block(struct transform *,
+__LA_DECL int transform_write_set_bytes_in_last_block(struct transform *,
 		     int bytes_in_last_block);
-__LA_DECL int archive_write_get_bytes_in_last_block(struct transform *);
+__LA_DECL int transform_write_get_bytes_in_last_block(struct transform *);
 
 /* The dev/ino of a file that won't be archived.  This is used
  * to avoid recursively adding an archive to itself. */
 #if ARCHIVE_VERSION_NUMBER < 3000000
-__LA_DECL int archive_write_set_skip_file(struct transform *, dev_t, ino_t);
+__LA_DECL int transform_write_set_skip_file(struct transform *, dev_t, ino_t);
 #else
-__LA_DECL int archive_write_set_skip_file(struct transform *,
+__LA_DECL int transform_write_set_skip_file(struct transform *,
     __LA_INT64_T, __LA_INT64_T);
 #endif
 
 #if ARCHIVE_VERSION_NUMBER < 4000000
-__LA_DECL int archive_write_set_compression_bzip2(struct transform *);
-__LA_DECL int archive_write_set_compression_compress(struct transform *);
-__LA_DECL int archive_write_set_compression_gzip(struct transform *);
-__LA_DECL int archive_write_set_compression_lzma(struct transform *);
-__LA_DECL int archive_write_set_compression_none(struct transform *);
-__LA_DECL int archive_write_set_compression_program(struct transform *,
+__LA_DECL int transform_write_set_compression_bzip2(struct transform *);
+__LA_DECL int transform_write_set_compression_compress(struct transform *);
+__LA_DECL int transform_write_set_compression_gzip(struct transform *);
+__LA_DECL int transform_write_set_compression_lzma(struct transform *);
+__LA_DECL int transform_write_set_compression_none(struct transform *);
+__LA_DECL int transform_write_set_compression_program(struct transform *,
 		     const char *cmd);
-__LA_DECL int archive_write_set_compression_xz(struct transform *);
+__LA_DECL int transform_write_set_compression_xz(struct transform *);
 #endif
 
-__LA_DECL int archive_write_add_filter_bzip2(struct transform *);
-__LA_DECL int archive_write_add_filter_compress(struct transform *);
-__LA_DECL int archive_write_add_filter_gzip(struct transform *);
-__LA_DECL int archive_write_add_filter_lzma(struct transform *);
-__LA_DECL int archive_write_add_filter_none(struct transform *);
-__LA_DECL int archive_write_add_filter_program(struct transform *,
+__LA_DECL int transform_write_add_filter_bzip2(struct transform *);
+__LA_DECL int transform_write_add_filter_compress(struct transform *);
+__LA_DECL int transform_write_add_filter_gzip(struct transform *);
+__LA_DECL int transform_write_add_filter_lzma(struct transform *);
+__LA_DECL int transform_write_add_filter_none(struct transform *);
+__LA_DECL int transform_write_add_filter_program(struct transform *,
 		     const char *cmd);
-__LA_DECL int archive_write_add_filter_xz(struct transform *);
+__LA_DECL int transform_write_add_filter_xz(struct transform *);
 
 
-__LA_DECL int archive_write_open(struct transform *, void *,
-		     archive_open_callback *, archive_write_callback *,
+__LA_DECL int transform_write_open(struct transform *, void *,
+		     archive_open_callback *, transform_write_callback *,
 		     archive_close_callback *);
-__LA_DECL int archive_write_open_fd(struct transform *, int _fd);
-__LA_DECL int archive_write_open_filename(struct transform *, const char *_file);
-/* A deprecated synonym for archive_write_open_filename() */
-__LA_DECL int archive_write_open_file(struct transform *, const char *_file);
-__LA_DECL int archive_write_open_FILE(struct transform *, FILE *);
+__LA_DECL int transform_write_open_fd(struct transform *, int _fd);
+__LA_DECL int transform_write_open_filename(struct transform *, const char *_file);
+/* A deprecated synonym for transform_write_open_filename() */
+__LA_DECL int transform_write_open_file(struct transform *, const char *_file);
+__LA_DECL int transform_write_open_FILE(struct transform *, FILE *);
 /* _buffSize is the size of the buffer, _used refers to a variable that
  * will be updated after each write into the buffer. */
-__LA_DECL int archive_write_open_memory(struct transform *,
+__LA_DECL int transform_write_open_memory(struct transform *,
 			void *_buffer, size_t _buffSize, size_t *_used);
 
 /*
  * Note that the library will truncate writes beyond the size provided
- * to archive_write_header or pad if the provided data is short.
+ * to transform_write_header or pad if the provided data is short.
  */
-__LA_DECL __LA_SSIZE_T	archive_write_data(struct transform *,
+__LA_DECL __LA_SSIZE_T	transform_write_data(struct transform *,
 			    const void *, size_t);
 
 #if ARCHIVE_VERSION_NUMBER < 3000000
 /* Libarchive 1.x and 2.x use off_t for the argument, but that's not
  * stable on Linux. */
-__LA_DECL __LA_SSIZE_T	 archive_write_data_block(struct transform *,
+__LA_DECL __LA_SSIZE_T	 transform_write_data_block(struct transform *,
 				    const void *, size_t, off_t);
 #else
 /* Libarchive 3.0 uses explicit int64_t to ensure consistent 64-bit support. */
-__LA_DECL __LA_SSIZE_T	 archive_write_data_block(struct transform *,
+__LA_DECL __LA_SSIZE_T	 transform_write_data_block(struct transform *,
 				    const void *, size_t, __LA_INT64_T);
 #endif
-__LA_DECL int		 archive_write_finish_entry(struct transform *);
-__LA_DECL int		 archive_write_close(struct transform *);
+__LA_DECL int		 transform_write_finish_entry(struct transform *);
+__LA_DECL int		 transform_write_close(struct transform *);
 /* This can fail if the archive wasn't already closed, in which case
- * archive_write_free() will implicitly call archive_write_close(). */
-__LA_DECL int		 archive_write_free(struct transform *);
+ * transform_write_free() will implicitly call transform_write_close(). */
+__LA_DECL int		 transform_write_free(struct transform *);
 #if ARCHIVE_VERSION_NUMBER < 4000000
-/* Synonym for archive_write_free() for backwards compatibility. */
-__LA_DECL int		 archive_write_finish(struct transform *);
+/* Synonym for transform_write_free() for backwards compatibility. */
+__LA_DECL int		 transform_write_finish(struct transform *);
 #endif
 
 /*
  * Set write options.  Note that there's really no reason to use
- * anything but archive_write_set_options().  The others should probably
+ * anything but transform_write_set_options().  The others should probably
  * all be deprecated and eventually removed.
  */
 /* Apply option string to both the format and all filters. */
-__LA_DECL int		archive_write_set_options(struct transform *_a,
+__LA_DECL int		transform_write_set_options(struct transform *_a,
 			    const char *s);
 /* Apply option string to all matching filters. */
-__LA_DECL int		archive_write_set_filter_options(struct transform *_a,
+__LA_DECL int		transform_write_set_filter_options(struct transform *_a,
 			    const char *s);
 #if ARCHIVE_VERSION_NUMBER < 4000000
-/* Deprecated synonym for archive_write_set_filter_options. */
-__LA_DECL int		archive_write_set_compressor_options(struct transform *_a,
+/* Deprecated synonym for transform_write_set_filter_options. */
+__LA_DECL int		transform_write_set_compressor_options(struct transform *_a,
 			    const char *s);
 #endif
 

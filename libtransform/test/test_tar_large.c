@@ -223,10 +223,10 @@ DEFINE_TEST(test_tar_large)
 	/*
 	 * Open an archive for writing.
 	 */
-	a = archive_write_new();
-	archive_write_set_format_pax_restricted(a);
-	archive_write_set_bytes_per_block(a, 0); /* No buffering. */
-	archive_write_open(a, &memdata, NULL, memory_write, NULL);
+	a = transform_write_new();
+	transform_write_set_format_pax_restricted(a);
+	transform_write_set_bytes_per_block(a, 0); /* No buffering. */
+	transform_write_open(a, &memdata, NULL, memory_write, NULL);
 
 	/*
 	 * Write a series of large files to it.
@@ -240,7 +240,7 @@ DEFINE_TEST(test_tar_large)
 
 		archive_entry_set_size(ae, filesize);
 
-		assertA(0 == archive_write_header(a, ae));
+		assertA(0 == transform_write_header(a, ae));
 		archive_entry_free(ae);
 
 		/*
@@ -251,7 +251,7 @@ DEFINE_TEST(test_tar_large)
 			if ((int64_t)writesize > filesize)
 				writesize = (size_t)filesize;
 			assertA((int)writesize
-			    == archive_write_data(a, filedata, writesize));
+			    == transform_write_data(a, filedata, writesize));
 			filesize -= writesize;
 		}
 	}
@@ -259,13 +259,13 @@ DEFINE_TEST(test_tar_large)
 	assert((ae = archive_entry_new()) != NULL);
 	archive_entry_copy_pathname(ae, "lastfile");
 	archive_entry_set_mode(ae, S_IFREG | 0755);
-	assertA(0 == archive_write_header(a, ae));
+	assertA(0 == transform_write_header(a, ae));
 	archive_entry_free(ae);
 
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/*
 	 * Open the same archive for reading.

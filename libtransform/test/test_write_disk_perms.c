@@ -126,7 +126,7 @@ defaultgid(void)
 DEFINE_TEST(test_write_disk_perms)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__)
-	skipping("archive_write_disk interface");
+	skipping("transform_write_disk interface");
 #else
 	struct transform *a;
 	struct transform_entry *ae;
@@ -143,15 +143,15 @@ DEFINE_TEST(test_write_disk_perms)
 	 */
 	assertEqualInt(0, chown(".", getuid(), getgid()));
 
-	/* Create an archive_write_disk object. */
-	assert((a = archive_write_disk_new()) != NULL);
+	/* Create an transform_write_disk object. */
+	assert((a = transform_write_disk_new()) != NULL);
 
 	/* Write a regular file to it. */
 	assert((ae = archive_entry_new()) != NULL);
 	archive_entry_copy_pathname(ae, "file_0755");
 	archive_entry_set_mode(ae, S_IFREG | 0777);
-	assert(0 == archive_write_header(a, ae));
-	assert(0 == archive_write_finish_entry(a));
+	assert(0 == transform_write_header(a, ae));
+	assert(0 == transform_write_finish_entry(a));
 	archive_entry_free(ae);
 
 	/* Write a regular file, then write over it. */
@@ -159,9 +159,9 @@ DEFINE_TEST(test_write_disk_perms)
 	assert((ae = archive_entry_new()) != NULL);
 	archive_entry_copy_pathname(ae, "file_overwrite_0144");
 	archive_entry_set_mode(ae, S_IFREG | 0777);
-	assert(0 == archive_write_header(a, ae));
+	assert(0 == transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assert(0 == archive_write_finish_entry(a));
+	assert(0 == transform_write_finish_entry(a));
 	/* Check that file was created with different perms. */
 	assert(0 == stat("file_overwrite_0144", &st));
 	failure("file_overwrite_0144: st.st_mode=%o", st.st_mode);
@@ -170,17 +170,17 @@ DEFINE_TEST(test_write_disk_perms)
 	assert((ae = archive_entry_new()) != NULL);
 	archive_entry_copy_pathname(ae, "file_overwrite_0144");
 	archive_entry_set_mode(ae, S_IFREG | 0144);
-	assert(0 == archive_write_header(a, ae));
+	assert(0 == transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assert(0 == archive_write_finish_entry(a));
+	assert(0 == transform_write_finish_entry(a));
 
 	/* Write a regular dir. */
 	assert((ae = archive_entry_new()) != NULL);
 	archive_entry_copy_pathname(ae, "dir_0514");
 	archive_entry_set_mode(ae, S_IFDIR | 0514);
-	assert(0 == archive_write_header(a, ae));
+	assert(0 == transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assert(0 == archive_write_finish_entry(a));
+	assert(0 == transform_write_finish_entry(a));
 
 	/* Overwrite an existing dir. */
 	/* For dir, the first perms should get left. */
@@ -193,9 +193,9 @@ DEFINE_TEST(test_write_disk_perms)
 	assert((ae = archive_entry_new()) != NULL);
 	archive_entry_copy_pathname(ae, "dir_overwrite_0744");
 	archive_entry_set_mode(ae, S_IFDIR | 0777);
-	assert(0 == archive_write_header(a, ae));
+	assert(0 == transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assert(0 == archive_write_finish_entry(a));
+	assert(0 == transform_write_finish_entry(a));
 	/* Make sure they're unchanged. */
 	assert(0 == stat("dir_overwrite_0744", &st));
 	failure("dir_overwrite_0744: st.st_mode=%o", st.st_mode);
@@ -205,26 +205,26 @@ DEFINE_TEST(test_write_disk_perms)
 	assert((ae = archive_entry_new()) != NULL);
 	archive_entry_copy_pathname(ae, "file_no_suid");
 	archive_entry_set_mode(ae, S_IFREG | S_ISUID | 0777);
-	archive_write_disk_set_options(a, 0);
-	assert(0 == archive_write_header(a, ae));
-	assert(0 == archive_write_finish_entry(a));
+	transform_write_disk_set_options(a, 0);
+	assert(0 == transform_write_header(a, ae));
+	assert(0 == transform_write_finish_entry(a));
 
 	/* Write a regular file with ARCHIVE_EXTRACT_PERM. */
 	assert(archive_entry_clear(ae) != NULL);
 	archive_entry_copy_pathname(ae, "file_0777");
 	archive_entry_set_mode(ae, S_IFREG | 0777);
-	archive_write_disk_set_options(a, ARCHIVE_EXTRACT_PERM);
-	assert(0 == archive_write_header(a, ae));
-	assert(0 == archive_write_finish_entry(a));
+	transform_write_disk_set_options(a, ARCHIVE_EXTRACT_PERM);
+	assert(0 == transform_write_header(a, ae));
+	assert(0 == transform_write_finish_entry(a));
 
 	/* Write a regular file with ARCHIVE_EXTRACT_PERM & SUID bit */
 	assert(archive_entry_clear(ae) != NULL);
 	archive_entry_copy_pathname(ae, "file_4742");
 	archive_entry_set_mode(ae, S_IFREG | S_ISUID | 0742);
 	archive_entry_set_uid(ae, getuid());
-	archive_write_disk_set_options(a, ARCHIVE_EXTRACT_PERM);
-	assert(0 == archive_write_header(a, ae));
-	assert(0 == archive_write_finish_entry(a));
+	transform_write_disk_set_options(a, ARCHIVE_EXTRACT_PERM);
+	assert(0 == transform_write_header(a, ae));
+	assert(0 == transform_write_finish_entry(a));
 
 	/*
 	 * Write a regular file with ARCHIVE_EXTRACT_PERM & SUID bit,
@@ -235,8 +235,8 @@ DEFINE_TEST(test_write_disk_perms)
 	archive_entry_copy_pathname(ae, "file_bad_suid");
 	archive_entry_set_mode(ae, S_IFREG | S_ISUID | 0742);
 	archive_entry_set_uid(ae, getuid() + 1);
-	archive_write_disk_set_options(a, ARCHIVE_EXTRACT_PERM);
-	assertA(0 == archive_write_header(a, ae));
+	transform_write_disk_set_options(a, ARCHIVE_EXTRACT_PERM);
+	assertA(0 == transform_write_header(a, ae));
 	/*
 	 * Because we didn't ask for owner, the failure to
 	 * restore SUID shouldn't return a failure.
@@ -244,19 +244,19 @@ DEFINE_TEST(test_write_disk_perms)
 	 * See more detailed comments below.
 	 */
 	failure("Opportunistic SUID failure shouldn't return error.");
-	assertEqualInt(0, archive_write_finish_entry(a));
+	assertEqualInt(0, transform_write_finish_entry(a));
 
         if (getuid() != 0) {
 		assert(archive_entry_clear(ae) != NULL);
 		archive_entry_copy_pathname(ae, "file_bad_suid2");
 		archive_entry_set_mode(ae, S_IFREG | S_ISUID | 0742);
 		archive_entry_set_uid(ae, getuid() + 1);
-		archive_write_disk_set_options(a,
+		transform_write_disk_set_options(a,
 		    ARCHIVE_EXTRACT_PERM | ARCHIVE_EXTRACT_OWNER);
-		assertA(0 == archive_write_header(a, ae));
+		assertA(0 == transform_write_header(a, ae));
 		/* Owner change should fail here. */
 		failure("Non-opportunistic SUID failure should return error.");
-		assertEqualInt(ARCHIVE_WARN, archive_write_finish_entry(a));
+		assertEqualInt(ARCHIVE_WARN, transform_write_finish_entry(a));
 	}
 
 	/* Write a regular file with ARCHIVE_EXTRACT_PERM & SGID bit */
@@ -264,10 +264,10 @@ DEFINE_TEST(test_write_disk_perms)
 	archive_entry_copy_pathname(ae, "file_perm_sgid");
 	archive_entry_set_mode(ae, S_IFREG | S_ISGID | 0742);
 	archive_entry_set_gid(ae, defaultgid());
-	archive_write_disk_set_options(a, ARCHIVE_EXTRACT_PERM);
-	assert(0 == archive_write_header(a, ae));
+	transform_write_disk_set_options(a, ARCHIVE_EXTRACT_PERM);
+	assert(0 == transform_write_header(a, ae));
 	failure("Setting SGID bit should succeed here.");
-	assertEqualIntA(a, 0, archive_write_finish_entry(a));
+	assertEqualIntA(a, 0, transform_write_finish_entry(a));
 
 	if (altgid() == -1) {
 		/*
@@ -302,10 +302,10 @@ DEFINE_TEST(test_write_disk_perms)
 		archive_entry_set_mode(ae, S_IFREG | S_ISGID | 0742);
 		archive_entry_set_uid(ae, getuid());
 		archive_entry_set_gid(ae, altgid());
-		archive_write_disk_set_options(a, ARCHIVE_EXTRACT_PERM);
-		assert(0 == archive_write_header(a, ae));
+		transform_write_disk_set_options(a, ARCHIVE_EXTRACT_PERM);
+		assert(0 == transform_write_header(a, ae));
 		failure("Setting SGID bit should fail because of group mismatch but the failure should be silent because we didn't ask for the group to be set.");
-		assertEqualIntA(a, 0, archive_write_finish_entry(a));
+		assertEqualIntA(a, 0, transform_write_finish_entry(a));
 
 		/*
 		 * As above, but add _EXTRACT_OWNER to verify that it
@@ -316,11 +316,11 @@ DEFINE_TEST(test_write_disk_perms)
 		archive_entry_set_mode(ae, S_IFREG | S_ISGID | 0742);
 		archive_entry_set_uid(ae, getuid());
 		archive_entry_set_gid(ae, altgid());
-		archive_write_disk_set_options(a,
+		transform_write_disk_set_options(a,
 		    ARCHIVE_EXTRACT_PERM | ARCHIVE_EXTRACT_OWNER);
-		assert(0 == archive_write_header(a, ae));
+		assert(0 == transform_write_header(a, ae));
 		failure("Setting SGID bit should succeed here.");
-		assertEqualIntA(a, ARCHIVE_OK, archive_write_finish_entry(a));
+		assertEqualIntA(a, ARCHIVE_OK, transform_write_finish_entry(a));
 	}
 
 	/*
@@ -336,20 +336,20 @@ DEFINE_TEST(test_write_disk_perms)
 		archive_entry_copy_pathname(ae, "file_bad_sgid");
 		archive_entry_set_mode(ae, S_IFREG | S_ISGID | 0742);
 		archive_entry_set_gid(ae, invalidgid());
-		archive_write_disk_set_options(a, ARCHIVE_EXTRACT_PERM);
-		assertA(0 == archive_write_header(a, ae));
+		transform_write_disk_set_options(a, ARCHIVE_EXTRACT_PERM);
+		assertA(0 == transform_write_header(a, ae));
 		failure("This SGID restore should fail without an error.");
-		assertEqualIntA(a, 0, archive_write_finish_entry(a));
+		assertEqualIntA(a, 0, transform_write_finish_entry(a));
 
 		assert(archive_entry_clear(ae) != NULL);
 		archive_entry_copy_pathname(ae, "file_bad_sgid2");
 		archive_entry_set_mode(ae, S_IFREG | S_ISGID | 0742);
 		archive_entry_set_gid(ae, invalidgid());
-		archive_write_disk_set_options(a,
+		transform_write_disk_set_options(a,
 		    ARCHIVE_EXTRACT_PERM | ARCHIVE_EXTRACT_OWNER);
-		assertA(0 == archive_write_header(a, ae));
+		assertA(0 == transform_write_header(a, ae));
 		failure("This SGID restore should fail with an error.");
-		assertEqualIntA(a, ARCHIVE_WARN, archive_write_finish_entry(a));
+		assertEqualIntA(a, ARCHIVE_WARN, transform_write_finish_entry(a));
 	}
 
 	/* Set ownership should fail if we're not root. */
@@ -360,12 +360,12 @@ DEFINE_TEST(test_write_disk_perms)
 		archive_entry_copy_pathname(ae, "file_bad_owner");
 		archive_entry_set_mode(ae, S_IFREG | 0744);
 		archive_entry_set_uid(ae, getuid() + 1);
-		archive_write_disk_set_options(a, ARCHIVE_EXTRACT_OWNER);
-		assertA(0 == archive_write_header(a, ae));
-		assertEqualIntA(a,ARCHIVE_WARN,archive_write_finish_entry(a));
+		transform_write_disk_set_options(a, ARCHIVE_EXTRACT_OWNER);
+		assertA(0 == transform_write_header(a, ae));
+		assertEqualIntA(a,ARCHIVE_WARN,transform_write_finish_entry(a));
 	}
 
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 	archive_entry_free(ae);
 
 	/* Test the entries on disk. */

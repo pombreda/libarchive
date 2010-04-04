@@ -114,12 +114,12 @@ test_pax_filename_encoding_2(void)
 		return;
 	}
 
-	assert((a = archive_write_new()) != NULL);
-	assertEqualIntA(a, 0, archive_write_set_format_pax(a));
-	assertEqualIntA(a, 0, archive_write_set_compression_none(a));
-	assertEqualIntA(a, 0, archive_write_set_bytes_per_block(a, 0));
+	assert((a = transform_write_new()) != NULL);
+	assertEqualIntA(a, 0, transform_write_set_format_pax(a));
+	assertEqualIntA(a, 0, transform_write_set_compression_none(a));
+	assertEqualIntA(a, 0, transform_write_set_bytes_per_block(a, 0));
 	assertEqualInt(0,
-	    archive_write_open_memory(a, buff, sizeof(buff), &used));
+	    transform_write_open_memory(a, buff, sizeof(buff), &used));
 
 	assert((entry = archive_entry_new()) != NULL);
 	/* Set pathname, gname, uname, hardlink to nonconvertible values. */
@@ -129,7 +129,7 @@ test_pax_filename_encoding_2(void)
 	archive_entry_copy_hardlink(entry, filename);
 	archive_entry_set_filetype(entry, AE_IFREG);
 	failure("This should generate a warning for nonconvertible names.");
-	assertEqualInt(ARCHIVE_WARN, archive_write_header(a, entry));
+	assertEqualInt(ARCHIVE_WARN, transform_write_header(a, entry));
 	archive_entry_free(entry);
 
 	assert((entry = archive_entry_new()) != NULL);
@@ -140,7 +140,7 @@ test_pax_filename_encoding_2(void)
 	archive_entry_copy_symlink(entry, filename);
 	archive_entry_set_filetype(entry, AE_IFLNK);
 	failure("This should generate a warning for nonconvertible names.");
-	assertEqualInt(ARCHIVE_WARN, archive_write_header(a, entry));
+	assertEqualInt(ARCHIVE_WARN, transform_write_header(a, entry));
 	archive_entry_free(entry);
 
 	assert((entry = archive_entry_new()) != NULL);
@@ -148,11 +148,11 @@ test_pax_filename_encoding_2(void)
 	archive_entry_copy_pathname(entry, longname);
 	archive_entry_set_filetype(entry, AE_IFREG);
 	failure("This should generate a warning for nonconvertible names.");
-	assertEqualInt(ARCHIVE_WARN, archive_write_header(a, entry));
+	assertEqualInt(ARCHIVE_WARN, transform_write_header(a, entry));
 	archive_entry_free(entry);
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/*
 	 * Now read the entries back.
@@ -231,18 +231,18 @@ test_pax_filename_encoding_3(void)
 	}
 	archive_entry_free(entry);
 
-	assert((a = archive_write_new()) != NULL);
-	assertEqualIntA(a, 0, archive_write_set_format_pax(a));
-	assertEqualIntA(a, 0, archive_write_set_compression_none(a));
-	assertEqualIntA(a, 0, archive_write_set_bytes_per_block(a, 0));
+	assert((a = transform_write_new()) != NULL);
+	assertEqualIntA(a, 0, transform_write_set_format_pax(a));
+	assertEqualIntA(a, 0, transform_write_set_compression_none(a));
+	assertEqualIntA(a, 0, transform_write_set_bytes_per_block(a, 0));
 	assertEqualInt(0,
-	    archive_write_open_memory(a, buff, sizeof(buff), &used));
+	    transform_write_open_memory(a, buff, sizeof(buff), &used));
 
 	assert((entry = archive_entry_new()) != NULL);
 	/* Set pathname to non-convertible wide value. */
 	archive_entry_copy_pathname_w(entry, badname);
 	archive_entry_set_filetype(entry, AE_IFREG);
-	assertEqualInt(ARCHIVE_OK, archive_write_header(a, entry));
+	assertEqualInt(ARCHIVE_OK, transform_write_header(a, entry));
 	archive_entry_free(entry);
 
 	assert((entry = archive_entry_new()) != NULL);
@@ -250,7 +250,7 @@ test_pax_filename_encoding_3(void)
 	/* Set gname to non-convertible wide value. */
 	archive_entry_copy_gname_w(entry, badname);
 	archive_entry_set_filetype(entry, AE_IFREG);
-	assertEqualInt(ARCHIVE_OK, archive_write_header(a, entry));
+	assertEqualInt(ARCHIVE_OK, transform_write_header(a, entry));
 	archive_entry_free(entry);
 
 	assert((entry = archive_entry_new()) != NULL);
@@ -258,7 +258,7 @@ test_pax_filename_encoding_3(void)
 	/* Set uname to non-convertible wide value. */
 	archive_entry_copy_uname_w(entry, badname);
 	archive_entry_set_filetype(entry, AE_IFREG);
-	assertEqualInt(ARCHIVE_OK, archive_write_header(a, entry));
+	assertEqualInt(ARCHIVE_OK, transform_write_header(a, entry));
 	archive_entry_free(entry);
 
 	assert((entry = archive_entry_new()) != NULL);
@@ -266,7 +266,7 @@ test_pax_filename_encoding_3(void)
 	/* Set hardlink to non-convertible wide value. */
 	archive_entry_copy_hardlink_w(entry, badname);
 	archive_entry_set_filetype(entry, AE_IFREG);
-	assertEqualInt(ARCHIVE_OK, archive_write_header(a, entry));
+	assertEqualInt(ARCHIVE_OK, transform_write_header(a, entry));
 	archive_entry_free(entry);
 
 	assert((entry = archive_entry_new()) != NULL);
@@ -274,11 +274,11 @@ test_pax_filename_encoding_3(void)
 	/* Set symlink to non-convertible wide value. */
 	archive_entry_copy_symlink_w(entry, badname);
 	archive_entry_set_filetype(entry, AE_IFLNK);
-	assertEqualInt(ARCHIVE_OK, archive_write_header(a, entry));
+	assertEqualInt(ARCHIVE_OK, transform_write_header(a, entry));
 	archive_entry_free(entry);
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/*
 	 * Now read the entries back.

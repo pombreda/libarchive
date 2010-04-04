@@ -26,7 +26,7 @@
 __FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk_sparse.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
- * Write a file using archive_write_data call, read the file
+ * Write a file using transform_write_data call, read the file
  * back and verify the contents.  The data written includes large
  * blocks of nulls, so it should exercise the sparsification logic
  * if ARCHIVE_EXTRACT_SPARSE is enabled.
@@ -50,30 +50,30 @@ verify_write_data(struct transform *a, int sparse)
 	archive_entry_set_size(ae, 8 * buff_size);
 	archive_entry_set_pathname(ae, "test_write_data");
 	archive_entry_set_mode(ae, AE_IFREG | 0755);
-	assertEqualIntA(a, 0, archive_write_header(a, ae));
+	assertEqualIntA(a, 0, transform_write_header(a, ae));
 
-	/* Use archive_write_data() to write three relatively sparse blocks. */
+	/* Use transform_write_data() to write three relatively sparse blocks. */
 
 	/* First has non-null data at beginning. */
 	memset(buff, 0, buff_size);
 	memcpy(buff, data, sizeof(data));
 	failure("%s", msg);
-	assertEqualInt(buff_size, archive_write_data(a, buff, buff_size));
+	assertEqualInt(buff_size, transform_write_data(a, buff, buff_size));
 
 	/* Second has non-null data in the middle. */
 	memset(buff, 0, buff_size);
 	memcpy(buff + buff_size / 2 - 3, data, sizeof(data));
 	failure("%s", msg);
-	assertEqualInt(buff_size, archive_write_data(a, buff, buff_size));
+	assertEqualInt(buff_size, transform_write_data(a, buff, buff_size));
 
 	/* Third has non-null data at the end. */
 	memset(buff, 0, buff_size);
 	memcpy(buff + buff_size - sizeof(data), data, sizeof(data));
 	failure("%s", msg);
-	assertEqualInt(buff_size, archive_write_data(a, buff, buff_size));
+	assertEqualInt(buff_size, transform_write_data(a, buff, buff_size));
 
 	failure("%s", msg);
-	assertEqualIntA(a, 0, archive_write_finish_entry(a));
+	assertEqualIntA(a, 0, transform_write_finish_entry(a));
 
 	/* Test the entry on disk. */
 	assert(0 == stat(archive_entry_pathname(ae), &st));
@@ -121,7 +121,7 @@ verify_write_data(struct transform *a, int sparse)
 }
 
 /*
- * As above, but using the archive_write_data_block() call.
+ * As above, but using the transform_write_data_block() call.
  */
 static void
 verify_write_data_block(struct transform *a, int sparse)
@@ -142,9 +142,9 @@ verify_write_data_block(struct transform *a, int sparse)
 	archive_entry_set_size(ae, 8 * buff_size);
 	archive_entry_set_pathname(ae, "test_write_data_block");
 	archive_entry_set_mode(ae, AE_IFREG | 0755);
-	assertEqualIntA(a, 0, archive_write_header(a, ae));
+	assertEqualIntA(a, 0, transform_write_header(a, ae));
 
-	/* Use archive_write_data_block() to write three
+	/* Use transform_write_data_block() to write three
 	   relatively sparse blocks. */
 
 	/* First has non-null data at beginning. */
@@ -152,24 +152,24 @@ verify_write_data_block(struct transform *a, int sparse)
 	memcpy(buff, data, sizeof(data));
 	failure("%s", msg);
 	assertEqualInt(ARCHIVE_OK,
-	    archive_write_data_block(a, buff, buff_size, 100));
+	    transform_write_data_block(a, buff, buff_size, 100));
 
 	/* Second has non-null data in the middle. */
 	memset(buff, 0, buff_size);
 	memcpy(buff + buff_size / 2 - 3, data, sizeof(data));
 	failure("%s", msg);
 	assertEqualInt(ARCHIVE_OK,
-	    archive_write_data_block(a, buff, buff_size, buff_size + 200));
+	    transform_write_data_block(a, buff, buff_size, buff_size + 200));
 
 	/* Third has non-null data at the end. */
 	memset(buff, 0, buff_size);
 	memcpy(buff + buff_size - sizeof(data), data, sizeof(data));
 	failure("%s", msg);
 	assertEqualInt(ARCHIVE_OK,
-	    archive_write_data_block(a, buff, buff_size, buff_size * 2 + 300));
+	    transform_write_data_block(a, buff, buff_size, buff_size * 2 + 300));
 
 	failure("%s", msg);
-	assertEqualIntA(a, 0, archive_write_finish_entry(a));
+	assertEqualIntA(a, 0, transform_write_finish_entry(a));
 
 	/* Test the entry on disk. */
 	assert(0 == stat(archive_entry_pathname(ae), &st));
@@ -265,16 +265,16 @@ DEFINE_TEST(test_write_disk_sparse)
 	 * write calls to the disk should vary, of course, but the
 	 * client program shouldn't see any difference.)
 	 */
-	assert((ad = archive_write_disk_new()) != NULL);
-        archive_write_disk_set_options(ad, 0);
+	assert((ad = transform_write_disk_new()) != NULL);
+        transform_write_disk_set_options(ad, 0);
 	verify_write_data(ad, 0);
 	verify_write_data_block(ad, 0);
-	assertEqualInt(0, archive_write_free(ad));
+	assertEqualInt(0, transform_write_free(ad));
 
-	assert((ad = archive_write_disk_new()) != NULL);
-        archive_write_disk_set_options(ad, ARCHIVE_EXTRACT_SPARSE);
+	assert((ad = transform_write_disk_new()) != NULL);
+        transform_write_disk_set_options(ad, ARCHIVE_EXTRACT_SPARSE);
 	verify_write_data(ad, 1);
 	verify_write_data_block(ad, 1);
-	assertEqualInt(0, archive_write_free(ad));
+	assertEqualInt(0, transform_write_free(ad));
 
 }

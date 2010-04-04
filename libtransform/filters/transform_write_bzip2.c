@@ -25,7 +25,7 @@
 
 #include "transform_platform.h"
 
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_compression_bzip2.c 201091 2009-12-28 02:22:41Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libarchive/transform_write_set_compression_bzip2.c 201091 2009-12-28 02:22:41Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -47,16 +47,16 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_compression_bzip2.c 20
 
 #if ARCHIVE_VERSION_NUMBER < 4000000
 int
-archive_write_set_compression_bzip2(struct transform *a)
+transform_write_set_compression_bzip2(struct transform *a)
 {
-	__archive_write_filters_free(a);
-	return (archive_write_add_filter_bzip2(a));
+	__transform_write_filters_free(a);
+	return (transform_write_add_filter_bzip2(a));
 }
 #endif
 
 #ifndef HAVE_BZLIB_H
 int
-archive_write_add_filter_bzip2(struct transform *a)
+transform_write_add_filter_bzip2(struct transform *a)
 {
 	archive_set_error(a, ARCHIVE_ERRNO_MISC,
 	    "bzip2 compression not supported on this platform");
@@ -94,14 +94,14 @@ static int drive_compressor(struct transform_write_filter *,
  * Add a bzip2 compression filter to this write handle.
  */
 int
-archive_write_add_filter_bzip2(struct transform *_a)
+transform_write_add_filter_bzip2(struct transform *_a)
 {
 	struct transform_write *a = (struct transform_write *)_a;
-	struct transform_write_filter *f = __archive_write_allocate_filter(_a);
+	struct transform_write_filter *f = __transform_write_allocate_filter(_a);
 	struct private_data *data;
 
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "archive_write_add_filter_bzip2");
+	    ARCHIVE_STATE_NEW, "transform_write_add_filter_bzip2");
 
 	data = calloc(1, sizeof(*data));
 	if (data == NULL) {
@@ -129,7 +129,7 @@ archive_compressor_bzip2_open(struct transform_write_filter *f)
 	struct private_data *data = (struct private_data *)f->data;
 	int ret;
 
-	ret = __archive_write_open_filter(f->next_filter);
+	ret = __transform_write_open_filter(f->next_filter);
 	if (ret != 0)
 		return (ret);
 
@@ -247,7 +247,7 @@ archive_compressor_bzip2_close(struct transform_write_filter *f)
 	ret = drive_compressor(f, data, 1);
 	if (ret == ARCHIVE_OK) {
 		/* Write the last block */
-		ret = __archive_write_filter(f->next_filter,
+		ret = __transform_write_filter(f->next_filter,
 		    data->compressed,
 		    data->compressed_buffer_size - data->stream.avail_out);
 	}
@@ -261,7 +261,7 @@ archive_compressor_bzip2_close(struct transform_write_filter *f)
 		ret = ARCHIVE_FATAL;
 	}
 
-	r1 = __archive_write_close_filter(f->next_filter);
+	r1 = __transform_write_close_filter(f->next_filter);
 	return (r1 < ret ? r1 : ret);
 }
 
@@ -291,7 +291,7 @@ drive_compressor(struct transform_write_filter *f,
 
 	for (;;) {
 		if (data->stream.avail_out == 0) {
-			bytes_written = __archive_write_filter(f->next_filter,
+			bytes_written = __transform_write_filter(f->next_filter,
 			    data->compressed,
 			    data->compressed_buffer_size);
 			if (bytes_written <= 0) {

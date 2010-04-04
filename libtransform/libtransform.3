@@ -106,7 +106,7 @@ enable those attributes for all entries.
 The read and write APIs are accessed through the
 .Fn transform_read_XXX
 functions and the
-.Fn archive_write_XXX
+.Fn transform_write_XXX
 functions, respectively, and either can be used independently
 of the other.
 .Pp
@@ -204,12 +204,12 @@ manual page provides more detailed calling information for this API.
 .Sh WRITING AN ARCHIVE
 You use a similar process to write an archive.
 The
-.Fn archive_write_new
+.Fn transform_write_new
 function creates an archive object useful for writing,
 the various
-.Fn archive_write_set_XXX
+.Fn transform_write_set_XXX
 functions are used to set parameters for writing the archive, and
-.Fn archive_write_open
+.Fn transform_write_open
 completes the setup and opens the archive for writing.
 .Pp
 Individual archive entries are written in a three-step
@@ -226,28 +226,28 @@ field, which specifies the type of object and
 .Va st_size
 field, which specifies the size of the data portion of the object.
 The
-.Fn archive_write_header
+.Fn transform_write_header
 function actually writes the header data to the archive.
 You can then use
-.Fn archive_write_data
+.Fn transform_write_data
 to write the actual data.
 .Pp
 After all entries have been written, use the
-.Fn archive_write_free
+.Fn transform_write_free
 function to release all resources.
 .Pp
 The
-.Xr archive_write 3
+.Xr transform_write 3
 manual page provides more detailed calling information for this API.
 .Sh WRITING ENTRIES TO DISK
 The
-.Xr archive_write_disk 3
+.Xr transform_write_disk 3
 API allows you to write
 .Xr archive_entry 3
 objects to disk using the same API used by
-.Xr archive_write 3 .
+.Xr transform_write 3 .
 The
-.Xr archive_write_disk 3
+.Xr transform_write_disk 3
 API is used internally by
 .Fn transform_read_extract ;
 using it directly can provide greater control over how entries
@@ -305,14 +305,14 @@ returns a textual error message suitable for display.
 .Pp
 .Fn transform_read_new
 and
-.Fn archive_write_new
+.Fn transform_write_new
 return pointers to an allocated and initialized
 .Tn struct transform
 object.
 .Pp
 .Fn transform_read_data
 and
-.Fn archive_write_data
+.Fn transform_write_data
 return a count of the number of bytes actually read or written.
 A value of zero indicates the end of the data for this entry.
 A negative value indicates an error, in which case the
@@ -329,7 +329,7 @@ functions that are impacted by the currently-selected locale.
 .Xr archive_entry 3 ,
 .Xr transform_read 3 ,
 .Xr archive_util 3 ,
-.Xr archive_write 3 ,
+.Xr transform_write 3 ,
 .Xr tar 5
 .Sh HISTORY
 The

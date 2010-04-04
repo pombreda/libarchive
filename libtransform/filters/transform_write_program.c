@@ -24,7 +24,7 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_compression_program.c 201104 2009-12-28 03:14:30Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libarchive/transform_write_set_compression_program.c 201104 2009-12-28 03:14:30Z kientzle $");
 
 #ifdef HAVE_SYS_WAIT_H
 #  include <sys/wait.h>
@@ -48,10 +48,10 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_compression_program.c 
 
 #if ARCHIVE_VERSION_NUMBER < 4000000
 int
-archive_write_set_compression_program(struct transform *a, const char *cmd)
+transform_write_set_compression_program(struct transform *a, const char *cmd)
 {
-	__archive_write_filters_free(a);
-	return (archive_write_add_filter_program(a, cmd));
+	__transform_write_filters_free(a);
+	return (transform_write_add_filter_program(a, cmd));
 }
 #endif
 
@@ -64,7 +64,7 @@ archive_write_set_compression_program(struct transform *a, const char *cmd)
  * this function is actually invoked.
  */
 int
-archive_write_add_filter_program(struct transform *_a, const char *cmd)
+transform_write_add_filter_program(struct transform *_a, const char *cmd)
 {
 	archive_set_error(_a, -1,
 	    "External compression programs not supported on this platform");
@@ -96,14 +96,14 @@ static int archive_compressor_program_free(struct transform_write_filter *);
  * external program.
  */
 int
-archive_write_add_filter_program(struct transform *_a, const char *cmd)
+transform_write_add_filter_program(struct transform *_a, const char *cmd)
 {
-	struct transform_write_filter *f = __archive_write_allocate_filter(_a);
+	struct transform_write_filter *f = __transform_write_allocate_filter(_a);
 	struct transform_write *a = (struct transform_write *)_a;
 	struct private_data *data;
 	static const char *prefix = "Program: ";
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "archive_write_add_filter_program");
+	    ARCHIVE_STATE_NEW, "transform_write_add_filter_program");
 	data = calloc(1, sizeof(*data));
 	if (data == NULL) {
 		archive_set_error(&a->archive, ENOMEM, "Out of memory");
@@ -130,7 +130,7 @@ archive_compressor_program_open(struct transform_write_filter *f)
 	struct private_data *data = (struct private_data *)f->data;
 	int ret;
 
-	ret = __archive_write_open_filter(f->next_filter);
+	ret = __transform_write_open_filter(f->next_filter);
 	if (ret != ARCHIVE_OK)
 		return (ret);
 
@@ -214,7 +214,7 @@ restart_write:
 
 	data->child_buf_avail += ret;
 
-	ret = __archive_write_filter(f->next_filter,
+	ret = __transform_write_filter(f->next_filter,
 	    data->child_buf, data->child_buf_avail);
 	if (ret <= 0)
 		return (-1);
@@ -285,7 +285,7 @@ archive_compressor_program_close(struct transform_write_filter *f)
 		}
 		data->child_buf_avail += bytes_read;
 
-		ret = __archive_write_filter(f->next_filter,
+		ret = __transform_write_filter(f->next_filter,
 		    data->child_buf, data->child_buf_avail);
 		if (ret != ARCHIVE_OK) {
 			ret = ARCHIVE_FATAL;
@@ -308,7 +308,7 @@ cleanup:
 		    "Filter exited with failure.");
 		ret = ARCHIVE_FATAL;
 	}
-	r1 = __archive_write_close_filter(f->next_filter);
+	r1 = __transform_write_close_filter(f->next_filter);
 	return (r1 < ret ? r1 : ret);
 }
 

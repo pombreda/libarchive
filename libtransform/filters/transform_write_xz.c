@@ -26,7 +26,7 @@
 
 #include "transform_platform.h"
 
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_compression_xz.c 201108 2009-12-28 03:28:21Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libarchive/transform_write_set_compression_xz.c 201108 2009-12-28 03:28:21Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -48,23 +48,23 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_compression_xz.c 20110
 
 #if ARCHIVE_VERSION_NUMBER < 4000000
 int
-archive_write_set_compression_lzma(struct transform *a)
+transform_write_set_compression_lzma(struct transform *a)
 {
-	__archive_write_filters_free(a);
-	return (archive_write_add_filter_lzma(a));
+	__transform_write_filters_free(a);
+	return (transform_write_add_filter_lzma(a));
 }
 
 int
-archive_write_set_compression_xz(struct transform *a)
+transform_write_set_compression_xz(struct transform *a)
 {
-	__archive_write_filters_free(a);
-	return (archive_write_add_filter_xz(a));
+	__transform_write_filters_free(a);
+	return (transform_write_add_filter_xz(a));
 }
 #endif
 
 #ifndef HAVE_LZMA_H
 int
-archive_write_add_filter_xz(struct transform *a)
+transform_write_add_filter_xz(struct transform *a)
 {
 	archive_set_error(a, ARCHIVE_ERRNO_MISC,
 	    "xz compression not supported on this platform");
@@ -72,7 +72,7 @@ archive_write_add_filter_xz(struct transform *a)
 }
 
 int
-archive_write_add_filter_lzma(struct transform *a)
+transform_write_add_filter_lzma(struct transform *a)
 {
 	archive_set_error(a, ARCHIVE_ERRNO_MISC,
 	    "lzma compression not supported on this platform");
@@ -125,14 +125,14 @@ common_setup(struct transform_write_filter *f)
  * Add an xz compression filter to this write handle.
  */
 int
-archive_write_add_filter_xz(struct transform *_a)
+transform_write_add_filter_xz(struct transform *_a)
 {
 	struct transform_write_filter *f;
 	int r;
 
 	archive_check_magic(_a, ARCHIVE_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "archive_write_add_filter_xz");
-	f = __archive_write_allocate_filter(_a);
+	    ARCHIVE_STATE_NEW, "transform_write_add_filter_xz");
+	f = __transform_write_allocate_filter(_a);
 	r = common_setup(f);
 	if (r == ARCHIVE_OK) {
 		f->code = ARCHIVE_FILTER_XZ;
@@ -145,14 +145,14 @@ archive_write_add_filter_xz(struct transform *_a)
  * code set.  (The liblzma setup looks at the code to determine
  * the one place that XZ and LZMA require different handling.) */
 int
-archive_write_add_filter_lzma(struct transform *_a)
+transform_write_add_filter_lzma(struct transform *_a)
 {
 	struct transform_write_filter *f;
 	int r;
 
 	archive_check_magic(_a, ARCHIVE_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "archive_write_add_filter_lzma");
-	f = __archive_write_allocate_filter(_a);
+	    ARCHIVE_STATE_NEW, "transform_write_add_filter_lzma");
+	f = __transform_write_allocate_filter(_a);
 	r = common_setup(f);
 	if (r == ARCHIVE_OK) {
 		f->code = ARCHIVE_FILTER_LZMA;
@@ -202,7 +202,7 @@ archive_compressor_xz_open(struct transform_write_filter *f)
 	struct private_data *data = f->data;
 	int ret;
 
-	ret = __archive_write_open_filter(f->next_filter);
+	ret = __transform_write_open_filter(f->next_filter);
 	if (ret != ARCHIVE_OK)
 		return (ret);
 
@@ -291,12 +291,12 @@ archive_compressor_xz_close(struct transform_write_filter *f)
 
 	ret = drive_compressor(f, data, 1);
 	if (ret == ARCHIVE_OK) {
-		ret = __archive_write_filter(f->next_filter,
+		ret = __transform_write_filter(f->next_filter,
 		    data->compressed,
 		    data->compressed_buffer_size - data->stream.avail_out);
 	}
 	lzma_end(&(data->stream));
-	r1 = __archive_write_close_filter(f->next_filter);
+	r1 = __transform_write_close_filter(f->next_filter);
 	return (r1 < ret ? r1 : ret);
 }
 
@@ -325,7 +325,7 @@ drive_compressor(struct transform_write_filter *f,
 
 	for (;;) {
 		if (data->stream.avail_out == 0) {
-			ret = __archive_write_filter(f->next_filter,
+			ret = __transform_write_filter(f->next_filter,
 			    data->compressed,
 			    data->compressed_buffer_size);
 			if (ret != ARCHIVE_OK)

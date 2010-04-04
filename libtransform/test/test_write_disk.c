@@ -41,11 +41,11 @@ static void create(struct transform_entry *ae, const char *msg)
 	struct stat st;
 
 	/* Write the entry to disk. */
-	assert((ad = archive_write_disk_new()) != NULL);
+	assert((ad = transform_write_disk_new()) != NULL);
 	failure("%s", msg);
-	assertEqualIntA(ad, 0, archive_write_header(ad, ae));
-	assertEqualIntA(ad, 0, archive_write_finish_entry(ad));
-	assertEqualInt(0, archive_write_free(ad));
+	assertEqualIntA(ad, 0, transform_write_header(ad, ae));
+	assertEqualIntA(ad, 0, transform_write_finish_entry(ad));
+	assertEqualInt(0, transform_write_free(ad));
 
 	/* Test the entries on disk. */
 	assert(0 == stat(archive_entry_pathname(ae), &st));
@@ -67,11 +67,11 @@ static void create_reg_file(struct transform_entry *ae, const char *msg)
 	struct transform *ad;
 
 	/* Write the entry to disk. */
-	assert((ad = archive_write_disk_new()) != NULL);
-        archive_write_disk_set_options(ad, ARCHIVE_EXTRACT_TIME);
+	assert((ad = transform_write_disk_new()) != NULL);
+        transform_write_disk_set_options(ad, ARCHIVE_EXTRACT_TIME);
 	failure("%s", msg);
 	/*
-	 * A touchy API design issue: archive_write_data() does (as of
+	 * A touchy API design issue: transform_write_data() does (as of
 	 * 2.4.12) enforce the entry size as a limit on the data
 	 * written to the file.  This was not enforced prior to
 	 * 2.4.12.  The change was prompted by the refined
@@ -89,10 +89,10 @@ static void create_reg_file(struct transform_entry *ae, const char *msg)
 	 */
 	archive_entry_set_size(ae, sizeof(data));
 	archive_entry_set_mtime(ae, 123456789, 0);
-	assertEqualIntA(ad, 0, archive_write_header(ad, ae));
-	assertEqualInt(sizeof(data), archive_write_data(ad, data, sizeof(data)));
-	assertEqualIntA(ad, 0, archive_write_finish_entry(ad));
-	assertEqualInt(0, archive_write_free(ad));
+	assertEqualIntA(ad, 0, transform_write_header(ad, ae));
+	assertEqualInt(sizeof(data), transform_write_data(ad, data, sizeof(data)));
+	assertEqualIntA(ad, 0, transform_write_finish_entry(ad));
+	assertEqualInt(0, transform_write_free(ad));
 
 	/* Test the entries on disk. */
 	assertIsReg(archive_entry_pathname(ae), archive_entry_mode(ae) & 0777);
@@ -115,20 +115,20 @@ static void create_reg_file2(struct transform_entry *ae, const char *msg)
 		data[i] = (char)(i % 256);
 
 	/* Write the entry to disk. */
-	assert((ad = archive_write_disk_new()) != NULL);
+	assert((ad = transform_write_disk_new()) != NULL);
 	failure("%s", msg);
 	/*
 	 * See above for an explanation why this next call
 	 * is necessary.
 	 */
 	archive_entry_set_size(ae, datasize);
-	assertEqualIntA(ad, 0, archive_write_header(ad, ae));
+	assertEqualIntA(ad, 0, transform_write_header(ad, ae));
 	for (i = 0; i < datasize - 999; i += 1000) {
 		assertEqualIntA(ad, ARCHIVE_OK,
-		    archive_write_data_block(ad, data + i, 1000, i));
+		    transform_write_data_block(ad, data + i, 1000, i));
 	}
-	assertEqualIntA(ad, 0, archive_write_finish_entry(ad));
-	assertEqualInt(0, archive_write_free(ad));
+	assertEqualIntA(ad, 0, transform_write_finish_entry(ad));
+	assertEqualInt(0, transform_write_free(ad));
 
 	/* Test the entries on disk. */
 	assertIsReg(archive_entry_pathname(ae), archive_entry_mode(ae) & 0777);
@@ -144,14 +144,14 @@ static void create_reg_file3(struct transform_entry *ae, const char *msg)
 	struct stat st;
 
 	/* Write the entry to disk. */
-	assert((ad = archive_write_disk_new()) != NULL);
+	assert((ad = transform_write_disk_new()) != NULL);
 	failure("%s", msg);
 	/* Set the size smaller than the data and verify the truncation. */
 	archive_entry_set_size(ae, 5);
-	assertEqualIntA(ad, 0, archive_write_header(ad, ae));
-	assertEqualInt(5, archive_write_data(ad, data, sizeof(data)));
-	assertEqualIntA(ad, 0, archive_write_finish_entry(ad));
-	assertEqualInt(0, archive_write_free(ad));
+	assertEqualIntA(ad, 0, transform_write_header(ad, ae));
+	assertEqualInt(5, transform_write_data(ad, data, sizeof(data)));
+	assertEqualIntA(ad, 0, transform_write_finish_entry(ad));
+	assertEqualInt(0, transform_write_free(ad));
 
 	/* Test the entry on disk. */
 	assert(0 == stat(archive_entry_pathname(ae), &st));
@@ -171,13 +171,13 @@ static void create_reg_file4(struct transform_entry *ae, const char *msg)
 	struct stat st;
 
 	/* Write the entry to disk. */
-	assert((ad = archive_write_disk_new()) != NULL);
+	assert((ad = transform_write_disk_new()) != NULL);
 	/* Leave the size unset.  The data should not be truncated. */
-	assertEqualIntA(ad, 0, archive_write_header(ad, ae));
+	assertEqualIntA(ad, 0, transform_write_header(ad, ae));
 	assertEqualInt(ARCHIVE_OK,
-	    archive_write_data_block(ad, data, sizeof(data), 0));
-	assertEqualIntA(ad, 0, archive_write_finish_entry(ad));
-	assertEqualInt(0, archive_write_free(ad));
+	    transform_write_data_block(ad, data, sizeof(data), 0));
+	assertEqualIntA(ad, 0, transform_write_finish_entry(ad));
+	assertEqualInt(0, transform_write_free(ad));
 
 	/* Test the entry on disk. */
 	assert(0 == stat(archive_entry_pathname(ae), &st));
@@ -200,15 +200,15 @@ static void create_reg_file_win(struct transform_entry *ae, const char *msg)
 	size_t l;
 
 	/* Write the entry to disk. */
-	assert((ad = archive_write_disk_new()) != NULL);
-        archive_write_disk_set_options(ad, ARCHIVE_EXTRACT_TIME);
+	assert((ad = transform_write_disk_new()) != NULL);
+        transform_write_disk_set_options(ad, ARCHIVE_EXTRACT_TIME);
 	failure("%s", msg);
 	archive_entry_set_size(ae, sizeof(data));
 	archive_entry_set_mtime(ae, 123456789, 0);
-	assertEqualIntA(ad, 0, archive_write_header(ad, ae));
-	assertEqualInt(sizeof(data), archive_write_data(ad, data, sizeof(data)));
-	assertEqualIntA(ad, 0, archive_write_finish_entry(ad));
-	assertEqualInt(0, archive_write_free(ad));
+	assertEqualIntA(ad, 0, transform_write_header(ad, ae));
+	assertEqualInt(sizeof(data), transform_write_data(ad, data, sizeof(data)));
+	assertEqualIntA(ad, 0, transform_write_finish_entry(ad));
+	assertEqualInt(0, transform_write_free(ad));
 
 	/* Test the entries on disk. */
 	l = strlen(archive_entry_pathname(ae));

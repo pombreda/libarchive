@@ -50,13 +50,13 @@ DEFINE_TEST(test_write_compress)
 	assert(NULL != (data = (char *)malloc(datasize)));
 	memset(data, 0, datasize);
 
-	assert((a = archive_write_new()) != NULL);
+	assert((a = transform_write_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_set_format_ustar(a));
+	    transform_write_set_format_ustar(a));
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_set_compression_compress(a));
+	    transform_write_set_compression_compress(a));
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_open_memory(a, buff, buffsize, &used));
+	    transform_write_open_memory(a, buff, buffsize, &used));
 
 	for (i = 0; i < 100; i++) {
 		sprintf(path, "file%03d", i);
@@ -64,14 +64,14 @@ DEFINE_TEST(test_write_compress)
 		archive_entry_copy_pathname(ae, path);
 		archive_entry_set_size(ae, datasize);
 		archive_entry_set_filetype(ae, AE_IFREG);
-		assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+		assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 		assertEqualInt(datasize,
-		    archive_write_data(a, data, datasize));
+		    transform_write_data(a, data, datasize));
 		archive_entry_free(ae);
 	}
 
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/*
 	 * Now, read the data back.

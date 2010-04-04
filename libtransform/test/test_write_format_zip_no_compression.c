@@ -96,13 +96,13 @@ DEFINE_TEST(test_write_format_zip_no_compression)
 	unsigned long crc;
 
 	/* Create new ZIP archive in memory without padding. */
-	assert((a = archive_write_new()) != NULL);
-	assertA(0 == archive_write_set_format_zip(a));
-	assertA(0 == archive_write_set_format_options(a, "zip:compression=store"));
-	assertA(0 == archive_write_set_compression_none(a));
-	assertA(0 == archive_write_set_bytes_per_block(a, 1));
-	assertA(0 == archive_write_set_bytes_in_last_block(a, 1));
-	assertA(0 == archive_write_open_memory(a, buff, sizeof(buff), &used));
+	assert((a = transform_write_new()) != NULL);
+	assertA(0 == transform_write_set_format_zip(a));
+	assertA(0 == transform_write_set_format_options(a, "zip:compression=store"));
+	assertA(0 == transform_write_set_compression_none(a));
+	assertA(0 == transform_write_set_bytes_per_block(a, 1));
+	assertA(0 == transform_write_set_bytes_in_last_block(a, 1));
+	assertA(0 == transform_write_open_memory(a, buff, sizeof(buff), &used));
 
 	/* Write entries. */
 
@@ -116,9 +116,9 @@ DEFINE_TEST(test_write_format_zip_no_compression)
 	archive_entry_set_mtime(entry, t, 0);
 	archive_entry_set_atime(entry, t, 0);
 	archive_entry_set_ctime(entry, t, 0);
-	assertEqualIntA(a, 0, archive_write_header(a, entry));
-	assertEqualIntA(a, sizeof(file_data1), archive_write_data(a, file_data1, sizeof(file_data1)));
-	assertEqualIntA(a, sizeof(file_data2), archive_write_data(a, file_data2, sizeof(file_data2)));
+	assertEqualIntA(a, 0, transform_write_header(a, entry));
+	assertEqualIntA(a, sizeof(file_data1), transform_write_data(a, file_data1, sizeof(file_data1)));
+	assertEqualIntA(a, sizeof(file_data2), transform_write_data(a, file_data2, sizeof(file_data2)));
 	archive_entry_free(entry);
 
 	/* Folder */
@@ -131,12 +131,12 @@ DEFINE_TEST(test_write_format_zip_no_compression)
 	archive_entry_set_mtime(entry, t, 0);
 	archive_entry_set_atime(entry, t, 0);
 	archive_entry_set_ctime(entry, t, 0);
-	assertEqualIntA(a, 0, archive_write_header(a, entry));
+	assertEqualIntA(a, 0, transform_write_header(a, entry));
 	archive_entry_free(entry);
 
 	/* Close the archive . */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/* Remember the end of the archive in memory. */
 	buffend = buff + used;

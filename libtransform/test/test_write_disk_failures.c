@@ -28,7 +28,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk_failures.c 201247 2
 DEFINE_TEST(test_write_disk_failures)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__)
-	skipping("archive_write_disk interface");
+	skipping("transform_write_disk interface");
 #else
 	struct transform_entry *ae;
 	struct transform *a;
@@ -54,12 +54,12 @@ DEFINE_TEST(test_write_disk_failures)
 	archive_entry_copy_pathname(ae, "dir/file");
 	archive_entry_set_mode(ae, S_IFREG | 0755);
 	archive_entry_set_size(ae, 8);
-	assert((a = archive_write_disk_new()) != NULL);
-        archive_write_disk_set_options(a, ARCHIVE_EXTRACT_TIME);
+	assert((a = transform_write_disk_new()) != NULL);
+        transform_write_disk_set_options(a, ARCHIVE_EXTRACT_TIME);
 	archive_entry_set_mtime(ae, 123456789, 0);
-	assertEqualIntA(a, ARCHIVE_FAILED, archive_write_header(a, ae));
-	assertEqualIntA(a, 0, archive_write_finish_entry(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_FAILED, transform_write_header(a, ae));
+	assertEqualIntA(a, 0, transform_write_finish_entry(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 	archive_entry_free(ae);
 #endif
 }

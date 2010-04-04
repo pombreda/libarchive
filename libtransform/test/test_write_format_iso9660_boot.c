@@ -102,14 +102,14 @@ _test_write_format_iso9660_boot(int write_info_tbl)
 	assert(buff != NULL);
 
 	/* ISO9660 format: Create a new archive in memory. */
-	assert((a = archive_write_new()) != NULL);
-	assertA(0 == archive_write_set_format_iso9660(a));
-	assertA(0 == archive_write_set_compression_none(a));
-	assertA(0 == archive_write_set_options(a, "boot=boot.img"));
+	assert((a = transform_write_new()) != NULL);
+	assertA(0 == transform_write_set_format_iso9660(a));
+	assertA(0 == transform_write_set_compression_none(a));
+	assertA(0 == transform_write_set_options(a, "boot=boot.img"));
 	if (write_info_tbl)
-		assertA(0 == archive_write_set_options(a, "boot-info-table"));
-	assertA(0 == archive_write_set_options(a, "!pad"));
-	assertA(0 == archive_write_open_memory(a, buff, buffsize, &used));
+		assertA(0 == transform_write_set_options(a, "boot-info-table"));
+	assertA(0 == transform_write_set_options(a, "!pad"));
+	assertA(0 == transform_write_open_memory(a, buff, buffsize, &used));
 
 	/*
 	 * "boot.img" has a bunch of attributes and 10K bytes of null data.
@@ -123,14 +123,14 @@ _test_write_format_iso9660_boot(int write_info_tbl)
 	archive_entry_set_mode(ae, S_IFREG | 0755);
 	archive_entry_set_nlink(ae, 1);
 	archive_entry_set_size(ae, 10*1024);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
 	for (i = 0; i < 10; i++)
-		assertEqualIntA(a, 1024, archive_write_data(a, nullb, 1024));
+		assertEqualIntA(a, 1024, transform_write_data(a, nullb, 1024));
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_free(a));
 
 	assert(used == 2048 * 38);
 	/* Check System Area. */

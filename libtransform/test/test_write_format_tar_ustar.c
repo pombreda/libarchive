@@ -75,13 +75,13 @@ DEFINE_TEST(test_write_format_tar_ustar)
 	buff = malloc(buffsize);
 
 	/* Create a new archive in memory. */
-	assert((a = archive_write_new()) != NULL);
+	assert((a = transform_write_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_set_format_ustar(a));
+	    transform_write_set_format_ustar(a));
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_set_compression_none(a));
+	    transform_write_set_compression_none(a));
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_open_memory(a, buff, buffsize, &used));
+	    transform_write_open_memory(a, buff, buffsize, &used));
 
 	/*
 	 * Add various files to it.
@@ -100,9 +100,9 @@ DEFINE_TEST(test_write_format_tar_ustar)
 	archive_entry_set_ino(entry, 89);
 	archive_entry_set_nlink(entry, 2);
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_header(a, entry));
+	    transform_write_header(a, entry));
 	archive_entry_free(entry);
-	assertEqualIntA(a, 10, archive_write_data(a, "1234567890", 10));
+	assertEqualIntA(a, 10, transform_write_data(a, "1234567890", 10));
 
 	/* Hardlink to "file" with 10 bytes of content */
 	assert((entry = archive_entry_new()) != NULL);
@@ -117,10 +117,10 @@ DEFINE_TEST(test_write_format_tar_ustar)
 	archive_entry_set_ino(entry, 89);
 	archive_entry_set_nlink(entry, 2);
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_header(a, entry));
+	    transform_write_header(a, entry));
 	archive_entry_free(entry);
 	/* Write of data to dir should fail == zero bytes get written. */
-	assertEqualIntA(a, 0, archive_write_data(a, "1234567890", 10));
+	assertEqualIntA(a, 0, transform_write_data(a, "1234567890", 10));
 
 	/* "dir" */
 	assert((entry = archive_entry_new()) != NULL);
@@ -130,10 +130,10 @@ DEFINE_TEST(test_write_format_tar_ustar)
 	archive_entry_set_size(entry, 10);
 	archive_entry_set_nlink(entry, 2);
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_header(a, entry));
+	    transform_write_header(a, entry));
 	archive_entry_free(entry);
 	/* Write of data to dir should fail == zero bytes get written. */
-	assertEqualIntA(a, 0, archive_write_data(a, "1234567890", 10));
+	assertEqualIntA(a, 0, transform_write_data(a, "1234567890", 10));
 
 	/* "symlink" pointing to "file" */
 	assert((entry = archive_entry_new()) != NULL);
@@ -149,10 +149,10 @@ DEFINE_TEST(test_write_format_tar_ustar)
 	archive_entry_set_ino(entry, 90);
 	archive_entry_set_nlink(entry, 1);
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_header(a, entry));
+	    transform_write_header(a, entry));
 	archive_entry_free(entry);
 	/* Write of data to symlink should fail == zero bytes get written. */
-	assertEqualIntA(a, 0, archive_write_data(a, "1234567890", 10));
+	assertEqualIntA(a, 0, transform_write_data(a, "1234567890", 10));
 
 	/* file with 99-char filename. */
 	assert((entry = archive_entry_new()) != NULL);
@@ -166,7 +166,7 @@ DEFINE_TEST(test_write_format_tar_ustar)
 	archive_entry_set_ino(entry, 7);
 	archive_entry_set_nlink(entry, 1);
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_header(a, entry));
+	    transform_write_header(a, entry));
 	archive_entry_free(entry);
 
 	/* file with 100-char filename. */
@@ -181,7 +181,7 @@ DEFINE_TEST(test_write_format_tar_ustar)
 	archive_entry_set_ino(entry, 7);
 	archive_entry_set_nlink(entry, 1);
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_header(a, entry));
+	    transform_write_header(a, entry));
 	archive_entry_free(entry);
 
 	/* file with 256-char filename. */
@@ -196,11 +196,11 @@ DEFINE_TEST(test_write_format_tar_ustar)
 	archive_entry_set_ino(entry, 7);
 	archive_entry_set_nlink(entry, 1);
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_header(a, entry));
+	    transform_write_header(a, entry));
 	archive_entry_free(entry);
 
 	/* Close out the archive. */
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/*
 	 * Verify the archive format.

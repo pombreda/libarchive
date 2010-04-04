@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/archive_write_private.h 201155 2009-12-29 05:20:12Z kientzle $
+ * $FreeBSD: head/lib/libarchive/transform_write_private.h 201155 2009-12-29 05:20:12Z kientzle $
  */
 
 #ifndef __LIBARCHIVE_BUILD
@@ -56,15 +56,15 @@ struct transform_write_filter {
 };
 
 #if ARCHIVE_VERSION < 4000000
-void __archive_write_filters_free(struct transform *);
+void __transform_write_filters_free(struct transform *);
 #endif
 
-struct transform_write_filter *__archive_write_allocate_filter(struct transform *);
+struct transform_write_filter *__transform_write_allocate_filter(struct transform *);
 
-int __archive_write_output(struct transform_write *, const void *, size_t);
-int __archive_write_filter(struct transform_write_filter *, const void *, size_t);
-int __archive_write_open_filter(struct transform_write_filter *);
-int __archive_write_close_filter(struct transform_write_filter *);
+int __transform_write_output(struct transform_write *, const void *, size_t);
+int __transform_write_filter(struct transform_write_filter *, const void *, size_t);
+int __transform_write_open_filter(struct transform_write_filter *);
+int __transform_write_close_filter(struct transform_write_filter *);
 
 struct transform_write {
 	struct transform	archive;
@@ -79,7 +79,7 @@ struct transform_write {
 
 	/* Callbacks to open/read/write/close archive stream. */
 	archive_open_callback	*client_opener;
-	archive_write_callback	*client_writer;
+	transform_write_callback	*client_writer;
 	archive_close_callback	*client_closer;
 	void			*client_data;
 
@@ -110,7 +110,7 @@ struct transform_write {
 
 	/*
 	 * Pointers to format-specific functions for writing.  They're
-	 * initialized by archive_write_set_format_XXX() calls.
+	 * initialized by transform_write_set_format_XXX() calls.
 	 */
 	int	(*format_init)(struct transform_write *);
 	int	(*format_options)(struct transform_write *,

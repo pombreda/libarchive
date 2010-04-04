@@ -43,20 +43,20 @@ DEFINE_TEST(test_write_compress_program)
 
 	/* Create a new archive in memory. */
 	/* Write it through an external "gzip" program. */
-	assert((a = archive_write_new()) != NULL);
-	assertA(0 == archive_write_set_format_ustar(a));
-	r = archive_write_set_compression_program(a, "gzip");
+	assert((a = transform_write_new()) != NULL);
+	assertA(0 == transform_write_set_format_ustar(a));
+	r = transform_write_set_compression_program(a, "gzip");
 	if (r == ARCHIVE_FATAL) {
 		skipping("Write compression via external "
 		    "program unsupported on this platform");
-		archive_write_free(a);
+		transform_write_free(a);
 		return;
 	}
-	assertA(0 == archive_write_set_bytes_per_block(a, blocksize));
-	assertA(0 == archive_write_set_bytes_in_last_block(a, blocksize));
-	assertA(blocksize == archive_write_get_bytes_in_last_block(a));
-	assertA(0 == archive_write_open_memory(a, buff, sizeof(buff), &used));
-	assertA(blocksize == archive_write_get_bytes_in_last_block(a));
+	assertA(0 == transform_write_set_bytes_per_block(a, blocksize));
+	assertA(0 == transform_write_set_bytes_in_last_block(a, blocksize));
+	assertA(blocksize == transform_write_get_bytes_in_last_block(a));
+	assertA(0 == transform_write_open_memory(a, buff, sizeof(buff), &used));
+	assertA(blocksize == transform_write_get_bytes_in_last_block(a));
 
 	/*
 	 * Write a file to it.
@@ -67,13 +67,13 @@ DEFINE_TEST(test_write_compress_program)
 	archive_entry_set_mode(ae, S_IFREG | 0755);
 	archive_entry_set_size(ae, 8);
 
-	assertA(0 == archive_write_header(a, ae));
+	assertA(0 == transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assertA(8 == archive_write_data(a, "12345678", 9));
+	assertA(8 == transform_write_data(a, "12345678", 9));
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/*
 	 * Now, read the data back through the built-in gzip support.

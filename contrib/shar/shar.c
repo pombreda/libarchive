@@ -67,16 +67,16 @@ shar_create(void)
 {
 	struct transform *a;
 
-	if ((a = archive_write_new()) == NULL)
+	if ((a = transform_write_new()) == NULL)
 		errx(EXIT_FAILURE, "%s", archive_error_string(a));
 
 	if (b_opt)
-		archive_write_set_format_shar_dump(a);
+		transform_write_set_format_shar_dump(a);
 	else
-		archive_write_set_format_shar(a);
-	archive_write_set_compression_none(a);
+		transform_write_set_format_shar(a);
+	transform_write_set_compression_none(a);
 
-	if (archive_write_open_filename(a, o_arg) != ARCHIVE_OK)
+	if (transform_write_open_filename(a, o_arg) != ARCHIVE_OK)
 		errx(EX_CANTCREAT, "%s", archive_error_string(a));
 
 	return (a);
@@ -102,7 +102,7 @@ shar_write_entry_data(struct transform *a, const int fd)
 			archive_set_error(a, errno, "Read failed");
 			return (ARCHIVE_WARN);
 		}
-		bytes_written = archive_write_data(a, buffer, bytes_read);
+		bytes_written = transform_write_data(a, buffer, bytes_read);
 		if (bytes_written < 0)
 			return (ARCHIVE_WARN);
 		bytes_read = read(fd, buffer, sizeof(buffer));
@@ -152,7 +152,7 @@ shar_write_entry(struct transform *a, const char *pathname, const char *accpath,
 	archive_entry_set_pathname(entry, pathname);
 	if (!S_ISREG(st->st_mode) || st->st_size == 0)
 		archive_entry_set_size(entry, 0);
-	if (archive_write_header(a, entry) != ARCHIVE_OK) {
+	if (transform_write_header(a, entry) != ARCHIVE_OK) {
 		warnx("%s: %s", pathname, archive_error_string(a));
 		ret = ARCHIVE_WARN;
 		goto out;
@@ -269,7 +269,7 @@ shar_write(char **fn, size_t nfn)
 		}
 	}
 
-	if (archive_write_free(a) != ARCHIVE_OK)
+	if (transform_write_free(a) != ARCHIVE_OK)
 		errx(EXIT_FAILURE, "%s", archive_error_string(a));
 
 	if (error != 0)

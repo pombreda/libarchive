@@ -91,8 +91,8 @@ DEFINE_TEST(test_extattr_freebsd)
 	close(fd);
 
 	/* Create a write-to-disk object. */
-	assert(NULL != (a = archive_write_disk_new()));
-	archive_write_disk_set_options(a,
+	assert(NULL != (a = transform_write_disk_new()));
+	transform_write_disk_set_options(a,
 	    ARCHIVE_EXTRACT_TIME | ARCHIVE_EXTRACT_PERM | ARCHIVE_EXTRACT_XATTR);
 
 	/* Populate an archive entry with an extended attribute. */
@@ -103,7 +103,7 @@ DEFINE_TEST(test_extattr_freebsd)
 	archive_entry_set_size(ae, 0);
 	archive_entry_set_mode(ae, 0755);
 	archive_entry_xattr_add_entry(ae, "user.foo", "12345", 5);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
 
 	/* Another entry; similar but with mode = 0. */
@@ -114,16 +114,16 @@ DEFINE_TEST(test_extattr_freebsd)
 	archive_entry_set_size(ae, 0);
 	archive_entry_set_mode(ae, 0);
 	archive_entry_xattr_add_entry(ae, "user.bar", "123456", 6);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
 
 	/* Close the archive. */
 	if (extattr_privilege_bug)
 		/* If the bug is here, write_close will return warning. */
-		assertEqualIntA(a, ARCHIVE_WARN, archive_write_close(a));
+		assertEqualIntA(a, ARCHIVE_WARN, transform_write_close(a));
 	else
-		assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+		assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/* Verify the data on disk. */
 	assertEqualInt(0, stat("test0", &st));

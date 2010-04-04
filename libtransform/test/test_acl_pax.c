@@ -404,12 +404,12 @@ DEFINE_TEST(test_acl_pax)
 	FILE *f;
 
 	/* Write an archive to memory. */
-	assert(NULL != (a = archive_write_new()));
-	assertA(0 == archive_write_set_format_pax(a));
-	assertA(0 == archive_write_set_compression_none(a));
-	assertA(0 == archive_write_set_bytes_per_block(a, 1));
-	assertA(0 == archive_write_set_bytes_in_last_block(a, 1));
-	assertA(0 == archive_write_open_memory(a, buff, sizeof(buff), &used));
+	assert(NULL != (a = transform_write_new()));
+	assertA(0 == transform_write_set_format_pax(a));
+	assertA(0 == transform_write_set_compression_none(a));
+	assertA(0 == transform_write_set_bytes_per_block(a, 1));
+	assertA(0 == transform_write_set_bytes_in_last_block(a, 1));
+	assertA(0 == transform_write_open_memory(a, buff, sizeof(buff), &used));
 
 	/* Write a series of files to the archive with different ACL info. */
 
@@ -420,28 +420,28 @@ DEFINE_TEST(test_acl_pax)
 
 	/* Basic owner/owning group should just update mode bits. */
 	set_acls(ae, acls0, sizeof(acls0)/sizeof(acls0[0]));
-	assertA(0 == archive_write_header(a, ae));
+	assertA(0 == transform_write_header(a, ae));
 
 	/* With any extended ACL entry, we should read back a full set. */
 	set_acls(ae, acls1, sizeof(acls1)/sizeof(acls1[0]));
-	assertA(0 == archive_write_header(a, ae));
+	assertA(0 == transform_write_header(a, ae));
 
 
 	/* A more extensive set of ACLs. */
 	set_acls(ae, acls2, sizeof(acls2)/sizeof(acls2[0]));
-	assertA(0 == archive_write_header(a, ae));
+	assertA(0 == transform_write_header(a, ae));
 
 	/*
 	 * Check that clearing ACLs gets rid of them all by repeating
 	 * the first test.
 	 */
 	set_acls(ae, acls0, sizeof(acls0)/sizeof(acls0[0]));
-	assertA(0 == archive_write_header(a, ae));
+	assertA(0 == transform_write_header(a, ae));
 	archive_entry_free(ae);
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/* Write out the data we generated to a file for manual inspection. */
 	assert(NULL != (f = fopen("testout", "wb")));

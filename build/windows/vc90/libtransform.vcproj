@@ -294,87 +294,87 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write.c"
+				RelativePath="..\..\libtransform\transform_write.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_disk.c"
+				RelativePath="..\..\libtransform\transform_write_disk.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_disk_set_standard_lookup.c"
+				RelativePath="..\..\libtransform\transform_write_disk_set_standard_lookup.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_open_fd.c"
+				RelativePath="..\..\libtransform\transform_write_open_fd.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_open_file.c"
+				RelativePath="..\..\libtransform\transform_write_open_file.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_open_filename.c"
+				RelativePath="..\..\libtransform\transform_write_open_filename.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_open_memory.c"
+				RelativePath="..\..\libtransform\transform_write_open_memory.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_set_compression_bzip2.c"
+				RelativePath="..\..\libtransform\transform_write_set_compression_bzip2.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_set_compression_compress.c"
+				RelativePath="..\..\libtransform\transform_write_set_compression_compress.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_set_compression_gzip.c"
+				RelativePath="..\..\libtransform\transform_write_set_compression_gzip.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_set_compression_none.c"
+				RelativePath="..\..\libtransform\transform_write_set_compression_none.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_set_compression_program.c"
+				RelativePath="..\..\libtransform\transform_write_set_compression_program.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_set_format.c"
+				RelativePath="..\..\libtransform\transform_write_set_format.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_set_format_ar.c"
+				RelativePath="..\..\libtransform\transform_write_set_format_ar.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_set_format_by_name.c"
+				RelativePath="..\..\libtransform\transform_write_set_format_by_name.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_set_format_cpio.c"
+				RelativePath="..\..\libtransform\transform_write_set_format_cpio.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_set_format_cpio_newc.c"
+				RelativePath="..\..\libtransform\transform_write_set_format_cpio_newc.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_set_format_mtree.c"
+				RelativePath="..\..\libtransform\transform_write_set_format_mtree.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_set_format_pax.c"
+				RelativePath="..\..\libtransform\transform_write_set_format_pax.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_set_format_shar.c"
+				RelativePath="..\..\libtransform\transform_write_set_format_shar.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_set_format_ustar.c"
+				RelativePath="..\..\libtransform\transform_write_set_format_ustar.c"
 				>
 			</File>
 			<File
@@ -428,11 +428,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_disk_private.h"
+				RelativePath="..\..\libtransform\transform_write_disk_private.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libtransform\archive_write_private.h"
+				RelativePath="..\..\libtransform\transform_write_private.h"
 				>
 			</File>
 			<File

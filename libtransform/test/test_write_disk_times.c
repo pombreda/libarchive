@@ -26,7 +26,7 @@
 __FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk_times.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
- * Exercise time restores in archive_write_disk(), including
+ * Exercise time restores in transform_write_disk(), including
  * correct handling of omitted time values.
  * On FreeBSD, we also test birthtime and high-res time restores.
  */
@@ -36,10 +36,10 @@ DEFINE_TEST(test_write_disk_times)
 	struct transform *a;
 	struct transform_entry *ae;
 
-	/* Create an archive_write_disk object. */
-	assert((a = archive_write_disk_new()) != NULL);
+	/* Create an transform_write_disk object. */
+	assert((a = transform_write_disk_new()) != NULL);
 	assertEqualInt(ARCHIVE_OK,
-	    archive_write_disk_set_options(a, ARCHIVE_EXTRACT_TIME));
+	    transform_write_disk_set_options(a, ARCHIVE_EXTRACT_TIME));
 
 	/*
 	 * Easy case: mtime and atime both specified.
@@ -49,8 +49,8 @@ DEFINE_TEST(test_write_disk_times)
 	archive_entry_set_mode(ae, S_IFREG | 0777);
 	archive_entry_set_atime(ae, 123456, 0);
 	archive_entry_set_mtime(ae, 234567, 0);
-	assertEqualInt(ARCHIVE_OK, archive_write_header(a, ae));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish_entry(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_header(a, ae));
+	assertEqualInt(ARCHIVE_OK, transform_write_finish_entry(a));
 	archive_entry_free(ae);
 	/* Verify */
 	assertFileAtime("file1", 123456, 0);
@@ -63,8 +63,8 @@ DEFINE_TEST(test_write_disk_times)
 	archive_entry_copy_pathname(ae, "file2");
 	archive_entry_set_mode(ae, S_IFREG | 0777);
 	archive_entry_set_mtime(ae, 234567, 0);
-	assertEqualInt(ARCHIVE_OK, archive_write_header(a, ae));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish_entry(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_header(a, ae));
+	assertEqualInt(ARCHIVE_OK, transform_write_finish_entry(a));
 	archive_entry_free(ae);
 	assertFileMtime("file2", 234567, 0);
 	assertFileAtimeRecent("file2");
@@ -76,8 +76,8 @@ DEFINE_TEST(test_write_disk_times)
 	archive_entry_copy_pathname(ae, "file3");
 	archive_entry_set_mode(ae, S_IFREG | 0777);
 	archive_entry_set_atime(ae, 345678, 0);
-	assertEqualInt(ARCHIVE_OK, archive_write_header(a, ae));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish_entry(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_header(a, ae));
+	assertEqualInt(ARCHIVE_OK, transform_write_finish_entry(a));
 	archive_entry_free(ae);
 	/* Verify: Current mtime and atime as specified. */
 	assertFileAtime("file3", 345678, 0);
@@ -89,8 +89,8 @@ DEFINE_TEST(test_write_disk_times)
 	assert((ae = archive_entry_new()) != NULL);
 	archive_entry_copy_pathname(ae, "file4");
 	archive_entry_set_mode(ae, S_IFREG | 0777);
-	assertEqualInt(ARCHIVE_OK, archive_write_header(a, ae));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish_entry(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_header(a, ae));
+	assertEqualInt(ARCHIVE_OK, transform_write_finish_entry(a));
 	archive_entry_free(ae);
 	/* Verify: Current mtime and atime. */
 	assertFileAtimeRecent("file4");
@@ -105,8 +105,8 @@ DEFINE_TEST(test_write_disk_times)
 	archive_entry_set_mode(ae, S_IFREG | 0777);
 	archive_entry_set_atime(ae, 1234567, 23456);
 	archive_entry_set_mtime(ae, 2345678, 4567);
-	assertEqualInt(ARCHIVE_OK, archive_write_header(a, ae));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish_entry(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_header(a, ae));
+	assertEqualInt(ARCHIVE_OK, transform_write_finish_entry(a));
 	archive_entry_free(ae);
 	/* Verify */
 	assertFileMtime("file10", 2345678, 4567);
@@ -122,8 +122,8 @@ DEFINE_TEST(test_write_disk_times)
 	archive_entry_set_birthtime(ae, 3456789, 12345);
 	/* mtime must be later than birthtime! */
 	archive_entry_set_mtime(ae, 12345678, 4567);
-	assertEqualInt(ARCHIVE_OK, archive_write_header(a, ae));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish_entry(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_header(a, ae));
+	assertEqualInt(ARCHIVE_OK, transform_write_finish_entry(a));
 	archive_entry_free(ae);
 	/* Verify */
 	assertFileAtime("file11", 1234567, 23456);
@@ -137,8 +137,8 @@ DEFINE_TEST(test_write_disk_times)
 	archive_entry_copy_pathname(ae, "file12");
 	archive_entry_set_mode(ae, S_IFREG | 0777);
 	archive_entry_set_birthtime(ae, 3456789, 12345);
-	assertEqualInt(ARCHIVE_OK, archive_write_header(a, ae));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish_entry(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_header(a, ae));
+	assertEqualInt(ARCHIVE_OK, transform_write_finish_entry(a));
 	archive_entry_free(ae);
 	/* Verify */
 	assertFileAtimeRecent("file12");
@@ -152,8 +152,8 @@ DEFINE_TEST(test_write_disk_times)
 	archive_entry_copy_pathname(ae, "file13");
 	archive_entry_set_mode(ae, S_IFREG | 0777);
 	archive_entry_set_mtime(ae, 4567890, 23456);
-	assertEqualInt(ARCHIVE_OK, archive_write_header(a, ae));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish_entry(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_header(a, ae));
+	assertEqualInt(ARCHIVE_OK, transform_write_finish_entry(a));
 	archive_entry_free(ae);
 	/* Verify */
 	assertFileAtimeRecent("file13");
@@ -163,5 +163,5 @@ DEFINE_TEST(test_write_disk_times)
 	skipping("Platform-specific time restore tests");
 #endif
 
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 }

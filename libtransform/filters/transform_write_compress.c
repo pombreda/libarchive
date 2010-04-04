@@ -58,7 +58,7 @@
 
 #include "transform_platform.h"
 
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_compression_compress.c 201111 2009-12-28 03:33:05Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libarchive/transform_write_set_compression_compress.c 201111 2009-12-28 03:33:05Z kientzle $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -116,10 +116,10 @@ static int archive_compressor_compress_free(struct transform_write_filter *);
 
 #if ARCHIVE_VERSION_NUMBER < 4000000
 int
-archive_write_set_compression_compress(struct transform *a)
+transform_write_set_compression_compress(struct transform *a)
 {
-	__archive_write_filters_free(a);
-	return (archive_write_add_filter_compress(a));
+	__transform_write_filters_free(a);
+	return (transform_write_add_filter_compress(a));
 }
 #endif
 
@@ -127,13 +127,13 @@ archive_write_set_compression_compress(struct transform *a)
  * Add a compress filter to this write handle.
  */
 int
-archive_write_add_filter_compress(struct transform *_a)
+transform_write_add_filter_compress(struct transform *_a)
 {
 	struct transform_write *a = (struct transform_write *)_a;
-	struct transform_write_filter *f = __archive_write_allocate_filter(_a);
+	struct transform_write_filter *f = __transform_write_allocate_filter(_a);
 
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
-	    ARCHIVE_STATE_NEW, "archive_write_add_filter_compress");
+	    ARCHIVE_STATE_NEW, "transform_write_add_filter_compress");
 	f->open = &archive_compressor_compress_open;
 	f->code = ARCHIVE_FILTER_COMPRESS;
 	f->name = "compress";
@@ -152,7 +152,7 @@ archive_compressor_compress_open(struct transform_write_filter *f)
 	f->code = ARCHIVE_FILTER_COMPRESS;
 	f->name = "compress";
 
-	ret = __archive_write_open_filter(f->next_filter);
+	ret = __transform_write_open_filter(f->next_filter);
 	if (ret != ARCHIVE_OK)
 		return (ret);
 
@@ -228,7 +228,7 @@ output_byte(struct transform_write_filter *f, unsigned char c)
 	++state->out_count;
 
 	if (state->compressed_buffer_size == state->compressed_offset) {
-		bytes_written = __archive_write_filter(f->next_filter,
+		bytes_written = __transform_write_filter(f->next_filter,
 		    state->compressed, state->compressed_buffer_size);
 		if (bytes_written <= 0)
 			return ARCHIVE_FATAL;
@@ -427,10 +427,10 @@ archive_compressor_compress_close(struct transform_write_filter *f)
 		goto cleanup;
 
 	/* Write the last block */
-	ret = __archive_write_filter(f->next_filter,
+	ret = __transform_write_filter(f->next_filter,
 	    state->compressed, state->compressed_offset);
 cleanup:
-	ret = __archive_write_close_filter(f->next_filter);
+	ret = __transform_write_close_filter(f->next_filter);
 	free(state->compressed);
 	free(state);
 	return (ret);

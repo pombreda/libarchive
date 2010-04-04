@@ -42,10 +42,10 @@ DEFINE_TEST(test_write_format_pax)
 	assert(buff != NULL);
 
 	/* Create a new archive in memory. */
-	assert((a = archive_write_new()) != NULL);
-	assertA(0 == archive_write_set_format_pax(a));
-	assertA(0 == archive_write_set_compression_none(a));
-	assertA(0 == archive_write_open_memory(a, buff, buffsize, &used));
+	assert((a = transform_write_new()) != NULL);
+	assertA(0 == transform_write_set_format_pax(a));
+	assertA(0 == transform_write_set_compression_none(a));
+	assertA(0 == transform_write_open_memory(a, buff, buffsize, &used));
 
 	/*
 	 * "file" has a bunch of attributes and 8 bytes of data.
@@ -58,9 +58,9 @@ DEFINE_TEST(test_write_format_pax)
 	archive_entry_copy_pathname(ae, "file");
 	archive_entry_set_mode(ae, S_IFREG | 0755);
 	archive_entry_set_size(ae, 8);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assertEqualIntA(a, 8, archive_write_data(a, "12345678", 9));
+	assertEqualIntA(a, 8, transform_write_data(a, "12345678", 9));
 
 	/*
 	 * "file2" is similar but has birthtime later than mtime.
@@ -73,9 +73,9 @@ DEFINE_TEST(test_write_format_pax)
 	archive_entry_copy_pathname(ae, "file2");
 	archive_entry_set_mode(ae, S_IFREG | 0755);
 	archive_entry_set_size(ae, 8);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assertEqualIntA(a, 8, archive_write_data(a, "12345678", 9));
+	assertEqualIntA(a, 8, transform_write_data(a, "12345678", 9));
 
 	/*
 	 * "file3" is sparse file and has hole size of which is
@@ -90,13 +90,13 @@ DEFINE_TEST(test_write_format_pax)
 	archive_entry_set_mode(ae, S_IFREG | 0755);
 	archive_entry_set_size(ae, 1024008);
 	archive_entry_sparse_add_entry(ae, 1024000, 8);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
 	memset(nulls, 0, sizeof(nulls));
 	for (i = 0; i < 1024000; i += 1024)
 		/* write hole data, which won't be stored into an archive file. */
-		assertEqualIntA(a, 1024, archive_write_data(a, nulls, 1024));
-	assertEqualIntA(a, 8, archive_write_data(a, "12345678", 9));
+		assertEqualIntA(a, 1024, transform_write_data(a, nulls, 1024));
+	assertEqualIntA(a, 8, transform_write_data(a, "12345678", 9));
 
 	/*
 	 * XXX TODO XXX Archive directory, other file types.
@@ -105,8 +105,8 @@ DEFINE_TEST(test_write_format_pax)
 	 */
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_free(a));
 
 	/*
 	 *

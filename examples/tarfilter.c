@@ -57,14 +57,14 @@ main(int argc, char **argv)
 		die("Couldn't open input archive");
 
 	/* Write an uncompressed ustar archive to stdout. */
-	outa = archive_write_new();
+	outa = transform_write_new();
 	if (outa == NULL)
 		die("Couldn't create archive writer.");
-	if (archive_write_set_compression_none(outa) != ARCHIVE_OK)
+	if (transform_write_set_compression_none(outa) != ARCHIVE_OK)
 		die("Couldn't enable compression");
-	if (archive_write_set_format_ustar(outa) != ARCHIVE_OK)
+	if (transform_write_set_format_ustar(outa) != ARCHIVE_OK)
 		die("Couldn't set output format");
-	if (archive_write_open_fd(outa, 1) != ARCHIVE_OK)
+	if (transform_write_open_fd(outa, 1) != ARCHIVE_OK)
 		die("Couldn't open output archive");
 
 	/* Examine each entry in the input archive. */
@@ -88,12 +88,12 @@ main(int argc, char **argv)
 		archive_entry_set_mode(entry, (m & ~07777) | 0744);
 
 		/* Copy input entries to output archive. */
-		if (archive_write_header(outa, entry) != ARCHIVE_OK)
+		if (transform_write_header(outa, entry) != ARCHIVE_OK)
 			die("Error writing output archive");
 		if (archive_entry_size(entry) > 0) {
 			len = transform_read_data(ina, buff, sizeof(buff));
 			while (len > 0) {
-				if (archive_write_data(outa, buff, len) != len)
+				if (transform_write_data(outa, buff, len) != len)
 					die("Error writing output archive");
 				len = transform_read_data(ina, buff, sizeof(buff));
 			}
@@ -107,7 +107,7 @@ main(int argc, char **argv)
 	/* Close the archives.  */
 	if (transform_read_free(ina) != ARCHIVE_OK)
 		die("Error closing input archive");
-	if (archive_write_free(outa) != ARCHIVE_OK)
+	if (transform_write_free(outa) != ARCHIVE_OK)
 		die("Error closing output archive");
 	return (0);
 }

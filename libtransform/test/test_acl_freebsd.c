@@ -226,8 +226,8 @@ DEFINE_TEST(test_acl_freebsd)
 	close(fd);
 
 	/* Create a write-to-disk object. */
-	assert(NULL != (a = archive_write_disk_new()));
-	archive_write_disk_set_options(a,
+	assert(NULL != (a = transform_write_disk_new()));
+	transform_write_disk_set_options(a,
 	    ARCHIVE_EXTRACT_TIME | ARCHIVE_EXTRACT_PERM | ARCHIVE_EXTRACT_ACL);
 
 	/* Populate an archive entry with some metadata, including ACL info */
@@ -237,12 +237,12 @@ DEFINE_TEST(test_acl_freebsd)
 	archive_entry_set_mtime(ae, 123456, 7890);
 	archive_entry_set_size(ae, 0);
 	set_acls(ae, acls2);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
 
 	/* Close the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/* Verify the data on disk. */
 	assertEqualInt(0, stat("test0", &st));

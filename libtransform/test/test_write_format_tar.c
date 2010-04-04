@@ -39,21 +39,21 @@ DEFINE_TEST(test_write_format_tar)
 	/* Repeat the following for a variety of odd blocksizes. */
 	for (blocksize = 1; blocksize < 100000; blocksize += blocksize + 3) {
 		/* Create a new archive in memory. */
-		assert((a = archive_write_new()) != NULL);
+		assert((a = transform_write_new()) != NULL);
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_write_set_format_ustar(a));
+		    transform_write_set_format_ustar(a));
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_write_set_compression_none(a));
+		    transform_write_set_compression_none(a));
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_write_set_bytes_per_block(a, (int)blocksize));
+		    transform_write_set_bytes_per_block(a, (int)blocksize));
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_write_set_bytes_in_last_block(a, (int)blocksize));
+		    transform_write_set_bytes_in_last_block(a, (int)blocksize));
 		assertEqualInt(blocksize,
-		    archive_write_get_bytes_in_last_block(a));
+		    transform_write_get_bytes_in_last_block(a));
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_write_open_memory(a, buff, sizeof(buff), &used));
+		    transform_write_open_memory(a, buff, sizeof(buff), &used));
 		assertEqualInt(blocksize,
-		    archive_write_get_bytes_in_last_block(a));
+		    transform_write_get_bytes_in_last_block(a));
 
 		/*
 		 * Write a file to it.
@@ -71,13 +71,13 @@ DEFINE_TEST(test_write_format_tar)
 		assertEqualInt(S_IFREG | 0755, archive_entry_mode(ae));
 		archive_entry_set_size(ae, 8);
 
-		assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+		assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 		archive_entry_free(ae);
-		assertEqualInt(8, archive_write_data(a, "12345678", 9));
+		assertEqualInt(8, transform_write_data(a, "12345678", 9));
 
 		/* Close out the archive. */
-		assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-		assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+		assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+		assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 		/* This calculation gives "the smallest multiple of
 		 * the block size that is at least 2048 bytes". */

@@ -41,10 +41,10 @@ test_format(int	(*set_format)(struct transform *))
 	buff = malloc(buffsize);
 
 	/* Create a new archive in memory. */
-	assert((a = archive_write_new()) != NULL);
+	assert((a = transform_write_new()) != NULL);
 	assertA(0 == (*set_format)(a));
-	assertA(0 == archive_write_set_compression_none(a));
-	assertA(0 == archive_write_open_memory(a, buff, buffsize, &used));
+	assertA(0 == transform_write_set_compression_none(a));
+	assertA(0 == transform_write_open_memory(a, buff, buffsize, &used));
 
 	/*
 	 * Write a file to it.
@@ -62,9 +62,9 @@ test_format(int	(*set_format)(struct transform *))
 	assert((S_IFREG | 0755) == archive_entry_mode(ae));
 	archive_entry_set_size(ae, 8);
 
-	assertA(0 == archive_write_header(a, ae));
+	assertA(0 == transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assertA(8 == archive_write_data(a, "12345678", 9));
+	assertA(8 == transform_write_data(a, "12345678", 9));
 
 	/*
 	 * Write another file to it.
@@ -82,9 +82,9 @@ test_format(int	(*set_format)(struct transform *))
 	assert((S_IFREG | 0755) == archive_entry_mode(ae));
 	archive_entry_set_size(ae, 4);
 
-	assertA(0 == archive_write_header(a, ae));
+	assertA(0 == transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assertA(4 == archive_write_data(a, "1234", 5));
+	assertA(4 == transform_write_data(a, "1234", 5));
 
 	/*
 	 * Write a directory to it.
@@ -95,15 +95,15 @@ test_format(int	(*set_format)(struct transform *))
 	archive_entry_set_mode(ae, S_IFDIR | 0755);
 	archive_entry_set_size(ae, 512);
 
-	assertA(0 == archive_write_header(a, ae));
+	assertA(0 == transform_write_header(a, ae));
 	assertEqualInt(0, archive_entry_size(ae));
 	archive_entry_free(ae);
-	assertEqualIntA(a, 0, archive_write_data(a, "12345678", 9));
+	assertEqualIntA(a, 0, transform_write_data(a, "12345678", 9));
 
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/*
 	 * Damage the second entry to test the search-ahead recovery.
@@ -175,6 +175,6 @@ test_format(int	(*set_format)(struct transform *))
 
 DEFINE_TEST(test_write_format_cpio)
 {
-	test_format(archive_write_set_format_cpio);
-	test_format(archive_write_set_format_cpio_newc);
+	test_format(transform_write_set_format_cpio);
+	test_format(transform_write_set_format_cpio_newc);
 }

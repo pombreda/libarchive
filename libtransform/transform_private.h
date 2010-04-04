@@ -58,10 +58,10 @@
 struct transform_vtable {
 	int	(*archive_close)(struct transform *);
 	int	(*archive_free)(struct transform *);
-	int	(*archive_write_finish_entry)(struct transform *);
-	ssize_t	(*archive_write_data)(struct transform *,
+	int	(*transform_write_finish_entry)(struct transform *);
+	ssize_t	(*transform_write_data)(struct transform *,
 	    const void *, size_t);
-	ssize_t	(*archive_write_data_block)(struct transform *,
+	ssize_t	(*transform_write_data_block)(struct transform *,
 	    const void *, size_t, int64_t);
 
 	int	(*archive_filter_count)(struct transform *);

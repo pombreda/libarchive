@@ -25,7 +25,7 @@
 #include "test.h"
 __FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_open_memory.c 189308 2009-03-03 17:02:51Z kientzle $");
 
-/* Try to force archive_write_open_memory.c to write past the end of an array. */
+/* Try to force transform_write_open_memory.c to write past the end of an array. */
 static unsigned char buff[16384];
 
 DEFINE_TEST(test_write_open_memory)
@@ -47,36 +47,36 @@ DEFINE_TEST(test_write_open_memory)
 	for (i = 100; i < 1600; i++) {
 		size_t used;
 		size_t blocksize = 94;
-		assert((a = archive_write_new()) != NULL);
+		assert((a = transform_write_new()) != NULL);
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_write_set_format_ustar(a));
+		    transform_write_set_format_ustar(a));
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_write_set_bytes_in_last_block(a, 1));
+		    transform_write_set_bytes_in_last_block(a, 1));
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_write_set_bytes_per_block(a, (int)blocksize));
+		    transform_write_set_bytes_per_block(a, (int)blocksize));
 		buff[i] = 0xAE;
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_write_open_memory(a, buff, i, &used));
+		    transform_write_open_memory(a, buff, i, &used));
 		/* If buffer is smaller than a tar header, this should fail. */
 		if (i < (511/blocksize)*blocksize)
 			assertEqualIntA(a, ARCHIVE_FATAL,
-			    archive_write_header(a,ae));
+			    transform_write_header(a,ae));
 		else
 			assertEqualIntA(a, ARCHIVE_OK,
-			    archive_write_header(a, ae));
+			    transform_write_header(a, ae));
 		/* If buffer is smaller than a tar header plus 1024 byte
 		 * end-of-archive marker, then this should fail. */
 		failure("buffer size=%d\n", (int)i);
 		if (i < 1536)
 			assertEqualIntA(a, ARCHIVE_FATAL,
-			    archive_write_close(a));
+			    transform_write_close(a));
 		else {
-			assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
+			assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
 			assertEqualInt(used, archive_position_compressed(a));
 			assertEqualInt(archive_position_compressed(a),
 			    archive_position_uncompressed(a));
 		}
-		assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+		assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 		assertEqualInt(buff[i], 0xAE);
 		assert(used <= i);
 	}

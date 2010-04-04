@@ -48,10 +48,10 @@ DEFINE_TEST(test_write_format_iso9660)
 	assert(buff != NULL);
 
 	/* Create a new archive in memory. */
-	assert((a = archive_write_new()) != NULL);
-	assertA(0 == archive_write_set_format_iso9660(a));
-	assertA(0 == archive_write_set_compression_none(a));
-	assertA(0 == archive_write_open_memory(a, buff, buffsize, &used));
+	assert((a = transform_write_new()) != NULL);
+	assertA(0 == transform_write_set_format_iso9660(a));
+	assertA(0 == transform_write_set_compression_none(a));
+	assertA(0 == transform_write_open_memory(a, buff, buffsize, &used));
 
 	/*
 	 * "file" has a bunch of attributes and 8 bytes of data.
@@ -65,9 +65,9 @@ DEFINE_TEST(test_write_format_iso9660)
 	archive_entry_set_mode(ae, AE_IFREG | 0755);
 	archive_entry_set_size(ae, 8);
 	archive_entry_set_nlink(ae, 2);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assertEqualIntA(a, 8, archive_write_data(a, "12345678", 9));
+	assertEqualIntA(a, 8, transform_write_data(a, "12345678", 9));
 
 	/*
 	 * "hardlnk" has linked to "file".
@@ -81,7 +81,7 @@ DEFINE_TEST(test_write_format_iso9660)
 	archive_entry_set_mode(ae, AE_IFREG | 0755);
 	archive_entry_set_hardlink(ae, "file");
 	archive_entry_set_nlink(ae, 2);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
 
 	/*
@@ -95,9 +95,9 @@ DEFINE_TEST(test_write_format_iso9660)
 	archive_entry_copy_pathname(ae, longname);
 	archive_entry_set_mode(ae, AE_IFREG | 0666);
 	archive_entry_set_size(ae, 8);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
-	assertEqualIntA(a, 8, archive_write_data(a, "12345678", 9));
+	assertEqualIntA(a, 8, transform_write_data(a, "12345678", 9));
 
 	/*
 	 * "symlnk has symbolic linked to longname.
@@ -109,7 +109,7 @@ DEFINE_TEST(test_write_format_iso9660)
 	archive_entry_copy_pathname(ae, "symlnk");
 	archive_entry_set_mode(ae, AE_IFLNK | 0555);
 	archive_entry_set_symlink(ae, longname);
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 	archive_entry_free(ae);
 
 	/*
@@ -130,13 +130,13 @@ DEFINE_TEST(test_write_format_iso9660)
 		archive_entry_set_mtime(ae, 5, 50);
 		archive_entry_copy_pathname(ae, dirname);
 		archive_entry_set_mode(ae, S_IFDIR | 0755);
-		assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+		assertEqualIntA(a, ARCHIVE_OK, transform_write_header(a, ae));
 		archive_entry_free(ae);
 	}
 
 	/* Close out the archive. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_free(a));
 
 	/*
 	 * -----------------------------------------------------------

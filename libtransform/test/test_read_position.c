@@ -42,10 +42,10 @@ DEFINE_TEST(test_read_position)
 	assert(sizeof(nulls) + 512 + 1024 <= sizeof(buff));
 
 	/* Create an archive. */
-	assert(NULL != (a = archive_write_new()));
-	assertA(0 == archive_write_set_format_pax_restricted(a));
-	assertA(0 == archive_write_set_bytes_per_block(a, 512));
-	assertA(0 == archive_write_open_memory(a, buff, sizeof(buff), &write_pos));
+	assert(NULL != (a = transform_write_new()));
+	assertA(0 == transform_write_set_format_pax_restricted(a));
+	assertA(0 == transform_write_set_bytes_per_block(a, 512));
+	assertA(0 == transform_write_open_memory(a, buff, sizeof(buff), &write_pos));
 
 	for (i = 0; i < sizeof(data_sizes)/sizeof(data_sizes[0]); ++i) {
 		/* Create a simple archive_entry. */
@@ -53,13 +53,13 @@ DEFINE_TEST(test_read_position)
 		archive_entry_set_pathname(ae, "testfile");
 		archive_entry_set_mode(ae, S_IFREG);
 		archive_entry_set_size(ae, data_sizes[i]);
-		assertA(0 == archive_write_header(a, ae));
+		assertA(0 == transform_write_header(a, ae));
 		archive_entry_free(ae);
 		assertA(data_sizes[i]
-		    == (size_t)archive_write_data(a, nulls, sizeof(nulls)));
+		    == (size_t)transform_write_data(a, nulls, sizeof(nulls)));
 	}
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualIntA(a, ARCHIVE_OK, transform_write_close(a));
+	assertEqualInt(ARCHIVE_OK, transform_write_free(a));
 
 	/* Read the archive back. */
 	assert(NULL != (a = transform_read_new()));

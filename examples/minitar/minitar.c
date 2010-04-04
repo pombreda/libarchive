@@ -233,31 +233,31 @@ create(const char *filename, int compress, const char **argv)
 	ssize_t len;
 	int fd;
 
-	a = archive_write_new();
+	a = transform_write_new();
 	switch (compress) {
 #ifndef NO_BZIP2_CREATE
 	case 'j': case 'y':
-		archive_write_set_compression_bzip2(a);
+		transform_write_set_compression_bzip2(a);
 		break;
 #endif
 #ifndef NO_COMPRESS_CREATE
 	case 'Z':
-		archive_write_set_compression_compress(a);
+		transform_write_set_compression_compress(a);
 		break;
 #endif
 #ifndef NO_GZIP_CREATE
 	case 'z':
-		archive_write_set_compression_gzip(a);
+		transform_write_set_compression_gzip(a);
 		break;
 #endif
 	default:
-		archive_write_set_compression_none(a);
+		transform_write_set_compression_none(a);
 		break;
 	}
-	archive_write_set_format_ustar(a);
+	transform_write_set_format_ustar(a);
 	if (strcmp(filename, "-") == 0)
 		filename = NULL;
-	archive_write_open_file(a, filename);
+	transform_write_open_file(a, filename);
 
 	disk = transform_read_disk_new();
 #ifndef NO_LOOKUP
@@ -274,11 +274,11 @@ create(const char *filename, int compress, const char **argv)
 				msg("a ");
 				msg(tree_current_path(t));
 			}
-			archive_write_header(a, entry);
+			transform_write_header(a, entry);
 			fd = open(tree_current_access_path(t), O_RDONLY);
 			len = read(fd, buff, sizeof(buff));
 			while (len > 0) {
-				archive_write_data(a, buff, len);
+				transform_write_data(a, buff, len);
 				len = read(fd, buff, sizeof(buff));
 			}
 			close(fd);
@@ -288,8 +288,8 @@ create(const char *filename, int compress, const char **argv)
 		}
 		argv++;
 	}
-	archive_write_close(a);
-	archive_write_free(a);
+	transform_write_close(a);
+	transform_write_free(a);
 }
 #endif
 
@@ -302,8 +302,8 @@ extract(const char *filename, int do_extract, int flags)
 	int r;
 
 	a = transform_read_new();
-	ext = archive_write_disk_new();
-	archive_write_disk_set_options(ext, flags);
+	ext = transform_write_disk_new();
+	transform_write_disk_set_options(ext, flags);
 #ifndef NO_BZIP2_EXTRACT
 	transform_read_support_compression_bzip2(a);
 #endif
@@ -320,7 +320,7 @@ extract(const char *filename, int do_extract, int flags)
 	transform_read_support_format_cpio(a);
 #endif
 #ifndef NO_LOOKUP
-	archive_write_disk_set_standard_lookup(ext);
+	transform_write_disk_set_standard_lookup(ext);
 #endif
 	if (filename != NULL && strcmp(filename, "-") == 0)
 		filename = NULL;
@@ -343,7 +343,7 @@ extract(const char *filename, int do_extract, int flags)
 		if (verbose || !do_extract)
 			msg(archive_entry_pathname(entry));
 		if (do_extract) {
-			r = archive_write_header(ext, entry);
+			r = transform_write_header(ext, entry);
 			if (r != ARCHIVE_OK)
 				errmsg(archive_error_string(a));
 			else
@@ -373,7 +373,7 @@ copy_data(struct transform *ar, struct transform *aw)
 		}
 		if (r != ARCHIVE_OK)
 			return (r);
-		r = archive_write_data_block(aw, buff, size, offset);
+		r = transform_write_data_block(aw, buff, size, offset);
 		if (r != ARCHIVE_OK) {
 			errmsg(archive_error_string(ar));
 			return (r);
