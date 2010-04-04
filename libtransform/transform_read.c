@@ -95,7 +95,6 @@ archive_read_new(void)
 	a->archive.magic = ARCHIVE_READ_MAGIC;
 
 	a->archive.state = ARCHIVE_STATE_NEW;
-	a->entry = NULL;
 	a->archive.vtable = archive_read_vtable();
 
 	return (&a->archive);

@@ -125,11 +125,6 @@ struct archive_read_client {
 struct archive_read {
 	struct archive	archive;
 
-	struct archive_entry	*entry;
-
-	/* Dev/ino of the archive being read/written. */
-	dev_t		  skip_file_dev;
-	ino_t		  skip_file_ino;
 
 	/*
 	 * Used by archive_read_data() to track blocks and copy
@@ -152,9 +147,6 @@ struct archive_read {
 
 	/* Last filter in chain */
 	struct archive_read_filter *filter;
-
-	/* File offset of beginning of most recently-read header. */
-	off_t		  header_position;
 
 	/*
 	 * Format detection is mostly the same as compression
