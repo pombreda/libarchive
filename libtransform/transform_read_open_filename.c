@@ -23,8 +23,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_open_filename.c 201093 2009-12-28 02:28:44Z kientzle $");
+#include "transform_platform.h"
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_read_open_filename.c 201093 2009-12-28 02:28:44Z kientzle $");
 
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
@@ -59,7 +59,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_open_filename.c 201093 2009
 #include <sys/diskslice.h>
 #endif
 
-#include "archive.h"
+#include "transform.h"
 
 #ifndef O_BINARY
 #define O_BINARY 0
@@ -76,7 +76,7 @@ struct read_file_data {
 
 static int	file_close(struct transform *, void *);
 static ssize_t	file_read(struct transform *, void *, const void **buff);
-#if ARCHIVE_VERSION_NUMBER < 3000000
+#if TRANSFORM_VERSION_NUMBER < 3000000
 static off_t	file_skip(struct transform *, void *, off_t request);
 #else
 static int64_t	file_skip(struct transform *, void *, int64_t request);
@@ -84,14 +84,14 @@ static int64_t	file_skip(struct transform *, void *, int64_t request);
 static off_t	file_skip_lseek(struct transform *, void *, off_t request);
 
 int
-archive_read_open_file(struct archive *a, const char *filename,
+transform_read_open_file(struct transform *a, const char *filename,
     size_t block_size)
 {
-	return (archive_read_open_filename(a, filename, block_size));
+	return (transform_read_open_filename(a, filename, block_size));
 }
 
 int
-archive_read_open_filename(struct archive *a, const char *filename,
+transform_read_open_filename(struct transform *a, const char *filename,
     size_t block_size)
 {
 	struct stat st;
@@ -107,10 +107,10 @@ archive_read_open_filename(struct archive *a, const char *filename,
 	struct partinfo pi;
 #endif
 
-	archive_clear_error(a);
+	transform_clear_error(a);
 	if (filename == NULL || filename[0] == '\0') {
 		/* We used to delegate stdin support by
-		 * directly calling archive_read_open_fd(a,0,block_size)
+		 * directly calling transform_read_open_fd(a,0,block_size)
 		 * here, but that doesn't (and shouldn't) handle the
 		 * end-of-file flush when reading stdout from a pipe.
 		 * Basically, read_open_fd() is intended for folks who
@@ -126,14 +126,14 @@ archive_read_open_filename(struct archive *a, const char *filename,
 	} else {
 		fd = open(filename, O_RDONLY | O_BINARY);
 		if (fd < 0) {
-			archive_set_error(a, errno,
+			transform_set_error(a, errno,
 			    "Failed to open '%s'", filename);
-			return (ARCHIVE_FATAL);
+			return (TRANSFORM_FATAL);
 		}
 	}
 	if (fstat(fd, &st) != 0) {
-		archive_set_error(a, errno, "Can't stat '%s'", filename);
-		return (ARCHIVE_FATAL);
+		transform_set_error(a, errno, "Can't stat '%s'", filename);
+		return (TRANSFORM_FATAL);
 	}
 
 	/*
@@ -155,7 +155,7 @@ archive_read_open_filename(struct archive *a, const char *filename,
 	 */
 	if (S_ISREG(st.st_mode)) {
 		/* Safety:  Tell the extractor not to overwrite the input. */
-		archive_read_extract_set_skip_file(a, st.st_dev, st.st_ino);
+		transform_read_extract_set_skip_file(a, st.st_dev, st.st_ino);
 		/* Regular files act like disks. */
 		is_disk_like = 1;
 	}
@@ -205,10 +205,10 @@ archive_read_open_filename(struct archive *a, const char *filename,
 	}
 	buffer = malloc(block_size);
 	if (mine == NULL || buffer == NULL) {
-		archive_set_error(a, ENOMEM, "No memory");
+		transform_set_error(a, ENOMEM, "No memory");
 		free(mine);
 		free(buffer);
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	}
 	strcpy(mine->filename, filename);
 	mine->block_size = block_size;
@@ -221,7 +221,7 @@ archive_read_open_filename(struct archive *a, const char *filename,
 	if (is_disk_like)
 		mine->use_lseek = 1;
 
-	return (archive_read_open_transform(a, mine,
+	return (transform_read_open_transform(a, mine,
 		NULL, file_read, file_skip, file_close));
 }
 
@@ -236,7 +236,7 @@ file_read(struct transform *t, void *client_data, const void **buff)
 	 * us back in alignment. */
 
 	/* TODO: Someday, try mmap() here; if that succeeds, give
-	 * the entire file to libarchive as a single block.  That
+	 * the entire file to libtransform as a single block.  That
 	 * could be a lot faster than block-by-block manual I/O. */
 
 	/* TODO: We might be able to improve performance on pipes and
@@ -269,7 +269,7 @@ file_read(struct transform *t, void *client_data, const void **buff)
  * it does provide measurable improvement.)
  *
  * TODO: Be lazy about the actual seek.  There are a few pathological
- * cases where libarchive makes a bunch of seek requests in a row
+ * cases where libtransform makes a bunch of seek requests in a row
  * without any intervening reads.  This isn't a huge performance
  * problem, since the kernel handles seeks lazily already, but
  * it would be very slightly faster if we simply remembered the
@@ -289,7 +289,7 @@ file_skip_lseek(struct transform *t, void *client_data, off_t request)
 	/* If lseek() fails, don't bother trying again. */
 	mine->use_lseek = 0;
 
-	/* Let libarchive recover with read+discard */
+	/* Let libtransform recover with read+discard */
 	if (errno == ESPIPE)
 		return (0);
 
@@ -309,7 +309,7 @@ file_skip_lseek(struct transform *t, void *client_data, off_t request)
  * accelerate operation on tape drives.
  */
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
+#if TRANSFORM_VERSION_NUMBER < 3000000
 static off_t
 file_skip(struct transform *t, void *client_data, off_t request)
 #else
@@ -323,7 +323,7 @@ file_skip(struct transform *t, void *client_data, int64_t request)
 	if (mine->use_lseek)
 		return (file_skip_lseek(t, client_data, request));
 
-	/* If we can't skip, return 0; libarchive will read+discard instead. */
+	/* If we can't skip, return 0; libtransform will read+discard instead. */
 	return (0);
 }
 

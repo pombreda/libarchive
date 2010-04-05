@@ -23,8 +23,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_open_fd.c 201093 2009-12-28 02:28:44Z kientzle $");
+#include "transform_platform.h"
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_write_open_filename.c 191165 2009-04-17 00:39:35Z kientzle $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -34,9 +34,6 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_open_fd.c 201093 2009-12-2
 #endif
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
-#ifdef HAVE_IO_H
-#include <io.h>
 #endif
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
@@ -48,12 +45,16 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_open_fd.c 201093 2009-12-2
 #include <unistd.h>
 #endif
 
-#include "archive.h"
+#include "transform.h"
 
-struct write_fd_data {
-	struct archive *archive;
-	off_t		offset;
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+
+struct write_file_data {
+	struct transform *transform;
 	int		fd;
+	char		filename[1];
 };
 
 static int	file_close(struct transform *, void *);
@@ -61,84 +62,103 @@ static int	file_open(struct transform *, void *);
 static ssize_t	file_write(struct transform *, void *, const void *buff, size_t);
 
 int
-archive_write_open_fd(struct archive *a, int fd)
+transform_write_open_file(struct transform *a, const char *filename)
 {
-	struct write_fd_data *mine;
+	return (transform_write_open_filename(a, filename));
+}
 
-	mine = (struct write_fd_data *)malloc(sizeof(*mine));
+int
+transform_write_open_filename(struct transform *a, const char *filename)
+{
+	struct write_file_data *mine;
+
+	if (filename == NULL || filename[0] == '\0')
+		return (transform_write_open_fd(a, 1));
+
+	mine = (struct write_file_data *)malloc(sizeof(*mine) + strlen(filename));
 	if (mine == NULL) {
-		archive_set_error(a, ENOMEM, "No memory");
-		return (ARCHIVE_FATAL);
+		transform_set_error(a, ENOMEM, "No memory");
+		return (TRANSFORM_FATAL);
 	}
-	mine->archive = a;
-	mine->fd = fd;
-#if defined(__CYGWIN__) || defined(_WIN32)
-	setmode(mine->fd, O_BINARY);
-#endif
-	return (archive_write_open_transform(a, mine,
-		    file_open, file_write, file_close));
+	strcpy(mine->filename, filename);
+	mine->fd = -1;
+	mine->transform = a;
+	return (transform_write_open_transform(a, mine,
+		file_open, file_write, file_close));
 }
 
 static int
 file_open(struct transform *t, void *client_data)
 {
-	struct write_fd_data *mine;
+	int flags;
+	struct write_file_data *mine;
 	struct stat st;
 
-	mine = (struct write_fd_data *)client_data;
+	mine = (struct write_file_data *)client_data;
+	flags = O_WRONLY | O_CREAT | O_TRUNC | O_BINARY;
 
-	if (fstat(mine->fd, &st) != 0) {
-		transform_set_error(t, errno, "Couldn't stat fd %d", mine->fd);
+	/*
+	 * Open the file.
+	 */
+	mine->fd = open(mine->filename, flags, 0666);
+	if (mine->fd < 0) {
+		transform_set_error(t, errno, "Failed to open '%s'",
+		    mine->filename);
 		return (TRANSFORM_FATAL);
 	}
 
-	/*
-	 * If this is a regular file, don't add it to itself.
-	 */
-	if (S_ISREG(st.st_mode))
-		archive_write_set_skip_file(mine->archive, st.st_dev, st.st_ino);
+	if (fstat(mine->fd, &st) != 0) {
+               transform_set_error(t, errno, "Couldn't stat '%s'",
+                   mine->filename);
+               return (TRANSFORM_FATAL);
+	}
 
 	/*
-	 * If client hasn't explicitly set the last block handling,
-	 * then set it here.
+	 * Set up default last block handling.
 	 */
 	if (transform_write_get_bytes_in_last_block(t) < 0) {
-		/* If the output is a block or character device, fifo,
-		 * or stdout, pad the last block, otherwise leave it
-		 * unpadded. */
 		if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode) ||
-		    S_ISFIFO(st.st_mode) || (mine->fd == 1))
-			/* Last block will be fully padded. */
+		    S_ISFIFO(st.st_mode))
+			/* Pad last block when writing to device or FIFO. */
 			transform_write_set_bytes_in_last_block(t, 0);
 		else
+			/* Don't pad last block otherwise. */
 			transform_write_set_bytes_in_last_block(t, 1);
 	}
+
+	/*
+	 * If the output file is a regular file, don't add it to
+	 * itself.  If it's a device file, it's okay to add the device
+	 * entry to the output transform.
+	 */
+	if (S_ISREG(st.st_mode))
+		transform_write_set_skip_file(mine->transform, st.st_dev, st.st_ino);
 
 	return (TRANSFORM_OK);
 }
 
 static ssize_t
-file_write(struct transform *t, void *client_data, const void *buff, size_t length)
+file_write(struct transform *a, void *client_data, const void *buff, size_t length)
 {
-	struct write_fd_data	*mine;
+	struct write_file_data	*mine;
 	ssize_t	bytesWritten;
 
-	mine = (struct write_fd_data *)client_data;
+	mine = (struct write_file_data *)client_data;
 	bytesWritten = write(mine->fd, buff, length);
 	if (bytesWritten <= 0) {
-		transform_set_error(t, errno, "Write error");
-		/* XXX this won't fly */
+		transform_set_error(a, errno, "Write error");
 		return (-1);
 	}
 	return (bytesWritten);
 }
 
 static int
-file_close(struct transform *a, void *client_data)
+file_close(struct transform *t, void *client_data)
 {
-	struct write_fd_data	*mine = (struct write_fd_data *)client_data;
+	struct write_file_data	*mine = (struct write_file_data *)client_data;
 
-	(void)a; /* UNUSED */
+	(void)t; /* UNUSED */
+	close(mine->fd);
 	free(mine);
-	return (ARCHIVE_OK);
+	return (TRANSFORM_OK);
 }

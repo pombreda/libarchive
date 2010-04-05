@@ -23,20 +23,20 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_open_memory.c,v 1.6 2007/07/06 15:51:59 kientzle Exp $");
+#include "transform_platform.h"
+__FBSDID("$FreeBSD: src/lib/libtransform/transform_read_open_memory.c,v 1.6 2007/07/06 15:51:59 kientzle Exp $");
 
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "archive.h"
+#include "transform.h"
 
 /*
- * Glue to read an archive from a block of memory.
+ * Glue to read an transform from a block of memory.
  *
  * This is mostly a huge help in building test harnesses;
- * test programs can build archives in memory and read them
+ * test programs can build transforms in memory and read them
  * back again without having to mess with files on disk.
  */
 
@@ -48,7 +48,7 @@ struct read_memory_data {
 
 static int	memory_read_close(struct transform *, void *);
 static int	memory_read_open(struct transform *, void *);
-#if ARCHIVE_VERSION_NUMBER < 3000000
+#if TRANSFORM_VERSION_NUMBER < 3000000
 static off_t	memory_read_skip(struct transform *, void *, off_t request);
 #else
 static int64_t	memory_read_skip(struct transform *, void *, int64_t request);
@@ -56,32 +56,32 @@ static int64_t	memory_read_skip(struct transform *, void *, int64_t request);
 static ssize_t	memory_read(struct transform *, void *, const void **buff);
 
 int
-archive_read_open_memory(struct archive *a, void *buff, size_t size)
+transform_read_open_memory(struct transform *a, void *buff, size_t size)
 {
-	return archive_read_open_memory2(a, buff, size, size);
+	return transform_read_open_memory2(a, buff, size, size);
 }
 
 /*
- * Don't use _open_memory2() in production code; the archive_read_open_memory()
+ * Don't use _open_memory2() in production code; the transform_read_open_memory()
  * version is the one you really want.  This is just here so that
  * test harnesses can exercise block operations inside the library.
  */
 int
-archive_read_open_memory2(struct archive *a, void *buff,
+transform_read_open_memory2(struct transform *a, void *buff,
     size_t size, size_t read_size)
 {
 	struct read_memory_data *mine;
 
 	mine = (struct read_memory_data *)malloc(sizeof(*mine));
 	if (mine == NULL) {
-		archive_set_error(a, ENOMEM, "No memory");
-		return (ARCHIVE_FATAL);
+		transform_set_error(a, ENOMEM, "No memory");
+		return (TRANSFORM_FATAL);
 	}
 	memset(mine, 0, sizeof(*mine));
 	mine->buffer = (unsigned char *)buff;
 	mine->end = mine->buffer + size;
 	mine->read_size = read_size;
-	return (archive_read_open_transform(a, mine, memory_read_open,
+	return (transform_read_open_transform(a, mine, memory_read_open,
 		    memory_read, memory_read_skip, memory_read_close));
 }
 
@@ -123,7 +123,7 @@ memory_read(struct transform *t, void *client_data, const void **buff)
  * necessary in order to better exercise internal code when used
  * as a test harness.
  */
-#if ARCHIVE_VERSION_NUMBER < 3000000
+#if TRANSFORM_VERSION_NUMBER < 3000000
 static off_t
 memory_read_skip(struct transform *t, void *client_data, off_t skip)
 #else

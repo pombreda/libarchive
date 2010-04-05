@@ -23,14 +23,14 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_open_memory.c,v 1.3 2007/01/09 08:05:56 kientzle Exp $");
+#include "transform_platform.h"
+__FBSDID("$FreeBSD: src/lib/libtransform/transform_write_open_memory.c,v 1.3 2007/01/09 08:05:56 kientzle Exp $");
 
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "archive.h"
+#include "transform.h"
 
 /*
  * This is a little tricky.  I used to allow the
@@ -61,20 +61,20 @@ static ssize_t	memory_write(struct transform *, void *, const void *buff, size_t
  * client buffer and lets us tell the client the final size.
  */
 int
-archive_write_open_memory(struct archive *a, void *buff, size_t buffSize, size_t *used)
+transform_write_open_memory(struct transform *a, void *buff, size_t buffSize, size_t *used)
 {
 	struct write_memory_data *mine;
 
 	mine = (struct write_memory_data *)malloc(sizeof(*mine));
 	if (mine == NULL) {
-		archive_set_error(a, ENOMEM, "No memory");
-		return (ARCHIVE_FATAL);
+		transform_set_error(a, ENOMEM, "No memory");
+		return (TRANSFORM_FATAL);
 	}
 	memset(mine, 0, sizeof(*mine));
 	mine->buff = buff;
 	mine->size = buffSize;
 	mine->client_size = used;
-	return (archive_write_open_transform(a, mine,
+	return (transform_write_open_transform(a, mine,
 		    memory_write_open, memory_write, memory_write_close));
 }
 

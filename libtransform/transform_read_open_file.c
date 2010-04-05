@@ -23,8 +23,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_open_file.c 201093 2009-12-28 02:28:44Z kientzle $");
+#include "transform_platform.h"
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_read_open_file.c 201093 2009-12-28 02:28:44Z kientzle $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -48,7 +48,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_open_file.c 201093 2009-12-
 #include <unistd.h>
 #endif
 
-#include "archive.h"
+#include "transform.h"
 
 struct read_FILE_data {
 	FILE    *f;
@@ -59,28 +59,28 @@ struct read_FILE_data {
 
 static int	file_close(struct transform *, void *);
 static ssize_t	file_read(struct transform *, void *, const void **buff);
-#if ARCHIVE_VERSION_NUMBER < 3000000
+#if TRANSFORM_VERSION_NUMBER < 3000000
 static off_t	file_skip(struct transform *, void *, off_t request);
 #else
 static int64_t	file_skip(struct transform *, void *, int64_t request);
 #endif
 
 int
-archive_read_open_FILE(struct archive *a, FILE *f)
+transform_read_open_FILE(struct transform *a, FILE *f)
 {
 	struct stat st;
 	struct read_FILE_data *mine;
 	size_t block_size = 128 * 1024;
 	void *b;
 
-	archive_clear_error(a);
+	transform_clear_error(a);
 	mine = (struct read_FILE_data *)malloc(sizeof(*mine));
 	b = malloc(block_size);
 	if (mine == NULL || b == NULL) {
-		archive_set_error(a, ENOMEM, "No memory");
+		transform_set_error(a, ENOMEM, "No memory");
 		free(mine);
 		free(b);
-		return (ARCHIVE_FATAL);
+		return (TRANSFORM_FATAL);
 	}
 	mine->block_size = block_size;
 	mine->buffer = b;
@@ -91,7 +91,7 @@ archive_read_open_FILE(struct archive *a, FILE *f)
 	 * streams, some of which don't support fileno()).)
 	 */
 	if (fstat(fileno(mine->f), &st) == 0 && S_ISREG(st.st_mode)) {
-		archive_read_extract_set_skip_file(a, st.st_dev, st.st_ino);
+		transform_read_extract_set_skip_file(a, st.st_dev, st.st_ino);
 		/* Enable the seek optimization only for regular files. */
 		mine->can_skip = 1;
 	} else
@@ -101,7 +101,7 @@ archive_read_open_FILE(struct archive *a, FILE *f)
 	setmode(fileno(mine->f), O_BINARY);
 #endif
 
-	return (archive_read_open_transform(a, mine, NULL, file_read,
+	return (transform_read_open_transform(a, mine, NULL, file_read,
 		    file_skip, file_close));
 }
 
@@ -119,7 +119,7 @@ file_read(struct transform *t, void *client_data, const void **buff)
 	return (bytes_read);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
+#if TRANSFORM_VERSION_NUMBER < 3000000
 static off_t
 file_skip(struct transform *t, void *client_data, off_t request)
 #else

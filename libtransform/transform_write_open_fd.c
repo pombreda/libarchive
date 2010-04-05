@@ -23,8 +23,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_open_file.c,v 1.19 2007/01/09 08:05:56 kientzle Exp $");
+#include "transform_platform.h"
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_write_open_fd.c 201093 2009-12-28 02:28:44Z kientzle $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -34,6 +34,9 @@ __FBSDID("$FreeBSD: src/lib/libarchive/archive_write_open_file.c,v 1.19 2007/01/
 #endif
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
+#endif
+#ifdef HAVE_IO_H
+#include <io.h>
 #endif
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
@@ -45,10 +48,12 @@ __FBSDID("$FreeBSD: src/lib/libarchive/archive_write_open_file.c,v 1.19 2007/01/
 #include <unistd.h>
 #endif
 
-#include "archive.h"
+#include "transform.h"
 
-struct write_FILE_data {
-	FILE		*f;
+struct write_fd_data {
+	struct transform *transform;
+	off_t		offset;
+	int		fd;
 };
 
 static int	file_close(struct transform *, void *);
@@ -56,25 +61,58 @@ static int	file_open(struct transform *, void *);
 static ssize_t	file_write(struct transform *, void *, const void *buff, size_t);
 
 int
-archive_write_open_FILE(struct archive *a, FILE *f)
+transform_write_open_fd(struct transform *a, int fd)
 {
-	struct write_FILE_data *mine;
+	struct write_fd_data *mine;
 
-	mine = (struct write_FILE_data *)malloc(sizeof(*mine));
+	mine = (struct write_fd_data *)malloc(sizeof(*mine));
 	if (mine == NULL) {
-		archive_set_error(a, ENOMEM, "No memory");
-		return (ARCHIVE_FATAL);
+		transform_set_error(a, ENOMEM, "No memory");
+		return (TRANSFORM_FATAL);
 	}
-	mine->f = f;
-	return (archive_write_open_transform(a, mine,
+	mine->transform = a;
+	mine->fd = fd;
+#if defined(__CYGWIN__) || defined(_WIN32)
+	setmode(mine->fd, O_BINARY);
+#endif
+	return (transform_write_open_transform(a, mine,
 		    file_open, file_write, file_close));
 }
 
 static int
 file_open(struct transform *t, void *client_data)
 {
-	(void)t; /* UNUSED */
-	(void)client_data; /* UNUSED */
+	struct write_fd_data *mine;
+	struct stat st;
+
+	mine = (struct write_fd_data *)client_data;
+
+	if (fstat(mine->fd, &st) != 0) {
+		transform_set_error(t, errno, "Couldn't stat fd %d", mine->fd);
+		return (TRANSFORM_FATAL);
+	}
+
+	/*
+	 * If this is a regular file, don't add it to itself.
+	 */
+	if (S_ISREG(st.st_mode))
+		transform_write_set_skip_file(mine->transform, st.st_dev, st.st_ino);
+
+	/*
+	 * If client hasn't explicitly set the last block handling,
+	 * then set it here.
+	 */
+	if (transform_write_get_bytes_in_last_block(t) < 0) {
+		/* If the output is a block or character device, fifo,
+		 * or stdout, pad the last block, otherwise leave it
+		 * unpadded. */
+		if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode) ||
+		    S_ISFIFO(st.st_mode) || (mine->fd == 1))
+			/* Last block will be fully padded. */
+			transform_write_set_bytes_in_last_block(t, 0);
+		else
+			transform_write_set_bytes_in_last_block(t, 1);
+	}
 
 	return (TRANSFORM_OK);
 }
@@ -82,25 +120,25 @@ file_open(struct transform *t, void *client_data)
 static ssize_t
 file_write(struct transform *t, void *client_data, const void *buff, size_t length)
 {
-	struct write_FILE_data	*mine;
-	size_t	bytesWritten;
+	struct write_fd_data	*mine;
+	ssize_t	bytesWritten;
 
-	mine = client_data;
-	bytesWritten = fwrite(buff, 1, length, mine->f);
-	if (bytesWritten < length) {
+	mine = (struct write_fd_data *)client_data;
+	bytesWritten = write(mine->fd, buff, length);
+	if (bytesWritten <= 0) {
 		transform_set_error(t, errno, "Write error");
-		/* XXX this won't fly, use proper error code */
+		/* XXX this won't fly */
 		return (-1);
 	}
 	return (bytesWritten);
 }
 
 static int
-file_close(struct transform *t, void *client_data)
+file_close(struct transform *a, void *client_data)
 {
-	struct write_FILE_data	*mine = client_data;
+	struct write_fd_data	*mine = (struct write_fd_data *)client_data;
 
-	(void)t; /* UNUSED */
+	(void)a; /* UNUSED */
 	free(mine);
 	return (TRANSFORM_OK);
 }
