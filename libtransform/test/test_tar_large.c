@@ -263,7 +263,7 @@ DEFINE_TEST(test_tar_large)
 	 */
 	a = transform_read_new();
 	transform_read_support_format_tar(a);
-	transform_read_open2(a, &memdata, NULL,
+	transform_read_open(a, &memdata, NULL,
 	    memory_read, memory_read_skip, NULL);
 
 	/*

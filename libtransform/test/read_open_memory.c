@@ -91,10 +91,10 @@ read_open_memory_internal(struct transform *a, void *buff,
 	mine->copy_buff = malloc(mine->copy_buff_size);
 	memset(mine->copy_buff, 0xA5, mine->copy_buff_size);
 	if (fullapi)
-		return (transform_read_open2(a, mine, memory_read_open,
+		return (transform_read_open(a, mine, memory_read_open,
 			    memory_read, memory_read_skip, memory_read_close));
 	else
-		return (transform_read_open2(a, mine, NULL,
+		return (transform_read_open(a, mine, NULL,
 			    memory_read, NULL, memory_read_close));
 }
 

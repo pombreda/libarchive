@@ -146,20 +146,6 @@ transform_read_set_filter_options(struct transform *_a, const char *s)
 	return (TRANSFORM_OK);
 }
 
-/*
- * Open the transform
- */
-int
-transform_read_open(struct transform *a, void *client_data,
-    transform_open_callback *client_opener, transform_read_callback *client_reader,
-    transform_close_callback *client_closer)
-{
-	/* Old transform_read_open() is just a thin shell around
-	 * transform_read_open2. */
-	return transform_read_open2(a, client_data, client_opener,
-	    client_reader, NULL, client_closer);
-}
-
 static ssize_t
 client_read_proxy(struct transform_read_filter *self, const void **buff)
 {
@@ -206,8 +192,11 @@ client_close_proxy(struct transform_read_filter *self)
 }
 
 
+/*
+ * Open the transform
+ */
 int
-transform_read_open2(struct transform *_a, void *client_data,
+transform_read_open(struct transform *_a, void *client_data,
     transform_open_callback *client_opener,
     transform_read_callback *client_reader,
     transform_skip_callback *client_skipper,

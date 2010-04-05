@@ -240,9 +240,6 @@ __LA_DECL int transform_read_support_compression_xz(struct transform *);
 /* Open the transform using callbacks for transform I/O. */
 __LA_DECL int transform_read_open(struct transform *, void *_client_data,
 		     transform_open_callback *, transform_read_callback *,
-		     transform_close_callback *);
-__LA_DECL int transform_read_open2(struct transform *, void *_client_data,
-		     transform_open_callback *, transform_read_callback *,
 		     transform_skip_callback *, transform_close_callback *);
 
 /*
