@@ -95,10 +95,10 @@ read_open_memory_internal(struct archive *a, void *buff,
 	mine->copy_buff = malloc(mine->copy_buff_size);
 	memset(mine->copy_buff, 0xA5, mine->copy_buff_size);
 	if (fullapi)
-		return (archive_read_open3(a, mine, memory_read_open,
+		return (archive_read_open_transform(a, mine, memory_read_open,
 			    memory_read, memory_read_skip, memory_read_close));
 	else
-		return (archive_read_open3(a, mine, NULL,
+		return (archive_read_open_transform(a, mine, NULL,
 			    memory_read, NULL, memory_read_close));
 }
 

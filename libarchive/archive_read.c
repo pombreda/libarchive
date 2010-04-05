@@ -242,12 +242,12 @@ archive_read_open2(struct archive *a, void *_client_data,
 		return (ARCHIVE_FATAL);
 	}
 
-	return archive_read_open3(a, client_data, __archive_shim_open,
+	return archive_read_open_transform(a, client_data, __archive_shim_open,
 		__archive_shim_read, __archive_shim_skip, __archive_shim_close);
 }
 
 int
-archive_read_open3(struct archive *a, void *client_data,
+archive_read_open_transform(struct archive *a, void *client_data,
     transform_open_callback *client_opener,
     transform_read_callback *client_reader,
     transform_skip_callback *client_skipper,

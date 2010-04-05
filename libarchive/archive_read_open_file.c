@@ -101,7 +101,7 @@ archive_read_open_FILE(struct archive *a, FILE *f)
 	setmode(fileno(mine->f), O_BINARY);
 #endif
 
-	return (archive_read_open3(a, mine, NULL, file_read,
+	return (archive_read_open_transform(a, mine, NULL, file_read,
 		    file_skip, file_close));
 }
 

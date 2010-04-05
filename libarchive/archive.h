@@ -365,7 +365,7 @@ __LA_DECL int archive_read_open(struct archive *, void *_client_data,
 __LA_DECL int archive_read_open2(struct archive *, void *_client_data,
 		     archive_open_callback *, archive_read_callback *,
 		     archive_skip_callback *, archive_close_callback *);
-__LA_DECL int archive_read_open3(struct archive *, void *_client_data,
+__LA_DECL int archive_read_open_transform(struct archive *, void *_client_data,
 		     transform_open_callback *, transform_read_callback *,
 		     transform_skip_callback *, transform_close_callback *);
 
@@ -595,7 +595,7 @@ __LA_DECL int archive_write_set_format_zip(struct archive *);
 __LA_DECL int archive_write_open(struct archive *, void *,
 		     archive_open_callback *, archive_write_callback *,
 		     archive_close_callback *);
-__LA_DECL int archive_write_open2(struct archive *, void *,
+__LA_DECL int archive_write_open_transform(struct archive *, void *,
 		     transform_open_callback *, transform_write_callback *,
 		     transform_close_callback *);
 __LA_DECL int archive_write_open_fd(struct archive *, int _fd);

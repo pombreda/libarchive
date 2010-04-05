@@ -221,7 +221,7 @@ archive_read_open_filename(struct archive *a, const char *filename,
 	if (is_disk_like)
 		mine->use_lseek = 1;
 
-	return (archive_read_open3(a, mine,
+	return (archive_read_open_transform(a, mine,
 		NULL, file_read, file_skip, file_close));
 }
 

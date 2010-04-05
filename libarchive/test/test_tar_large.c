@@ -226,7 +226,7 @@ DEFINE_TEST(test_tar_large)
 	a = archive_write_new();
 	archive_write_set_format_pax_restricted(a);
 	archive_write_set_bytes_per_block(a, 0); /* No buffering. */
-	archive_write_open2(a, &memdata, NULL, memory_write, NULL);
+	archive_write_open_transform(a, &memdata, NULL, memory_write, NULL);
 
 	/*
 	 * Write a series of large files to it.
@@ -272,7 +272,7 @@ DEFINE_TEST(test_tar_large)
 	 */
 	a = archive_read_new();
 	archive_read_support_format_tar(a);
-	archive_read_open3(a, &memdata, NULL,
+	archive_read_open_transform(a, &memdata, NULL,
 	    memory_read, memory_read_skip, NULL);
 
 	/*

@@ -233,7 +233,7 @@ archive_write_open(struct archive *a, void *_client_data,
 		archive_set_error(a, ENOMEM, "No memory");
 		return (ARCHIVE_FATAL);
 	}
-	return archive_write_open2(a, client_data,
+	return archive_write_open_transform(a, client_data,
 		__archive_shim_open, __archive_shim_write, __archive_shim_close);
 }
 
@@ -241,7 +241,7 @@ archive_write_open(struct archive *a, void *_client_data,
  * Open the archive using the current settings.
  */
 int
-archive_write_open2(struct archive *_a, void *client_data,
+archive_write_open_transform(struct archive *_a, void *client_data,
     transform_open_callback *opener, transform_write_callback *writer,
     transform_close_callback *closer)
 {

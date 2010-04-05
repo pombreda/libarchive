@@ -66,7 +66,7 @@ archive_write_open_FILE(struct archive *a, FILE *f)
 		return (ARCHIVE_FATAL);
 	}
 	mine->f = f;
-	return (archive_write_open2(a, mine,
+	return (archive_write_open_transform(a, mine,
 		    file_open, file_write, file_close));
 }
 

@@ -81,7 +81,7 @@ archive_read_open_memory2(struct archive *a, void *buff,
 	mine->buffer = (unsigned char *)buff;
 	mine->end = mine->buffer + size;
 	mine->read_size = read_size;
-	return (archive_read_open3(a, mine, memory_read_open,
+	return (archive_read_open_transform(a, mine, memory_read_open,
 		    memory_read, memory_read_skip, memory_read_close));
 }
 

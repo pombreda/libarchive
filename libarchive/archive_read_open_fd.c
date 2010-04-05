@@ -105,7 +105,7 @@ archive_read_open_fd(struct archive *a, int fd, size_t block_size)
 	setmode(mine->fd, O_BINARY);
 #endif
 
-	return (archive_read_open3(a, mine,
+	return (archive_read_open_transform(a, mine,
 		NULL, file_read, file_skip, file_close));
 }
 

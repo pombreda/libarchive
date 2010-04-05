@@ -75,7 +75,7 @@ archive_write_open_fd(struct archive *a, int fd)
 #if defined(__CYGWIN__) || defined(_WIN32)
 	setmode(mine->fd, O_BINARY);
 #endif
-	return (archive_write_open2(a, mine,
+	return (archive_write_open_transform(a, mine,
 		    file_open, file_write, file_close));
 }
 
