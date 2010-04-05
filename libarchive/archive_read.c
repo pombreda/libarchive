@@ -259,7 +259,7 @@ archive_read_open_transform(struct archive *a, void *client_data,
 	    "archive_read_open");
 	archive_clear_error(a);
 
-	e = transform_read_open2(a->transform,
+	e = transform_read_open(a->transform,
 		client_data,
 		client_opener,
 		client_reader,
