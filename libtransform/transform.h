@@ -374,11 +374,6 @@ __LA_DECL int transform_write_set_bytes_in_last_block(struct transform *,
 		     int bytes_in_last_block);
 __LA_DECL int transform_write_get_bytes_in_last_block(struct transform *);
 
-/* The dev/ino of a file that won't be transformd.  This is used
- * to avoid recursively adding an transform to itself. */
-__LA_DECL int transform_write_set_skip_file(struct transform *,
-    __LA_INT64_T, __LA_INT64_T);
-
 __LA_DECL int transform_write_add_filter_bzip2(struct transform *);
 __LA_DECL int transform_write_add_filter_compress(struct transform *);
 __LA_DECL int transform_write_add_filter_gzip(struct transform *);
