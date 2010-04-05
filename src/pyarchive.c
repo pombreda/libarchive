@@ -8,7 +8,6 @@ License: GPL2/BSD 3 clause
 #include <archive.h>
 #include <archive_entry.h>
 #include <unistd.h> /* gid_t, uid_t, time_t */
-#include <sys/stat.h> /* S_IS* crap */
 
 /*
 todo
@@ -438,7 +437,7 @@ static PyGetSetDef PyArchiveEntry_getsetters[] = {
 static PyObject *
 PyArchive_Entry_isblk(PyArchiveEntry *self)
 {
-    if(S_ISBLK(archive_entry_mode(self->archive_entry))) {
+    if(AE_IFBLK == archive_entry_filetype(self->archive_entry)) {
         Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE;
@@ -447,7 +446,7 @@ PyArchive_Entry_isblk(PyArchiveEntry *self)
 static PyObject *
 PyArchive_Entry_ischr(PyArchiveEntry *self)
 {
-    if(S_ISCHR(archive_entry_mode(self->archive_entry))) {
+    if(AE_IFCHR == archive_entry_filetype(self->archive_entry)) {
         Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE;
@@ -456,8 +455,8 @@ PyArchive_Entry_ischr(PyArchiveEntry *self)
 static PyObject *
 PyArchive_Entry_isdev(PyArchiveEntry *self)
 {
-    long mode = archive_entry_mode(self->archive_entry);
-    if(S_ISBLK(mode) || S_ISCHR(mode)) {
+    long mode = archive_entry_filetype(self->archive_entry);
+    if(AE_IFBLK == mode || AE_IFCHR == mode) {
         Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE;
@@ -466,7 +465,7 @@ PyArchive_Entry_isdev(PyArchiveEntry *self)
 static PyObject *
 PyArchive_Entry_isdir(PyArchiveEntry *self)
 {
-    if(S_ISDIR(archive_entry_mode(self->archive_entry))) {
+    if(AE_IFDIR == archive_entry_filetype(self->archive_entry)) {
         Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE;
@@ -475,7 +474,7 @@ PyArchive_Entry_isdir(PyArchiveEntry *self)
 static PyObject *
 PyArchive_Entry_isfifo(PyArchiveEntry *self)
 {
-    if(S_ISFIFO(archive_entry_mode(self->archive_entry))) {
+    if(AE_IFIFO == archive_entry_filetype(self->archive_entry)) {
         Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE;
@@ -484,7 +483,7 @@ PyArchive_Entry_isfifo(PyArchiveEntry *self)
 // broken out into a macro since it's used a few other places, and having
 // to refcount true/false (and handle it at the invoker) is overkill
 #define PyArchive_Entry_raw_isreg(self)    \
-    (S_ISREG(archive_entry_mode(((PyArchiveEntry *)self)->archive_entry)))
+    (AE_IFREG == archive_entry_filetype(((PyArchiveEntry *)self)->archive_entry))
 
 // note isreg serves double duty as isfile
 static PyObject *
@@ -499,7 +498,7 @@ PyArchive_Entry_isreg(PyArchiveEntry *self)
 static PyObject *
 PyArchive_Entry_issym(PyArchiveEntry *self)
 {
-    if(S_ISLNK(archive_entry_mode(self->archive_entry))) {
+    if(AE_IFLNK == archive_entry_filetype(self->archive_entry)) {
         Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE;
