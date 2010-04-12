@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2009 Michihiro NAKAJIMA
+ * Copyright (c) 2010 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -21,40 +21,41 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD$
  */
+#include "test.h"
+__FBSDID("$FreeBSD$");
 
-#ifndef BSDTAR_WINDOWS_H
-#define	BSDTAR_WINDOWS_H 1
-#include <direct.h>
-#include <windows.h>
+DEFINE_TEST(test_option_n)
+{
+	assertMakeDir("d1", 0755);
+	assertMakeFile("d1/file1", 0644, "d1/file1");
 
-#ifndef PRId64
-#define	PRId64 "I64"
-#endif
-#define	geteuid()	0
+	/* Test 1: -c without -n */
+	assertMakeDir("test1", 0755);
+	assertChdir("test1");
+	assertEqualInt(0,
+	    systemf("%s -cf archive.tar -C .. d1 >c.out 2>c.err", testprog));
+	assertEmptyFile("c.out");
+	assertEmptyFile("c.err");
+	assertEqualInt(0,
+	    systemf("%s -xf archive.tar >x.out 2>x.err", testprog));
+	assertEmptyFile("x.out");
+	assertEmptyFile("x.err");
+	assertFileContents("d1/file1", 8, "d1/file1");
+	assertChdir("..");
 
-#ifndef S_IFIFO
-#define	S_IFIFO	0010000 /* pipe */
-#endif
-
-#include <string.h>  /* Must include before redefining 'strdup' */
-#if !defined(__BORLANDC__)
-#define	strdup _strdup
-#endif
-#if !defined(__BORLANDC__)
-#define	getcwd _getcwd
-#endif
-
-#define	chdir __tar_chdir
-int __tar_chdir(const char *);
-
-#ifndef S_ISREG
-#define	S_ISREG(a)	(a & _S_IFREG)
-#endif
-#ifndef S_ISBLK
-#define	S_ISBLK(a)	(0)
-#endif
-
-#endif /* BSDTAR_WINDOWS_H */
+	/* Test 2: -c with -n */
+	assertMakeDir("test2", 0755);
+	assertChdir("test2");
+	assertEqualInt(0,
+	    systemf("%s -cnf archive.tar -C .. d1 >c.out 2>c.err", testprog));
+	assertEmptyFile("c.out");
+	assertEmptyFile("c.err");
+	assertEqualInt(0,
+	    systemf("%s -xf archive.tar >x.out 2>x.err", testprog));
+	assertEmptyFile("x.out");
+	assertEmptyFile("x.err");
+	assertIsDir("d1", 0755);
+	assertFileNotExists("d1/file1");
+	assertChdir("..");
+}

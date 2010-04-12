@@ -66,9 +66,6 @@ __FBSDID("$FreeBSD: src/usr.bin/tar/bsdtar.c,v 1.93 2008/11/08 04:43:24 kientzle
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#if HAVE_ZLIB_H
-#include <zlib.h>
-#endif
 
 #include "bsdtar.h"
 #include "err.h"
@@ -85,7 +82,7 @@ __FBSDID("$FreeBSD: src/usr.bin/tar/bsdtar.c,v 1.93 2008/11/08 04:43:24 kientzle
 #endif
 #if defined(__APPLE__)
 #undef _PATH_DEFTAPE
-#define _PATH_DEFTAPE "-"  /* Mac OS has no tape support, default to stdio. */
+#define	_PATH_DEFTAPE "-"  /* Mac OS has no tape support, default to stdio. */
 #endif
 
 #ifndef _PATH_DEFTAPE
@@ -95,8 +92,6 @@ __FBSDID("$FreeBSD: src/usr.bin/tar/bsdtar.c,v 1.93 2008/11/08 04:43:24 kientzle
 #ifdef __MINGW32__
 int _CRT_glob = 0; /* Disable broken CRT globbing. */
 #endif
-
-static struct bsdtar *_bsdtar;
 
 #if defined(HAVE_SIGACTION) && (defined(SIGINFO) || defined(SIGUSR1))
 static volatile int siginfo_occurred;
@@ -151,7 +146,7 @@ main(int argc, char **argv)
 	 * Use a pointer for consistency, but stack-allocated storage
 	 * for ease of cleanup.
 	 */
-	_bsdtar = bsdtar = &bsdtar_storage;
+	bsdtar = &bsdtar_storage;
 	memset(bsdtar, 0, sizeof(*bsdtar));
 	bsdtar->fd = -1; /* Mark as "unused" */
 	option_o = 0;

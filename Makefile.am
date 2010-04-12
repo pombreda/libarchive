@@ -470,7 +470,18 @@ bsdtar_test_SOURCES=						\
 	tar/test/test_empty_mtree.c				\
 	tar/test/test_getdate.c					\
 	tar/test/test_help.c					\
+	tar/test/test_option_C_upper.c				\
+	tar/test/test_option_H_upper.c				\
+	tar/test/test_option_L_upper.c				\
+	tar/test/test_option_O_upper.c				\
 	tar/test/test_option_T_upper.c				\
+	tar/test/test_option_U_upper.c				\
+	tar/test/test_option_X_upper.c				\
+	tar/test/test_option_b.c				\
+	tar/test/test_option_exclude.c				\
+	tar/test/test_option_k.c				\
+	tar/test/test_option_keep_newer_files.c			\
+	tar/test/test_option_n.c				\
 	tar/test/test_option_q.c				\
 	tar/test/test_option_r.c				\
 	tar/test/test_option_s.c				\
@@ -505,6 +516,7 @@ bsdtar_TESTS_ENVIRONMENT=
 endif
 
 bsdtar_test_EXTRA_DIST=			\
+	tar/test/test_option_keep_newer_files.tgz.uu \
 	tar/test/test_patterns_2.tar.uu	\
 	tar/test/test_patterns_3.tar.uu	\
 	tar/test/test_patterns_4.tar.uu	\

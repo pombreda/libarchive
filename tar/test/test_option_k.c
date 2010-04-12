@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2003-2007 Tim Kientzle
+ * Copyright (c) 2010 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,20 +23,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/usr.bin/tar/test/test_option_q.c,v 1.3 2008/08/22 01:35:08 kientzle Exp $");
+__FBSDID("$FreeBSD$");
 
-DEFINE_TEST(test_option_q)
+DEFINE_TEST(test_option_k)
 {
-	int r;
-
 	/*
-	 * Create an archive with several different versions of the
-	 * same files.  By default, the last version will overwrite
-	 * any earlier versions.  The -q/--fast-read option will
-	 * stop early, so we can verify -q/--fast-read by seeing
-	 * which version of each file actually ended up being
-	 * extracted.  This also exercises -r mode, since that's
-	 * what we use to build up the test archive.
+	 * Create an archive with a couple of different versions of the
+	 * same file.
 	 */
 
 	assertMakeFile("foo", 0644, "foo1");
@@ -61,52 +54,53 @@ DEFINE_TEST(test_option_q)
 
 	/*
 	 * Now, try extracting from the test archive with various
-	 * combinations of -q.
+	 * combinations of -k
 	 */
 
-	/* Test 1: -q foo should only extract the first foo. */
+	/* Test 1: No option */
 	assertMakeDir("test1", 0755);
 	assertChdir("test1");
-	r = systemf("%s -xf ../archive.tar -q foo >test.out 2>test.err",
-	    testprog);
-	failure("Fatal error trying to use -q option");
-	if (!assertEqualInt(0, r))
-		return;
-
-	assertFileContents("foo1", 4, "foo");
+	assertEqualInt(0,
+	    systemf("%s -xf ../archive.tar >test.out 2>test.err", testprog));
+	assertFileContents("foo3", 4, "foo");
+	assertFileContents("bar2", 4, "bar");
 	assertEmptyFile("test.out");
 	assertEmptyFile("test.err");
 	assertChdir("..");
 
-	/* Test 2: -q foo bar should extract up to the first bar. */
+	/* Test 2: With -k, we should just get the first versions. */
 	assertMakeDir("test2", 0755);
 	assertChdir("test2");
 	assertEqualInt(0,
-	    systemf("%s -xf ../archive.tar -q foo bar >test.out 2>test.err", testprog));
-	assertFileContents("foo2", 4, "foo");
+	    systemf("%s -xf ../archive.tar -k >test.out 2>test.err", testprog));
+	assertFileContents("foo1", 4, "foo");
 	assertFileContents("bar1", 4, "bar");
 	assertEmptyFile("test.out");
 	assertEmptyFile("test.err");
 	assertChdir("..");
 
-	/* Test 3: Same as test 2, but use --fast-read spelling. */
+	/* Test 3: Without -k, existing files should get overwritten */
 	assertMakeDir("test3", 0755);
 	assertChdir("test3");
+	assertMakeFile("bar", 0644, "bar0");
+	assertMakeFile("foo", 0644, "foo0");
 	assertEqualInt(0,
-	    systemf("%s -xf ../archive.tar --fast-read foo bar >test.out 2>test.err", testprog));
-	assertFileContents("foo2", 4, "foo");
-	assertFileContents("bar1", 4, "bar");
+	    systemf("%s -xf ../archive.tar >test.out 2>test.err", testprog));
+	assertFileContents("foo3", 4, "foo");
+	assertFileContents("bar2", 4, "bar");
 	assertEmptyFile("test.out");
 	assertEmptyFile("test.err");
 	assertChdir("..");
 
-	/* Test 4: Without -q, should extract everything. */
+	/* Test 4: With -k, existing files should not get overwritten */
 	assertMakeDir("test4", 0755);
 	assertChdir("test4");
+	assertMakeFile("bar", 0644, "bar0");
+	assertMakeFile("foo", 0644, "foo0");
 	assertEqualInt(0,
-	    systemf("%s -xf ../archive.tar foo bar >test.out 2>test.err", testprog));
-	assertFileContents("foo3", 4, "foo");
-	assertFileContents("bar2", 4, "bar");
+	    systemf("%s -xf ../archive.tar -k >test.out 2>test.err", testprog));
+	assertFileContents("foo0", 4, "foo");
+	assertFileContents("bar0", 4, "bar");
 	assertEmptyFile("test.out");
 	assertEmptyFile("test.err");
 	assertChdir("..");

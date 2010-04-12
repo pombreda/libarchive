@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2009 Michihiro NAKAJIMA
+ * Copyright (c) 2010 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -21,40 +21,36 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD$
  */
+#include "test.h"
+__FBSDID("$FreeBSD$");
 
-#ifndef BSDTAR_WINDOWS_H
-#define	BSDTAR_WINDOWS_H 1
-#include <direct.h>
-#include <windows.h>
+DEFINE_TEST(test_option_keep_newer_files)
+{
+	const char *reffile = "test_option_keep_newer_files.tgz";
 
-#ifndef PRId64
-#define	PRId64 "I64"
-#endif
-#define	geteuid()	0
+	/* Reference file has one entry "file" with a very old timestamp. */
+	extract_reference_file(reffile);
 
-#ifndef S_IFIFO
-#define	S_IFIFO	0010000 /* pipe */
-#endif
+	/* Test 1: Without --keep-newer-files */
+	assertMakeDir("test1", 0755);
+	assertChdir("test1");
+	assertMakeFile("file", 0644, "new");
+	assertEqualInt(0,
+	    systemf("%s -xf ../%s >test.out 2>test.err", testprog, reffile));
+	assertFileContents("old\n", 4, "file");
+	assertEmptyFile("test.out");
+	assertEmptyFile("test.err");
+	assertChdir("..");
 
-#include <string.h>  /* Must include before redefining 'strdup' */
-#if !defined(__BORLANDC__)
-#define	strdup _strdup
-#endif
-#if !defined(__BORLANDC__)
-#define	getcwd _getcwd
-#endif
-
-#define	chdir __tar_chdir
-int __tar_chdir(const char *);
-
-#ifndef S_ISREG
-#define	S_ISREG(a)	(a & _S_IFREG)
-#endif
-#ifndef S_ISBLK
-#define	S_ISBLK(a)	(0)
-#endif
-
-#endif /* BSDTAR_WINDOWS_H */
+	/* Test 2: With --keep-newer-files */
+	assertMakeDir("test2", 0755);
+	assertChdir("test2");
+	assertMakeFile("file", 0644, "new");
+	assertEqualInt(0,
+	    systemf("%s -xf ../%s --keep-newer-files >test.out 2>test.err", testprog, reffile));
+	assertFileContents("new", 3, "file");
+	assertEmptyFile("test.out");
+	assertEmptyFile("test.err");
+	assertChdir("..");
+}

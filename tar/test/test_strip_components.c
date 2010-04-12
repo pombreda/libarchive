@@ -25,18 +25,6 @@
 #include "test.h"
 __FBSDID("$FreeBSD: src/usr.bin/tar/test/test_strip_components.c,v 1.2 2008/11/10 05:24:13 kientzle Exp $");
 
-static int
-touch(const char *fn)
-{
-	FILE *f = fopen(fn, "w");
-	failure("Couldn't create file '%s', errno=%d (%s)\n",
-	    fn, errno, strerror(errno));
-	if (!assert(f != NULL))
-		return (0); /* Failure. */
-	fclose(f);
-	return (1); /* Success */
-}
-
 DEFINE_TEST(test_strip_components)
 {
 	assertMakeDir("d0", 0755);
@@ -44,7 +32,7 @@ DEFINE_TEST(test_strip_components)
 	assertMakeDir("d1", 0755);
 	assertMakeDir("d1/d2", 0755);
 	assertMakeDir("d1/d2/d3", 0755);
-	assertEqualInt(1, touch("d1/d2/f1"));
+	assertMakeFile("d1/d2/f1", 0644, "");
 	assertMakeHardlink("l1", "d1/d2/f1");
 	assertMakeHardlink("d1/l2", "d1/d2/f1");
 	if (canSymlink()) {
@@ -53,7 +41,7 @@ DEFINE_TEST(test_strip_components)
 	}
 	assertChdir("..");
 
-	assertEqualInt(0, systemf("%s -cf test.tar d0", testprog));
+	assertEqualInt(0, systemf("%s -cf test.tar d0/l1 d0/s1 d0/d1", testprog));
 
 	assertMakeDir("target", 0755);
 	assertEqualInt(0, systemf("%s -x -C target --strip-components 2 "
@@ -82,18 +70,11 @@ DEFINE_TEST(test_strip_components)
 	 * which these three names get archived.  If d0/l1 is first,
 	 * none of the three can be restored.  If either of the longer
 	 * names are first, then the two longer ones can both be
-	 * restored.
+	 * restored.  Note that the "tar -cf" command above explicitly
+	 * lists d0/l1 before d0/d1.
 	 *
-	 * The tree-walking code used by bsdtar always visits files
-	 * before subdirectories, so bsdtar's behavior is fortunately
-	 * deterministic:  d0/l1 will always get stored first and the
-	 * other two will be stored as hardlinks to d0/l1.  Since
-	 * d0/l1 can't be extracted, none of these three will be
-	 * extracted.
-	 *
-	 * It may be worth extending this test to force a particular
-	 * archiving order so as to exercise both of the cases described
-	 * above.
+	 * It may be worth extending this test to exercise other
+	 * archiving orders.
 	 *
 	 * Of course, this is all totally different for cpio and newc
 	 * formats because the hardlink management is different.
