@@ -34,7 +34,6 @@ EXTRA_DIST= \
 	build/clean.sh			\
 	build/cmake			\
 	build/version			\
-	build/windows			\
 	contrib				\
 	doc				\
 	examples			\
@@ -80,6 +79,10 @@ include_HEADERS= libtransform/transform.h
 
 libtransform_la_SOURCES = 									\
 	libtransform/transform_read.c							\
+	libtransform/transform_read_open_fd.c			\
+	libtransform/transform_read_open_file.c			\
+	libtransform/transform_read_open_filename.c			\
+	libtransform/transform_read_open_memory.c			\
 	libtransform/filters/transform_read_all.c	\
 	libtransform/filters/transform_read_bzip2.c	\
 	libtransform/filters/transform_read_compress.c	\
@@ -91,6 +94,10 @@ libtransform_la_SOURCES = 									\
 	libtransform/filters/transform_read_xz.c	\
 	libtransform/transform_write.c							\
 	libtransform/transform_write_set_options.c		\
+	libtransform/transform_write_open_fd.c			\
+	libtransform/transform_write_open_file.c			\
+	libtransform/transform_write_open_filename.c			\
+	libtransform/transform_write_open_memory.c			\
 	libtransform/filters/transform_write_bzip2.c	\
 	libtransform/filters/transform_write_compress.c	\
 	libtransform/filters/transform_write_gzip.c		\
