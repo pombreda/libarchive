@@ -7,10 +7,6 @@ dnl These first two version numbers are updated automatically on each release.
 m4_define([LIBTRANSFORM_VERSION_S],[2.8.900a])
 m4_define([LIBTRANSFORM_VERSION_N],[2008900])
 
-dnl bsdtar and bsdcpio versioning tracks libtransform
-m4_define([BSDTAR_VERSION_S],LIBTRANSFORM_VERSION_S())
-m4_define([BSDCPIO_VERSION_S],LIBTRANSFORM_VERSION_S())
-
 #
 # Now starts the "real" configure script.
 #
@@ -40,16 +36,10 @@ AC_DEFINE([LIBTRANSFORM_VERSION_STRING],"LIBTRANSFORM_VERSION_S()",
 	[Version number of libtransform])
 AC_DEFINE_UNQUOTED([LIBTRANSFORM_VERSION_NUMBER],"LIBTRANSFORM_VERSION_N()",
 	[Version number of libtransform as a single integer])
-AC_DEFINE([BSDCPIO_VERSION_STRING],"BSDCPIO_VERSION_S()",
-	[Version number of bsdcpio])
-AC_DEFINE([BSDTAR_VERSION_STRING],"BSDTAR_VERSION_S()",
-	[Version number of bsdtar])
 
 # The shell variables here must be the same as the AC_SUBST() variables
 # below, but the shell variable names apparently cannot be the same as
 # the m4 macro names above.  Why?  Ask autoconf.
-BSDCPIO_VERSION_STRING=BSDCPIO_VERSION_S()
-BSDTAR_VERSION_STRING=BSDTAR_VERSION_S()
 LIBTRANSFORM_VERSION_STRING=LIBTRANSFORM_VERSION_S()
 LIBTRANSFORM_VERSION_NUMBER=LIBTRANSFORM_VERSION_N()
 
@@ -57,8 +47,6 @@ LIBTRANSFORM_VERSION_NUMBER=LIBTRANSFORM_VERSION_N()
 # Yes, I believe this is the fourth time we define what are essentially
 # the same symbols.  Why? Ask autoconf.
 AC_SUBST(TRANSFORM_LIBTOOL_VERSION)
-AC_SUBST(BSDCPIO_VERSION_STRING)
-AC_SUBST(BSDTAR_VERSION_STRING)
 AC_SUBST(LIBTRANSFORM_VERSION_STRING)
 AC_SUBST(LIBTRANSFORM_VERSION_NUMBER)
 
@@ -93,93 +81,6 @@ AC_USE_SYSTEM_EXTENSIONS
 AC_LIBTOOL_WIN32_DLL
 AC_PROG_LIBTOOL
 AC_CHECK_TOOL([STRIP],[strip])
-
-#
-# Options for building bsdtar.
-#
-# Default is to build bsdtar, but allow people to override that.
-#
-AC_ARG_ENABLE([bsdtar],
-	[AS_HELP_STRING([--enable-bsdtar], [enable build of bsdtar (default)])
-	AS_HELP_STRING([--enable-bsdtar=static], [force static build of bsdtar])
-	AS_HELP_STRING([--enable-bsdtar=shared], [force dynamic build of bsdtar])
-AS_HELP_STRING([--disable-bsdtar], [disable build of bsdtar])],
-	[], [enable_bsdtar=yes])
-
-case "$enable_bsdtar" in
-yes)
-	if test "$enable_static" = "no"; then
-		static_bsdtar=no
-	else
-		static_bsdtar=yes
-	fi
-	build_bsdtar=yes
-	;;
-dynamic|shared)
-	if test "$enable_shared" = "no"; then
-		AC_MSG_FAILURE([Shared linking of bsdtar requires shared libtransform])
-	fi
-	build_bsdtar=yes
-	static_bsdtar=no
-	;;
-static)
-	build_bsdtar=yes
-	static_bsdtar=yes
-	;;
-no)
-	build_bsdtar=no
-	static_bsdtar=no
-	;;
-*)
-	AC_MSG_FAILURE([Unsupported value for --enable-bsdtar])
-	;;
-esac
-
-AM_CONDITIONAL([BUILD_BSDTAR], [ test "$build_bsdtar" = yes ])
-AM_CONDITIONAL([STATIC_BSDTAR], [ test "$static_bsdtar" = yes ])
-
-#
-# Options for building bsdcpio.
-#
-# Default is not to build bsdcpio, but that can be overridden.
-#
-AC_ARG_ENABLE([bsdcpio],
-	[AS_HELP_STRING([--enable-bsdcpio], [enable build of bsdcpio (default)])
-	AS_HELP_STRING([--enable-bsdcpio=static], [static build of bsdcpio])
-	AS_HELP_STRING([--enable-bsdcpio=shared], [dynamic build of bsdcpio])
-AS_HELP_STRING([--disable-bsdcpio], [disable build of bsdcpio])],
-	[], [enable_bsdcpio=yes])
-
-case "$enable_bsdcpio" in
-yes)
-	if test "$enable_static" = "no"; then
-	   static_bsdcpio=no
-	else
-	   static_bsdcpio=yes
-        fi
-	build_bsdcpio=yes
-	;;
-dynamic|shared)
-	if test "$enabled_shared" = "no"; then
-	   AC_MSG_FAILURE([Shared linking of bsdcpio requires shared libtransform])
-	fi
-	build_bsdcpio=yes
-	;;
-static)
-	build_bsdcpio=yes
-	static_bsdcpio=yes
-	;;
-no)
-	build_bsdcpio=no
-	static_bsdcpio=no
-	;;
-*)
-	AC_MSG_FAILURE([Unsupported value for --enable-bsdcpio])
-	;;
-esac
-
-AM_CONDITIONAL([BUILD_BSDCPIO], [ test "$build_bsdcpio" = yes ])
-AM_CONDITIONAL([STATIC_BSDCPIO], [ test "$static_bsdcpio" = yes ])
 
 # Set up defines needed before including any headers
 case $host in
