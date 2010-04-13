@@ -59,11 +59,7 @@ struct read_FILE_data {
 
 static int	file_close(struct transform *, void *);
 static ssize_t	file_read(struct transform *, void *, const void **buff);
-#if TRANSFORM_VERSION_NUMBER < 3000000
-static off_t	file_skip(struct transform *, void *, off_t request);
-#else
 static int64_t	file_skip(struct transform *, void *, int64_t request);
-#endif
 
 int
 transform_read_open_FILE(struct transform *a, FILE *f)
@@ -91,7 +87,6 @@ transform_read_open_FILE(struct transform *a, FILE *f)
 	 * streams, some of which don't support fileno()).)
 	 */
 	if (fstat(fileno(mine->f), &st) == 0 && S_ISREG(st.st_mode)) {
-		transform_read_extract_set_skip_file(a, st.st_dev, st.st_ino);
 		/* Enable the seek optimization only for regular files. */
 		mine->can_skip = 1;
 	} else
@@ -101,7 +96,7 @@ transform_read_open_FILE(struct transform *a, FILE *f)
 	setmode(fileno(mine->f), O_BINARY);
 #endif
 
-	return (transform_read_open_transform(a, mine, NULL, file_read,
+	return (transform_read_open(a, mine, NULL, file_read,
 		    file_skip, file_close));
 }
 
@@ -119,13 +114,8 @@ file_read(struct transform *t, void *client_data, const void **buff)
 	return (bytes_read);
 }
 
-#if TRANSFORM_VERSION_NUMBER < 3000000
-static off_t
-file_skip(struct transform *t, void *client_data, off_t request)
-#else
 static int64_t
 file_skip(struct transform *t, void *client_data, int64_t request)
-#endif
 {
 	struct read_FILE_data *mine = (struct read_FILE_data *)client_data;
 

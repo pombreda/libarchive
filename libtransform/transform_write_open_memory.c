@@ -74,7 +74,7 @@ transform_write_open_memory(struct transform *a, void *buff, size_t buffSize, si
 	mine->buff = buff;
 	mine->size = buffSize;
 	mine->client_size = used;
-	return (transform_write_open_transform(a, mine,
+	return (transform_write_open(a, mine,
 		    memory_write_open, memory_write, memory_write_close));
 }
 

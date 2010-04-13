@@ -59,11 +59,7 @@ struct read_fd_data {
 
 static int	file_close(struct transform *, void *);
 static ssize_t	file_read(struct transform *, void *, const void **buff);
-#if TRANSFORM_VERSION_NUMBER < 3000000
-static off_t	file_skip(struct transform *, void *, off_t request);
-#else
 static int64_t	file_skip(struct transform *, void *, int64_t request);
-#endif
 
 int
 transform_read_open_fd(struct transform *a, int fd, size_t block_size)
@@ -97,7 +93,6 @@ transform_read_open_fd(struct transform *a, int fd, size_t block_size)
 	 * only enable this optimization for regular files.
 	 */
 	if (S_ISREG(st.st_mode)) {
-		transform_read_extract_set_skip_file(a, st.st_dev, st.st_ino);
 		mine->can_skip = 1;
 	} else
 		mine->can_skip = 0;
@@ -105,7 +100,7 @@ transform_read_open_fd(struct transform *a, int fd, size_t block_size)
 	setmode(mine->fd, O_BINARY);
 #endif
 
-	return (transform_read_open_transform(a, mine,
+	return (transform_read_open(a, mine,
 		NULL, file_read, file_skip, file_close));
 }
 
@@ -123,13 +118,8 @@ file_read(struct transform *t, void *client_data, const void **buff)
 	return (bytes_read);
 }
 
-#if TRANSFORM_VERSION_NUMBER < 3000000
-static off_t
-file_skip(struct transform *t, void *client_data, off_t request)
-#else
 static int64_t
 file_skip(struct transform *t, void *client_data, int64_t request)
-#endif
 {
 	struct read_fd_data *mine = (struct read_fd_data *)client_data;
 	off_t old_offset, new_offset;

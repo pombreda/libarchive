@@ -83,7 +83,7 @@ transform_write_open_filename(struct transform *a, const char *filename)
 	strcpy(mine->filename, filename);
 	mine->fd = -1;
 	mine->transform = a;
-	return (transform_write_open_transform(a, mine,
+	return (transform_write_open(a, mine,
 		file_open, file_write, file_close));
 }
 
@@ -125,14 +125,6 @@ file_open(struct transform *t, void *client_data)
 			/* Don't pad last block otherwise. */
 			transform_write_set_bytes_in_last_block(t, 1);
 	}
-
-	/*
-	 * If the output file is a regular file, don't add it to
-	 * itself.  If it's a device file, it's okay to add the device
-	 * entry to the output transform.
-	 */
-	if (S_ISREG(st.st_mode))
-		transform_write_set_skip_file(mine->transform, st.st_dev, st.st_ino);
 
 	return (TRANSFORM_OK);
 }

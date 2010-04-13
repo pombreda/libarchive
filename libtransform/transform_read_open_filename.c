@@ -76,11 +76,7 @@ struct read_file_data {
 
 static int	file_close(struct transform *, void *);
 static ssize_t	file_read(struct transform *, void *, const void **buff);
-#if TRANSFORM_VERSION_NUMBER < 3000000
-static off_t	file_skip(struct transform *, void *, off_t request);
-#else
 static int64_t	file_skip(struct transform *, void *, int64_t request);
-#endif
 static off_t	file_skip_lseek(struct transform *, void *, off_t request);
 
 int
@@ -154,8 +150,6 @@ transform_read_open_filename(struct transform *a, const char *filename,
 	 * here for tape-like and socket-like devices.
 	 */
 	if (S_ISREG(st.st_mode)) {
-		/* Safety:  Tell the extractor not to overwrite the input. */
-		transform_read_extract_set_skip_file(a, st.st_dev, st.st_ino);
 		/* Regular files act like disks. */
 		is_disk_like = 1;
 	}
@@ -221,7 +215,7 @@ transform_read_open_filename(struct transform *a, const char *filename,
 	if (is_disk_like)
 		mine->use_lseek = 1;
 
-	return (transform_read_open_transform(a, mine,
+	return (transform_read_open(a, mine,
 		NULL, file_read, file_skip, file_close));
 }
 
@@ -309,13 +303,8 @@ file_skip_lseek(struct transform *t, void *client_data, off_t request)
  * accelerate operation on tape drives.
  */
 
-#if TRANSFORM_VERSION_NUMBER < 3000000
-static off_t
-file_skip(struct transform *t, void *client_data, off_t request)
-#else
 static int64_t
 file_skip(struct transform *t, void *client_data, int64_t request)
-#endif
 {
 	struct read_file_data *mine = (struct read_file_data *)client_data;
 

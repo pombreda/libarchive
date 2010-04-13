@@ -75,7 +75,7 @@ transform_write_open_fd(struct transform *a, int fd)
 #if defined(__CYGWIN__) || defined(_WIN32)
 	setmode(mine->fd, O_BINARY);
 #endif
-	return (transform_write_open_transform(a, mine,
+	return (transform_write_open(a, mine,
 		    file_open, file_write, file_close));
 }
 
@@ -91,12 +91,6 @@ file_open(struct transform *t, void *client_data)
 		transform_set_error(t, errno, "Couldn't stat fd %d", mine->fd);
 		return (TRANSFORM_FATAL);
 	}
-
-	/*
-	 * If this is a regular file, don't add it to itself.
-	 */
-	if (S_ISREG(st.st_mode))
-		transform_write_set_skip_file(mine->transform, st.st_dev, st.st_ino);
 
 	/*
 	 * If client hasn't explicitly set the last block handling,

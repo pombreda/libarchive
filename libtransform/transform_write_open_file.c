@@ -66,7 +66,7 @@ transform_write_open_FILE(struct transform *a, FILE *f)
 		return (TRANSFORM_FATAL);
 	}
 	mine->f = f;
-	return (transform_write_open_transform(a, mine,
+	return (transform_write_open(a, mine,
 		    file_open, file_write, file_close));
 }
 

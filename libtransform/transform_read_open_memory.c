@@ -48,11 +48,7 @@ struct read_memory_data {
 
 static int	memory_read_close(struct transform *, void *);
 static int	memory_read_open(struct transform *, void *);
-#if TRANSFORM_VERSION_NUMBER < 3000000
-static off_t	memory_read_skip(struct transform *, void *, off_t request);
-#else
 static int64_t	memory_read_skip(struct transform *, void *, int64_t request);
-#endif
 static ssize_t	memory_read(struct transform *, void *, const void **buff);
 
 int
@@ -81,7 +77,7 @@ transform_read_open_memory2(struct transform *a, void *buff,
 	mine->buffer = (unsigned char *)buff;
 	mine->end = mine->buffer + size;
 	mine->read_size = read_size;
-	return (transform_read_open_transform(a, mine, memory_read_open,
+	return (transform_read_open(a, mine, memory_read_open,
 		    memory_read, memory_read_skip, memory_read_close));
 }
 
@@ -123,13 +119,8 @@ memory_read(struct transform *t, void *client_data, const void **buff)
  * necessary in order to better exercise internal code when used
  * as a test harness.
  */
-#if TRANSFORM_VERSION_NUMBER < 3000000
-static off_t
-memory_read_skip(struct transform *t, void *client_data, off_t skip)
-#else
 static int64_t
 memory_read_skip(struct transform *t, void *client_data, int64_t skip)
-#endif
 {
 	struct read_memory_data *mine = (struct read_memory_data *)client_data;
 
