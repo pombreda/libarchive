@@ -236,61 +236,6 @@ if test "x$with_lzma" != "xno"; then
   AC_CHECK_LIB(lzma,lzma_stream_decoder)
 fi
 
-AC_ARG_WITH([openssl],
-  AS_HELP_STRING([--without-openssl], [Don't build support for mtree and xar hashes through openssl]))
-
-AC_CHECK_HEADERS([md5.h ripemd.h rmd160.h sha.h sha1.h sha2.h sha256.h])
-# Common names for libc implementation on NetBSD and OpenBSD
-AC_CHECK_FUNCS(MD5Init RMD160Init SHA1Init)
-# SHA2 on NetBSD and older OpenBSD
-AC_CHECK_FUNCS(SHA256_Init SHA384_Init SHA512_Init)
-# SHA2 on newer OpenBSD
-AC_CHECK_FUNCS(SHA256Init SHA384Init SHA512Init)
-
-if test "x$with_openssl" != "xno"; then
-  if test "$ac_cv_func_MD5Init" != "yes"; then
-    AC_CHECK_HEADERS([openssl/md5.h])
-    AC_SEARCH_LIBS([MD5_Init], [crypto])
-  fi
-  if test "$ac_cv_func_RMD160Init" != "yes"; then
-    AC_CHECK_HEADERS([openssl/ripemd.h])
-    AC_SEARCH_LIBS([RIPEMD160_Init], [crypto])
-  fi
-  if test "$ac_cv_func_SHA1Init" != "yes"; then
-    AC_CHECK_HEADERS([openssl/sha.h])
-    AC_SEARCH_LIBS([SHA1_Init], [crypto])
-  fi
-
-  AC_CHECK_HEADERS([openssl/sha.h])
-  if test "$ac_cv_func_SHA256Init" != "yes" &&
-    test "$ac_cv_func_SHA256_Init" != "yes"; then
-      AC_SEARCH_LIBS([SHA256_Init], [crypto])
-      if test "$ac_cv_func_SHA256_Init" = "yes" &&
-        test "$ac_cv_header_openssl_sha_h" = "yes"; then
-        AC_DEFINE(HAVE_OPENSSL_SHA256_INIT, 1,
-	  [Define to 1 if your openssl has the `SHA256_Init' function.])
-      fi
-  fi
-  if test "$ac_cv_func_SHA384Init" != "yes" &&
-    test "$ac_cv_func_SHA384_Init" != "yes"; then
-      AC_SEARCH_LIBS([SHA384_Init], [crypto])
-      if test "$ac_cv_func_SHA384_Init" = "yes" &&
-        test "$ac_cv_header_openssl_sha_h" = "yes"; then
-        AC_DEFINE(HAVE_OPENSSL_SHA384_INIT, 1,
-	  [Define to 1 if your openssl has the `SHA384_Init' function.])
-      fi
-  fi
-  if test "$ac_cv_func_SHA512Init" != "yes" &&
-    test "$ac_cv_func_SHA512_Init" != "yes"; then
-      AC_SEARCH_LIBS([SHA512_Init], [crypto])
-      if test "$ac_cv_func_SHA512_Init" = "yes" &&
-        test "$ac_cv_header_openssl_sha_h" = "yes"; then
-        AC_DEFINE(HAVE_OPENSSL_SHA512_INIT, 1,
-	  [Define to 1 if your openssl has the `SHA512_Init' function.])
-      fi
-  fi
-fi
-
 # TODO: Give the user the option of using a pre-existing system
 # libtransform.  This will define HAVE_LIBTRANSFORM which will cause
 # bsdtar_platform.h to use #include <...> for the libtransform headers.

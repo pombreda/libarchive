@@ -266,24 +266,6 @@
 /* Define to 1 if you have the `nl_langinfo' function. */
 #cmakedefine HAVE_NL_LANGINFO 1
 
-/* Define to 1 if you have the <openssl/md5.h> header file. */
-#cmakedefine HAVE_OPENSSL_MD5_H 1
-
-/* Define to 1 if you have the <openssl/ripemd.h> header file. */
-#cmakedefine HAVE_OPENSSL_RIPEMD_H 1
-
-/* Define to 1 if you have the <openssl/sha.h> header file. */
-#cmakedefine HAVE_OPENSSL_SHA_H 1
-
-/* Define to 1 if your openssl has the `SHA256_Init' function. */
-#cmakedefine HAVE_OPENSSL_SHA256_INIT 1
-
-/* Define to 1 if your openssl has the `SHA384_Init' function. */
-#cmakedefine HAVE_OPENSSL_SHA384_INIT 1
-
-/* Define to 1 if your openssl has the `SHA512_Init' function. */
-#cmakedefine HAVE_OPENSSL_SHA512_INIT 1
-
 /* Define to 1 if you have the <paths.h> header file. */
 #cmakedefine HAVE_PATHS_H 1
 

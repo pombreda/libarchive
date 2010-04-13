@@ -11,13 +11,11 @@ man_MANS= $(libtransform_man_MANS)
 BUILT_SOURCES= libtransform/test/list.h
 
 #
-# What to test: We always test libtransform, test bsdtar and bsdcpio only
-# if we built them.
+# What to test: We always test libtransform
 #
 check_PROGRAMS=
 TESTS=
 TESTS_ENVIRONMENT=
-# Always build and test both bsdtar and bsdcpio as part of 'distcheck'
 # The next line is commented out by default in shipping libtransform releases.
 # It is uncommented by default in trunk.
 AM_CFLAGS=-Wall -Werror
