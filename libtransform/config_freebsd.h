@@ -51,7 +51,6 @@
 #define	HAVE_SHA512 1
 #endif
 
-#define	HAVE_BSDXML_H 1
 #define	HAVE_BZLIB_H 1
 #define	HAVE_CHFLAGS 1
 #define	HAVE_CHOWN 1
