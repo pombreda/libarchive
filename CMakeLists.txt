@@ -362,42 +362,12 @@ CHECK_SYMBOL_EXISTS(UINT64_MAX       "${headers}" HAVE_DECL_UINT64_MAX)
 CHECK_SYMBOL_EXISTS(SIZE_MAX         "${headers}" HAVE_DECL_SIZE_MAX)
 CHECK_SYMBOL_EXISTS(SSIZE_MAX        "limits.h"   HAVE_DECL_SSIZE_MAX)
 
-#
-# Check struct members
-#
-# Check for tm_gmtoff in struct tm
-CHECK_STRUCT_MEMBER("struct tm" tm_gmtoff
-    "time.h" HAVE_STRUCT_TM_TM_GMTOFF)
-CHECK_STRUCT_MEMBER("struct tm" __tm_gmtoff
-    "time.h" HAVE_STRUCT_TM___TM_GMTOFF)
-
-# Check for birthtime in struct stat
-CHECK_STRUCT_MEMBER("struct stat" st_birthtime
-    "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_BIRTHTIME)
-
-# Check for high-resolution timestamps in struct stat
-CHECK_STRUCT_MEMBER("struct stat" st_birthtimespec.tv_nsec
-    "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_BIRTHTIMESPEC_TV_NSEC)
-CHECK_STRUCT_MEMBER("struct stat" st_mtimespec.tv_nsec
-    "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC)
-CHECK_STRUCT_MEMBER("struct stat" st_mtim.tv_nsec
-    "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC)
-CHECK_STRUCT_MEMBER("struct stat" st_mtime_n
-    "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIME_N)
-CHECK_STRUCT_MEMBER("struct stat" st_umtime
-    "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_UMTIME)
-CHECK_STRUCT_MEMBER("struct stat" st_mtime_usec
-    "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIME_USEC)
 # Check for block size support in struct stat
 CHECK_STRUCT_MEMBER("struct stat" st_blksize
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_BLKSIZE)
 # Check for st_flags in struct stat (BSD fflags)
 CHECK_STRUCT_MEMBER("struct stat" st_flags
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_FLAGS)
-#
-#
-CHECK_STRUCT_MEMBER("struct tm" tm_sec
-    "sys/types.h;sys/time.h;time.h" TIME_WITH_SYS_TIME)
 
 #
 # Check for integer types

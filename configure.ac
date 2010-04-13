@@ -163,16 +163,6 @@ AC_CHECK_MEMBERS([struct tm.tm_gmtoff, struct tm.__tm_gmtoff],,,
 #include <time.h>
 ])
 
-# Check for birthtime in struct stat
-AC_CHECK_MEMBERS([struct stat.st_birthtime])
-
-# Check for high-resolution timestamps in struct stat
-AC_CHECK_MEMBERS([struct stat.st_birthtimespec.tv_nsec])
-AC_CHECK_MEMBERS([struct stat.st_mtimespec.tv_nsec])
-AC_CHECK_MEMBERS([struct stat.st_mtim.tv_nsec])
-AC_CHECK_MEMBERS([struct stat.st_mtime_n]) # AIX
-AC_CHECK_MEMBERS([struct stat.st_umtime]) # Tru64
-AC_CHECK_MEMBERS([struct stat.st_mtime_usec]) # Hurd
 # Check for block size support in struct stat
 AC_CHECK_MEMBERS([struct stat.st_blksize])
 # Check for st_flags in struct stat (BSD fflags)
@@ -224,10 +214,9 @@ AC_FUNC_VPRINTF
 AC_CHECK_STDCALL_FUNC([CreateHardLinkA],[const char *, const char *, void *])
 AC_CHECK_FUNCS([chflags chown chroot ctime_r])
 AC_CHECK_FUNCS([fchdir fchflags fchmod fchown fcntl fork])
-AC_CHECK_FUNCS([fstat ftruncate futimens futimes geteuid getpid])
-AC_CHECK_FUNCS([getgrnam_r getpwnam_r])
+AC_CHECK_FUNCS([fstat ftruncate geteuid getpid])
 AC_CHECK_FUNCS([lchflags lchmod lchown link localtime_r lstat])
-AC_CHECK_FUNCS([lutimes mbrtowc memmove memset mkdir mkfifo mknod mkstemp])
+AC_CHECK_FUNCS([brtowc memmove memset mkdir mkfifo mknod mkstemp])
 AC_CHECK_FUNCS([nl_langinfo pipe poll readlink])
 AC_CHECK_FUNCS([select setenv setlocale sigaction])
 AC_CHECK_FUNCS([strchr strdup strerror strncpy_s strrchr symlink timegm])
