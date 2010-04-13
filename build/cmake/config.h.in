@@ -6,39 +6,6 @@
 /* Version number of bsdtar */
 #cmakedefine BSDTAR_VERSION_STRING "${BSDTAR_VERSION_STRING}"
 
-/* Define to 1 if you have the `acl_create_entry' function. */
-#cmakedefine HAVE_ACL_CREATE_ENTRY 1
-
-/* Define to 1 if you have the `acl_get_link' function. */
-#cmakedefine HAVE_ACL_GET_LINK 1
-
-/* Define to 1 if you have the `acl_get_link_np' function. */
-#cmakedefine HAVE_ACL_GET_LINK_NP 1
-
-/* Define to 1 if you have the `acl_get_perm' function. */
-#cmakedefine HAVE_ACL_GET_PERM 1
-
-/* Define to 1 if you have the `acl_get_perm_np' function. */
-#cmakedefine HAVE_ACL_GET_PERM_NP 1
-
-/* Define to 1 if you have the `acl_init' function. */
-#cmakedefine HAVE_ACL_INIT 1
-
-/* Define to 1 if the system has the type `acl_permset_t'. */
-#cmakedefine HAVE_ACL_PERMSET_T 1
-
-/* Define to 1 if you have the `acl_set_fd' function. */
-#cmakedefine HAVE_ACL_SET_FD 1
-
-/* Define to 1 if you have the `acl_set_fd_np' function. */
-#cmakedefine HAVE_ACL_SET_FD_NP 1
-
-/* Define to 1 if you have the `acl_set_file' function. */
-#cmakedefine HAVE_ACL_SET_FILE 1
-
-/* True for systems with POSIX ACL support */
-#cmakedefine HAVE_ACL_USER 1
-
 /* Define to 1 if you have the <attr/xattr.h> header file. */
 #cmakedefine HAVE_ATTR_XATTR_H 1
 
