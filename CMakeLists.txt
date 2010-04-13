@@ -45,7 +45,6 @@ OPTION(ENABLE_TAR_SHARED "Enable dynamic build of tar" OFF)
 OPTION(ENABLE_CPIO "Enable cpio building" ON)
 OPTION(ENABLE_CPIO_SHARED "Enable dynamic build of cpio" OFF)
 OPTION(ENABLE_XATTR "Enable extended attribute support" ON)
-OPTION(ENABLE_ACL "Enable ACL support" ON)
 OPTION(ENABLE_TEST "Enable unit and regression tests" ON)
 
 IF(ENABLE_TEST)
@@ -210,7 +209,6 @@ ENDMACRO (LA_CHECK_INCLUDE_FILE)
 LA_CHECK_INCLUDE_FILE("sys/types.h" HAVE_SYS_TYPES_H)
 
 # Alphabetize the rest unless there's a compelling reason
-LA_CHECK_INCLUDE_FILE("acl/libacl.h" HAVE_ACL_LIBACL_H)
 LA_CHECK_INCLUDE_FILE("attr/xattr.h" HAVE_ATTR_XATTR_H)
 LA_CHECK_INCLUDE_FILE("ctype.h" HAVE_CTYPE_H)
 LA_CHECK_INCLUDE_FILE("copyfile.h" HAVE_COPYFILE_H)
@@ -239,7 +237,6 @@ LA_CHECK_INCLUDE_FILE("stdint.h" HAVE_STDINT_H)
 LA_CHECK_INCLUDE_FILE("stdlib.h" HAVE_STDLIB_H)
 LA_CHECK_INCLUDE_FILE("string.h" HAVE_STRING_H)
 LA_CHECK_INCLUDE_FILE("strings.h" HAVE_STRINGS_H)
-LA_CHECK_INCLUDE_FILE("sys/acl.h" HAVE_SYS_ACL_H)
 LA_CHECK_INCLUDE_FILE("sys/cdefs.h" HAVE_SYS_CDEFS_H)
 LA_CHECK_INCLUDE_FILE("sys/extattr.h" HAVE_SYS_EXTATTR_H)
 LA_CHECK_INCLUDE_FILE("sys/ioctl.h" HAVE_SYS_IOCTL_H)
@@ -653,44 +650,6 @@ IF(ENABLE_XATTR)
   CHECK_FUNCTION_EXISTS_GLIBC(llistxattr HAVE_LLISTXATTR)
   CHECK_FUNCTION_EXISTS_GLIBC(lsetxattr HAVE_LSETXATTR)
 ENDIF(ENABLE_XATTR)
-
-#
-# Check for ACL libraries, headers, and functions
-#
-# The ACL support in libtransform is written against the POSIX1e draft,
-# which was never officially approved and varies quite a bit across
-# platforms.  Worse, some systems have completely non-POSIX acl functions,
-# which makes the following checks rather more complex than I would like.
-#
-IF(ENABLE_ACL)
-  CHECK_LIBRARY_EXISTS(acl "acl_get_file" "" HAVE_ACL_LIB)
-  IF(HAVE_ACL_LIB)
-    SET(CMAKE_REQUIRED_LIBRARIES "acl")
-    FIND_LIBRARY(ACL_LIBRARY NAMES acl)
-    LIST(APPEND ADDITIONAL_LIBS ${ACL_LIBRARY})
-  ENDIF(HAVE_ACL_LIB)
-  #
-  CHECK_FUNCTION_EXISTS_GLIBC(acl_create_entry HAVE_ACL_CREATE_ENTRY)
-  CHECK_FUNCTION_EXISTS_GLIBC(acl_init HAVE_ACL_INIT)
-  CHECK_FUNCTION_EXISTS_GLIBC(acl_set_fd HAVE_ACL_SET_FD)
-  CHECK_FUNCTION_EXISTS_GLIBC(acl_set_fd_np HAVE_ACL_SET_FD_NP)
-  CHECK_FUNCTION_EXISTS_GLIBC(acl_set_file HAVE_ACL_SET_FILE)
-  CHECK_TYPE_EXISTS(acl_permset_t "${INCLUDES}"    HAVE_ACL_PERMSET_T)
-
-  # The "acl_get_perm()" function was omitted from the POSIX draft.
-  # (It's a pretty obvious oversight; otherwise, there's no way to
-  # test for specific permissions in a permset.)  Linux uses the obvious
-  # name, FreeBSD adds _np to mark it as "non-Posix extension."
-  # Test for both as a double-check that we really have POSIX-style ACL support.
-  CHECK_SYMBOL_EXISTS(acl_get_perm "${INCLUDES}" HAVE_ACL_GET_PERM)
-  CHECK_SYMBOL_EXISTS(acl_get_perm_np "${INCLUDES}" HAVE_ACL_GET_PERM_NP)
-  CHECK_SYMBOL_EXISTS(acl_get_link "${INCLUDES}" HAVE_ACL_GET_LINK)
-  CHECK_SYMBOL_EXISTS(acl_get_link_np "${INCLUDES}" HAVE_ACL_GET_LINK_NP)
-
-  # MacOS has an acl.h that isn't POSIX.  It can be detected by
-  # checking for ACL_USER
-  CHECK_SYMBOL_EXISTS(ACL_USER "${INCLUDES}" HAVE_ACL_USER)
-ENDIF(ENABLE_ACL)
 
 # Generate "config.h" from "build/cmake/config.h.in"
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/build/cmake/config.h.in

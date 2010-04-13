@@ -425,53 +425,6 @@ if test "x$enable_xattr" != "xno"; then
 	AC_CHECK_FUNCS([lgetxattr listxattr llistxattr lsetxattr])
 fi
 
-# Check for ACL support
-#
-# The ACL support in libtransform is written against the POSIX1e draft,
-# which was never officially approved and varies quite a bit across
-# platforms.  Worse, some systems have completely non-POSIX acl functions,
-# which makes the following checks rather more complex than I would like.
-#
-AC_ARG_ENABLE([acl],
-		AS_HELP_STRING([--disable-acl],
-		[Enable ACL support (default: check)]))
-
-if test "x$enable_acl" != "xno"; then
-   AC_CHECK_HEADERS([sys/acl.h])
-   AC_CHECK_LIB([acl],[acl_get_file])
-   AC_CHECK_FUNCS([acl_create_entry acl_init acl_set_fd acl_set_fd_np acl_set_file])
-
-   AC_CHECK_TYPES(acl_permset_t,,,
-	[#if HAVE_SYS_TYPES_H
-	#include <sys/types.h>
-	#endif
-	#if HAVE_SYS_ACL_H
-	#include <sys/acl.h>
-	#endif
-	])
-
-    # The "acl_get_perm()" function was omitted from the POSIX draft.
-    # (It's a pretty obvious oversight; otherwise, there's no way to
-    # test for specific permissions in a permset.)  Linux uses the obvious
-    # name, FreeBSD adds _np to mark it as "non-Posix extension."
-    # Test for both as a double-check that we really have POSIX-style ACL support.
-    AC_CHECK_FUNCS(acl_get_perm_np acl_get_perm acl_get_link acl_get_link_np,,,
-	[#if HAVE_SYS_TYPES_H
-	#include <sys/types.h>
-	#endif
-	#if HAVE_SYS_ACL_H
-	#include <sys/acl.h>
-	#endif
-	])
-
-    # MacOS has an acl.h that isn't POSIX.  It can be detected by
-    # checking for ACL_USER
-    AC_CHECK_DECL([ACL_USER],
-		[AC_DEFINE(HAVE_ACL_USER, 1, [True for systems with POSIX ACL support])],
-		[],
-		[#include <sys/acl.h>])
-fi
-
 # Additional requirements
 AC_SYS_LARGEFILE
 

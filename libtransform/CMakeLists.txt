@@ -96,7 +96,6 @@ SET(libtransform_SOURCES
 # Man pages
 SET(libtransform_MANS
   transform_entry.3
-  transform_entry_acl.3
   transform_entry_linkify.3
   transform_entry_paths.3
   transform_entry_perms.3

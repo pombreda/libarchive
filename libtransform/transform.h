@@ -323,8 +323,6 @@ __LA_DECL int transform_write_set_filter_option(struct transform *, const char *
 #define	TRANSFORM_EXTRACT_NO_OVERWRITE 		(0x0008)
 /* Default: Try create first, unlink only if create fails with EEXIST. */
 #define	TRANSFORM_EXTRACT_UNLINK			(0x0010)
-/* Default: Do not restore ACLs. */
-#define	TRANSFORM_EXTRACT_ACL			(0x0020)
 /* Default: Do not restore fflags. */
 #define	TRANSFORM_EXTRACT_FFLAGS			(0x0040)
 /* Default: Do not restore xattrs. */
