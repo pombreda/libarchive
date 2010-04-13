@@ -23,7 +23,6 @@ SET(libtransform_SOURCES
   transform_entry_sparse.c
   transform_entry_stat.c
   transform_entry_strmode.c
-  transform_entry_xattr.c
   transform_platform.h
   transform_private.h
   transform_read.c

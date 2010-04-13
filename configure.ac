@@ -192,7 +192,7 @@ esac
 # Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([attr/xattr.h copyfile.h ctype.h errno.h])
+AC_CHECK_HEADERS([copyfile.h ctype.h errno.h])
 AC_CHECK_HEADERS([ext2fs/ext2_fs.h fcntl.h grp.h])
 AC_CHECK_HEADERS([inttypes.h io.h langinfo.h limits.h])
 AC_CHECK_HEADERS([linux/fiemap.h linux/fs.h])
@@ -409,21 +409,6 @@ AC_CHECK_MEMBER(struct dirent.d_namlen,,,
 #include <dirent.h>
 #endif
 ])
-
-# Check for Extended Attributes support
-AC_ARG_ENABLE([xattr],
-		AS_HELP_STRING([--disable-xattr],
-		[Enable Extended Attributes support (default: check)]))
-
-if test "x$enable_xattr" != "xno"; then
-	AC_CHECK_HEADERS([attr/xattr.h])
-	AC_CHECK_HEADERS([sys/xattr.h])
-	AC_CHECK_LIB(attr,setxattr)
-	AC_CHECK_FUNCS([extattr_get_file extattr_list_file])
-	AC_CHECK_FUNCS([extattr_set_fd extattr_set_file])
-	AC_CHECK_FUNCS([fsetxattr getxattr])
-	AC_CHECK_FUNCS([lgetxattr listxattr llistxattr lsetxattr])
-fi
 
 # Additional requirements
 AC_SYS_LARGEFILE

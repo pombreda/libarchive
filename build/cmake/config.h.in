@@ -6,9 +6,6 @@
 /* Version number of bsdtar */
 #cmakedefine BSDTAR_VERSION_STRING "${BSDTAR_VERSION_STRING}"
 
-/* Define to 1 if you have the <attr/xattr.h> header file. */
-#cmakedefine HAVE_ATTR_XATTR_H 1
-
 /* Define to 1 if you have the <bzlib.h> header file. */
 #cmakedefine HAVE_BZLIB_H 1
 
@@ -142,9 +139,6 @@
 /* Define to 1 if fseeko (and presumably ftello) exists and is declared. */
 #cmakedefine HAVE_FSEEKO 1
 
-/* Define to 1 if you have the `fsetxattr' function. */
-#cmakedefine HAVE_FSETXATTR 1
-
 /* Define to 1 if you have the `fstat' function. */
 #cmakedefine HAVE_FSTAT 1
 
@@ -162,9 +156,6 @@
 
 /* Define to 1 if you have the `getpid' function. */
 #cmakedefine HAVE_GETPID 1
-
-/* Define to 1 if you have the `getxattr' function. */
-#cmakedefine HAVE_GETXATTR 1
 
 /* Define to 1 if you have the <grp.h> header file. */
 #cmakedefine HAVE_GRP_H 1
@@ -189,15 +180,6 @@
 
 /* Define to 1 if you have the `lchown' function. */
 #cmakedefine HAVE_LCHOWN 1
-
-/* Define to 1 if you have the `lgetxattr' function. */
-#cmakedefine HAVE_LGETXATTR 1
-
-/* Define to 1 if you have the `acl' library (-lacl). */
-#cmakedefine HAVE_LIBACL 1
-
-/* Define to 1 if you have the `attr' library (-lattr). */
-#cmakedefine HAVE_LIBATTR 1
 
 /* Define to 1 if you have the `bz2' library (-lbz2). */
 #cmakedefine HAVE_LIBBZ2 1
@@ -229,12 +211,6 @@
 /* Define to 1 if you have the <linux/fs.h> header file. */
 #cmakedefine HAVE_LINUX_FS_H 1
 
-/* Define to 1 if you have the `listxattr' function. */
-#cmakedefine HAVE_LISTXATTR 1
-
-/* Define to 1 if you have the `llistxattr' function. */
-#cmakedefine HAVE_LLISTXATTR 1
-
 /* Define to 1 if you have the <locale.h> header file. */
 #cmakedefine HAVE_LOCALE_H 1
 
@@ -243,9 +219,6 @@
 
 /* Define to 1 if the system has the type `long long int'. */
 #cmakedefine HAVE_LONG_LONG_INT 1
-
-/* Define to 1 if you have the `lsetxattr' function. */
-#cmakedefine HAVE_LSETXATTR 1
 
 /* Define to 1 if you have the `lstat' function. */
 #cmakedefine HAVE_LSTAT 1
@@ -517,9 +490,6 @@
 
 /* Define to 1 if you have <sys/wait.h> that is POSIX.1 compatible. */
 #cmakedefine HAVE_SYS_WAIT_H 1
-
-/* Define to 1 if you have the <sys/xattr.h> header file. */
-#cmakedefine HAVE_SYS_XATTR_H 1
 
 /* Define to 1 if you have the `timegm' function. */
 #cmakedefine HAVE_TIMEGM 1

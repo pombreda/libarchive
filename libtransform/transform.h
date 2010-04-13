@@ -325,8 +325,6 @@ __LA_DECL int transform_write_set_filter_option(struct transform *, const char *
 #define	TRANSFORM_EXTRACT_UNLINK			(0x0010)
 /* Default: Do not restore fflags. */
 #define	TRANSFORM_EXTRACT_FFLAGS			(0x0040)
-/* Default: Do not restore xattrs. */
-#define	TRANSFORM_EXTRACT_XATTR 			(0x0080)
 /* Default: Do not try to guard against extracts redirected by symlinks. */
 /* Note: With TRANSFORM_EXTRACT_UNLINK, will remove any intermediate symlink. */
 #define	TRANSFORM_EXTRACT_SECURE_SYMLINKS		(0x0100)
