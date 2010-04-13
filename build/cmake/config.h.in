@@ -24,9 +24,6 @@
 /* Define to 1 if you have the `acl_init' function. */
 #cmakedefine HAVE_ACL_INIT 1
 
-/* Define to 1 if you have the <acl/libacl.h> header file. */
-#cmakedefine HAVE_ACL_LIBACL_H 1
-
 /* Define to 1 if the system has the type `acl_permset_t'. */
 #cmakedefine HAVE_ACL_PERMSET_T 1
 
