@@ -192,7 +192,7 @@ esac
 # Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([copyfile.h ctype.h errno.h])
+AC_CHECK_HEADERS([ctype.h errno.h])
 AC_CHECK_HEADERS([ext2fs/ext2_fs.h fcntl.h grp.h])
 AC_CHECK_HEADERS([inttypes.h io.h langinfo.h limits.h])
 AC_CHECK_HEADERS([linux/fiemap.h linux/fs.h])

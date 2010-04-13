@@ -209,7 +209,6 @@ LA_CHECK_INCLUDE_FILE("sys/types.h" HAVE_SYS_TYPES_H)
 
 # Alphabetize the rest unless there's a compelling reason
 LA_CHECK_INCLUDE_FILE("ctype.h" HAVE_CTYPE_H)
-LA_CHECK_INCLUDE_FILE("copyfile.h" HAVE_COPYFILE_H)
 LA_CHECK_INCLUDE_FILE("direct.h" HAVE_DIRECT_H)
 LA_CHECK_INCLUDE_FILE("dlfcn.h" HAVE_DLFCN_H)
 LA_CHECK_INCLUDE_FILE("errno.h" HAVE_ERRNO_H)
