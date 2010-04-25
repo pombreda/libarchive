@@ -374,7 +374,6 @@ _transform_read_free(struct transform *_a)
 {
 	struct transform_read *a = (struct transform_read *)_a;
 	int i, n;
-	int slots;
 	int r = TRANSFORM_OK;
 
 	if (_a == NULL)
