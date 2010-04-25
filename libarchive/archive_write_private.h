@@ -39,6 +39,7 @@
 struct archive_write;
 
 int __archive_write_output(struct archive_write *, const void *, size_t);
+int __archive_write_nulls(struct archive_write *, size_t);
 
 struct archive_write {
 	struct archive	archive;
