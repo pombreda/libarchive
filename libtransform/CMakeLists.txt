@@ -85,8 +85,8 @@ ENDIF(NOT WIN32 OR CYGWIN)
 INSTALL(TARGETS transform transform_static
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
-        TRANSFORM DESTINATION lib)
+        ARCHIVE DESTINATION lib)
 INSTALL_MAN(${libtransform_MANS})
 INSTALL(FILES ${include_HEADERS} DESTINATION include)
 
-add_subdirectory(test)
+#add_subdirectory(test)
