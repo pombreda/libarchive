@@ -63,11 +63,11 @@ DEFINE_TEST(test_write_compress_lzma)
 	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_set_bytes_per_block(a, 10));
 	assertEqualInt(TRANSFORM_FILTER_LZMA, transform_compression(a));
-	assertEqualString("lzma", transform_compression_name(a));
+	assertEqualString("lzma", transform_filter_name(a, 0));
 	assertEqualIntA(a, TRANSFORM_OK,
 	    transform_write_open_memory(a, buff, buffsize, &used1));
 	assertEqualInt(TRANSFORM_FILTER_LZMA, transform_compression(a));
-	assertEqualString("lzma", transform_compression_name(a));
+	assertEqualString("lzma", transform_filter_name(a, 0));
 	assert((ae = transform_entry_new()) != NULL);
 	transform_entry_set_filetype(ae, AE_IFREG);
 	transform_entry_set_size(ae, datasize);

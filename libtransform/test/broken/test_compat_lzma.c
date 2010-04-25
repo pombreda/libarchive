@@ -131,7 +131,7 @@ compat_lzma(const char *name)
 
 	/* Verify that the format detection worked. */
 	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_LZMA);
-	assertEqualString(transform_compression_name(a), "lzma");
+	assertEqualString(transform_filter_name(a, 0), "lzma");
 	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
 
 	assertEqualInt(TRANSFORM_OK, transform_read_close(a));

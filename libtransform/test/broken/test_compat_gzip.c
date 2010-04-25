@@ -75,7 +75,7 @@ verify(const char *name)
 
 	/* Verify that the format detection worked. */
 	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_GZIP);
-	assertEqualString(transform_compression_name(a), "gzip");
+	assertEqualString(transform_filter_name(a, 0), "gzip");
 	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
 
 	assertEqualInt(TRANSFORM_OK, transform_read_close(a));

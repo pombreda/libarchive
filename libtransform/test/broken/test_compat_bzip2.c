@@ -68,12 +68,12 @@ compat_bzip2(const char *name)
 
 	/* Verify that the format detection worked. */
 	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_BZIP2);
-	assertEqualString(transform_compression_name(a), "bzip2");
+	assertEqualString(transform_filter_name(a, 0), "bzip2");
 	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
 
 	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
 	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_BZIP2);
-	assertEqualString(transform_compression_name(a), "bzip2");
+	assertEqualString(transform_filter_name(a, 0), "bzip2");
 	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
 
 	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
