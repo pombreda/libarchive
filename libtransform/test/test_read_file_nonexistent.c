@@ -28,7 +28,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_file_nonexistent.c 1894
 DEFINE_TEST(test_read_file_nonexistent)
 {
 	struct transform* a = transform_read_new();
-	assertEqualInt(TRANSFORM_OK, transform_read_support_format_all(a));
 	assertEqualInt(TRANSFORM_FATAL,
 	    transform_read_open_filename(a, "notexistent.tar", 512));
 	transform_read_free(a);
