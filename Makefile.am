@@ -150,35 +150,35 @@ pkgconfig_DATA = build/pkgconfig/libtransform.pc
 libtransform_test_SOURCES=					\
 	$(libtransform_la_SOURCES)				\
 	libtransform/test/main.c					\
-	libtransform/test/read_open_memory.c			\
 	libtransform/test/test.h					\
-	libtransform/test/test_transform_api_feature.c		\
-	libtransform/test/test_bad_fd.c				\
-	libtransform/test/test_compat_bzip2.c			\
-	libtransform/test/test_compat_cpio.c			\
-	libtransform/test/test_compat_gtar.c			\
-	libtransform/test/test_compat_gzip.c			\
-	libtransform/test/test_compat_lzma.c			\
-	libtransform/test/test_compat_xz.c			\
-	libtransform/test/test_compat_zip.c			\
-	libtransform/test/test_empty_write.c			\
-	libtransform/test/test_fuzz.c				\
-	libtransform/test/test_open_fd.c				\
-	libtransform/test/test_open_file.c			\
-	libtransform/test/test_open_filename.c			\
-	libtransform/test/test_read_compress_program.c		\
-	libtransform/test/test_read_data_large.c			\
-	libtransform/test/test_read_disk.c			\
-	libtransform/test/test_read_truncated.c			\
-	libtransform/test/test_read_uu.c				\
-	libtransform/test/test_write_compress.c			\
-	libtransform/test/test_write_compress_bzip2.c		\
-	libtransform/test/test_write_compress_gzip.c		\
-	libtransform/test/test_write_compress_lzma.c		\
-	libtransform/test/test_write_compress_program.c		\
-	libtransform/test/test_write_compress_xz.c		\
-	libtransform/test/test_write_disk.c			\
-	libtransform/test/test_write_open_memory.c
+	libtransform/test/read_open_memory.c			\
+	libtransform/test/test_transform_api_feature.c		
+#	libtransform/test/test_bad_fd.c				\
+#	libtransform/test/test_compat_bzip2.c			\
+#	libtransform/test/test_compat_cpio.c			\
+#	libtransform/test/test_compat_gtar.c			\
+#	libtransform/test/test_compat_gzip.c			\
+#	libtransform/test/test_compat_lzma.c			\
+#	libtransform/test/test_compat_xz.c			\
+#	libtransform/test/test_compat_zip.c			\
+#	libtransform/test/test_empty_write.c			\
+#	libtransform/test/test_fuzz.c				\
+#	libtransform/test/test_open_fd.c				\
+#	libtransform/test/test_open_file.c			\
+#	libtransform/test/test_open_filename.c			\
+#	libtransform/test/test_read_compress_program.c		\
+#	libtransform/test/test_read_data_large.c			\
+#	libtransform/test/test_read_disk.c			\
+#	libtransform/test/test_read_truncated.c			\
+#	libtransform/test/test_read_uu.c				\
+#	libtransform/test/test_write_compress.c			\
+#	libtransform/test/test_write_compress_bzip2.c		\
+#	libtransform/test/test_write_compress_gzip.c		\
+#	libtransform/test/test_write_compress_lzma.c		\
+#	libtransform/test/test_write_compress_program.c		\
+#	libtransform/test/test_write_compress_xz.c		\
+#	libtransform/test/test_write_disk.c			\
+#	libtransform/test/test_write_open_memory.c
 
 libtransform_test_CPPFLAGS= -I$(top_srcdir)/libtransform -I$(top_builddir)/libtransform/test -DLIBTRANSFORM_STATIC $(PLATFORMCPPFLAGS)
 
