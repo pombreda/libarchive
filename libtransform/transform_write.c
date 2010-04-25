@@ -485,7 +485,7 @@ static int
 _transform_write_free(struct transform *_a)
 {
 	struct transform_write *a = (struct transform_write *)_a;
-	int r = TRANSFORM_OK, r1;
+	int r = TRANSFORM_OK;
 
 	if (_a == NULL)
 		return (TRANSFORM_OK);
