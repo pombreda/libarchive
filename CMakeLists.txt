@@ -25,8 +25,6 @@ STRING(REGEX REPLACE "[0]*([^0][0-9]*)$" "\\1" _minor ${_minor})
 STRING(REGEX REPLACE "[0]*([^0][0-9]*)$" "\\1" _revision ${_revision})
 #
 SET(VERSION                    "${_major}.${_minor}.${_revision}${_quality}")
-SET(BSDCPIO_VERSION_STRING     "${VERSION}")
-SET(BSDTAR_VERSION_STRING      "${VERSION}")
 SET(LIBTRANSFORM_VERSION_NUMBER  "${_version_number}")
 SET(LIBTRANSFORM_VERSION_STRING  "${VERSION}")
 # Shared library number
@@ -39,17 +37,11 @@ include(CTest)
 # TODO: Require CMake 2.8 and drop this workaround (perhaps late 2010).
 INCLUDE(AddTest28)
 
-OPTION(ENABLE_TAR_SHARED "Enable dynamic build of tar" OFF)
 OPTION(ENABLE_TEST "Enable unit and regression tests" ON)
 
 IF(ENABLE_TEST)
 	ENABLE_TESTING()
 ENDIF(ENABLE_TEST)
-IF(WIN32 AND NOT CYGWIN)
-  # Currently, dynamic build only.
-  SET(ENABLE_TAR_SHARED ON)
-  SET(ENABLE_CPIO_SHARED ON)
-ENDIF(WIN32 AND NOT CYGWIN)
 
 IF(WIN32)
   SET(_WIN32_WINNT 0x0500 CACHE INTERNAL "Setting _WIN32_WINNT to 0x0500 for Windows 2000 APIs")
@@ -563,5 +555,3 @@ ADD_CUSTOM_TARGET(run_all_tests)
 ENDIF(ENABLE_TEST)
 
 add_subdirectory(libtransform)
-add_subdirectory(tar)
-add_subdirectory(cpio)
