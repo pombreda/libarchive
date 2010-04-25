@@ -283,7 +283,6 @@ void extract_reference_file(const char *);
  */
 
 #include "transform.h"
-#include "transform_entry.h"
 
 /* Special customized read-from-memory interface. */
 int read_open_memory(struct transform *, void *, size_t, size_t);

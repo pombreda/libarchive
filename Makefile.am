@@ -13,9 +13,9 @@ BUILT_SOURCES= libtransform/test/list.h
 #
 # What to test: We always test libtransform
 #
-check_PROGRAMS=
-TESTS=
-TESTS_ENVIRONMENT=
+check_PROGRAMS= libtransform_test
+TESTS= libtransform_test
+TESTS_ENVIRONMENT= $(libtransform_TESTS_ENVIRONMENT)
 # The next line is commented out by default in shipping libtransform releases.
 # It is uncommented by default in trunk.
 AM_CFLAGS=-Wall -Werror
@@ -152,9 +152,6 @@ libtransform_test_SOURCES=					\
 	libtransform/test/main.c					\
 	libtransform/test/read_open_memory.c			\
 	libtransform/test/test.h					\
-	libtransform/test/test_acl_basic.c			\
-	libtransform/test/test_acl_freebsd.c			\
-	libtransform/test/test_acl_pax.c				\
 	libtransform/test/test_transform_api_feature.c		\
 	libtransform/test/test_bad_fd.c				\
 	libtransform/test/test_compat_bzip2.c			\
@@ -162,75 +159,18 @@ libtransform_test_SOURCES=					\
 	libtransform/test/test_compat_gtar.c			\
 	libtransform/test/test_compat_gzip.c			\
 	libtransform/test/test_compat_lzma.c			\
-	libtransform/test/test_compat_solaris_tar_acl.c		\
-	libtransform/test/test_compat_tar_hardlink.c		\
 	libtransform/test/test_compat_xz.c			\
 	libtransform/test/test_compat_zip.c			\
 	libtransform/test/test_empty_write.c			\
-	libtransform/test/test_entry.c				\
-	libtransform/test/test_extattr_freebsd.c			\
 	libtransform/test/test_fuzz.c				\
-	libtransform/test/test_entry_strmode.c			\
-	libtransform/test/test_link_resolver.c			\
 	libtransform/test/test_open_fd.c				\
 	libtransform/test/test_open_file.c			\
 	libtransform/test/test_open_filename.c			\
-	libtransform/test/test_pax_filename_encoding.c		\
 	libtransform/test/test_read_compress_program.c		\
 	libtransform/test/test_read_data_large.c			\
 	libtransform/test/test_read_disk.c			\
-	libtransform/test/test_read_disk_entry_from_file.c	\
-	libtransform/test/test_read_extract.c			\
-	libtransform/test/test_read_file_nonexistent.c		\
-	libtransform/test/test_read_format_ar.c			\
-	libtransform/test/test_read_format_cpio_afio.c		\
-	libtransform/test/test_read_format_cpio_bin.c		\
-	libtransform/test/test_read_format_cpio_bin_Z.c		\
-	libtransform/test/test_read_format_cpio_bin_be.c		\
-	libtransform/test/test_read_format_cpio_bin_bz2.c		\
-	libtransform/test/test_read_format_cpio_bin_gz.c		\
-	libtransform/test/test_read_format_cpio_bin_lzma.c	\
-	libtransform/test/test_read_format_cpio_bin_xz.c		\
-	libtransform/test/test_read_format_cpio_odc.c		\
-	libtransform/test/test_read_format_cpio_svr4_bzip2_rpm.c	\
-	libtransform/test/test_read_format_cpio_svr4_gzip.c	\
-	libtransform/test/test_read_format_cpio_svr4_gzip_rpm.c	\
-	libtransform/test/test_read_format_cpio_svr4c_Z.c		\
-	libtransform/test/test_read_format_empty.c		\
-	libtransform/test/test_read_format_gtar_gz.c		\
-	libtransform/test/test_read_format_gtar_lzma.c		\
-	libtransform/test/test_read_format_gtar_sparse.c		\
-	libtransform/test/test_read_format_iso_gz.c		\
-	libtransform/test/test_read_format_iso_multi_extent.c	\
-	libtransform/test/test_read_format_isojoliet_bz2.c	\
-	libtransform/test/test_read_format_isojoliet_long.c	\
-	libtransform/test/test_read_format_isojoliet_rr.c		\
-	libtransform/test/test_read_format_isorr_bz2.c		\
-	libtransform/test/test_read_format_isorr_ce.c		\
-	libtransform/test/test_read_format_isorr_new_bz2.c	\
-	libtransform/test/test_read_format_isorr_rr_moved.c	\
-	libtransform/test/test_read_format_isozisofs_bz2.c	\
-	libtransform/test/test_read_format_mtree.c		\
-	libtransform/test/test_read_format_pax_bz2.c		\
-	libtransform/test/test_read_format_raw.c			\
-	libtransform/test/test_read_format_tar.c			\
-	libtransform/test/test_read_format_tar_empty_filename.c	\
-	libtransform/test/test_read_format_tbz.c			\
-	libtransform/test/test_read_format_tgz.c			\
-	libtransform/test/test_read_format_tlz.c			\
-	libtransform/test/test_read_format_txz.c			\
-	libtransform/test/test_read_format_tz.c			\
-	libtransform/test/test_read_format_xar.c			\
-	libtransform/test/test_read_format_zip.c			\
-	libtransform/test/test_read_large.c			\
-	libtransform/test/test_read_pax_truncated.c		\
-	libtransform/test/test_read_position.c			\
 	libtransform/test/test_read_truncated.c			\
 	libtransform/test/test_read_uu.c				\
-	libtransform/test/test_sparse_basic.c			\
-	libtransform/test/test_tar_filenames.c			\
-	libtransform/test/test_tar_large.c			\
-	libtransform/test/test_ustar_filenames.c			\
 	libtransform/test/test_write_compress.c			\
 	libtransform/test/test_write_compress_bzip2.c		\
 	libtransform/test/test_write_compress_gzip.c		\
@@ -238,32 +178,6 @@ libtransform_test_SOURCES=					\
 	libtransform/test/test_write_compress_program.c		\
 	libtransform/test/test_write_compress_xz.c		\
 	libtransform/test/test_write_disk.c			\
-	libtransform/test/test_write_disk_failures.c		\
-	libtransform/test/test_write_disk_hardlink.c		\
-	libtransform/test/test_write_disk_perms.c			\
-	libtransform/test/test_write_disk_secure.c		\
-	libtransform/test/test_write_disk_sparse.c		\
-	libtransform/test/test_write_disk_symlink.c		\
-	libtransform/test/test_write_disk_times.c			\
-	libtransform/test/test_write_format_ar.c			\
-	libtransform/test/test_write_format_cpio.c		\
-	libtransform/test/test_write_format_cpio_empty.c		\
-	libtransform/test/test_write_format_cpio_odc.c		\
-	libtransform/test/test_write_format_cpio_newc.c		\
-	libtransform/test/test_write_format_iso9660.c		\
-	libtransform/test/test_write_format_iso9660_boot.c	\
-	libtransform/test/test_write_format_iso9660_empty.c	\
-	libtransform/test/test_write_format_iso9660_filename.c	\
-	libtransform/test/test_write_format_iso9660_zisofs.c	\
-	libtransform/test/test_write_format_mtree.c		\
-	libtransform/test/test_write_format_pax.c			\
-	libtransform/test/test_write_format_shar_empty.c		\
-	libtransform/test/test_write_format_tar.c			\
-	libtransform/test/test_write_format_tar_empty.c		\
-	libtransform/test/test_write_format_tar_ustar.c		\
-	libtransform/test/test_write_format_zip.c			\
-	libtransform/test/test_write_format_zip_empty.c		\
-	libtransform/test/test_write_format_zip_no_compression.c	\
 	libtransform/test/test_write_open_memory.c
 
 libtransform_test_CPPFLAGS= -I$(top_srcdir)/libtransform -I$(top_builddir)/libtransform/test -DLIBTRANSFORM_STATIC $(PLATFORMCPPFLAGS)
