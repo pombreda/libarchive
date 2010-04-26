@@ -23,15 +23,15 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libtransform/test/test_compat_gzip.c 191183 2009-04-17 01:06:31Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_compat_bzip2.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
- * Verify our ability to read sample files compatibly with gunzip.
+ * Verify our ability to read sample files compatibly with bunzip2.
  *
  * In particular:
- *  * gunzip will read multiple gzip streams, concatenating the output
- *  * gunzip will stop at the end of a stream if the following data
- *    doesn't start with a gzip signature.
+ *  * bunzip2 will read multiple bzip2 streams, concatenating the output
+ *  * bunzip2 will stop at the end of a stream if the following data
+ *    doesn't start with a bzip2 signature.
  */
 
 /*
@@ -39,34 +39,27 @@ __FBSDID("$FreeBSD: head/lib/libtransform/test/test_compat_gzip.c 191183 2009-04
  * compressed in different ways.
  */
 static void
-verify(const char *name)
+read_bzip2(const char *name)
 {
 	const char *n[7] = { "f1", "f2", "f3", "d1/f1", "d1/f2", "d1/f3", NULL };
 	struct transform_entry *ae;
 	struct transform *a;
-	int i,r;
+	int i;
 
 	assert((a = transform_read_new()) != NULL);
-	r = transform_read_support_compression_gzip(a);
-	if (r == TRANSFORM_WARN) {
-		skipping("gzip reading not fully supported on this platform");
-		assertEqualInt(TRANSFORM_OK, transform_read_free(a));
+	if (TRANSFORM_OK != transform_read_support_compression_bzip2(a)) {
+		skipping("Unsupported bzip2");
 		return;
 	}
-	assertEqualIntA(a, TRANSFORM_OK, r);
 	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_format_all(a));
 	extract_reference_file(name);
-	assertEqualIntA(a, TRANSFORM_OK, transform_read_open_filename(a, name, 200));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_open_filename(a, name, 2));
 
 	/* Read entries, match up names with list above. */
 	for (i = 0; i < 6; ++i) {
 		failure("Could not read file %d (%s) from %s", i, n[i], name);
 		assertEqualIntA(a, TRANSFORM_OK,
 		    transform_read_next_header(a, &ae));
-		if (r != TRANSFORM_OK) {
-			transform_read_free(a);
-			return;
-		}
 		assertEqualString(n[i], transform_entry_pathname(ae));
 	}
 
@@ -74,24 +67,23 @@ verify(const char *name)
 	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
 
 	/* Verify that the format detection worked. */
-	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_GZIP);
-	assertEqualString(transform_filter_name(a, 0), "gzip");
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_BZIP2);
+	assertEqualString(transform_filter_name(a, 0), "bzip2");
 	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
 
-	assertEqualInt(TRANSFORM_OK, transform_read_close(a));
+	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_BZIP2);
+	assertEqualString(transform_filter_name(a, 0), "bzip2");
+	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
+
 	assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 }
 
 
-DEFINE_TEST(test_compat_gzip)
+DEFINE_TEST(test_read_bzip2)
 {
-	/* This sample has been 'split', each piece compressed separately,
-	 * then concatenated.  Gunzip will emit the concatenated result. */
-	/* Not supported in libtransform 2.6 and earlier */
-	verify("test_compat_gzip_1.tgz");
-	/* This sample has been compressed as a single stream, but then
-	 * some unrelated garbage text has been appended to the end. */
-	verify("test_compat_gzip_2.tgz");
+	read_bzip2("test_compat_bzip2_1.tbz");
+	read_bzip2("test_compat_bzip2_2.tbz");
 }
 
 

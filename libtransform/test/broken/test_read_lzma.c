@@ -24,13 +24,74 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libtransform/test/test_compat_xz.c 191183 2009-04-17 01:06:31Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/test/test_compat_lzma.c 201247 2009-12-30 05:59:21Z kientzle $");
 
 /*
- * Verify our ability to read sample files compatibly with unxz.
+Execute the following to rebuild the data for this program:
+   tail -n +33 test_compat_lzma.c | /bin/sh
+
+# Use lzma command of XZ Utils.
+name=test_compat_lzma_1
+zcmd=lzma
+zsuffix=lzma
+ztar_suffix=tlz
+dir="$name`date +%Y%m%d%H%M%S`.$USER"
+mktarfile()
+{
+mkdir $dir
+echo "f1" > $dir/f1
+echo "f2" > $dir/f2
+echo "f3" > $dir/f3
+mkdir $dir/d1
+echo "f1" > $dir/d1/f1
+echo "f2" > $dir/d1/f2
+echo "f3" > $dir/d1/f3
+(cd $dir; tar cf ../$name.tar f1 f2 f3 d1/f1 d1/f2 d1/f3)
+rm -r $dir
+}
+mktarfile
+$zcmd $name.tar
+mv $name.tar.$zsuffix $name.$ztar_suffix
+echo "This is unrelated junk data at the end of the file" >> $name.$ztar_suffix
+uuencode $name.$ztar_suffix $name.$ztar_suffix > $name.$ztar_suffix.uu
+rm -f $name.$ztar_suffix
+#
+# Use option -e
+#
+name=test_compat_lzma_2
+dir="$name`date +%Y%m%d%H%M%S`.$USER"
+mktarfile
+$zcmd -e $name.tar
+mv $name.tar.$zsuffix $name.$ztar_suffix
+uuencode $name.$ztar_suffix $name.$ztar_suffix > $name.$ztar_suffix.uu
+rm -f $name.$ztar_suffix
+#
+# Use lzma command of LZMA SDK with option -d12.
+#
+name=test_compat_lzma_3
+zcmd=lzmasdk	# Change this path to use lzma of LZMA SDK.
+dir="$name`date +%Y%m%d%H%M%S`.$USER"
+mktarfile
+$zcmd e -d12 $name.tar $name.$ztar_suffix
+rm -f $name.tar
+uuencode $name.$ztar_suffix $name.$ztar_suffix > $name.$ztar_suffix.uu
+rm -f $name.$ztar_suffix
+
+exit 0
+*/
+
+/*
+ * Verify our ability to read sample files compatibly with unlzma.
  *
  * In particular:
- *  * unxz will read multiple xz streams, concatenating the output
+ *  * unlzma will read multiple lzma streams, concatenating the output
+ *  * unlzma will read lzma streams which is made by lzma with option -e,
+ *    concatenating the output
+ *
+ * Verify our ability to read sample files compatibly with lzma of
+ * LZMA SDK.
+ *  * lzma will read lzma streams which is made by lzma with option -d12,
+ *    concatenating the output
  */
 
 /*
@@ -38,7 +99,7 @@ __FBSDID("$FreeBSD: head/lib/libtransform/test/test_compat_xz.c 191183 2009-04-1
  * compressed in different ways.
  */
 static void
-compat_xz(const char *name)
+read_lzma(const char *name)
 {
 	const char *n[7] = { "f1", "f2", "f3", "d1/f1", "d1/f2", "d1/f3", NULL };
 	struct transform_entry *ae;
@@ -47,9 +108,9 @@ compat_xz(const char *name)
 
 	assert((a = transform_read_new()) != NULL);
 	assertEqualIntA(a, TRANSFORM_OK, transform_read_support_compression_all(a));
-	r = transform_read_support_compression_xz(a);
+	r = transform_read_support_compression_lzma(a);
 	if (r == TRANSFORM_WARN) {
-		skipping("xz reading not fully supported on this platform");
+		skipping("lzma reading not fully supported on this platform");
 		assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 		return;
 	}
@@ -69,8 +130,8 @@ compat_xz(const char *name)
 	assertEqualIntA(a, TRANSFORM_EOF, transform_read_next_header(a, &ae));
 
 	/* Verify that the format detection worked. */
-	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_XZ);
-	assertEqualString(transform_filter_name(a, 0), "xz");
+	assertEqualInt(transform_compression(a), TRANSFORM_FILTER_LZMA);
+	assertEqualString(transform_filter_name(a, 0), "lzma");
 	assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
 
 	assertEqualInt(TRANSFORM_OK, transform_read_close(a));
@@ -78,7 +139,17 @@ compat_xz(const char *name)
 }
 
 
-DEFINE_TEST(test_compat_xz)
+DEFINE_TEST(test_read_lzma)
 {
-	compat_xz("test_compat_xz_1.txz");
+	/* This sample has been added junk datas to its tail. */
+	read_lzma("test_compat_lzma_1.tlz");
+	/* This sample has been made by lzma with option -e,
+	 * the first byte of which is 0x5e.
+	 * Not supported in libtransform 2.7.* and earlier */
+	read_lzma("test_compat_lzma_2.tlz");
+	/* This sample has been made by lzma of LZMA SDK with
+	 * option -d12, second byte and third byte of which is
+	 * not zero.
+	 * Not supported in libtransform 2.7.* and earlier */
+	read_lzma("test_compat_lzma_3.tlz");
 }
