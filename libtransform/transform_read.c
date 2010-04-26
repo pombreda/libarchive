@@ -61,6 +61,7 @@ static struct transform_vtable *transform_read_vtable(void);
 static int64_t	_transform_filter_bytes(struct transform *, int);
 static int	_transform_filter_code(struct transform *, int);
 static const char *_transform_filter_name(struct transform *, int);
+static int  _transform_filter_count(struct transform *);
 static int	_transform_read_close(struct transform *);
 static int	_transform_read_free(struct transform *);
 static int64_t  advance_file_pointer(struct transform_read_filter *, int64_t);
@@ -75,6 +76,7 @@ transform_read_vtable(void)
 		av.transform_filter_bytes = _transform_filter_bytes;
 		av.transform_filter_code = _transform_filter_code;
 		av.transform_filter_name = _transform_filter_name;
+		av.transform_filter_count = _transform_filter_count;
 		av.transform_free = _transform_read_free;
 		av.transform_close = _transform_read_close;
 	}
@@ -339,6 +341,19 @@ free_filters(struct transform_read *a)
 		free(a->filter);
 		a->filter = t;
 	}
+}
+
+static int
+_transform_filter_count(struct transform *_a)
+{
+	struct transform_read *a = (struct transform_read *)_a;
+	struct transform_read_filter *p = a->filter;
+	int count = 0;
+	while(p) {
+		count++;
+		p = p->upstream;
+	}
+	return count;
 }
 
 /*

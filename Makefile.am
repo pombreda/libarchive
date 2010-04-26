@@ -155,6 +155,7 @@ libtransform_test_SOURCES=					\
 	libtransform/test/test_transform_api_feature.c		\
 	libtransform/test/test_bad_fd.c				\
 	libtransform/test/test_read_file_nonexistent.c	
+#	libtransform/test/test_filter_count.c		
 #	libtransform/test/test_open_fd.c				\
 #	libtransform/test/test_open_file.c			\
 #	libtransform/test/test_open_filename.c			

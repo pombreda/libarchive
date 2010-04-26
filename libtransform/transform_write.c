@@ -63,6 +63,7 @@ static struct transform_vtable *transform_write_vtable(void);
 
 static int	_transform_filter_code(struct transform *, int);
 static const char *_transform_filter_name(struct transform *, int);
+static int  _transform_filter_count(struct transform *);
 static int64_t	_transform_filter_bytes(struct transform *, int);
 static int	_transform_write_close(struct transform *);
 static int	_transform_write_free(struct transform *);
@@ -87,6 +88,7 @@ transform_write_vtable(void)
 		av.transform_filter_bytes = _transform_filter_bytes;
 		av.transform_filter_code = _transform_filter_code;
 		av.transform_filter_name = _transform_filter_name;
+		av.transform_filter_count = _transform_filter_count;
 		av.transform_free = _transform_write_free;
 		av.transform_write_data = _transform_write_data;
 	}
@@ -544,6 +546,20 @@ _transform_filter_name(struct transform *_a, int n)
 {
 	struct transform_write_filter *f = filter_lookup(_a, n);
 	return f == NULL ? NULL : f->name;
+}
+
+
+static int
+_transform_filter_count(struct transform *_a)
+{
+	struct transform_write *a = (struct transform_write *)_a;
+	struct transform_write_filter *p = a->filter_first;
+	int count = 0;
+	while(p) {
+		count++;
+		p = p->next_filter;
+	}
+	return count;
 }
 
 static int64_t
