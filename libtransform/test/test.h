@@ -301,8 +301,7 @@ char *raw_read_reference_file(const char *, int64_t *);
 
 #include "transform.h"
 
-
-int assertion_transform_contents_mem(struct transform *, void *, int64_t);
+int assertion_transform_contents_mem(struct transform *, const void *, int64_t);
 void log_transforminfo(struct transform *);
 
 /* Special customized read-from-memory interface. */

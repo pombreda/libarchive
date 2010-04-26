@@ -58,8 +58,8 @@ test_read_uu_sub(const char *uu_ref_file, const char *raw_ref_file)
 {
 	struct transform *a;
 	char *buff = NULL;
-	const char *decoded_expected = NULL;
-	const char *uudata = NULL;
+	char *decoded_expected = NULL;
+	char *uudata = NULL;
 	int64_t data_len;
 	int64_t uusize;
 	int extra;
