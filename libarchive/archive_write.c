@@ -65,6 +65,7 @@ static struct archive_vtable *archive_write_vtable(void);
 static int	_archive_filter_code(struct archive *, int);
 static const char *_archive_filter_name(struct archive *, int);
 static int64_t	_archive_filter_bytes(struct archive *, int);
+static int  _archive_filter_count(struct archive *);
 static int	_archive_write_close(struct archive *);
 static int	_archive_write_free(struct archive *);
 static int	_archive_write_header(struct archive *, struct archive_entry *);
@@ -89,6 +90,7 @@ archive_write_vtable(void)
 		av.archive_filter_bytes = _archive_filter_bytes;
 		av.archive_filter_code = _archive_filter_code;
 		av.archive_filter_name = _archive_filter_name;
+		av.archive_filter_count = _archive_filter_count;
 		av.archive_free = _archive_write_free;
 		av.archive_write_header = _archive_write_header;
 		av.archive_write_finish_entry = _archive_write_finish_entry;
@@ -192,7 +194,6 @@ archive_write_get_bytes_in_last_block(struct archive *a)
 	return (__convert_transform_fatal_error(a,
 		transform_write_get_bytes_in_last_block(a->transform)));
 }
-
 
 /*
  * dev/ino of a file to be rejected.  Used to prevent adding
@@ -444,6 +445,12 @@ static const char *
 _archive_filter_name(struct archive *a, int n)
 {
 	return transform_filter_name(a->transform, n);
+}
+
+static int
+_archive_filter_count(struct archive *a)
+{
+	return transform_filter_count(a->transform);
 }
 
 static int64_t

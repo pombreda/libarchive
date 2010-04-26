@@ -60,6 +60,7 @@ static struct archive_vtable *archive_read_vtable(void);
 static int64_t	_archive_filter_bytes(struct archive *, int);
 static int	_archive_filter_code(struct archive *, int);
 static const char *_archive_filter_name(struct archive *, int);
+static int  _archive_filter_count(struct archive *);;
 static int	_archive_read_close(struct archive *);
 static int	_archive_read_free(struct archive *);
 
@@ -73,6 +74,7 @@ archive_read_vtable(void)
 		av.archive_filter_bytes = _archive_filter_bytes;
 		av.archive_filter_code = _archive_filter_code;
 		av.archive_filter_name = _archive_filter_name;
+		av.archive_filter_count = _archive_filter_count;
 		av.archive_free = _archive_read_free;
 		av.archive_close = _archive_read_close;
 	}
@@ -665,6 +667,12 @@ static const char *
 _archive_filter_name(struct archive *a, int n)
 {
 	return transform_filter_name(a->transform, n);
+}
+
+static int
+_archive_filter_count(struct archive *a)
+{
+	return transform_filter_count(a->transform);
 }
 
 static int64_t
