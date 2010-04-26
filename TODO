@@ -1,0 +1,3 @@
+read_uu filter doesn't actually return the data the preceeding data to prefixed chunks; this is suboptimal.
+  basically, need two filters here; one that dies if it's not told to start right at the begining of a uu block, and one that
+  will pass data on till it hits a uu block, than transparently decompress it.
