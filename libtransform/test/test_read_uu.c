@@ -26,23 +26,6 @@
 #include "test.h"
 __FBSDID("$FreeBSD: head/lib/libtransform/test/test_read_uu.c 201248 2009-12-30 06:12:03Z kientzle $");
 
-static const char transform[] = {
-"begin 644 test_read_uu.Z\n"
-"M'YV0+@`('$BPH,&#\"!,J7,BP(4(8$&_4J`$\"`,08$F%4O)AQ(\\2/(#7&@#%C\n"
-"M!@T8-##.L`$\"QL@:-F(``%'#H<V;.'/J!%!G#ITP<BS\"H).FS<Z$1(T>/1A2\n"
-"IHU\"0%9=*G4JUJM6K6+-JW<JUJ]>O8,.*'4NVK-FS:-.J7<NVK=NW9P$`\n"
-"`\n"
-"end\n"
-};
-
-static const char transform64[] = {
-"begin-base64 644 test_read_uu.Z\n"
-"H52QLgAIHEiwoMGDCBMqXMiwIUIYEG/UqAECAMQYEmFUvJhxI8SPIDXGgDFjBg0YNDDOsAECxsga\n"
-"NmIAAFHDoc2bOHPqBFBnDp0wcizCoJOmzc6ERI0ePRhSo1CQFZdKnUq1qtWrWLNq3cq1q9evYMOK\n"
-"HUu2rNmzaNOqXcu2rdu3ZwE=\n"
-"====\n"
-};
-
 static const char extradata[] = {
 "From uudecode@libtransform Mon Jun  2 03:03:31 2008\n"
 "Return-Path: <uudecode@libtransform>\n"
@@ -69,17 +52,36 @@ static const char extradata[] = {
 "\n"
 };
 
+
 static void
-test_read_uu_sub(const char *uudata, size_t uusize)
+test_read_uu_sub(const char *uu_ref_file, const char *raw_ref_file)
 {
-	struct transform_entry *ae;
 	struct transform *a;
-	char *buff;
+	char *buff = NULL;
+	const char *decoded_expected = NULL;
+	const char *uudata = NULL;
+	int64_t data_len;
+	int64_t uusize;
 	int extra;
 
+	assert(NULL != (decoded_expected = raw_read_reference_file(raw_ref_file,
+		&data_len)));
+	if(NULL == decoded_expected) {
+		goto cleanup;
+	}
+
+	assert(NULL != (uudata = raw_read_reference_file(uu_ref_file,
+		&uusize)));
+	if(NULL == uudata) {
+		goto cleanup;
+	}
+
 	assert(NULL != (buff = malloc(uusize + 64 * 1024)));
-	if (buff == NULL)
-		return;
+	if (buff == NULL) {
+		goto cleanup;
+	}
+
+
 	for (extra = 0; extra <= 64; extra = extra==0?1:extra*2) {
 		size_t size = extra * 1024;
 		char *p = buff;
@@ -104,31 +106,44 @@ test_read_uu_sub(const char *uudata, size_t uusize)
 
 		assert((a = transform_read_new()) != NULL);
 		assertEqualIntA(a, TRANSFORM_OK,
-		    transform_read_support_compression_all(a));
-		assertEqualIntA(a, TRANSFORM_OK,
-		    transform_read_support_format_all(a));
+		    transform_read_support_compression_uu(a));
 		assertEqualIntA(a, TRANSFORM_OK,
 		    read_open_memory(a, buff, size, 2));
+
+		assertTransformContentsMem(a, (void *)decoded_expected, 
+			(int64_t)data_len);
+		
 		assertEqualIntA(a, TRANSFORM_OK,
-		    transform_read_next_header(a, &ae));
-		failure("transform_compression_name(a)=\"%s\"",
-		    transform_compression_name(a));
-		assertEqualInt(transform_compression(a),
-		    TRANSFORM_FILTER_COMPRESS);
-		failure("transform_format_name(a)=\"%s\"",
-		    transform_format_name(a));
-		assertEqualInt(transform_format(a), TRANSFORM_FORMAT_TAR_USTAR);
+			transform_errno(a));
+		// assert we're at the end of the file via this.
+		transform_read_consume(a, 1);
+		assertEqualIntA(a, TRANSFORM_EOF,
+			transform_errno(a));
+
+
+		failure("transform_filter_name(a, 0)=\"%s\"",
+		    transform_filter_name(a, 0));
+		assertEqualInt(transform_filter_code(a, 0),
+		    TRANSFORM_FILTER_UU);
 		assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
 		assertEqualInt(TRANSFORM_OK, transform_read_free(a));
 	}
-	free(buff);
+
+cleanup:
+
+	if(buff)
+		free(buff);
+	if(decoded_expected)
+		free(decoded_expected);
+	if(uudata)
+		free(uudata);
 }
 
 DEFINE_TEST(test_read_uu)
 {
 	/* Read the traditional uuencoded data. */
-	test_read_uu_sub(transform, sizeof(transform)-1);
+	test_read_uu_sub("test_read_uu.data.uu", "test_read_uu.data.raw");
 	/* Read the Base64 uuencoded data. */
-	test_read_uu_sub(transform64, sizeof(transform64)-1);
+	test_read_uu_sub("test_read_uu.data64.uu", "test_read_uu.data64.raw");
 }
 

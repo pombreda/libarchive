@@ -127,6 +127,12 @@
 #define	O_BINARY 0
 #endif
 
+
+/* various vars used by the tests */
+extern const char *test_filename;
+extern int test_line;
+extern void *test_extra;
+
 /*
  * Redefine DEFINE_TEST for use in defining the test functions.
  */
@@ -178,6 +184,9 @@
 /* Assert that file contents match a string; supports printf-style arguments. */
 #define assertFileContents             \
   assertion_setup(__FILE__, __LINE__);assertion_file_contents
+#define assertTransformContentsMem(t, desired, data_len)             \
+  assertion_setup(__FILE__, __LINE__);	\
+  assertion_transform_contents_mem(t, desired, data_len)
 #define assertFileMtime(pathname, sec, nsec)	\
   assertion_file_mtime(__FILE__, __LINE__, pathname, sec, nsec)
 #define assertFileMtimeRecent(pathname) \
@@ -221,6 +230,11 @@
 
 /* Function declarations.  These are defined in test_utility.c. */
 void failure(const char *fmt, ...);
+void assertion_count(const char *, int);
+void failure_start(const char *filename, int line, const char *fmt, ...);
+void failure_finish(void *);
+void loghexdump(const char *p, const char *ref, size_t l, size_t offset);
+void logprintf(const char *fmt, ...);
 int assertion_assert(const char *, int, int, const char *, void *);
 int assertion_chdir(const char *, int, const char *);
 int assertion_empty_file(const char *, ...);
@@ -278,11 +292,18 @@ char *slurpfile(size_t *, const char *fmt, ...);
 /* Extracts named reference file to the current directory. */
 void extract_reference_file(const char *);
 
+/* Read a raw reference file */
+char *raw_read_reference_file(const char *, int64_t *);
+
 /*
  * Special interfaces for libtransform test harness.
  */
 
 #include "transform.h"
+
+
+int assertion_transform_contents_mem(struct transform *, void *, int64_t);
+void log_transforminfo(struct transform *);
 
 /* Special customized read-from-memory interface. */
 int read_open_memory(struct transform *, void *, size_t, size_t);

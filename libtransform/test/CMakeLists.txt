@@ -8,6 +8,7 @@ IF(ENABLE_TEST)
     main.c
     read_open_memory.c
     test.h
+    test_util.c
     test_acl_basic.c
     test_acl_freebsd.c
     test_acl_pax.c

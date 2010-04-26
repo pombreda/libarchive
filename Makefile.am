@@ -151,10 +151,12 @@ libtransform_test_SOURCES=					\
 	$(libtransform_la_SOURCES)				\
 	libtransform/test/main.c					\
 	libtransform/test/test.h					\
+	libtransform/test/test_util.c				\
 	libtransform/test/read_open_memory.c			\
 	libtransform/test/test_transform_api_feature.c		\
 	libtransform/test/test_bad_fd.c				\
 	libtransform/test/test_filter_count.c		\
+	libtransform/test/test_read_uu.c				\
 	libtransform/test/test_read_file_nonexistent.c	
 #	libtransform/test/test_open_fd.c				\
 #	libtransform/test/test_open_file.c			\
@@ -172,7 +174,6 @@ libtransform_test_SOURCES=					\
 #	libtransform/test/test_read_data_large.c			\
 #	libtransform/test/test_read_disk.c			\
 #	libtransform/test/test_read_truncated.c			\
-#	libtransform/test/test_read_uu.c				\
 #	libtransform/test/test_write_compress.c			\
 #	libtransform/test/test_write_compress_bzip2.c		\
 #	libtransform/test/test_write_compress_gzip.c		\

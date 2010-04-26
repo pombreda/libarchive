@@ -220,7 +220,7 @@ vlogprintf(const char *fmt, va_list ap)
 #endif
 }
 
-static void
+void
 logprintf(const char *fmt, ...)
 {
 	va_list ap;
@@ -253,9 +253,9 @@ failure(const char *fmt, ...)
  * would be better off just removing it entirely.  That would simplify
  * the code here noticably.
  */
-static const char *test_filename;
-static int test_line;
-static void *test_extra;
+const char *test_filename;
+int test_line;
+void *test_extra;
 void assertion_setup(const char *filename, int line)
 {
 	test_filename = filename;
@@ -263,7 +263,7 @@ void assertion_setup(const char *filename, int line)
 }
 
 /* Called at the beginning of each assert() function. */
-static void
+void
 assertion_count(const char *file, int line)
 {
 	(void)file; /* UNUSED */
@@ -288,7 +288,7 @@ static struct line {
 }  failed_lines[10000];
 
 /* Count this failure, setup up log destination and handle initial report. */
-static void
+void
 failure_start(const char *filename, int line, const char *fmt, ...)
 {
 	va_list ap;
@@ -335,7 +335,7 @@ failure_start(const char *filename, int line, const char *fmt, ...)
  * to add strerror() output, for example.  Just define the EXTRA_DUMP()
  * macro appropriately.
  */
-static void
+void
 failure_finish(void *extra)
 {
 	(void)extra; /* UNUSED (maybe) */
@@ -509,12 +509,12 @@ assertion_equal_wstring(const char *file, int line,
 }
 
 /*
- * Pretty standard hexdump routine.  As a bonus, if ref != NULL, then
+ * Pretty standard loghexdump( routine.  As a bonus, if ref != NULL, then
  * any bytes in p that differ from ref will be highlighted with '_'
  * before and after the hex value.
  */
-static void
-hexdump(const char *p, const char *ref, size_t l, size_t offset)
+void
+loghexdump(const char *p, const char *ref, size_t l, size_t offset)
 {
 	size_t i, j;
 	char sep;
@@ -578,9 +578,9 @@ assertion_equal_mem(const char *file, int line,
 		offset += 16;
 	}
 	logprintf("      Dump of %s\n", e1);
-	hexdump(v1, v2, l < 64 ? l : 64, offset);
+	loghexdump(v1, v2, l < 64 ? l : 64, offset);
 	logprintf("      Dump of %s\n", e2);
-	hexdump(v2, v1, l < 64 ? l : 64, offset);
+	loghexdump(v2, v1, l < 64 ? l : 64, offset);
 	logprintf("\n");
 	failure_finish(extra);
 	return (0);
@@ -620,7 +620,7 @@ assertion_empty_file(const char *f1fmt, ...)
 		s = ((off_t)sizeof(buff) < st.st_size) ?
 		    (ssize_t)sizeof(buff) : (ssize_t)st.st_size;
 		s = fread(buff, 1, s, f);
-		hexdump(buff, NULL, s, 0);
+		loghexdump(buff, NULL, s, 0);
 		fclose(f);
 	}
 	failure_finish(NULL);
@@ -654,7 +654,7 @@ assertion_non_empty_file(const char *f1fmt, ...)
 }
 
 /* Verify that two files have the same contents. */
-/* TODO: hexdump the first bytes that actually differ. */
+/* TODO: loghexdump( the first bytes that actually differ. */
 int
 assertion_equal_file(const char *fn1, const char *f2pattern, ...)
 {
@@ -774,10 +774,10 @@ assertion_file_contents(const void *buff, int s, const char *fpattern, ...)
 	failure_start(test_filename, test_line, "File contents don't match");
 	logprintf("  file=\"%s\"\n", fn);
 	if (n > 0)
-		hexdump(contents, buff, n > 512 ? 512 : n, 0);
+		loghexdump(contents, buff, n > 512 ? 512 : n, 0);
 	else {
 		logprintf("  File empty, contents should be:\n");
-		hexdump(buff, NULL, s > 512 ? 512 : n, 0);
+		loghexdump(buff, NULL, s > 512 ? 512 : n, 0);
 	}
 	failure_finish(test_extra);
 	free(contents);
@@ -825,12 +825,12 @@ assertion_text_file_contents(const char *buff, const char *fn)
 	failure_start(test_filename, test_line, "Contents don't match");
 	logprintf("  file=\"%s\"\n", fn);
 	if (n > 0) {
-		hexdump(contents, buff, n, 0);
+		loghexdump(contents, buff, n, 0);
 		logprintf("  expected\n", fn);
-		hexdump(buff, contents, s, 0);
+		loghexdump(buff, contents, s, 0);
 	} else {
 		logprintf("  File empty, contents should be:\n");
-		hexdump(buff, NULL, s, 0);
+		loghexdump(buff, NULL, s, 0);
 	}
 	failure_finish(test_extra);
 	free(contents);
@@ -1597,6 +1597,14 @@ extract_reference_file(const char *name)
 	fclose(in);
 }
 
+char *
+raw_read_reference_file(const char *name, int64_t *size)
+{
+	size_t i;
+	char *ret = slurpfile(&i, "%s/%s", refdir, name);
+	*size = i;
+	return ret;
+}
 /*
  *
  * TEST management
