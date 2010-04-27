@@ -210,16 +210,23 @@ struct isoent {
 	struct isofile		*file;
 
 	struct isoent		*parent;
-	/* A list of sub directories. */
+	/* A list of children.(use chnext) */
 	struct {
 		struct isoent	*first;
 		struct isoent	**last;
 		int		 cnt;
 	}			 children;
+	/* A list of sub directories.(use drnext) */
+	struct {
+		struct isoent	*first;
+		struct isoent	**last;
+		int		 cnt;
+	}			 subdirs;
 	/* A sorted list of sub directories. */
 	struct isoent		**children_sorted;
 	/* Used for managing struct isoent list. */
 	struct isoent		*chnext;
+	struct isoent		*drnext;
 	struct isoent		*ptnext;
 
 	/*
@@ -326,36 +333,6 @@ struct iso_option {
 	unsigned int	 application_id:1;
 #define OPT_APPLICATION_ID_DEFAULT	0	/* Use default identifier */
 #define APPLICATION_IDENTIFIER_SIZE	128
-
-	/*
-	 * Usage  : !allow-period
-	 * Type   : boolean
-	 * Default: Enabled
-	 *	  : Violates the ISO9660 standard if disable.
-	 * COMPAT : mkisofs -d
-	 *
-	 * Allow trailing period from filenames.
-	 */
-	unsigned int	 allow_period:1;
-#define OPT_ALLOW_PERIOD_DEFAULT	1	/* Enabled */
-
-	/*
-	 * Usage  : allow-pvd-lowercase
-	 * Type   : boolean
-	 * Default: Disabled
-	 *	  : Violates the ISO9660 standard if enable.
-	 *	  : But mkisofs seems to use low-case characters
-	 *	  : in PVD.
-	 * COMPAT : NONE
-	 *
-	 * Allow Primary Volume Descriptor to use lower-case characters.
-	 */
-	unsigned int	 allow_pvd_lowercase:1;
-#ifdef COMPAT_MKISOFS
-#define OPT_ALLOW_PVD_LOWERCASE_DEFAULT	1	/* Enabled */
-#else
-#define OPT_ALLOW_PVD_LOWERCASE_DEFAULT	0	/* Disabled */
-#endif
 
 	/*
 	 * Usage : !allow-vernum
@@ -626,19 +603,6 @@ struct iso_option {
 #define PUBLISHER_IDENTIFIER_SIZE	128
 
 	/*
-	 * Usage  : relaxed-filenames
-	 * Type   : boolean
-	 * Default: Disabled
-	 *	  : Violates the ISO9660 standard if enable.
-	 * COMPAT : mkisofs -allow-lowercase
-	 *
-	 * Use all 7 bit ASCII characters except lower-case
-	 * characters.
-	 */
-	unsigned int	 relaxed_filenames:1;
-#define OPT_RELAXED_FILENAMES_DEFAULT	0	/* Disabled */
-
-	/*
 	 * Usage  : rockridge
 	 *        : !rockridge
 	 *        :    disable to generate SUSP and RR records.
@@ -686,8 +650,7 @@ struct iso_option {
 #define VOLUME_IDENTIFIER_SIZE		32
 
 	/*
-	 * Usage  : zisofs
-	 *        : !zisofs [DEFAULT]
+	 * Usage  : !zisofs [DEFAULT] 
 	 *        :    Disable to generate RRIP 'ZF' extension.
 	 *        : zisofs
 	 *        :    Make files zisofs file and generate RRIP 'ZF'
@@ -706,12 +669,12 @@ struct iso_option {
 	 *        :
 	 *        :    When you specify option 'boot=<boot-image>', that
 	 *        :    'boot-image' file won't be converted to zisofs file.
-	 * Type   : boolean, string
+	 * Type   : boolean
 	 * Default: Disabled
 	 *
 	 * Generates RRIP 'ZF' System Use Entry.
 	 */
-	unsigned int	 zisofs:2;
+	unsigned int	 zisofs:1;
 #define OPT_ZISOFS_DISABLED		0
 #define OPT_ZISOFS_DIRECT		1
 #define OPT_ZISOFS_DEFAULT		OPT_ZISOFS_DISABLED
@@ -997,8 +960,10 @@ static void	isofile_free_all_entries(struct iso9660 *);
 static struct isofile * isofile_new(struct archive_entry *);
 static void	isofile_free(struct isofile *);
 static void	isofile_gen_utility_names(struct isofile *);
+#ifdef HAVE_ZLIB_H
 static void	get_parent_and_base(struct archive_string *,
 		    struct archive_string *, const char *);
+#endif
 static int	isofile_register_hardlink(struct archive_write *,
 		    struct isofile *);
 static void	isofile_connect_hardlink_files(struct iso9660 *);
@@ -1019,9 +984,9 @@ static void	isoent_setup_directory_location(struct iso9660 *,
 		    int, struct vdd *);
 static void	isoent_setup_file_location(struct iso9660 *, int);
 static int	get_path_component(char *, int, const char *);
-static struct isoent *isoent_tree_add_child(struct archive_write *,
-		    struct isoent *, struct isoent *);
 static struct isoent *isoent_tree(struct archive_write *, struct isoent *);
+static struct isoent *isoent_find_child(struct isoent *, const char *);
+static struct isoent *isoent_find_entry(struct isoent *, const char *);
 static void	idr_relaxed_filenames(char *);
 static void	idr_init(struct iso9660 *, struct vdd *, struct idr *);
 static void	idr_cleanup(struct idr *);
@@ -1053,8 +1018,6 @@ static inline struct isoent * path_table_last_entry(struct path_table *);
 static int	isoent_make_path_table(struct archive_write *);
 static int	isoent_create_boot_catalog(struct archive_write *,
 		    struct isoent *);
-static struct	isoent *isoent_find_entry(struct isoent *,
-		    const char *);
 static size_t	fd_boot_image_size(int);
 static void	make_boot_catalog(struct iso9660 *, unsigned char *);
 static int	setup_boot_information(struct archive_write *);
@@ -1156,8 +1119,6 @@ archive_write_set_format_iso9660(struct archive *_a)
 	 */
 	iso9660->opt.abstract_file = OPT_ABSTRACT_FILE_DEFAULT;
 	iso9660->opt.application_id = OPT_APPLICATION_ID_DEFAULT;
-	iso9660->opt.allow_period = OPT_ALLOW_PERIOD_DEFAULT;
-	iso9660->opt.allow_pvd_lowercase = OPT_ALLOW_PVD_LOWERCASE_DEFAULT;
 	iso9660->opt.allow_vernum = OPT_ALLOW_VERNUM_DEFAULT;
 	iso9660->opt.biblio_file = OPT_BIBLIO_FILE_DEFAULT;
 	iso9660->opt.boot = OPT_BOOT_DEFAULT;
@@ -1175,7 +1136,6 @@ archive_write_set_format_iso9660(struct archive *_a)
 	iso9660->opt.limit_dirs = OPT_LIMIT_DIRS_DEFAULT;
 	iso9660->opt.pad = OPT_PAD_DEFAULT;
 	iso9660->opt.publisher = OPT_PUBLISHER_DEFAULT;
-	iso9660->opt.relaxed_filenames = OPT_RELAXED_FILENAMES_DEFAULT;
 	iso9660->opt.rr = OPT_RR_DEFAULT;
 	iso9660->opt.uid = OPT_UID_DEFAULT;
 	iso9660->opt.volume_id = OPT_VOLUME_ID_DEFAULT;
@@ -1289,14 +1249,6 @@ iso9660_options(struct archive_write *a, const char *key, const char *value)
 			    APPLICATION_IDENTIFIER_SIZE, key, value);
 			iso9660->opt.application_id = r == ARCHIVE_OK;
 			return (r);
-		}
-		if (strcmp(key, "allow-period") == 0) {
-			iso9660->opt.allow_period = value != NULL;
-			return (ARCHIVE_OK);
-		}
-		if (strcmp(key, "allow-pvd-lowercase") == 0) {
-			iso9660->opt.allow_pvd_lowercase = value != NULL;
-			return (ARCHIVE_OK);
 		}
 		if (strcmp(key, "allow-vernum") == 0) {
 			iso9660->opt.allow_vernum = value != NULL;
@@ -1499,10 +1451,6 @@ iso9660_options(struct archive_write *a, const char *key, const char *value)
 		}
 		break;
 	case 'r':
-		if (strcmp(key, "relaxed-filenames") == 0) {
-			iso9660->opt.relaxed_filenames = value != NULL;
-			return (ARCHIVE_OK);
-		}
 		if (strcmp(key, "rockridge") == 0 ||
 		    strcmp(key, "Rockridge") == 0) {
 			if (value == NULL)
@@ -1547,8 +1495,7 @@ iso9660_options(struct archive_write *a, const char *key, const char *value)
 				archive_set_error(&a->archive,
 				    ARCHIVE_ERRNO_MISC,
 				    "``zisofs'' "
-				    "is not supported on this platform.",
-				    value);
+				    "is not supported on this platform.");
 				return (ARCHIVE_FATAL);
 #endif
 			}
@@ -3678,10 +3625,11 @@ write_VD(struct archive_write *a, struct vdd *vdd)
 	default:
 		vdt = VDT_PRIMARY;
 		vd_ver = fst_ver = 1;
-		if (iso9660->opt.allow_pvd_lowercase)
-			vdc = VDC_LOWERCASE;
-		else
-			vdc = VDC_STD;
+#ifdef COMPAT_MKISOFS
+		vdc = VDC_LOWERCASE;
+#else
+		vdc = VDC_STD;
+#endif
 		break;
 	}
 
@@ -3902,12 +3850,6 @@ write_information_block(struct archive_write *a)
 	if (iso9660->opt.application_id != OPT_APPLICATION_ID_DEFAULT)
 		set_option_info(&info, &opt, "application-id",
 		    KEY_STR, iso9660->application_identifier.s);
-	if (iso9660->opt.allow_period != OPT_ALLOW_PERIOD_DEFAULT)
-		set_option_info(&info, &opt, "allow-period",
-		    KEY_FLG, iso9660->opt.allow_period);
-	if (iso9660->opt.allow_pvd_lowercase != OPT_ALLOW_PVD_LOWERCASE_DEFAULT)
-		set_option_info(&info, &opt, "allow-pvd-lowercase",
-		    KEY_FLG, iso9660->opt.allow_pvd_lowercase);
 	if (iso9660->opt.allow_vernum != OPT_ALLOW_VERNUM_DEFAULT)
 		set_option_info(&info, &opt, "allow-vernum",
 		    KEY_FLG, iso9660->opt.allow_vernum);
@@ -3972,9 +3914,6 @@ write_information_block(struct archive_write *a)
 	if (iso9660->opt.publisher != OPT_PUBLISHER_DEFAULT)
 		set_option_info(&info, &opt, "publisher",
 		    KEY_STR, iso9660->publisher_identifier.s);
-	if (iso9660->opt.relaxed_filenames != OPT_RELAXED_FILENAMES_DEFAULT)
-		set_option_info(&info, &opt, "relaxed-filenames",
-		    KEY_FLG, iso9660->opt.relaxed_filenames);
 	if (iso9660->opt.rr != OPT_RR_DEFAULT) {
 		if (iso9660->opt.rr == OPT_RR_DISABLED)
 			set_option_info(&info, &opt, "rockridge",
@@ -4252,47 +4191,44 @@ write_directory_descriptors(struct archive_write *a, struct vdd *vdd)
 	depth = 0;
 	np = vdd->rootent;
 	do {
-		if (np->dir) {
-			struct extr_rec *extr;
+		struct extr_rec *extr;
 
-			r = _write_directory_descriptors(a, vdd, np, depth);
-			if (r < 0)
-				return (r);
-			if (vdd->vdd_type != VDD_JOLIET) {
-				/*
-				 * This extract record is used by SUSP,RRIP.
-				 * Not for joliet.
-				 */
-				for (extr = np->extr_rec_list.first;
-				    extr != NULL;
-				    extr = extr->next) {
-					unsigned char *wb;
+		r = _write_directory_descriptors(a, vdd, np, depth);
+		if (r < 0)
+			return (r);
+		if (vdd->vdd_type != VDD_JOLIET) {
+			/*
+			 * This extract record is used by SUSP,RRIP.
+			 * Not for joliet.
+			 */
+			for (extr = np->extr_rec_list.first;
+			    extr != NULL;
+			    extr = extr->next) {
+				unsigned char *wb;
 
-					wb = wb_buffptr(a);
-					memcpy(wb, extr->buf, extr->offset);
-					memset(wb + extr->offset, 0,
-					    LOGICAL_BLOCK_SIZE - extr->offset);
-					r = wb_consume(a, LOGICAL_BLOCK_SIZE);
-					if (r < 0)
-						return (r);
-				}
-			}
-
-			if (np->children.first != NULL &&
-			    depth + 1 < vdd->max_depth) {
-				/* Enter to sub directories. */
-				np = np->children.first;
-				depth++;
-				continue;
+				wb = wb_buffptr(a);
+				memcpy(wb, extr->buf, extr->offset);
+				memset(wb + extr->offset, 0,
+				    LOGICAL_BLOCK_SIZE - extr->offset);
+				r = wb_consume(a, LOGICAL_BLOCK_SIZE);
+				if (r < 0)
+					return (r);
 			}
 		}
+
+		if (np->subdirs.first != NULL && depth + 1 < vdd->max_depth) {
+			/* Enter to sub directories. */
+			np = np->subdirs.first;
+			depth++;
+			continue;
+		}
 		while (np != np->parent) {
-			if (np->chnext == NULL) {
+			if (np->drnext == NULL) {
 				/* Return to the parent directory. */
 				np = np->parent;
 				depth--;
 			} else {
-				np = np->chnext;
+				np = np->drnext;
 				break;
 			}
 		}
@@ -4449,30 +4385,28 @@ write_file_descriptors(struct archive_write *a)
 		np = iso9660->primary.rootent;
 	}
 	do {
-		if (np->dir) {
-			r =  _write_file_descriptors(a, np);
-			if (r < 0)
-				return (r);
+		r =  _write_file_descriptors(a, np);
+		if (r < 0)
+			return (r);
 
-			if (np->children.first != NULL &&
-			    (joliet ||
-			    ((iso9660->opt.rr == OPT_RR_DISABLED &&
-			      depth + 2 < iso9660->primary.max_depth) ||
-			     (iso9660->opt.rr &&
-			      depth + 1 < iso9660->primary.max_depth)))) {
-				/* Enter to sub directories. */
-				np = np->children.first;
-				depth++;
-				continue;
-			}
+		if (np->subdirs.first != NULL &&
+		    (joliet ||
+		    ((iso9660->opt.rr == OPT_RR_DISABLED &&
+		      depth + 2 < iso9660->primary.max_depth) ||
+		     (iso9660->opt.rr &&
+		      depth + 1 < iso9660->primary.max_depth)))) {
+			/* Enter to sub directories. */
+			np = np->subdirs.first;
+			depth++;
+			continue;
 		}
 		while (np != np->parent) {
-			if (np->chnext == NULL) {
+			if (np->drnext == NULL) {
 				/* Return to the parent directory. */
 				np = np->parent;
 				depth--;
 			} else {
-				np = np->chnext;
+				np = np->drnext;
 				break;
 			}
 		}
@@ -4710,7 +4644,7 @@ isofile_gen_utility_names(struct isofile *file)
 		file->parentdir.length = len;
 		archive_string_copy(&(file->basename), &(file->parentdir));
 		archive_string_empty(&(file->parentdir));
-		file->parentdir.s = '\0';
+		*file->parentdir.s = '\0';
 		return;
 	}
 
@@ -4888,6 +4822,8 @@ isoent_new(struct isofile *file)
 	isoent->file = file;
 	isoent->children.first = NULL;
 	isoent->children.last = &(isoent->children.first);
+	isoent->subdirs.first = NULL;
+	isoent->subdirs.last = &(isoent->subdirs.first);
 	isoent->extr_rec_list.first = NULL;
 	isoent->extr_rec_list.last = &(isoent->extr_rec_list.first);
 	isoent->extr_rec_list.current = NULL;
@@ -4989,6 +4925,16 @@ isoent_add_child_head(struct isoent *parent, struct isoent *child)
 	parent->children.first = child;
 	parent->children.cnt++;
 	child->parent = parent;
+
+	/* Add a child to a sub-directory chain */
+	if (child->dir) {
+		if ((child->drnext = parent->subdirs.first) == NULL)
+			parent->subdirs.last = &(child->drnext);
+		parent->subdirs.first = child;
+		parent->subdirs.cnt++;
+		child->parent = parent;
+	} else
+		child->drnext = NULL;
 }
 
 static inline void
@@ -4999,6 +4945,15 @@ isoent_add_child_tail(struct isoent *parent, struct isoent *child)
 	parent->children.last = &(child->chnext);
 	parent->children.cnt++;
 	child->parent = parent;
+
+	/* Add a child to a sub-directory chain */
+	child->drnext = NULL;
+	if (child->dir) {
+		*parent->subdirs.last = child;
+		parent->subdirs.last = &(child->drnext);
+		parent->subdirs.cnt++;
+		child->parent = parent;
+	}
 }
 
 /*
@@ -5081,33 +5036,30 @@ isoent_setup_directory_location(struct iso9660 *iso9660, int location,
 	depth = 0;
 	np = vdd->rootent;
 	do {
-		if (np->dir) {
-			int block;
+		int block;
 
-			np->dir_block = calculate_directory_descriptors(
-			    iso9660, vdd, np, depth);
-			vdd->total_dir_block += np->dir_block;
-			np->dir_location = location;
-			location += np->dir_block;
-			block = extra_setup_location(np, location);
-			vdd->total_dir_block += block;
-			location += block;
+		np->dir_block = calculate_directory_descriptors(
+		    iso9660, vdd, np, depth);
+		vdd->total_dir_block += np->dir_block;
+		np->dir_location = location;
+		location += np->dir_block;
+		block = extra_setup_location(np, location);
+		vdd->total_dir_block += block;
+		location += block;
 
-			if (np->children.first != NULL &&
-			    depth + 1 < vdd->max_depth) {
-				/* Enter to sub directories. */
-				np = np->children.first;
-				depth++;
-				continue;
-			}
+		if (np->subdirs.first != NULL && depth + 1 < vdd->max_depth) {
+			/* Enter to sub directories. */
+			np = np->subdirs.first;
+			depth++;
+			continue;
 		}
 		while (np != np->parent) {
-			if (np->chnext == NULL) {
+			if (np->drnext == NULL) {
 				/* Return to the parent directory. */
 				np = np->parent;
 				depth--;
 			} else {
-				np = np->chnext;
+				np = np->drnext;
 				break;
 			}
 		}
@@ -5206,29 +5158,26 @@ isoent_setup_file_location(struct iso9660 *iso9660, int location)
 		np = iso9660->primary.rootent;
 	}
 	do {
-		if (np->dir) {
-			_isoent_file_location(iso9660, np,
-			    &location, &symlocation);
+		_isoent_file_location(iso9660, np, &location, &symlocation);
 
-			if (np->children.first != NULL &&
-			    (joliet ||
-			    ((iso9660->opt.rr == OPT_RR_DISABLED &&
-			      depth + 2 < iso9660->primary.max_depth) ||
-			     (iso9660->opt.rr &&
-			      depth + 1 < iso9660->primary.max_depth)))) {
-				/* Enter to sub directories. */
-				np = np->children.first;
-				depth++;
-				continue;
-			}
+		if (np->subdirs.first != NULL &&
+		    (joliet ||
+		    ((iso9660->opt.rr == OPT_RR_DISABLED &&
+		      depth + 2 < iso9660->primary.max_depth) ||
+		     (iso9660->opt.rr &&
+		      depth + 1 < iso9660->primary.max_depth)))) {
+			/* Enter to sub directories. */
+			np = np->subdirs.first;
+			depth++;
+			continue;
 		}
 		while (np != np->parent) {
-			if (np->chnext == NULL) {
+			if (np->drnext == NULL) {
 				/* Return to the parent directory. */
 				np = np->parent;
 				depth--;
 			} else {
-				np = np->chnext;
+				np = np->drnext;
 				break;
 			}
 		}
@@ -5255,60 +5204,6 @@ get_path_component(char *name, int n, const char *fn)
 	return (l);
 }
 
-static struct isoent *
-isoent_tree_add_child(struct archive_write *a, struct isoent *parent,
-    struct isoent *child)
-{
-	struct isoent *np;
-
-	for (np = parent->children.first; np != NULL; np = np->chnext) {
-		struct isofile *f1 = np->file;
-		struct isofile *f2 = child->file;
-
-		if (f1->basename.length != f2->basename.length)
-			continue;
-		if (memcmp(f1->basename.s, f2->basename.s,
-		    f1->basename.length) != 0)
-			continue;
-		/*
-		 * Right now, we have two entries names of which are
-		 * the same.
-		 */
-		/* If entries' file types are different,
-		 * we cannot handle. */
-		if (archive_entry_filetype(f1->entry) !=
-		    archive_entry_filetype(f2->entry)) {
-			archive_set_error(&a->archive,
-			    ARCHIVE_ERRNO_MISC,
-			    "Duplicate entries(`%s' and `%s') "
-			    "whose file type are different at "
-			    "`%s/%s'",
-			    archive_entry_pathname(f1->entry),
-			    archive_entry_pathname(f2->entry),
-			    f1->parentdir.s,
-			    f1->basename.s);
-			_isoent_free(child);
-			return (NULL);
-		}
-		/* Ignore a new entry which we are adding, if it's virtual.
-		 * We don't replace a being entry by a virtual entry. */
-		if (child->virtual)
-			continue;
-		if (archive_entry_mtime(f1->entry) <
-		    archive_entry_mtime(f2->entry) || np->virtual) {
-			/* Swap files. */
-			np->file = f2;
-			child->file = f1;
-			np->virtual = 0;
-		}
-		_isoent_free(child);
-		return (np);
-	}
-
-	isoent_add_child_tail(parent, child);
-	return (child);
-}
-
 /*
  * Add a new entry into the tree.
  */
@@ -5322,6 +5217,7 @@ isoent_tree(struct archive_write *a, struct isoent *isoent)
 #endif
 	struct iso9660 *iso9660 = a->format_data;
 	struct isoent *dent, *np;
+	struct isofile *f1, *f2;
 	const char *fn, *p;
 	int l;
 
@@ -5344,18 +5240,44 @@ isoent_tree(struct archive_write *a, struct isoent *isoent)
 			if (plen > 0)
 				plen++;
 			if (curdir->file->basename.length > 0 &&
-			    strcmp(p+plen, curdir->file->basename.s) == 0)
-				return (isoent_tree_add_child(a, curdir, isoent));
+			    strcmp(p+plen, curdir->file->basename.s) == 0) {
+				np = isoent_find_child(curdir,
+				    isoent->file->basename.s);
+				if (np != NULL)
+					goto same_entry;
+				isoent_add_child_tail(curdir, isoent);
+				return (isoent);
+			}
 		}
 	}
 
-	l = get_path_component(name, sizeof(name), fn);
-	np = dent->children.first;
 	for (;;) {
-		if (np == NULL && fn[0] != '\0') {
-			/*
-			 * Create a virtual directory.
-			 */
+		l = get_path_component(name, sizeof(name), fn);
+		np = isoent_find_child(dent, name);
+		if (np == NULL || fn[0] == '\0')
+			break;
+
+		/* Find next subdirectory. */
+		if (!np->dir) {
+			/* NOT Directory! */
+			archive_set_error(&a->archive,
+			    ARCHIVE_ERRNO_MISC,
+			    "`%s' is not directory, we cannot insert `%s' ",
+			    archive_entry_pathname(np->file->entry),
+			    archive_entry_pathname(isoent->file->entry));
+			_isoent_free(isoent);
+			return (NULL);
+		}
+		fn += l;
+		if (fn[0] == '/')
+			fn++;
+		dent = np;
+	}
+	if (np == NULL) {
+		/*
+		 * Create virtual parent directories.
+		 */
+		while (fn[0] != '\0') {
 			struct isoent *vp;
 			struct archive_string as;
 
@@ -5379,28 +5301,108 @@ isoent_tree(struct archive_write *a, struct isoent *isoent)
 				iso9660->dircnt_max = vp->file->dircnt;
 			isoent_add_child_tail(dent, vp);
 			np = vp;
+
+			fn += l;
+			if (fn[0] == '/')
+				fn++;
+			l = get_path_component(name, sizeof(name), fn);
+			dent = np;
 		}
 
-		if (np != NULL && fn[0] != '\0') {
-			/* Now we are finding a parent directory. */
-			if (strcmp(name, np->file->basename.s) == 0) {
-				/* Enter sub directories. */
-				fn += l;
-				if (fn[0] == '/')
-					fn++;
-				l = get_path_component(name,
-				    sizeof(name), fn);
-				dent = np;
-				np = dent->children.first;
-				continue;
-			}
-		} else {
-			/* Found where isoent can be inserted. */
-			iso9660->cur_dirent = dent;
-			return (isoent_tree_add_child(a, dent, isoent));
-		}
-		np = np->chnext;
+		/* Found out the parent directory where isoent can be
+		 * inserted. */
+		iso9660->cur_dirent = dent;
+		isoent_add_child_tail(dent, isoent);
+		return (isoent);
 	}
+
+same_entry:
+	/*
+	 * We have already has the entry the filename of which is
+	 * the same.
+	 */
+	f1 = np->file;
+	f2 = isoent->file;
+
+	/* If the file type of entries is different,
+	 * we cannot handle it. */
+	if (archive_entry_filetype(f1->entry) !=
+	    archive_entry_filetype(f2->entry)) {
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+		    "Found duplicate entries `%s' and its file type is "
+		    "different",
+		    archive_entry_pathname(f1->entry));
+		_isoent_free(isoent);
+		return (NULL);
+	}
+	if (archive_entry_mtime(f1->entry) <
+	    archive_entry_mtime(f2->entry) || np->virtual) {
+		/* Swap file entries. */
+		np->file = f2;
+		isoent->file = f1;
+		np->virtual = 0;
+	}
+	_isoent_free(isoent);
+	return (np);
+}
+
+/*
+ * TODO: The approach finding a child is very slow when having many children
+ *	 (about over 100K entries).
+ */
+static struct isoent *
+isoent_find_child(struct isoent *isoent, const char *child_name)
+{
+	struct isoent *np;
+
+	for (np = isoent->children.first; np != NULL; np = np->chnext) {
+		if (strcmp(child_name, np->file->basename.s) == 0)
+			return (np);
+	}
+
+	/* Not found. */
+	return (NULL);
+}
+
+/*
+ * Find a entry full-path of which is specified by `fn' parameter,
+ * in the tree.
+ */
+static struct isoent *
+isoent_find_entry(struct isoent *rootent, const char *fn)
+{
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	char name[_MAX_FNAME];/* Included null terminator size. */
+#else
+	char name[NAME_MAX+1];
+#endif
+	struct isoent *isoent, *np;
+	int l;
+
+	isoent = rootent;
+	np = NULL;
+	for (;;) {
+		l = get_path_component(name, sizeof(name), fn);
+		if (l == 0)
+			break;
+		fn += l;
+		if (fn[0] == '/')
+			fn++;
+
+		np = isoent_find_child(isoent, name);
+		if (np == NULL)
+			break;
+		if (fn[0] == '\0')
+			break;/* We found out the entry */
+
+		/* Try sub directory. */
+		isoent = np;
+		np = NULL;
+		if (!isoent->dir)
+			break;/* Not directory */
+	}
+
+	return (np);
 }
 
 /*
@@ -5435,8 +5437,6 @@ idr_init(struct iso9660 *iso9660, struct vdd *vdd, struct idr *idr)
 		if (iso9660->opt.iso_level <= 3) {
 			memcpy(idr->char_map, d_characters_map,
 			    sizeof(idr->char_map));
-			if (iso9660->opt.relaxed_filenames)
-				idr_relaxed_filenames(idr->char_map);
 		} else {
 			memcpy(idr->char_map, d1_characters_map,
 			    sizeof(idr->char_map));
@@ -5754,7 +5754,7 @@ isoent_gen_iso9660_identifier(struct archive_write *a, struct isoent *isoent,
 	if (iso9660->opt.iso_level <= 3) {
 		allow_ldots = 0;
 		allow_multidot = 0;
-		allow_period = iso9660->opt.allow_period;
+		allow_period = 1;
 		allow_vernum = iso9660->opt.allow_vernum;
 		if (iso9660->opt.iso_level == 1) {
 			fnmax = 8;
@@ -5819,8 +5819,7 @@ isoent_gen_iso9660_identifier(struct archive_write *a, struct isoent *isoent,
 				continue;
 			}
 			if (char_map[(unsigned char)*p]) {
-				/* if relaxed-filenames option specified or
-				 * iso-level is '4', a character '.' is
+				/* if iso-level is '4', a character '.' is
 				 * allowed by char_map. */
 				if (*p == '.') {
 					xdot = dot;
@@ -6288,21 +6287,18 @@ isoent_traverse_tree(struct archive_write *a, struct vdd* vdd)
 	else
 		genid = isoent_gen_iso9660_identifier;
 	do {
-		if (np->dir) {
-			if (np->virtual &&
-			    !archive_entry_mtime_is_set(np->file->entry)) {
-				/* Set properly times to virtual directory */
-				archive_entry_set_mtime(np->file->entry,
-				    iso9660->birth_time, 0);
-				archive_entry_set_atime(np->file->entry,
-				    iso9660->birth_time, 0);
-				archive_entry_set_ctime(np->file->entry,
-				    iso9660->birth_time, 0);
-			}
-			if (np->children.first == NULL)
-				;/* Next entry.
-				  * Only to reduce nesting this source. */
-			else if (vdd->vdd_type != VDD_JOLIET &&
+		if (np->virtual &&
+		    !archive_entry_mtime_is_set(np->file->entry)) {
+			/* Set properly times to virtual directory */
+			archive_entry_set_mtime(np->file->entry,
+			    iso9660->birth_time, 0);
+			archive_entry_set_atime(np->file->entry,
+			    iso9660->birth_time, 0);
+			archive_entry_set_ctime(np->file->entry,
+			    iso9660->birth_time, 0);
+		}
+		if (np->children.first != NULL) {
+			if (vdd->vdd_type != VDD_JOLIET &&
 			    !iso9660->opt.rr && depth + 1 >= vdd->max_depth) {
 				if (np->children.cnt > 0)
 					iso9660->directories_too_deep = np;
@@ -6315,21 +6311,22 @@ isoent_traverse_tree(struct archive_write *a, struct vdd* vdd)
 				if (r < 0)
 					goto exit_traverse_tree;
 
-				if (depth + 1 < vdd->max_depth) {
+				if (np->subdirs.first != NULL &&
+				    depth + 1 < vdd->max_depth) {
 					/* Enter to sub directories. */
-					np = np->children.first;
+					np = np->subdirs.first;
 					depth++;
 					continue;
 				}
 			}
 		}
 		while (np != np->parent) {
-			if (np->chnext == NULL) {
+			if (np->drnext == NULL) {
 				/* Return to the parent directory. */
 				np = np->parent;
 				depth--;
 			} else {
-				np = np->chnext;
+				np = np->drnext;
 				break;
 			}
 		}
@@ -6354,25 +6351,22 @@ isoent_collect_dirs(struct vdd *vdd, struct isoent *rootent, int depth)
 		rootent = vdd->rootent;
 	np = rootent;
 	do {
-		if (np->dir) {
-			/* Register current directory to pathtable. */
-			path_table_add_entry(&(vdd->pathtbl[depth]), np);
+		/* Register current directory to pathtable. */
+		path_table_add_entry(&(vdd->pathtbl[depth]), np);
 
-			if (np->children.first != NULL &&
-			    depth + 1 < vdd->max_depth) {
-				/* Enter to sub directories. */
-				np = np->children.first;
-				depth++;
-				continue;
-			}
+		if (np->subdirs.first != NULL && depth + 1 < vdd->max_depth) {
+			/* Enter to sub directories. */
+			np = np->subdirs.first;
+			depth++;
+			continue;
 		}
 		while (np != rootent) {
-			if (np->chnext == NULL) {
+			if (np->drnext == NULL) {
 				/* Return to the parent directory. */
 				np = np->parent;
 				depth--;
 			} else {
-				np = np->chnext;
+				np = np->drnext;
 				break;
 			}
 		}
@@ -6438,6 +6432,16 @@ isoent_rr_move_dir(struct archive_write *a, struct isoent **rr_moved,
 	isoent->children.cnt = 0;
 	isoent->children.first = NULL;
 	isoent->children.last = &isoent->children.first;
+
+	if (isoent->subdirs.first != NULL) {
+		*mvent->subdirs.last = isoent->subdirs.first;
+		mvent->subdirs.last = isoent->subdirs.last;
+	}
+	mvent->subdirs.cnt = isoent->subdirs.cnt;
+	isoent->subdirs.cnt = 0;
+	isoent->subdirs.first = NULL;
+	isoent->subdirs.last = &isoent->subdirs.first;
+
 	/*
 	 * The mvent becomes a child of the rr_moved entry.
 	 */
@@ -6473,7 +6477,7 @@ isoent_rr_move(struct archive_write *a)
 	rootent = iso9660->primary.rootent;
 	/* If "rr_moved" directory is already existing,
 	 * we have to use it. */
-	rr_moved = isoent_find_entry(rootent, "rr_moved");
+	rr_moved = isoent_find_child(rootent, "rr_moved");
 	if (rr_moved != NULL &&
 	    rr_moved != rootent->children.first) {
 		/*
@@ -6481,11 +6485,23 @@ isoent_rr_move(struct archive_write *a)
 		 * of the root.
 		 */
 		struct isoent *ent = rootent->children.first;
+
+		/* Remove "rr_moved" entry from children chain. */
 		while (ent->chnext != rr_moved)
 			ent = ent->chnext;
 		if ((ent->chnext = ent->chnext->chnext) == NULL)
 			rootent->children.last = &(ent->chnext);
 		rootent->children.cnt--;
+
+		/* Remove "rr_moved" entry from sub-directory chain. */
+		ent = rootent->subdirs.first;
+		while (ent->drnext != rr_moved)
+			ent = ent->drnext;
+		if ((ent->drnext = ent->drnext->drnext) == NULL)
+			rootent->subdirs.last = &(ent->drnext);
+		rootent->subdirs.cnt--;
+
+		/* Add "rr_moved" entry into the head of children chain. */
 		isoent_add_child_head(rootent, rr_moved);
 	}
 
@@ -6502,10 +6518,8 @@ isoent_rr_move(struct archive_write *a)
 
 			if (!np->dir)
 				continue;
-			for (mvent = np->children.first;
-			    mvent != NULL; mvent = mvent->chnext) {
-				if (!mvent->dir)
-					continue;
+			for (mvent = np->subdirs.first;
+			    mvent != NULL; mvent = mvent->drnext) {
 				r = isoent_rr_move_dir(a, &rr_moved,
 				    mvent, &newent);
 				if (r < 0)
@@ -6796,59 +6810,6 @@ isoent_make_path_table(struct archive_write *a)
 		calculate_path_table_size(&(iso9660->joliet));
 
 	return (ARCHIVE_OK);
-}
-
-/*
- * Find a entry full-path of which is specified by `fn' parameter,
- * in the tree.
- */
-static struct isoent *
-isoent_find_entry(struct isoent *rootent, const char *fn)
-{
-#if defined(_WIN32) && !defined(__CYGWIN__)
-	char name[_MAX_FNAME];/* Included null terminator size. */
-#else
-	char name[NAME_MAX+1];
-#endif
-	struct isoent *isoent, *np;
-	int l;
-
-	isoent = rootent;
-	l = get_path_component(name, sizeof(name), fn);
-	if (l == 0)
-		return (NULL);
-	fn += l;
-	if (fn[0] == '/')
-		fn++;
-
-	np = isoent->children.first;
-	while (np != NULL) {
-		if (fn[0] != '\0') {
-			/* Now we are finding a parent directory. */
-			if (np->dir &&
-			    strcmp(name, np->file->basename.s) == 0) {
-				/* Try sub directory. */
-				l = get_path_component(name, sizeof(name),
-				    fn);
-				if (l == 0)
-					return (NULL);
-				fn += l;
-				if (fn[0] == '/')
-					fn++;
-				isoent = np;
-				np = isoent->children.first;
-				continue;
-			}
-		} else {
-			/* Find a directory/file name. */
-			if (strcmp(name, np->file->basename.s) == 0)
-				return (np);
-		}
-		np = np->chnext;
-	}
-
-	/* Not found. */
-	return (NULL);
 }
 
 static int
