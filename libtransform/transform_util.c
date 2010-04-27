@@ -380,7 +380,7 @@ int
 __transform_mktemp(const char *tmpdir)
 {
 	struct transform_string temp_name;
-	int fd;
+	int fd = -1;
 
 	transform_string_init(&temp_name);
 	if (tmpdir == NULL) {
