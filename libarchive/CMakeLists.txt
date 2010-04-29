@@ -28,6 +28,8 @@ SET(libarchive_SOURCES
   archive_platform.h
   archive_private.h
   archive_util_transform_shim.c
+  archive_rb.c
+  archive_rb.h
   archive_read.c
   archive_read_data_into_fd.c
   archive_read_disk.c

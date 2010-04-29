@@ -22,6 +22,10 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/*
+ * The implemation of red black tree routine is based on
+ * /usr/include/sys/tree.h of FreeBSD
+ */
 
 #include "archive_platform.h"
 
@@ -54,6 +58,7 @@
 #include "archive_endian.h"
 #include "archive_entry.h"
 #include "archive_private.h"
+#include "archive_rb.h"
 #include "archive_write_private.h"
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
@@ -207,6 +212,9 @@ struct isofile {
 };
 
 struct isoent {
+	/* Keep `rbnode' at the first member of struct isoent. */
+	struct archive_rb_node	 rbnode;
+
 	struct isofile		*file;
 
 	struct isoent		*parent;
@@ -216,6 +224,8 @@ struct isoent {
 		struct isoent	**last;
 		int		 cnt;
 	}			 children;
+	struct archive_rb_tree	 rbtree;
+
 	/* A list of sub directories.(use drnext) */
 	struct {
 		struct isoent	*first;
@@ -690,6 +700,7 @@ struct iso9660 {
 
 	struct isofile		*cur_file;
 	struct isoent		*cur_dirent;
+	struct archive_string	 cur_dirstr;
 	uint64_t		 bytes_remaining;
 	int			 need_multi_extent;
 
@@ -854,39 +865,29 @@ enum vdc {
  * Used for resolving duplicated filenames.
  */
 struct idr {
-	struct wlist {
-		/* Chain wlist in flist. */
-		struct wlist		*next;
-		/* Chain wlist in llist. */
-		struct {
-			struct wlist	*next;
-			struct wlist	**prev;
-		} elqueue;
+	struct idrent {
+		struct archive_rb_node	rbnode;
+		/* Used in wait_list. */
+		struct idrent		*wnext;
+		struct idrent		*avail;
+
 		struct isoent		*isoent;
 		int			 weight;
 		int			 noff;
-	} *wlistpool;
+		int			 rename_num;
+	} *idrent_pool;
 
-	/* A list sorted by a filename of identifier. */
-	struct flist {
-		struct isoent		*isoent;
-		int			 noff;
-		struct flist_link {
-			struct wlist	*first;
-			struct wlist	**last;
-		} pri, low;
-	} *flistpool;
+	struct archive_rb_tree		 rbtree;
+
+	struct {
+		struct idrent		*first;
+		struct idrent		**last;
+	} wait_list;
 
 	int				 pool_size;
-	int				 wlistidx;
-	int				 flistidx;
-
-	/* A list sorted by a length of identifier. */
-#define IDR_LLIST_MAX			207
-	struct llist {
-		struct wlist		*first;
-		struct wlist		**last;
-	} llist[IDR_LLIST_MAX];
+	int				 pool_idx;
+	int				 num_size;
+	int				 null_size;
 
 	char				 char_map[0x80];
 };
@@ -977,8 +978,13 @@ static void	_isoent_free(struct isoent *isoent);
 static void	isoent_free_all(struct isoent *);
 static struct isoent * isoent_create_virtual_dir(struct iso9660 *,
 		    const char *);
-static inline void isoent_add_child_head(struct isoent *, struct isoent *);
-static inline void isoent_add_child_tail(struct isoent *, struct isoent *);
+static int	isoent_cmp_node(const struct archive_rb_node *,
+		    const struct archive_rb_node *);
+static int	isoent_cmp_key(const struct archive_rb_node *,
+		    const void *);
+static int	isoent_add_child_head(struct isoent *, struct isoent *);
+static int	isoent_add_child_tail(struct isoent *, struct isoent *);
+static void	isoent_remove_child(struct isoent *, struct isoent *);
 static void	isoent_trim_root_directory(struct iso9660 *);
 static void	isoent_setup_directory_location(struct iso9660 *,
 		    int, struct vdd *);
@@ -990,29 +996,32 @@ static struct isoent *isoent_find_entry(struct isoent *, const char *);
 static void	idr_relaxed_filenames(char *);
 static void	idr_init(struct iso9660 *, struct vdd *, struct idr *);
 static void	idr_cleanup(struct idr *);
-static inline void idr_llist_insert(struct llist *, struct wlist *);
-static inline void idr_llist_remove(struct llist *, struct wlist *);
 static int	idr_ensure_poolsize(struct archive_write *, struct idr *,
 		    int);
 static int	idr_start(struct archive_write *, struct idr *,
-		    int, int);
-static struct wlist * idr_flist_add(struct idr *, struct flist *,
-		    struct isoent *, int, int);
+		    int, int, int, int, const struct archive_rb_tree_ops *);
 static void	idr_register(struct idr *, struct isoent *, int,
-		    int, int);
-static struct llist * idr_extend_identifier(struct llist *,
-		    struct wlist *, int, int);
-static int	idr_has_same_identifier(struct llist *, struct wlist *);
-static void	idr_resolve(struct idr *, int, int,
-		    void (*)(unsigned char *, int));
+		    int);
+static void	idr_extend_identifier(struct idrent *, int, int);
+static void	idr_resolve(struct idr *, void (*)(unsigned char *, int));
 static void	idr_set_num(unsigned char *, int);
 static void	idr_set_num_beutf16(unsigned char *, int);
 static int	isoent_gen_iso9660_identifier(struct archive_write *,
 		    struct isoent *, struct idr *);
 static int	isoent_gen_joliet_identifier(struct archive_write *,
 		    struct isoent *, struct idr *);
-static int	_compare_iso9660_identifier(const void *, const void *);
-static int	_compare_joliet_identifier(const void *, const void *);
+static int	isoent_cmp_iso9660_identifier(const struct isoent *,
+		    const struct isoent *);
+static int	isoent_cmp_node_iso9660(const struct archive_rb_node *,
+		    const struct archive_rb_node *);
+static int	isoent_cmp_key_iso9660(const struct archive_rb_node *,
+		    const void *);
+static int	isoent_cmp_joliet_identifier(const struct isoent *,
+		    const struct isoent *);
+static int	isoent_cmp_node_joliet(const struct archive_rb_node *,
+		    const struct archive_rb_node *);
+static int	isoent_cmp_key_joliet(const struct archive_rb_node *,
+		    const void *);
 static inline void path_table_add_entry(struct path_table *, struct isoent *);
 static inline struct isoent * path_table_last_entry(struct path_table *);
 static int	isoent_make_path_table(struct archive_write *);
@@ -1058,7 +1067,6 @@ archive_write_set_format_iso9660(struct archive *_a)
 	iso9660->birth_time = 0;
 	iso9660->temp_fd = -1;
 	iso9660->cur_file = NULL;
-	iso9660->cur_dirent = NULL;
 	iso9660->primary.max_depth = 0;
 	iso9660->primary.vdd_type = VDD_PRIMARY;
 	iso9660->primary.pathtbl = NULL;
@@ -1151,6 +1159,10 @@ archive_write_set_format_iso9660(struct archive *_a)
 		return (ARCHIVE_FATAL);
 	}
 	iso9660->primary.rootent->parent = iso9660->primary.rootent;
+	iso9660->cur_dirent = iso9660->primary.rootent;
+	archive_string_init(&(iso9660->cur_dirstr));
+	archive_string_ensure(&(iso9660->cur_dirstr), 1);
+	iso9660->cur_dirstr.s[0] = 0;
 
 	a->format_data = iso9660;
 	a->format_name = "iso9660";
@@ -2008,6 +2020,7 @@ iso9660_free(struct archive_write *a)
 	isofile_free_all_entries(iso9660);
 	isofile_free_hardlinks(iso9660);
 
+	archive_string_free(&(iso9660->cur_dirstr));
 	archive_string_free(&(iso9660->volume_identifier));
 	archive_string_free(&(iso9660->publisher_identifier));
 	archive_string_free(&(iso9660->data_preparer_identifier));
@@ -4815,6 +4828,9 @@ static struct isoent *
 isoent_new(struct isofile *file)
 {
 	struct isoent *isoent;
+	static const struct archive_rb_tree_ops rb_ops = {
+		isoent_cmp_node, isoent_cmp_key,
+	};
 
 	isoent = calloc(1, sizeof(*isoent));
 	if (isoent == NULL)
@@ -4822,6 +4838,7 @@ isoent_new(struct isofile *file)
 	isoent->file = file;
 	isoent->children.first = NULL;
 	isoent->children.last = &(isoent->children.first);
+	__archive_rb_tree_init(&(isoent->rbtree), &rb_ops);
 	isoent->subdirs.first = NULL;
 	isoent->subdirs.last = &(isoent->subdirs.first);
 	isoent->extr_rec_list.first = NULL;
@@ -4917,9 +4934,31 @@ isoent_create_virtual_dir(struct iso9660 *iso9660, const char *pathname)
 	return (isoent);
 }
 
-static inline void
+static int
+isoent_cmp_node(const struct archive_rb_node *n1,
+    const struct archive_rb_node *n2)
+{
+	struct isoent *e1 = (struct isoent *)n1;
+	struct isoent *e2 = (struct isoent *)n2;
+
+	return (strcmp(e1->file->basename.s, e2->file->basename.s));
+}
+
+static int
+isoent_cmp_key(const struct archive_rb_node *n, const void *key)
+{
+	struct isoent *e = (struct isoent *)n;
+
+	return (strcmp(e->file->basename.s, (const char *)key));
+}
+
+static int
 isoent_add_child_head(struct isoent *parent, struct isoent *child)
 {
+
+	if (!__archive_rb_tree_insert_node(
+	    &(parent->rbtree), (struct archive_rb_node *)child))
+		return (0);
 	if ((child->chnext = parent->children.first) == NULL)
 		parent->children.last = &(child->chnext);
 	parent->children.first = child;
@@ -4935,11 +4974,16 @@ isoent_add_child_head(struct isoent *parent, struct isoent *child)
 		child->parent = parent;
 	} else
 		child->drnext = NULL;
+	return (1);
 }
 
-static inline void
+static int
 isoent_add_child_tail(struct isoent *parent, struct isoent *child)
 {
+
+	if (!__archive_rb_tree_insert_node(
+	    &(parent->rbtree), (struct archive_rb_node *)child))
+		return (0);
 	child->chnext = NULL;
 	*parent->children.last = child;
 	parent->children.last = &(child->chnext);
@@ -4954,6 +4998,34 @@ isoent_add_child_tail(struct isoent *parent, struct isoent *child)
 		parent->subdirs.cnt++;
 		child->parent = parent;
 	}
+	return (1);
+}
+
+static void
+isoent_remove_child(struct isoent *parent, struct isoent *child)
+{
+	struct isoent *ent;
+
+	/* Remove a child entry from children chain. */
+	ent = parent->children.first;
+	while (ent->chnext != child)
+		ent = ent->chnext;
+	if ((ent->chnext = ent->chnext->chnext) == NULL)
+		parent->children.last = &(ent->chnext);
+	parent->children.cnt--;
+
+	if (child->dir) {
+		/* Remove a child entry from sub-directory chain. */
+		ent = parent->subdirs.first;
+		while (ent->drnext != child)
+			ent = ent->drnext;
+		if ((ent->drnext = ent->drnext->drnext) == NULL)
+			parent->subdirs.last = &(ent->drnext);
+		parent->subdirs.cnt--;
+	}
+
+	__archive_rb_tree_remove_node(&(parent->rbtree),
+	    (struct archive_rb_node *)child);
 }
 
 /*
@@ -5226,33 +5298,38 @@ isoent_tree(struct archive_write *a, struct isoent *isoent)
 		fn = p = isoent->file->parentdir.s;
 	else
 		fn = p = "";
-	if (iso9660->cur_dirent != NULL) {
-		/*
-		 * If isoent's parent directory is the same as a cur_dirent
-		 * path, insert isoent into the cur_dirent.
-		 */
-		struct isoent *curdir = iso9660->cur_dirent;
-		int plen = curdir->file->parentdir.length;
 
-		if (plen == 0 ||
-		     (strncmp(p, curdir->file->parentdir.s, plen) == 0 &&
-		      p[plen] == '/')) {
-			if (plen > 0)
-				plen++;
-			if (curdir->file->basename.length > 0 &&
-			    strcmp(p+plen, curdir->file->basename.s) == 0) {
-				np = isoent_find_child(curdir,
-				    isoent->file->basename.s);
-				if (np != NULL)
-					goto same_entry;
-				isoent_add_child_tail(curdir, isoent);
-				return (isoent);
-			}
+	/*
+	 * If the path of the parent directory of `isoent' entry is
+	 * the same as the path of `cur_dirent', add isoent to
+	 * `cur_dirent'.
+	 */
+	if (archive_strlen(&(iso9660->cur_dirstr))
+	      == archive_strlen(&(isoent->file->parentdir)) &&
+	    strcmp(iso9660->cur_dirstr.s, fn) == 0) {
+		if (!isoent_add_child_tail(iso9660->cur_dirent, isoent)) {
+			np = (struct isoent *)__archive_rb_tree_find_node(
+			    &(iso9660->cur_dirent->rbtree),
+			    isoent->file->basename.s);
+			goto same_entry;
 		}
+		return (isoent);
 	}
 
 	for (;;) {
 		l = get_path_component(name, sizeof(name), fn);
+		if (l == 0) {
+			np = NULL;
+			break;
+		}
+		if (l < 0) {
+			archive_set_error(&a->archive,
+			    ARCHIVE_ERRNO_MISC,
+			    "A name buffer is too small");
+			_isoent_free(isoent);
+			return (NULL);
+		}
+
 		np = isoent_find_child(dent, name);
 		if (np == NULL || fn[0] == '\0')
 			break;
@@ -5306,13 +5383,42 @@ isoent_tree(struct archive_write *a, struct isoent *isoent)
 			if (fn[0] == '/')
 				fn++;
 			l = get_path_component(name, sizeof(name), fn);
+			if (l < 0) {
+				archive_string_free(&as);
+				archive_set_error(&a->archive,
+				    ARCHIVE_ERRNO_MISC,
+				    "A name buffer is too small");
+				_isoent_free(isoent);
+				return (NULL);
+			}
 			dent = np;
 		}
 
 		/* Found out the parent directory where isoent can be
 		 * inserted. */
 		iso9660->cur_dirent = dent;
-		isoent_add_child_tail(dent, isoent);
+		archive_string_empty(&(iso9660->cur_dirstr));
+		archive_string_ensure(&(iso9660->cur_dirstr),
+		    archive_strlen(&(dent->file->parentdir)) +
+		    archive_strlen(&(dent->file->basename)) + 2);
+		if (archive_strlen(&(dent->file->parentdir)) +
+		    archive_strlen(&(dent->file->basename)) == 0)
+			iso9660->cur_dirstr.s[0] = 0;
+		else {
+			if (archive_strlen(&(dent->file->parentdir)) > 0) {
+				archive_string_copy(&(iso9660->cur_dirstr),
+				    &(dent->file->parentdir));
+				archive_strappend_char(&(iso9660->cur_dirstr), '/');
+			}
+			archive_string_concat(&(iso9660->cur_dirstr),
+			    &(dent->file->basename));
+		}
+
+		if (!isoent_add_child_tail(dent, isoent)) {
+			np = (struct isoent *)__archive_rb_tree_find_node(
+			    &(dent->rbtree), isoent->file->basename.s);
+			goto same_entry;
+		}
 		return (isoent);
 	}
 
@@ -5347,21 +5453,16 @@ same_entry:
 }
 
 /*
- * TODO: The approach finding a child is very slow when having many children
- *	 (about over 100K entries).
+ * Find a entry from `isoent'
  */
 static struct isoent *
 isoent_find_child(struct isoent *isoent, const char *child_name)
 {
 	struct isoent *np;
 
-	for (np = isoent->children.first; np != NULL; np = np->chnext) {
-		if (strcmp(child_name, np->file->basename.s) == 0)
-			return (np);
-	}
-
-	/* Not found. */
-	return (NULL);
+	np = (struct isoent *)__archive_rb_tree_find_node(
+	    &(isoent->rbtree), child_name);
+	return (np);
 }
 
 /*
@@ -5430,8 +5531,7 @@ static void
 idr_init(struct iso9660 *iso9660, struct vdd *vdd, struct idr *idr)
 {
 
-	idr->wlistpool = NULL;
-	idr->flistpool = NULL;
+	idr->idrent_pool = NULL;
 	idr->pool_size = 0;
 	if (vdd->vdd_type != VDD_JOLIET) {
 		if (iso9660->opt.iso_level <= 3) {
@@ -5448,29 +5548,7 @@ idr_init(struct iso9660 *iso9660, struct vdd *vdd, struct idr *idr)
 static void
 idr_cleanup(struct idr *idr)
 {
-	free(idr->wlistpool);
-	free(idr->flistpool);
-}
-
-static inline void
-idr_llist_insert(struct llist *llist, struct wlist *wnp)
-{
-	if ((wnp->elqueue.next = llist->first) != NULL)
-		llist->first->elqueue.prev = &(wnp->elqueue.next);
-	else
-		llist->last = &(wnp->elqueue.next);
-	llist->first = wnp;
-	wnp->elqueue.prev = &(llist->first);
-}
-
-static inline void
-idr_llist_remove(struct llist *llist, struct wlist *wnp)
-{
-	if (wnp->elqueue.next != NULL)
-		wnp->elqueue.next->elqueue.prev = wnp->elqueue.prev;
-	else
-		llist->last = wnp->elqueue.prev;
-	*wnp->elqueue.prev = wnp->elqueue.next;
+	free(idr->idrent_pool);
 }
 
 static int
@@ -5483,16 +5561,9 @@ idr_ensure_poolsize(struct archive_write *a, struct idr *idr,
 		int psize;
 
 		psize = (cnt + bk) & ~bk;
-		free(idr->wlistpool);
-		idr->wlistpool = malloc(sizeof(struct wlist) * psize);
-		if (idr->wlistpool == NULL) {
-			archive_set_error(&a->archive, ENOMEM,
-			    "Can't allocate memory");
-			return (ARCHIVE_FATAL);
-		}
-		free(idr->flistpool);
-		idr->flistpool = malloc(sizeof(struct flist) * psize);
-		if (idr->flistpool == NULL) {
+		idr->idrent_pool = realloc(idr->idrent_pool,
+		    sizeof(struct idrent) * psize);
+		if (idr->idrent_pool == NULL) {
 			archive_set_error(&a->archive, ENOMEM,
 			    "Can't allocate memory");
 			return (ARCHIVE_FATAL);
@@ -5503,110 +5574,49 @@ idr_ensure_poolsize(struct archive_write *a, struct idr *idr,
 }
 
 static int
-idr_start(struct archive_write *a, struct idr *idr, int cnt, int ffmax)
+idr_start(struct archive_write *a, struct idr *idr, int cnt, int ffmax,
+    int num_size, int null_size, const struct archive_rb_tree_ops *rbt_ops)
 {
-	int i, r;
+	int r;
 
 	r = idr_ensure_poolsize(a, idr, cnt);
 	if (r != ARCHIVE_OK)
 		return (r);
-	idr->wlistidx = 0;
-	idr->flistidx = 0;
-	if (ffmax > IDR_LLIST_MAX)
-		ffmax = IDR_LLIST_MAX;
-	for (i = 0; i < ffmax; i++) {
-		idr->llist[i].first = NULL;
-		idr->llist[i].last = &(idr->llist[i].first);
-	}
+	__archive_rb_tree_init(&(idr->rbtree), rbt_ops);
+	idr->wait_list.first = NULL;
+	idr->wait_list.last = &(idr->wait_list.first);
+	idr->pool_idx = 0;
+	idr->num_size = num_size;
+	idr->null_size = null_size;
 	return (ARCHIVE_OK);
 }
 
-static inline void
-idr_flist_link_add(struct flist_link *fll, struct wlist *wl)
+static void
+idr_register(struct idr *idr, struct isoent *isoent, int weight, int noff)
 {
-	if ((wl->next = fll->first) == NULL)
-		fll->last = &(wl->next);
-	fll->first = wl;
-}
+	struct idrent *idrent, *n;
 
-static struct wlist *
-idr_flist_add(struct idr *idr, struct flist *fl, struct isoent *ent,
-    int weight, int noff)
-{
-	struct wlist *wlist;
+	idrent = &(idr->idrent_pool[idr->pool_idx++]);
+	idrent->wnext = idrent->avail = NULL;
+	idrent->isoent = isoent;
+	idrent->weight = weight;
+	idrent->noff = noff;
+	idrent->rename_num = 0;
 
-	if (fl == NULL) {
-		fl = &idr->flistpool[idr->flistidx++];
-		fl->pri.first = NULL;
-		fl->pri.last = &(fl->pri.first);
-		fl->low.first = NULL;
-		fl->low.last = &(fl->low.first);
-		fl->isoent = ent;
-		fl->noff = noff;
+	if (!__archive_rb_tree_insert_node(&(idr->rbtree), &(idrent->rbnode))) {
+		n = (struct idrent *)__archive_rb_tree_find_node(
+		    &(idr->rbtree), idrent->isoent);
+		if (n != NULL) {
+			/* this `idrent' needs to rename. */
+			idrent->avail = n;
+			*idr->wait_list.last = idrent;
+			idr->wait_list.last = &(idrent->wnext);
+		}
 	}
-
-	wlist = &idr->wlistpool[idr->wlistidx++];
-	wlist->isoent = ent;
-	wlist->weight = weight;
-	wlist->noff = noff;
-	if (weight < 0)
-		idr_flist_link_add(&(fl->pri), wlist);
-	else
-		idr_flist_link_add(&(fl->low), wlist);
-	return (wlist);
 }
 
 static void
-idr_register(struct idr *idr, struct isoent *ent, int weight,
-    int noff, int nsize)
-{
-	struct wlist *wlist;
-	struct flist *fl;
-	const char *id;
-	int cmp, cmplen, ext_off;
-	int i;
-
-	wlist = NULL;
-	ext_off = ent->ext_off;
-	for (i = 0; i < idr->flistidx; i++) {
-		fl = &(idr->flistpool[i]);
-		if (fl->noff != noff)
-			continue;
-		id = fl->isoent->identifier;
-		if (noff < 0) {
-			cmplen = ent->id_len - nsize;
-			if (fl->isoent->id_len < cmplen)
-				cmp = 1;
-			else
-				cmp = memcmp(id, ent->identifier,
-				    cmplen);
-		} else {
-			cmp = memcmp(id, ent->identifier, noff);
-			if (cmp == 0) {
-				cmplen = fl->isoent->ext_len;
-				if (cmplen != ent->ext_len)
-					cmp = 1;
-				else
-					cmp = memcmp(id+ext_off,
-					    &ent->identifier[ext_off],
-					    cmplen);
-			}
-		}
-		if (cmp == 0) {
-			wlist = idr_flist_add(
-			    idr, fl, ent, weight, noff);
-			break;
-		}
-	}
-	if (wlist == NULL)
-		wlist = idr_flist_add(idr, NULL, ent, weight, noff);
-	if (ext_off >= nsize && noff + nsize != ext_off)
-		idr_llist_insert(&idr->llist[ext_off-nsize], wlist);
-}
-
-static struct llist *
-idr_extend_identifier(struct llist *llist, struct wlist *wnp, int numsize,
-    int nullsize)
+idr_extend_identifier(struct idrent *wnp, int numsize, int nullsize)
 {
 	unsigned char *p;
 	int wnp_ext_off;
@@ -5615,79 +5625,26 @@ idr_extend_identifier(struct llist *llist, struct wlist *wnp, int numsize,
 	if (wnp->noff + numsize != wnp_ext_off) {
 		p = (unsigned char *)wnp->isoent->identifier;
 		/* Extend the filename; foo.c --> foo___.c */
-		if (wnp_ext_off >= numsize)
-			idr_llist_remove(&llist[wnp_ext_off - numsize], wnp);
 		memmove(p + wnp->noff + numsize, p + wnp_ext_off,
 		    wnp->isoent->ext_len + nullsize);
 		wnp->isoent->ext_off = wnp_ext_off = wnp->noff + numsize;
 		wnp->isoent->id_len = wnp_ext_off + wnp->isoent->ext_len;
 	}
-	return (&llist[wnp_ext_off - numsize]);
-}
-
-static int
-idr_has_same_identifier(struct llist *llist, struct wlist *wnp)
-{
-	unsigned char *p;
-	struct wlist *wnptmp, *w2;
-	int p_len;
-
-	p = (unsigned char *)wnp->isoent->identifier;
-	p_len = wnp->isoent->id_len;
-
-	for (wnptmp = wnp->next; wnptmp != NULL; wnptmp = wnptmp->next) {
-		if (p_len == wnptmp->isoent->id_len &&
-		    memcmp(p, wnptmp->isoent->identifier, p_len) == 0)
-			return (1); /* Found in following entries */
-	}
-	if (llist == NULL)
-		return (0);/* Not Found */
-
-	for (w2 = llist->first; w2 != NULL; w2 = w2->elqueue.next) {
-		if (p_len == w2->isoent->id_len &&
-		    memcmp(p, w2->isoent->identifier, p_len) == 0)
-			return (1); /* Found */
-	}
-	idr_llist_insert(llist, wnp);
-
-	return (0);
 }
 
 static void
-idr_resolve(struct idr *idr, int numsize, int nullsize,
-    void (*fsetnum)(unsigned char *p, int num))
+idr_resolve(struct idr *idr, void (*fsetnum)(unsigned char *p, int num))
 {
-	struct flist *fl;
+	struct idrent *n;
 	unsigned char *p;
-	int i;
 
-	/* Find out the same identifier. */
-	for (i = 0; i < idr->flistidx; i++) {
-		struct wlist *wnp;
-		int num = 0;
-
-		fl = &(idr->flistpool[i]);
-		if (fl->pri.first != NULL) {
-			*fl->low.last = fl->pri.first;
-			fl->low.last = fl->pri.last;
-		}
-		if (fl->low.first == NULL)
-			break;
-
-		for (wnp = fl->low.first; wnp->next != NULL;
-		    wnp = wnp->next) {
-			struct llist *ep;
-
-			if (!idr_has_same_identifier(NULL, wnp))
-				continue;
-			ep = idr_extend_identifier(
-			    idr->llist, wnp, numsize, nullsize);
-			p = (unsigned char *)wnp->isoent->identifier
-			    + wnp->noff;
-			do {
-				fsetnum(p, num++);
-			} while (idr_has_same_identifier(ep, wnp));
-		}
+	for (n = idr->wait_list.first; n != NULL; n = n->wnext) {
+		idr_extend_identifier(n, idr->num_size, idr->null_size);
+		p = (unsigned char *)n->isoent->identifier + n->noff;
+		do {
+			fsetnum(p, n->avail->rename_num++);
+		} while (!__archive_rb_tree_insert_node(
+		    &(idr->rbtree), &(n->rbnode)));
 	}
 }
 
@@ -5745,6 +5702,9 @@ isoent_gen_iso9660_identifier(struct archive_write *a, struct isoent *isoent,
 	const char *char_map;
 	char allow_ldots, allow_multidot, allow_period, allow_vernum;
 	int fnmax, ffmax, dnmax;
+	static const struct archive_rb_tree_ops rb_ops = {
+		isoent_cmp_node_iso9660, isoent_cmp_key_iso9660
+	};
 
 	if (isoent->children.cnt == 0)
 		return (0);
@@ -5785,7 +5745,7 @@ isoent_gen_iso9660_identifier(struct archive_write *a, struct isoent *isoent,
 			fnmax = ffmax = dnmax = 207;
 	}
 
-	r = idr_start(a, idr, isoent->children.cnt, ffmax);
+	r = idr_start(a, idr, isoent->children.cnt, ffmax, 3, 1, &rb_ops);
 	if (r < 0)
 		return (r);
 
@@ -5946,11 +5906,11 @@ isoent_gen_iso9660_identifier(struct archive_write *a, struct isoent *isoent,
 				noff = ext_off;
 		}
 		/* Register entry to the identifier resolver. */
-		idr_register(idr, np, weight, noff, 3);
+		idr_register(idr, np, weight, noff);
 	}
 
 	/* Resolve duplicate identifier. */
-	idr_resolve(idr, 3, 1, idr_set_num);
+	idr_resolve(idr, idr_set_num);
 
 	/* Add a period and a version number to identifiers. */
 	for (np = isoent->children.first; np != NULL; np = np->chnext) {
@@ -5975,7 +5935,6 @@ isoent_gen_iso9660_identifier(struct archive_write *a, struct isoent *isoent,
 			np->id_len = np->ext_off + np->ext_len;
 		np->mb_len = np->id_len;
 	}
-
 	return (ARCHIVE_OK);
 }
 
@@ -5992,6 +5951,9 @@ isoent_gen_joliet_identifier(struct archive_write *a, struct isoent *isoent,
 	size_t l;
 	int r;
 	int ffmax, parent_len;
+	static const struct archive_rb_tree_ops rb_ops = {
+		isoent_cmp_node_joliet, isoent_cmp_key_joliet
+	};
 
 	if (isoent->children.cnt == 0)
 		return (0);
@@ -6002,7 +5964,7 @@ isoent_gen_joliet_identifier(struct archive_write *a, struct isoent *isoent,
 	else
 		ffmax = 128;
 
-	r = idr_start(a, idr, isoent->children.cnt, ffmax);
+	r = idr_start(a, idr, isoent->children.cnt, ffmax, 6, 2, &rb_ops);
 	if (r < 0)
 		return (r);
 
@@ -6076,11 +6038,11 @@ isoent_gen_joliet_identifier(struct archive_write *a, struct isoent *isoent,
 		else
 			noff = ext_off;
 		/* Register entry to the identifier resolver. */
-		idr_register(idr, np, weight, noff, 6);
+		idr_register(idr, np, weight, noff);
 	}
 
 	/* Resolve duplicate identifier with Joliet Volume. */
-	idr_resolve(idr, 6, 2, idr_set_num_beutf16);
+	idr_resolve(idr, idr_set_num_beutf16);
 
 	return (ARCHIVE_OK);
 }
@@ -6089,15 +6051,12 @@ isoent_gen_joliet_identifier(struct archive_write *a, struct isoent *isoent,
  * This comparing rule is acording to ISO9660 Standard 9.3
  */
 static int
-_compare_iso9660_identifier(const void *v1, const void *v2)
+isoent_cmp_iso9660_identifier(const struct isoent *p1, const struct isoent *p2)
 {
-	const struct isoent *p1, *p2;
 	const char *s1, *s2;
 	int cmp;
 	int l;
 
-	p1 = *((const struct isoent **)(uintptr_t)v1);
-	p2 = *((const struct isoent **)(uintptr_t)v2);
 	s1 = p1->identifier;
 	s2 = p2->identifier;
 
@@ -6124,6 +6083,10 @@ _compare_iso9660_identifier(const void *v1, const void *v2)
 				    - 0x20);
 	}
 	/* Compare File Name Extension */
+	if (p1->ext_len == 0 && p2->ext_len == 0)
+		return (0);
+	if (p1->ext_len == 1 && p2->ext_len == 1)
+		return (0);
 	if (p1->ext_len <= 1)
 		return (-1);
 	if (p2->ext_len <= 1)
@@ -6160,15 +6123,31 @@ _compare_iso9660_identifier(const void *v1, const void *v2)
 }
 
 static int
-_compare_joliet_identifier(const void *v1, const void *v2)
+isoent_cmp_node_iso9660(const struct archive_rb_node *n1,
+    const struct archive_rb_node *n2)
 {
-	const struct isoent *p1, *p2;
+	struct idrent *e1 = (struct idrent *)n1;
+	struct idrent *e2 = (struct idrent *)n2;
+
+	return (isoent_cmp_iso9660_identifier(e1->isoent, e2->isoent));
+}
+
+static int
+isoent_cmp_key_iso9660(const struct archive_rb_node *node, const void *key)
+{
+	struct isoent *isoent = (struct isoent *)key;
+	struct idrent *idrent = (struct idrent *)node;
+
+	return (isoent_cmp_iso9660_identifier(idrent->isoent, isoent));
+}
+
+static int
+isoent_cmp_joliet_identifier(const struct isoent *p1, const struct isoent *p2)
+{
 	const unsigned char *s1, *s2;
 	int cmp;
 	int l;
 
-	p1 = *((const struct isoent **)(uintptr_t)v1);
-	p2 = *((const struct isoent **)(uintptr_t)v2);
 	s1 = (const unsigned char *)p1->identifier;
 	s2 = (const unsigned char *)p2->identifier;
 
@@ -6193,6 +6172,10 @@ _compare_joliet_identifier(const void *v1, const void *v2)
 				return (*(const unsigned char *)(s1 - 1));
 	}
 	/* Compare File Name Extension */
+	if (p1->ext_len == 0 && p2->ext_len == 0)
+		return (0);
+	if (p1->ext_len == 2 && p2->ext_len == 2)
+		return (0);
 	if (p1->ext_len <= 2)
 		return (-1);
 	if (p2->ext_len <= 2)
@@ -6227,15 +6210,30 @@ _compare_joliet_identifier(const void *v1, const void *v2)
 }
 
 static int
-isoent_make_sorted_files(struct archive_write *a, struct vdd *vdd,
-    struct isoent *isoent)
+isoent_cmp_node_joliet(const struct archive_rb_node *n1,
+    const struct archive_rb_node *n2)
 {
-	struct isoent **children;
-	struct isoent *np;
-	int (*compare)(const void *v1, const void *v2);
+	struct idrent *e1 = (struct idrent *)n1;
+	struct idrent *e2 = (struct idrent *)n2;
 
-	if (isoent->children.cnt == 0)
-		return (ARCHIVE_OK);
+	return (isoent_cmp_joliet_identifier(e1->isoent, e2->isoent));
+}
+
+static int
+isoent_cmp_key_joliet(const struct archive_rb_node *node, const void *key)
+{
+	struct isoent *isoent = (struct isoent *)key;
+	struct idrent *idrent = (struct idrent *)node;
+
+	return (isoent_cmp_joliet_identifier(idrent->isoent, isoent));
+}
+
+static int
+isoent_make_sorted_files(struct archive_write *a, struct isoent *isoent,
+    struct idr *idr)
+{
+	struct archive_rb_node *rn;
+	struct isoent **children;
 
 	children = malloc(isoent->children.cnt * sizeof(struct isoent *));
 	if (children == NULL) {
@@ -6243,24 +6241,15 @@ isoent_make_sorted_files(struct archive_write *a, struct vdd *vdd,
 		    "Can't allocate memory");
 		return (ARCHIVE_FATAL);
 	}
-	compare = NULL;/* gcc complain it's uninitialized. */
 	isoent->children_sorted = children;
-	switch (vdd->vdd_type) {
- 	case VDD_PRIMARY:
- 	case VDD_ENHANCED:
-		compare = _compare_iso9660_identifier;
-		break;
-	case VDD_JOLIET:
-		compare = _compare_joliet_identifier;
-		break;
+
+	//ARCHIVE_RB_TREE_FOREACH(rn, &(idr->rbtree)) {
+	for ((rn) = ARCHIVE_RB_TREE_MIN(&(idr->rbtree)); (rn);
+		(rn) = __archive_rb_tree_iterate((&(idr->rbtree)),
+		       (rn), ARCHIVE_RB_DIR_LEFT)) {
+		struct idrent *idrent = (struct idrent *)rn;
+		*children ++ = idrent->isoent;
 	}
-
-	for (np = isoent->children.first; np != NULL; np = np->chnext)
-		*children ++ = np;
-	children = isoent->children_sorted;
-	qsort(children, isoent->children.cnt,
-	    sizeof(struct isoent *), compare);
-
 	return (ARCHIVE_OK);
 }
 
@@ -6307,7 +6296,7 @@ isoent_traverse_tree(struct archive_write *a, struct vdd* vdd)
 				r = genid(a, np, &idr);
 				if (r < 0)
 					goto exit_traverse_tree;
-				r = isoent_make_sorted_files(a, vdd, np);
+				r = isoent_make_sorted_files(a, np, &idr);
 				if (r < 0)
 					goto exit_traverse_tree;
 
@@ -6484,22 +6473,8 @@ isoent_rr_move(struct archive_write *a)
 		 * It's necessary that rr_move is the first entry
 		 * of the root.
 		 */
-		struct isoent *ent = rootent->children.first;
-
 		/* Remove "rr_moved" entry from children chain. */
-		while (ent->chnext != rr_moved)
-			ent = ent->chnext;
-		if ((ent->chnext = ent->chnext->chnext) == NULL)
-			rootent->children.last = &(ent->chnext);
-		rootent->children.cnt--;
-
-		/* Remove "rr_moved" entry from sub-directory chain. */
-		ent = rootent->subdirs.first;
-		while (ent->drnext != rr_moved)
-			ent = ent->drnext;
-		if ((ent->drnext = ent->drnext->drnext) == NULL)
-			rootent->subdirs.last = &(ent->drnext);
-		rootent->subdirs.cnt--;
+		isoent_remove_child(rootent, rr_moved);
 
 		/* Add "rr_moved" entry into the head of children chain. */
 		isoent_add_child_head(rootent, rr_moved);
@@ -7361,14 +7336,14 @@ zisofs_fix_bootfile(struct archive_write *a)
 	isoent = isoent_find_entry(iso9660->primary.rootent,
 	    str.s);
 	if (isoent == NULL) {
-		archive_string_free(&str);
-		archive_string_free(&parentdir);
-		archive_string_free(&basename);
 		archive_set_error(&a->archive,
 		    ARCHIVE_ERRNO_MISC,
 		    "Specified file ``%s'' which disable to "
 		    " be zisofs is not found.",
 		    str.s);
+		archive_string_free(&str);
+		archive_string_free(&parentdir);
+		archive_string_free(&basename);
 		return (ARCHIVE_FATAL);
 	}
 	if (isoent->file->zisofs.keep_original) {
@@ -7821,3 +7796,4 @@ zisofs_finish_entry(struct archive_write *a)
 }
 
 #endif /* HAVE_ZLIB_H */
+
