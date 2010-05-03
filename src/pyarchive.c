@@ -79,7 +79,7 @@ _convert_and_set_archive_error(PyObject *err_kls, struct archive *a)
     if(!err_kls)
         err_kls = (PyObject *)PyArchiveError;
 
-    if(err_pstr = PyString_FromString(err_cstr)) {
+    if(NULL != (err_pstr = PyString_FromString(err_cstr))) {
         tmp = PyObject_CallFunction(err_kls, "O", err_pstr);
         if(tmp) {
             PyErr_SetObject(err_kls, tmp);
@@ -97,7 +97,7 @@ _usage_error(PyObject *err_kls, PyArchiveStream *archive, const char *msg)
     if(!err_kls)
         err_kls = (PyObject *)UsageError;
 
-    if(err_pstr = PyString_FromString(msg)) {
+    if(NULL != (err_pstr = PyString_FromString(msg))) {
         tmp = PyObject_CallFunction(err_kls, "O", err_pstr);
         if(tmp) {
             PyErr_SetObject(err_kls, tmp);
@@ -161,6 +161,7 @@ static PyObject *
 PyArchive_Entry_generic_immutable(PyArchiveEntry *self, void *closure)
 {
     PyErr_SetString(PyExc_AttributeError, "immutable attribute");
+    return NULL;
 }
 
 /* XXX
@@ -372,7 +373,7 @@ static PyGetSetDef PyArchiveEntry_getsetters[] = {
         (setter)PyArchive_Entry_generic_immutable, NULL},
     {"mtime_is_set", (getter)PyArchive_Entry_get_mtime_is_set,
         (setter)PyArchive_Entry_generic_immutable, NULL},
-    {"birthtime_is_set", (getter)PyArchive_Entry_get_mtime_is_set,
+    {"birthtime_is_set", (getter)PyArchive_Entry_get_birthtime_is_set,
         (setter)PyArchive_Entry_generic_immutable, NULL},
     {"ctime", (getter)PyArchive_Entry_get_ctime,
         (setter)PyArchive_Entry_generic_immutable, NULL},
@@ -816,7 +817,7 @@ init_extension()
         return;
     }
 
-    if(!(UsageError = PyObject_GetAttrString(tmp, "PyArchiveError"))) {
+    if(!(UsageError = PyObject_GetAttrString(tmp, "UsageError"))) {
         Py_DECREF(tmp);
         return;
     }
