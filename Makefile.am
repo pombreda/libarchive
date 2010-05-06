@@ -37,7 +37,6 @@ EXTRA_DIST= \
 	build/clean.sh			\
 	build/cmake			\
 	build/version			\
-	build/windows			\
 	contrib				\
 	doc				\
 	examples			\
@@ -236,6 +235,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test.h					\
 	libarchive/test/test_acl_basic.c			\
 	libarchive/test/test_acl_freebsd.c			\
+	libarchive/test/test_acl_freebsd_nfs4.c			\
 	libarchive/test/test_acl_pax.c				\
 	libarchive/test/test_archive_api_feature.c		\
 	libarchive/test/test_bad_fd.c				\

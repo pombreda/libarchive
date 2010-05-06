@@ -332,32 +332,60 @@ __LA_DECL void	archive_entry_copy_stat(struct archive_entry *, const struct stat
  *
  *  This last point, in particular, forces me to implement a reasonably
  *  complete set of ACL support routines.
- *
- *  TODO: Extend this to support NFSv4/NTFS permissions.  That should
- *  allow full ACL support on Mac OS, in particular, which uses
- *  POSIX.1e-style interfaces to manipulate NFSv4/NTFS permissions.
  */
 
 /*
- * Permission bits mimic POSIX.1e.  Note that I've not followed POSIX.1e's
- * "permset"/"perm" abstract type nonsense.  A permset is just a simple
- * bitmap, following long-standing Unix tradition.
+ * Permission bits.
  */
-#define	ARCHIVE_ENTRY_ACL_EXECUTE	1
-#define	ARCHIVE_ENTRY_ACL_WRITE		2
-#define	ARCHIVE_ENTRY_ACL_READ		4
+#define	ARCHIVE_ENTRY_ACL_EXECUTE             0x00000001
+#define	ARCHIVE_ENTRY_ACL_WRITE               0x00000002
+#define	ARCHIVE_ENTRY_ACL_READ                0x00000004
+#define	ARCHIVE_ENTRY_ACL_READ_DATA           0x00000008
+#define	ARCHIVE_ENTRY_ACL_LIST_DIRECTORY      0x00000008
+#define	ARCHIVE_ENTRY_ACL_WRITE_DATA          0x00000010
+#define	ARCHIVE_ENTRY_ACL_ADD_FILE            0x00000010
+#define	ARCHIVE_ENTRY_ACL_APPEND_DATA         0x00000020
+#define	ARCHIVE_ENTRY_ACL_ADD_SUBDIRECTORY    0x00000020
+#define	ARCHIVE_ENTRY_ACL_READ_NAMED_ATTRS    0x00000040
+#define	ARCHIVE_ENTRY_ACL_WRITE_NAMED_ATTRS   0x00000080
+#define	ARCHIVE_ENTRY_ACL_DELETE_CHILD        0x00000100
+#define	ARCHIVE_ENTRY_ACL_READ_ATTRIBUTES     0x00000200
+#define	ARCHIVE_ENTRY_ACL_WRITE_ATTRIBUTES    0x00000400
+#define	ARCHIVE_ENTRY_ACL_DELETE              0x00000800
+#define	ARCHIVE_ENTRY_ACL_READ_ACL            0x00001000
+#define	ARCHIVE_ENTRY_ACL_WRITE_ACL           0x00002000
+#define	ARCHIVE_ENTRY_ACL_WRITE_OWNER         0x00004000
+#define	ARCHIVE_ENTRY_ACL_SYNCHRONIZE         0x00008000
+/*
+ * Inheritance values (NFS4 ACLs only); included in permset.
+ */
+#define	ARCHIVE_ENTRY_ACL_ENTRY_FILE_INHERIT                0x02000000
+#define	ARCHIVE_ENTRY_ACL_ENTRY_DIRECTORY_INHERIT           0x04000000
+#define	ARCHIVE_ENTRY_ACL_ENTRY_NO_PROPAGATE_INHERIT        0x08000000
+#define	ARCHIVE_ENTRY_ACL_ENTRY_INHERIT_ONLY                0x10000000
+#define	ARCHIVE_ENTRY_ACL_ENTRY_SUCCESSFUL_ACCESS           0x20000000
+#define	ARCHIVE_ENTRY_ACL_ENTRY_FAILED_ACCESS               0x40000000
 
-/* We need to be able to specify either or both of these. */
-#define	ARCHIVE_ENTRY_ACL_TYPE_ACCESS	256
-#define	ARCHIVE_ENTRY_ACL_TYPE_DEFAULT	512
+/* We need to be able to specify combinations of these. */
+#define	ARCHIVE_ENTRY_ACL_TYPE_ACCESS	256  /* POSIX.1e only */
+#define	ARCHIVE_ENTRY_ACL_TYPE_DEFAULT	512  /* POSIX.1e only */
+#define	ARCHIVE_ENTRY_ACL_TYPE_ALLOW	1024 /* NFS4 only */
+#define	ARCHIVE_ENTRY_ACL_TYPE_DENY	2048 /* NFS4 only */
+#define	ARCHIVE_ENTRY_ACL_TYPE_AUDIT	4096 /* NFS4 only */
+#define	ARCHIVE_ENTRY_ACL_TYPE_ALARM	8192 /* NFS4 only */
+#define	ARCHIVE_ENTRY_ACL_TYPE_NFS4	(ARCHIVE_ENTRY_ACL_TYPE_ALLOW \
+	    | ARCHIVE_ENTRY_ACL_TYPE_DENY \
+	    | ARCHIVE_ENTRY_ACL_TYPE_AUDIT \
+	    | ARCHIVE_ENTRY_ACL_TYPE_ALARM)
 
 /* Tag values mimic POSIX.1e */
 #define	ARCHIVE_ENTRY_ACL_USER		10001	/* Specified user. */
 #define	ARCHIVE_ENTRY_ACL_USER_OBJ 	10002	/* User who owns the file. */
 #define	ARCHIVE_ENTRY_ACL_GROUP		10003	/* Specified group. */
 #define	ARCHIVE_ENTRY_ACL_GROUP_OBJ	10004	/* Group who owns the file. */
-#define	ARCHIVE_ENTRY_ACL_MASK		10005	/* Modify group access. */
+#define	ARCHIVE_ENTRY_ACL_MASK		10005	/* Modify group access (POSIX.1e only) */
 #define	ARCHIVE_ENTRY_ACL_OTHER		10006	/* Public. */
+#define	ARCHIVE_ENTRY_ACL_EVERYONE	10007   /* Everyone (NFS4 only) */
 
 /*
  * Set the ACL by clearing it and adding entries one at a time.
@@ -379,7 +407,7 @@ __LA_DECL void	 archive_entry_acl_add_entry_w(struct archive_entry *,
 /*
  * To retrieve the ACL, first "reset", then repeatedly ask for the
  * "next" entry.  The want_type parameter allows you to request only
- * access entries or only default entries.
+ * certain types of entries.
  */
 __LA_DECL int	 archive_entry_acl_reset(struct archive_entry *, int /* want_type */);
 __LA_DECL int	 archive_entry_acl_next(struct archive_entry *, int /* want_type */,
@@ -393,12 +421,14 @@ __LA_DECL int	 archive_entry_acl_next_w(struct archive_entry *, int /* want_type
  * Construct a text-format ACL.  The flags argument is a bitmask that
  * can include any of the following:
  *
- * ARCHIVE_ENTRY_ACL_TYPE_ACCESS - Include access entries.
- * ARCHIVE_ENTRY_ACL_TYPE_DEFAULT - Include default entries.
+ * ARCHIVE_ENTRY_ACL_TYPE_ACCESS - Include POSIX.1e "access" entries.
+ * ARCHIVE_ENTRY_ACL_TYPE_DEFAULT - Include POSIX.1e "default" entries.
+ * ARCHIVE_ENTRY_ACL_TYPE_NFS4 - Include NFS4 entries.
  * ARCHIVE_ENTRY_ACL_STYLE_EXTRA_ID - Include extra numeric ID field in
- *    each ACL entry.  (As used by 'star'.)
+ *    each ACL entry.  ('star' introduced this for POSIX.1e, this flag
+ *    also applies to NFS4.)
  * ARCHIVE_ENTRY_ACL_STYLE_MARK_DEFAULT - Include "default:" before each
- *    default ACL entry.
+ *    default ACL entry, as used in old Solaris ACLs.
  */
 #define	ARCHIVE_ENTRY_ACL_STYLE_EXTRA_ID	1024
 #define	ARCHIVE_ENTRY_ACL_STYLE_MARK_DEFAULT	2048
@@ -407,7 +437,6 @@ __LA_DECL const wchar_t	*archive_entry_acl_text_w(struct archive_entry *,
 
 /* Return a count of entries matching 'want_type' */
 __LA_DECL int	 archive_entry_acl_count(struct archive_entry *, int /* want_type */);
-
 
 /*
  * extended attributes
