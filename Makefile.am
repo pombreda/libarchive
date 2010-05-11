@@ -166,6 +166,7 @@ libtransform_test_SOURCES=					\
 #	libtransform/test/test_compat_gtar.c			\
 #	libtransform/test/test_compat_gzip.c			\
 #	libtransform/test/test_compat_lzma.c			\
+#	libtransform/test/test_compat_lzip.c		\
 #	libtransform/test/test_compat_xz.c			\
 #	libtransform/test/test_compat_zip.c			\
 #	libtransform/test/test_empty_write.c			\
@@ -178,6 +179,7 @@ libtransform_test_SOURCES=					\
 #	libtransform/test/test_write_compress_bzip2.c		\
 #	libtransform/test/test_write_compress_gzip.c		\
 #	libtransform/test/test_write_compress_lzma.c		\
+#	libtransform/test/test_write_compress_lzip.c		\
 #	libtransform/test/test_write_compress_program.c		\
 #	libtransform/test/test_write_compress_xz.c		\
 #	libtransform/test/test_write_disk.c			\

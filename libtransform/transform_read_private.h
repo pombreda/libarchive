@@ -139,7 +139,7 @@ struct transform_read {
 	struct transform_read_client client;
 
 	/* Registered filter bidders. */
-	struct transform_read_filter_bidder bidders[8];
+	struct transform_read_filter_bidder bidders[9];
 
 	/* Last filter in chain */
 	struct transform_read_filter *filter;

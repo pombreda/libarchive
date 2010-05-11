@@ -141,6 +141,9 @@ struct transform;
 #define	TRANSFORM_EOF	  (-1)	/* Found end of transform. */
 #define	TRANSFORM_OK	  0	/* Operation was successful. */
 #define	TRANSFORM_WARN	(-200)	/* Partial success. */
+/* for example, if data can't be pushed for some reason- buffer is full.  retry. */
+#define TRANSFORM_FAILED (-250) /* Current operation cannot complete. */
+/* fatal cannot be continued however; network buffering, the network connection was lost for example */
 #define	TRANSFORM_FATAL	(-300)	/* No more operations are possible. */
 
 /*
@@ -195,6 +198,7 @@ typedef int	transform_close_callback(struct transform *, void *_client_data);
 #define	TRANSFORM_FILTER_XZ	6
 #define	TRANSFORM_FILTER_UU	7
 #define	TRANSFORM_FILTER_RPM	8
+#define	TRANSFORM_FILTER_LZIP	9
 
 /*-
  * Basic outline for reading an transform:
@@ -224,6 +228,7 @@ __LA_DECL int transform_read_support_compression_all(struct transform *);
 __LA_DECL int transform_read_support_compression_bzip2(struct transform *);
 __LA_DECL int transform_read_support_compression_compress(struct transform *);
 __LA_DECL int transform_read_support_compression_gzip(struct transform *);
+__LA_DECL int transform_read_support_compression_lzip(struct transform *);
 __LA_DECL int transform_read_support_compression_lzma(struct transform *);
 __LA_DECL int transform_read_support_compression_none(struct transform *);
 __LA_DECL int transform_read_support_compression_program(struct transform *,
@@ -374,6 +379,7 @@ __LA_DECL int transform_write_add_filter_bzip2(struct transform *);
 __LA_DECL int transform_write_add_filter_compress(struct transform *);
 __LA_DECL int transform_write_add_filter_gzip(struct transform *);
 __LA_DECL int transform_write_add_filter_lzma(struct transform *);
+__LA_DECL int transform_write_add_filter_lzip(struct transform *);
 __LA_DECL int transform_write_add_filter_none(struct transform *);
 __LA_DECL int transform_write_add_filter_program(struct transform *,
 		     const char *cmd);
@@ -388,6 +394,7 @@ __LA_DECL int transform_write_open_filename(struct transform *, const char *_fil
 /* A deprecated synonym for transform_write_open_filename() */
 __LA_DECL int transform_write_open_file(struct transform *, const char *_file);
 __LA_DECL int transform_write_open_FILE(struct transform *, FILE *);
+
 /* _buffSize is the size of the buffer, _used refers to a variable that
  * will be updated after each write into the buffer. */
 __LA_DECL int transform_write_open_memory(struct transform *,

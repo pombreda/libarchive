@@ -7,6 +7,7 @@ SET(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/build/cmake")
 if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${libtransform_BINARY_DIR}/bin)
 endif()
+SET(CMAKE_BUILD_TYPE "Debug")
 
 #
 # Version - read from 'version' file.
@@ -191,8 +192,7 @@ MACRO (LA_CHECK_INCLUDE_FILE header var)
       ENDIF (${var})
 ENDMACRO (LA_CHECK_INCLUDE_FILE)
 
-# Few headers that must precede other headers
-# Must precede sys/extattr.h on FreeBSD
+# Some FreeBSD headers assume sys/types.h was already included.
 LA_CHECK_INCLUDE_FILE("sys/types.h" HAVE_SYS_TYPES_H)
 
 # Alphabetize the rest unless there's a compelling reason
@@ -223,7 +223,6 @@ LA_CHECK_INCLUDE_FILE("stdlib.h" HAVE_STDLIB_H)
 LA_CHECK_INCLUDE_FILE("string.h" HAVE_STRING_H)
 LA_CHECK_INCLUDE_FILE("strings.h" HAVE_STRINGS_H)
 LA_CHECK_INCLUDE_FILE("sys/cdefs.h" HAVE_SYS_CDEFS_H)
-LA_CHECK_INCLUDE_FILE("sys/extattr.h" HAVE_SYS_EXTATTR_H)
 LA_CHECK_INCLUDE_FILE("sys/ioctl.h" HAVE_SYS_IOCTL_H)
 LA_CHECK_INCLUDE_FILE("sys/mkdev.h" HAVE_SYS_MKDEV_H)
 LA_CHECK_INCLUDE_FILE("sys/param.h" HAVE_SYS_PARAM_H)
@@ -248,12 +247,9 @@ LA_CHECK_INCLUDE_FILE("winioctl.h" HAVE_WINIOCTL_H)
 #
 
 SET(CMAKE_REQUIRED_LIBRARIES "")
-
 #
 # Check functions
 #
-CHECK_SYMBOL_EXISTS(CreateHardLinkA "windows.h" HAVE_CREATEHARDLINKA)
-CHECK_SYMBOL_EXISTS(CreateHardLinkW "windows.h" HAVE_CREATEHARDLINKW)
 CHECK_SYMBOL_EXISTS(_CrtSetReportMode "crtdbg.h" HAVE__CrtSetReportMode)
 CHECK_FUNCTION_EXISTS_GLIBC(chflags HAVE_CHFLAGS)
 CHECK_FUNCTION_EXISTS_GLIBC(chown HAVE_CHOWN)
@@ -345,8 +341,6 @@ ENDIF(HAVE_INTTYPES_H)
 CHECK_SYMBOL_EXISTS(EFTYPE           "errno.h"    HAVE_EFTYPE)
 CHECK_SYMBOL_EXISTS(EILSEQ           "errno.h"    HAVE_EILSEQ)
 CHECK_SYMBOL_EXISTS(D_MD_ORDER       "langinfo.h" HAVE_D_MD_ORDER)
-CHECK_SYMBOL_EXISTS(optarg           "unistd.h"   HAVE_DECL_OPTARG)
-CHECK_SYMBOL_EXISTS(optind           "unistd.h"   HAVE_DECL_OPTIND)
 CHECK_SYMBOL_EXISTS(INT64_MAX        "${headers}" HAVE_DECL_INT64_MAX)
 CHECK_SYMBOL_EXISTS(INT64_MIN        "${headers}" HAVE_DECL_INT64_MIN)
 CHECK_SYMBOL_EXISTS(UINT32_MAX       "${headers}" HAVE_DECL_UINT32_MAX)
