@@ -230,6 +230,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_compat_cpio.c			\
 	libarchive/test/test_compat_gtar.c			\
 	libarchive/test/test_compat_gzip.c			\
+	libarchive/test/test_compat_lzip.c			\
 	libarchive/test/test_compat_lzma.c			\
 	libarchive/test/test_compat_solaris_tar_acl.c		\
 	libarchive/test/test_compat_tar_hardlink.c		\
@@ -259,6 +260,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_read_format_cpio_bin_be.c		\
 	libarchive/test/test_read_format_cpio_bin_bz2.c		\
 	libarchive/test/test_read_format_cpio_bin_gz.c		\
+	libarchive/test/test_read_format_cpio_bin_lzip.c	\
 	libarchive/test/test_read_format_cpio_bin_lzma.c	\
 	libarchive/test/test_read_format_cpio_bin_xz.c		\
 	libarchive/test/test_read_format_cpio_odc.c		\
@@ -304,6 +306,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_write_compress.c			\
 	libarchive/test/test_write_compress_bzip2.c		\
 	libarchive/test/test_write_compress_gzip.c		\
+	libarchive/test/test_write_compress_lzip.c		\
 	libarchive/test/test_write_compress_lzma.c		\
 	libarchive/test/test_write_compress_program.c		\
 	libarchive/test/test_write_compress_xz.c		\
@@ -484,12 +487,14 @@ bsdtar_test_SOURCES=						\
 	tar/test/test_option_X_upper.c				\
 	tar/test/test_option_b.c				\
 	tar/test/test_option_exclude.c				\
+	tar/test/test_option_gid_gname.c			\
 	tar/test/test_option_k.c				\
 	tar/test/test_option_keep_newer_files.c			\
 	tar/test/test_option_n.c				\
 	tar/test/test_option_q.c				\
 	tar/test/test_option_r.c				\
 	tar/test/test_option_s.c				\
+	tar/test/test_option_uid_uname.c			\
 	tar/test/test_patterns.c				\
 	tar/test/test_stdio.c					\
 	tar/test/test_strip_components.c			\
@@ -592,6 +597,7 @@ bsdcpio_test_SOURCES=						\
 	cpio/test/test_cmdline.c				\
 	cpio/test/test_format_newc.c				\
 	cpio/test/test_gcpio_compat.c				\
+	cpio/test/test_option_0.c				\
 	cpio/test/test_option_B_upper.c				\
 	cpio/test/test_option_C_upper.c				\
 	cpio/test/test_option_J_upper.c				\

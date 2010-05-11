@@ -17,6 +17,7 @@ IF(ENABLE_TEST)
     test_compat_cpio.c
     test_compat_gtar.c
     test_compat_gzip.c
+    test_compat_lzip.c
     test_compat_lzma.c
     test_compat_solaris_tar_acl.c
     test_compat_tar_hardlink.c
@@ -46,6 +47,7 @@ IF(ENABLE_TEST)
     test_read_format_cpio_bin_be.c
     test_read_format_cpio_bin_bz2.c
     test_read_format_cpio_bin_gz.c
+    test_read_format_cpio_bin_lzip.c
     test_read_format_cpio_bin_lzma.c
     test_read_format_cpio_bin_xz.c
     test_read_format_cpio_odc.c
@@ -91,6 +93,7 @@ IF(ENABLE_TEST)
     test_write_compress.c
     test_write_compress_bzip2.c
     test_write_compress_gzip.c
+    test_write_compress_lzip.c
     test_write_compress_lzma.c
     test_write_compress_program.c
     test_write_compress_xz.c

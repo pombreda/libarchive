@@ -108,3 +108,10 @@ archive_read_support_compression_xz(struct archive *a)
 	return (__convert_transform_error_to_archive_error(a, a->transform,
 		transform_read_support_compression_xz(a->transform)));
 }
+
+int
+archive_read_support_compression_lzip(struct archive *a)
+{
+	return (__convert_transform_error_to_archive_error(a, a->transform,
+		transform_read_support_compression_lzip(a->transform)));
+}

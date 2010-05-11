@@ -68,6 +68,15 @@ archive_write_add_filter_lzma(struct archive *a)
 }
 
 int 
+archive_write_add_filter_lzip(struct archive *a)
+{
+	archive_check_magic(a, ARCHIVE_WRITE_MAGIC,
+		ARCHIVE_STATE_NEW, "archive_write_add_filter_lzip");
+	return (__convert_transform_error_to_archive_error(a, a->transform,
+		transform_write_add_filter_lzip(a->transform)));
+}
+
+int 
 archive_write_add_filter_none(struct archive *a)
 {
 	archive_check_magic(a, ARCHIVE_WRITE_MAGIC,
@@ -133,6 +142,16 @@ archive_write_set_compression_lzma(struct archive *a)
 	if (ARCHIVE_OK != ret)
 		return ret;
 	return (archive_write_add_filter_lzma(a));
+}
+
+int
+archive_write_set_compression_lzip(struct archive *a)
+{
+	int ret = transform_write_reset_filters(a->transform);
+	ret = __convert_transform_error_to_archive_error(a, a->transform, ret);
+	if (ARCHIVE_OK != ret)
+		return ret;
+	return (archive_write_add_filter_lzip(a));
 }
 
 int

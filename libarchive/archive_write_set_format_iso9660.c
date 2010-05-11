@@ -298,10 +298,8 @@ struct isoent {
 	int			 dir:1;
 };
 
-#define HARDLINK_HASH_SIZE	(1 << 10)	/* 1024 */
-#define HARDLINK_HASH_MASK	(HARDLINK_HASH_SIZE -1)
 struct hardlink {
-	struct hardlink		*next;
+	struct archive_rb_node	 rbnode;
 	int			 nlink;
 	struct {
 		struct isofile	*first;
@@ -624,6 +622,10 @@ struct iso_option {
 	 *        : rockridge=useful [DEFAULT]
 	 *        :    generate SUSP and RR records.
 	 *        :    [COMPAT: mkisofs -r]
+	 *        :    NOTE  Our rockridge=useful option does not set a zero
+	 *        :          to uid and gid, you should use application
+	 *        :          option such as --gid,--gname,--uid and --uname
+	 *        :          badtar options instead.
 	 * Type   : boolean/string
 	 * Default: Enabled as rockridge=useful
 	 * COMPAT : mkisofs -r / -R
@@ -635,17 +637,6 @@ struct iso_option {
 #define OPT_RR_STRICT			1
 #define OPT_RR_USEFUL			2
 #define OPT_RR_DEFAULT			OPT_RR_USEFUL
-
-	/*
-	 * Usage  : uid=<value>
-	 * Type   : decimal
-	 * Default: Not specified
-	 * COMPAT : mkisofs -uid <value>
-	 *
-	 * Specifies a user id to rewrite the user id of all files.
-	 */
-	unsigned int	 uid:1;
-#define OPT_UID_DEFAULT			0	/* Not specified */
 
 	/*
 	 * Usage  : volume-id=<value>
@@ -711,10 +702,7 @@ struct iso9660 {
 	}			 all_file_list;
 
 	/* Used for managing to find hardlinking files. */
-	struct {
-		struct hardlink	*first;
-		struct hardlink	**last;
-	}			 hardlink[HARDLINK_HASH_SIZE];
+	struct archive_rb_tree	 hardlink_rbtree;
 
 	/* Used for making the Path Table Record. */
 	struct vdd {
@@ -754,8 +742,6 @@ struct iso9660 {
 	struct archive_string	 bibliographic_file_identifier;
 
 	/* Used for making rockridge extensions. */
-	int			 uid;
-	int			 gid;
 	int			 location_rrip_er;
 
 	/* Used for making zisofs. */
@@ -990,7 +976,7 @@ static void	isoent_setup_directory_location(struct iso9660 *,
 		    int, struct vdd *);
 static void	isoent_setup_file_location(struct iso9660 *, int);
 static int	get_path_component(char *, int, const char *);
-static struct isoent *isoent_tree(struct archive_write *, struct isoent *);
+static int	isoent_tree(struct archive_write *, struct isoent **);
 static struct isoent *isoent_find_child(struct isoent *, const char *);
 static struct isoent *isoent_find_entry(struct isoent *, const char *);
 static void	idr_relaxed_filenames(char *);
@@ -1137,7 +1123,6 @@ archive_write_set_format_iso9660(struct archive *_a)
 	iso9660->opt.boot_type = OPT_BOOT_TYPE_DEFAULT;
 	iso9660->opt.compression_level = OPT_COMPRESSION_LEVEL_DEFAULT;
 	iso9660->opt.copyright_file = OPT_COPYRIGHT_FILE_DEFAULT;
-	iso9660->opt.gid = OPT_GID_DEFAULT;
 	iso9660->opt.iso_level = OPT_ISO_LEVEL_DEFAULT;
 	iso9660->opt.joliet = OPT_JOLIET_DEFAULT;
 	iso9660->opt.limit_depth = OPT_LIMIT_DEPTH_DEFAULT;
@@ -1145,7 +1130,6 @@ archive_write_set_format_iso9660(struct archive *_a)
 	iso9660->opt.pad = OPT_PAD_DEFAULT;
 	iso9660->opt.publisher = OPT_PUBLISHER_DEFAULT;
 	iso9660->opt.rr = OPT_RR_DEFAULT;
-	iso9660->opt.uid = OPT_UID_DEFAULT;
 	iso9660->opt.volume_id = OPT_VOLUME_ID_DEFAULT;
 	iso9660->opt.zisofs = OPT_ZISOFS_DEFAULT;
 
@@ -1406,16 +1390,6 @@ iso9660_options(struct archive_write *a, const char *key, const char *value)
 		}
 #endif
 		break;
-	case 'g':
-		if (strcmp(key, "gid") == 0) {
-			r = get_num_opt(a, &num, INT_MAX, 0, key, value);
-			if (r != ARCHIVE_OK)
-				return (ARCHIVE_FATAL);
-			iso9660->gid = num;
-			iso9660->opt.gid = 1;
-			return (ARCHIVE_OK);
-		}
-		break;
 	case 'i':
 		if (strcmp(key, "iso-level") == 0) {
 			if (value != NULL && value[1] == '\0' &&
@@ -1475,16 +1449,6 @@ iso9660_options(struct archive_write *a, const char *key, const char *value)
 				iso9660->opt.rr = OPT_RR_USEFUL;
 			else
 				goto invalid_value;
-			return (ARCHIVE_OK);
-		}
-		break;
-	case 'u':
-		if (strcmp(key, "uid") == 0) {
-			r = get_num_opt(a, &num, INT_MAX, 0, key, value);
-			if (r != ARCHIVE_OK)
-				return (ARCHIVE_FATAL);
-			iso9660->uid = num;
-			iso9660->opt.uid = 1;
 			return (ARCHIVE_OK);
 		}
 		break;
@@ -1575,9 +1539,9 @@ iso9660_write_header(struct archive_write *a, struct archive_entry *entry)
 		iso9660->dircnt_max = isoent->file->dircnt;
 
 	/* Add the current file into tree */
-	isoent = isoent_tree(a, isoent);
-	if (isoent == NULL)
-		return (ARCHIVE_FATAL);
+	r = isoent_tree(a, &isoent);
+	if (r != ARCHIVE_OK)
+		return (r);
 
 	/* If there is the same file in tree and
 	 * the current file is older than the file in tree.
@@ -1599,8 +1563,6 @@ iso9660_write_header(struct archive_write *a, struct archive_entry *entry)
 		r = isofile_register_hardlink(a, file);
 		if (r != ARCHIVE_OK)
 			return (ARCHIVE_FATAL);
-		if (archive_entry_hardlink(file->entry) != NULL)
-			archive_entry_unset_size(file->entry);
 	}
 
 	/*
@@ -2803,9 +2765,9 @@ set_directory_record_rr(unsigned char *bp, int dr_len,
 			if (iso9660->opt.rr == OPT_RR_USEFUL) {
 				/*
 				 * This action is simular mkisofs -r option
+				 * but our rockridge=useful option does not
+				 * set a zero to uid and gid.
 				 */
-				uid = 0;
-				gid = 0;
 				/* set all read bit ON */
 				mode |= 0444;
 #if !defined(_WIN32) && !defined(__CYGWIN__)
@@ -2818,10 +2780,6 @@ set_directory_record_rr(unsigned char *bp, int dr_len,
 				/* clear setuid,setgid,sticky bits. */
 				mode &= ~07000;
 			}
-			if (iso9660->opt.uid)
-				uid = iso9660->uid;
-			if (iso9660->opt.gid)
-				gid = iso9660->gid;
 
 			bp[1] = 'P';
 			bp[2] = 'X';
@@ -3901,9 +3859,6 @@ write_information_block(struct archive_write *a)
 	if (iso9660->opt.copyright_file != OPT_COPYRIGHT_FILE_DEFAULT)
 		set_option_info(&info, &opt, "copyright-file",
 		    KEY_STR, iso9660->copyright_file_identifier.s);
-	if (iso9660->opt.gid != OPT_GID_DEFAULT)
-		set_option_info(&info, &opt, "gid", KEY_INT,
-		    iso9660->gid);
 	if (iso9660->opt.iso_level != OPT_ISO_LEVEL_DEFAULT)
 		set_option_info(&info, &opt, "iso-level",
 		    KEY_INT, iso9660->opt.iso_level);
@@ -3938,9 +3893,6 @@ write_information_block(struct archive_write *a)
 			set_option_info(&info, &opt, "rockridge",
 			    KEY_STR, "useful");
 	}
-	if (iso9660->opt.uid != OPT_UID_DEFAULT)
-		set_option_info(&info, &opt, "uid", KEY_INT,
-		    iso9660->uid);
 	if (iso9660->opt.volume_id != OPT_VOLUME_ID_DEFAULT)
 		set_option_info(&info, &opt, "volume-id",
 		    KEY_STR, iso9660->volume_identifier.s);
@@ -4720,50 +4672,38 @@ isofile_register_hardlink(struct archive_write *a, struct isofile *file)
 {
 	struct iso9660 *iso9660 = a->format_data;
 	struct hardlink *hl;
-	const char *pathname, *p;
-	uint32_t hash;
+	const char *pathname;
 
+	archive_entry_set_nlink(file->entry, 1);
 	pathname = archive_entry_hardlink(file->entry);
-	if (pathname == NULL)
+	if (pathname == NULL) {
+		/* This `file` is a hardlink target. */
 		pathname = archive_entry_pathname(file->entry);
-	hash = 0;
-	for (p = pathname; *p; p++)
-		hash =  (hash<<1) ^ *p;
-	hash &= HARDLINK_HASH_MASK;
-	for (hl = iso9660->hardlink[hash].first;
-	    hl != NULL; hl = hl->next) {
-		if (strcmp(pathname,
-		    archive_entry_pathname(hl->file_list.first->entry)) == 0)
-			break;
-	}
-	if (hl == NULL) {
 		hl = malloc(sizeof(*hl));
 		if (hl == NULL) {
 			archive_set_error(&a->archive, ENOMEM,
 			    "Can't allocate memory");
 			return (ARCHIVE_FATAL);
 		}
-		hl->nlink = 0;
-		hl->file_list.first = NULL;
-		hl->file_list.last = &(hl->file_list.first);
-		/* Insert `hl` into the tail of iso9660->hardlink[hash] */
-		hl->next = NULL;
-		*iso9660->hardlink[hash].last = hl;
-		iso9660->hardlink[hash].last = &(hl->next);
-	}
-	if (archive_entry_hardlink(file->entry) == NULL) {
-		/* Insert `file` into the head.
-		 * A hardlink target must be the first position. */
-		if ((file->hlnext = hl->file_list.first) == NULL)
-			hl->file_list.last = &(file->hlnext);
-		hl->file_list.first = file;
-	} else {
-		/* Insert `file` into the tail. */
+		hl->nlink = 1;
+		/* A hardlink target must be the first position. */
 		file->hlnext = NULL;
-		*hl->file_list.last = file;
+		hl->file_list.first = file;
 		hl->file_list.last = &(file->hlnext);
+		__archive_rb_tree_insert_node(&(iso9660->hardlink_rbtree),
+		    (struct archive_rb_node *)hl);
+	} else {
+		hl = (struct hardlink *)__archive_rb_tree_find_node(
+		    &(iso9660->hardlink_rbtree), pathname);
+		if (hl != NULL) {
+			/* Insert `file` entry into the tail. */
+			file->hlnext = NULL;
+			*hl->file_list.last = file;
+			hl->file_list.last = &(file->hlnext);
+			hl->nlink++;
+		}
+		archive_entry_unset_size(file->entry);
 	}
-	hl->nlink++;
 
 	return (ARCHIVE_OK);
 }
@@ -4771,56 +4711,70 @@ isofile_register_hardlink(struct archive_write *a, struct isofile *file)
 /*
  * Hardlinked files have to have the same location of extent.
  * We have to find out hardlink target entries for the entries
- * which referrence that target entries.
+ * which have a hardlink target name.
  */
 static void
 isofile_connect_hardlink_files(struct iso9660 *iso9660)
 {
+	struct archive_rb_node *n;
 	struct hardlink *hl;
 	struct isofile *target, *nf;
-	int i;
 
-	for (i = 0; i < HARDLINK_HASH_SIZE; i++) {
-		for (hl = iso9660->hardlink[i].first;
-		    hl != NULL; hl = hl->next) {
-			target = hl->file_list.first;
-			if (archive_entry_hardlink(target->entry) != NULL)
-				continue;
-			archive_entry_set_nlink(target->entry, hl->nlink);
-			for (nf = target->hlnext;
-			    nf != NULL; nf = nf->hlnext) {
-				nf->hardlink_target = target;
-				archive_entry_set_nlink(
-				    nf->entry, hl->nlink);
-			}
+	ARCHIVE_RB_TREE_FOREACH(n, &(iso9660->hardlink_rbtree)) {
+		hl = (struct hardlink *)n;
+
+		/* The first entry must be a hardlink target. */
+		target = hl->file_list.first;
+		archive_entry_set_nlink(target->entry, hl->nlink);
+		/* Set a hardlink target to reference entries. */
+		for (nf = target->hlnext;
+		    nf != NULL; nf = nf->hlnext) {
+			nf->hardlink_target = target;
+			archive_entry_set_nlink(nf->entry, hl->nlink);
 		}
 	}
+}
+
+static int
+isofile_hd_cmp_node(const struct archive_rb_node *n1,
+    const struct archive_rb_node *n2)
+{
+	struct hardlink *h1 = (struct hardlink *)n1;
+	struct hardlink *h2 = (struct hardlink *)n2;
+
+	return (strcmp(archive_entry_pathname(h1->file_list.first->entry),
+		       archive_entry_pathname(h2->file_list.first->entry)));
+}
+
+static int
+isofile_hd_cmp_key(const struct archive_rb_node *n, const void *key)
+{
+	struct hardlink *h = (struct hardlink *)n;
+
+	return (strcmp(archive_entry_pathname(h->file_list.first->entry),
+		       (const char *)key));
 }
 
 static void
 isofile_init_hardlinks(struct iso9660 *iso9660)
 {
-	int i;
+	static const struct archive_rb_tree_ops rb_ops = {
+		isofile_hd_cmp_node, isofile_hd_cmp_key,
+	};
 
-	for (i = 0; i < HARDLINK_HASH_SIZE; i++) {
-		iso9660->hardlink[i].first = NULL;
-		iso9660->hardlink[i].last = &(iso9660->hardlink[i].first);
-	}
+	__archive_rb_tree_init(&(iso9660->hardlink_rbtree), &rb_ops);
 }
 
 static void
 isofile_free_hardlinks(struct iso9660 *iso9660)
 {
-	struct hardlink *hl, *hl_next;
-	int i;
+	struct archive_rb_node *n, *next;
 
-	for (i = 0; i < HARDLINK_HASH_SIZE; i++) {
-		hl = iso9660->hardlink[i].first;
-		while (hl != NULL) {
-			hl_next = hl->next;
-			free(hl);
-			hl = hl_next;
-		}
+	for (n = ARCHIVE_RB_TREE_MIN(&(iso9660->hardlink_rbtree)); n;) {
+		next = __archive_rb_tree_iterate(&(iso9660->hardlink_rbtree),
+		    n, ARCHIVE_RB_DIR_RIGHT);
+		free(n);
+		n = next;
 	}
 }
 
@@ -5279,8 +5233,8 @@ get_path_component(char *name, int n, const char *fn)
 /*
  * Add a new entry into the tree.
  */
-static struct isoent *
-isoent_tree(struct archive_write *a, struct isoent *isoent)
+static int
+isoent_tree(struct archive_write *a, struct isoent **isoentpp)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__)
 	char name[_MAX_FNAME];/* Included null terminator size. */
@@ -5288,11 +5242,12 @@ isoent_tree(struct archive_write *a, struct isoent *isoent)
 	char name[NAME_MAX+1];
 #endif
 	struct iso9660 *iso9660 = a->format_data;
-	struct isoent *dent, *np;
+	struct isoent *dent, *isoent, *np;
 	struct isofile *f1, *f2;
 	const char *fn, *p;
 	int l;
 
+	isoent = *isoentpp;
 	dent = iso9660->primary.rootent;
 	if (isoent->file->parentdir.length > 0)
 		fn = p = isoent->file->parentdir.s;
@@ -5313,7 +5268,7 @@ isoent_tree(struct archive_write *a, struct isoent *isoent)
 			    isoent->file->basename.s);
 			goto same_entry;
 		}
-		return (isoent);
+		return (ARCHIVE_OK);
 	}
 
 	for (;;) {
@@ -5327,7 +5282,7 @@ isoent_tree(struct archive_write *a, struct isoent *isoent)
 			    ARCHIVE_ERRNO_MISC,
 			    "A name buffer is too small");
 			_isoent_free(isoent);
-			return (NULL);
+			return (ARCHIVE_FATAL);
 		}
 
 		np = isoent_find_child(dent, name);
@@ -5343,7 +5298,8 @@ isoent_tree(struct archive_write *a, struct isoent *isoent)
 			    archive_entry_pathname(np->file->entry),
 			    archive_entry_pathname(isoent->file->entry));
 			_isoent_free(isoent);
-			return (NULL);
+			*isoentpp = NULL;
+			return (ARCHIVE_FAILED);
 		}
 		fn += l;
 		if (fn[0] == '/')
@@ -5370,7 +5326,8 @@ isoent_tree(struct archive_write *a, struct isoent *isoent)
 				archive_set_error(&a->archive, ENOMEM,
 				    "Can't allocate memory");
 				_isoent_free(isoent);
-				return (NULL);
+				*isoentpp = NULL;
+				return (ARCHIVE_FATAL);
 			}
 			archive_string_free(&as);
 
@@ -5389,7 +5346,8 @@ isoent_tree(struct archive_write *a, struct isoent *isoent)
 				    ARCHIVE_ERRNO_MISC,
 				    "A name buffer is too small");
 				_isoent_free(isoent);
-				return (NULL);
+				*isoentpp = NULL;
+				return (ARCHIVE_FATAL);
 			}
 			dent = np;
 		}
@@ -5419,7 +5377,7 @@ isoent_tree(struct archive_write *a, struct isoent *isoent)
 			    &(dent->rbtree), isoent->file->basename.s);
 			goto same_entry;
 		}
-		return (isoent);
+		return (ARCHIVE_OK);
 	}
 
 same_entry:
@@ -5439,7 +5397,8 @@ same_entry:
 		    "different",
 		    archive_entry_pathname(f1->entry));
 		_isoent_free(isoent);
-		return (NULL);
+		*isoentpp = NULL;
+		return (ARCHIVE_FAILED);
 	}
 	if (archive_entry_mtime(f1->entry) <
 	    archive_entry_mtime(f2->entry) || np->virtual) {
@@ -5449,7 +5408,8 @@ same_entry:
 		np->virtual = 0;
 	}
 	_isoent_free(isoent);
-	return (np);
+	*isoentpp = np;
+	return (ARCHIVE_OK);
 }
 
 /*
@@ -6129,7 +6089,7 @@ isoent_cmp_node_iso9660(const struct archive_rb_node *n1,
 	struct idrent *e1 = (struct idrent *)n1;
 	struct idrent *e2 = (struct idrent *)n2;
 
-	return (isoent_cmp_iso9660_identifier(e1->isoent, e2->isoent));
+	return (isoent_cmp_iso9660_identifier(e2->isoent, e1->isoent));
 }
 
 static int
@@ -6138,7 +6098,7 @@ isoent_cmp_key_iso9660(const struct archive_rb_node *node, const void *key)
 	struct isoent *isoent = (struct isoent *)key;
 	struct idrent *idrent = (struct idrent *)node;
 
-	return (isoent_cmp_iso9660_identifier(idrent->isoent, isoent));
+	return (isoent_cmp_iso9660_identifier(isoent, idrent->isoent));
 }
 
 static int
@@ -6216,7 +6176,7 @@ isoent_cmp_node_joliet(const struct archive_rb_node *n1,
 	struct idrent *e1 = (struct idrent *)n1;
 	struct idrent *e2 = (struct idrent *)n2;
 
-	return (isoent_cmp_joliet_identifier(e1->isoent, e2->isoent));
+	return (isoent_cmp_joliet_identifier(e2->isoent, e1->isoent));
 }
 
 static int
@@ -6225,7 +6185,7 @@ isoent_cmp_key_joliet(const struct archive_rb_node *node, const void *key)
 	struct isoent *isoent = (struct isoent *)key;
 	struct idrent *idrent = (struct idrent *)node;
 
-	return (isoent_cmp_joliet_identifier(idrent->isoent, isoent));
+	return (isoent_cmp_joliet_identifier(isoent, idrent->isoent));
 }
 
 static int
@@ -6243,10 +6203,7 @@ isoent_make_sorted_files(struct archive_write *a, struct isoent *isoent,
 	}
 	isoent->children_sorted = children;
 
-	//ARCHIVE_RB_TREE_FOREACH(rn, &(idr->rbtree)) {
-	for ((rn) = ARCHIVE_RB_TREE_MIN(&(idr->rbtree)); (rn);
-		(rn) = __archive_rb_tree_iterate((&(idr->rbtree)),
-		       (rn), ARCHIVE_RB_DIR_LEFT)) {
+	ARCHIVE_RB_TREE_FOREACH(rn, &(idr->rbtree)) {
 		struct idrent *idrent = (struct idrent *)rn;
 		*children ++ = idrent->isoent;
 	}
@@ -6840,8 +6797,7 @@ isoent_create_boot_catalog(struct archive_write *a, struct isoent *rootent)
 	isoent->virtual = 1;
 
 	/* Add the "boot.catalog" entry into tree */
-	isoent = isoent_tree(a, isoent);
-	if (isoent == NULL)
+	if (isoent_tree(a, &isoent) != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 
 	iso9660->el_torito.catalog = isoent;
