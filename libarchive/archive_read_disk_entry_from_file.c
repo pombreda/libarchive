@@ -224,6 +224,41 @@ archive_read_disk_entry_from_file(struct archive *_a,
 static void setup_acl_posix1e(struct archive_read_disk *a,
     struct archive_entry *entry, acl_t acl, int archive_entry_acl_type);
 
+/*
+ * For POSIX.1e ACLs, if a default ACL only has entries for
+ * owner, owning group, and other, then it can be represented with
+ * just mode bits.  Such ACLs are 'trivial' and don't need to be
+ * stored.
+ *
+ * Note: It is probably not worthwhile trying to do this
+ * for NFS4 ACLs; determining 'trivial' NFS4 ACLs is very
+ * system-dependent because systems assume a bunch of
+ * specific NFS4 ACLs.
+ */
+static int posix1e_acl_is_trivial(acl_t acl)
+{
+	acl_tag_t	 acl_tag;
+	acl_entry_t	 acl_entry;
+	int		 s;
+
+	s = acl_get_entry(acl, ACL_FIRST_ENTRY, &acl_entry);
+	while (s == 1) {
+		acl_get_tag_type(acl_entry, &acl_tag);
+		switch (acl_tag) {
+		case ACL_USER:
+		case ACL_GROUP:
+			return (0);
+		case ACL_MASK:
+		case ACL_USER_OBJ:
+		case ACL_GROUP_OBJ:
+		case ACL_OTHER:
+			continue;
+		}
+		s = acl_get_entry(acl, ACL_NEXT_ENTRY, &acl_entry);
+	}
+	return (1);
+}
+
 static int
 setup_acls_posix1e(struct archive_read_disk *a,
     struct archive_entry *entry, int fd)
@@ -252,6 +287,11 @@ setup_acls_posix1e(struct archive_read_disk *a,
 #endif
 	else
 		acl = acl_get_file(accpath, ACL_TYPE_ACCESS);
+
+	if (posix1e_acl_is_trivial(acl)) {
+		acl_free(acl);
+		return (ARCHIVE_OK);
+	}
 	if (acl != NULL) {
 		setup_acl_posix1e(a, entry, acl,
 		    ARCHIVE_ENTRY_ACL_TYPE_ACCESS);
@@ -261,6 +301,7 @@ setup_acls_posix1e(struct archive_read_disk *a,
 	/* Only directories can have default ACLs. */
 	if (S_ISDIR(archive_entry_mode(entry))) {
 		acl = acl_get_file(accpath, ACL_TYPE_DEFAULT);
+		/* Note: Default ACL is never trivial. */
 		if (acl != NULL) {
 			setup_acl_posix1e(a, entry, acl,
 			    ARCHIVE_ENTRY_ACL_TYPE_DEFAULT);
