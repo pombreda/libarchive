@@ -142,7 +142,7 @@ static void	next_field_w(const wchar_t **wp, const wchar_t **start,
 		    const wchar_t **end, wchar_t *sep);
 static int	prefix_w(const wchar_t *start, const wchar_t *end,
 		    const wchar_t *test);
-static void
+static int
 archive_entry_acl_add_entry_w_len(struct archive_entry *entry, int type,
 		    int permset, int tag, int id, const wchar_t *name, size_t);
 
@@ -1248,52 +1248,55 @@ archive_entry_acl_clear(struct archive_entry *entry)
 /*
  * Add a single ACL entry to the internal list of ACL data.
  */
-void
+int
 archive_entry_acl_add_entry(struct archive_entry *entry,
     int type, int permset, int tag, int id, const char *name)
 {
 	struct ae_acl *ap;
 
 	if (acl_special(entry, type, permset, tag) == 0)
-		return;
+		return ARCHIVE_OK;
 	ap = acl_new_entry(entry, type, permset, tag, id);
 	if (ap == NULL) {
 		/* XXX Error XXX */
-		return;
+		return ARCHIVE_FAILED;
 	}
 	if (name != NULL  &&  *name != '\0')
 		aes_copy_mbs(&ap->name, name);
 	else
 		aes_clean(&ap->name);
+	return ARCHIVE_OK;
 }
 
 /*
  * As above, but with a wide-character name.
  */
-void
+int
 archive_entry_acl_add_entry_w(struct archive_entry *entry,
     int type, int permset, int tag, int id, const wchar_t *name)
 {
-	archive_entry_acl_add_entry_w_len(entry, type, permset, tag, id, name, wcslen(name));
+	return archive_entry_acl_add_entry_w_len(entry,
+	    type, permset, tag, id, name, wcslen(name));
 }
 
-static void
+static int
 archive_entry_acl_add_entry_w_len(struct archive_entry *entry,
     int type, int permset, int tag, int id, const wchar_t *name, size_t len)
 {
 	struct ae_acl *ap;
 
 	if (acl_special(entry, type, permset, tag) == 0)
-		return;
+		return ARCHIVE_OK;
 	ap = acl_new_entry(entry, type, permset, tag, id);
 	if (ap == NULL) {
 		/* XXX Error XXX */
-		return;
+		return ARCHIVE_FAILED;
 	}
 	if (name != NULL  &&  *name != L'\0' && len > 0)
 		aes_copy_wcs_len(&ap->name, name, len);
 	else
 		aes_clean(&ap->name);
+	return ARCHIVE_OK;
 }
 
 /*
@@ -1303,7 +1306,8 @@ archive_entry_acl_add_entry_w_len(struct archive_entry *entry,
 static int
 acl_special(struct archive_entry *entry, int type, int permset, int tag)
 {
-	if (type == ARCHIVE_ENTRY_ACL_TYPE_ACCESS) {
+	if (type == ARCHIVE_ENTRY_ACL_TYPE_ACCESS
+	    && ((permset & ~007) == 0)) {
 		switch (tag) {
 		case ARCHIVE_ENTRY_ACL_USER_OBJ:
 			entry->ae_stat.aest_mode &= ~0700;
@@ -1332,9 +1336,54 @@ acl_new_entry(struct archive_entry *entry,
 {
 	struct ae_acl *ap, *aq;
 
-	if (type != ARCHIVE_ENTRY_ACL_TYPE_ACCESS &&
-	    type != ARCHIVE_ENTRY_ACL_TYPE_DEFAULT)
+
+	/* Type argument must be a valid NFS4 or POSIX.1e type.
+	 * The type must agree with anything already set and
+	 * the permset must be compatible. */
+	if (type & ARCHIVE_ENTRY_ACL_TYPE_NFS4) {
+		if (entry->acl_types & ~ARCHIVE_ENTRY_ACL_TYPE_NFS4) {
+			return (NULL);
+		}
+		if (permset & ~ARCHIVE_ENTRY_ACL_PERMS_NFS4) {
+			return (NULL);
+		}
+	} else	if (type & ARCHIVE_ENTRY_ACL_TYPE_POSIX1E) {
+		if (entry->acl_types & ~ARCHIVE_ENTRY_ACL_TYPE_POSIX1E) {
+			return (NULL);
+		}
+		if (permset & ~ARCHIVE_ENTRY_ACL_PERMS_POSIX1E) {
+			return (NULL);
+		}
+	} else {
 		return (NULL);
+	}
+
+	/* Verify the tag is valid and compatible with NFS4 or POSIX.1e. */
+	switch (tag) {
+	case ARCHIVE_ENTRY_ACL_USER:
+	case ARCHIVE_ENTRY_ACL_USER_OBJ:
+	case ARCHIVE_ENTRY_ACL_GROUP:
+	case ARCHIVE_ENTRY_ACL_GROUP_OBJ:
+	case ARCHIVE_ENTRY_ACL_MASK:
+		/* Tags valid in both NFS4 and POSIX.1e */
+		break;
+	case ARCHIVE_ENTRY_ACL_OTHER:
+		/* Tags valid only in POSIX.1e. */
+		if (type & ~ARCHIVE_ENTRY_ACL_TYPE_POSIX1E) {
+			return (NULL);
+		}
+		break;
+	case ARCHIVE_ENTRY_ACL_EVERYONE:
+		/* Tags valid only in NFS4. */
+		if (type & ~ARCHIVE_ENTRY_ACL_TYPE_NFS4) {
+			return (NULL);
+		}
+		break;
+	default:
+		/* No other values are valid. */
+		return (NULL);
+	}
+
 	if (entry->acl_text_w != NULL) {
 		free(entry->acl_text_w);
 		entry->acl_text_w = NULL;
@@ -1367,6 +1416,8 @@ acl_new_entry(struct archive_entry *entry,
 	ap->tag = tag;
 	ap->id = id;
 	ap->permset = permset;
+
+	entry->acl_types |= type;
 	return (ap);
 }
 

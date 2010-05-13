@@ -29,30 +29,28 @@ __FBSDID("$FreeBSD$");
 #include <sys/acl.h>
 
 struct myacl_t {
-	int type;  /* Type of ACL: "access" or "default" */
-	int permset; /* Permissions for this class of users. */
-	int tag; /* Owner, User, Owning group, group, other, etc. */
+	int type;
+	int permset;
+	int tag;
 	int qual; /* GID or UID of user/group, depending on tag. */
 	const char *name; /* Name of user/group, depending on tag. */
 };
 
 static struct myacl_t acls2[] = {
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, ARCHIVE_ENTRY_ACL_EXECUTE | ARCHIVE_ENTRY_ACL_READ,
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW,
+	  ARCHIVE_ENTRY_ACL_EXECUTE | ARCHIVE_ENTRY_ACL_READ_DATA,
 	  ARCHIVE_ENTRY_ACL_USER_OBJ, -1, "" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, ARCHIVE_ENTRY_ACL_READ,
-	  ARCHIVE_ENTRY_ACL_USER, 77, "user77" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, 0,
-	  ARCHIVE_ENTRY_ACL_USER, 78, "user78" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, ARCHIVE_ENTRY_ACL_READ,
-	  ARCHIVE_ENTRY_ACL_GROUP_OBJ, -1, "" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, 0007,
-	  ARCHIVE_ENTRY_ACL_GROUP, 78, "group78" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS,
-	  ARCHIVE_ENTRY_ACL_WRITE | ARCHIVE_ENTRY_ACL_EXECUTE,
-	  ARCHIVE_ENTRY_ACL_OTHER, -1, "" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS,
-	  ARCHIVE_ENTRY_ACL_WRITE | ARCHIVE_ENTRY_ACL_READ | ARCHIVE_ENTRY_ACL_EXECUTE,
-	  ARCHIVE_ENTRY_ACL_MASK, -1, "" },
+//	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_READ,
+//	  ARCHIVE_ENTRY_ACL_USER, 77, "user77" },
+//	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_WRITE,
+//	  ARCHIVE_ENTRY_ACL_USER, 78, "user78" },
+//	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_READ,
+//	  ARCHIVE_ENTRY_ACL_GROUP_OBJ, -1, "" },
+//	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, 0007,
+//	  ARCHIVE_ENTRY_ACL_GROUP, 79, "group79" },
+//	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW,
+//	  ARCHIVE_ENTRY_ACL_WRITE | ARCHIVE_ENTRY_ACL_EXECUTE,
+//	  ARCHIVE_ENTRY_ACL_OTHER, -1, "" },
 	{ 0, 0, 0, 0, NULL }
 };
 
@@ -63,9 +61,10 @@ set_acls(struct archive_entry *ae, struct myacl_t *acls)
 
 	archive_entry_acl_clear(ae);
 	for (i = 0; acls[i].name != NULL; i++) {
-		archive_entry_acl_add_entry(ae,
-		    acls[i].type, acls[i].permset, acls[i].tag, acls[i].qual,
-		    acls[i].name);
+		assertEqualInt(ARCHIVE_OK,
+		    archive_entry_acl_add_entry(ae,
+			acls[i].type, acls[i].permset, acls[i].tag,
+			acls[i].qual, acls[i].name));
 	}
 }
 
@@ -88,6 +87,8 @@ acl_match(acl_entry_t aclent, struct myacl_t *myacl)
 		permset |= ARCHIVE_ENTRY_ACL_WRITE;
 	if (acl_get_perm_np(opaque_ps, ACL_READ))
 		permset |= ARCHIVE_ENTRY_ACL_READ;
+	if (acl_get_perm_np(opaque_ps, ACL_READ_DATA))
+		permset |= ARCHIVE_ENTRY_ACL_READ_DATA;
 
 	if (permset != myacl->permset)
 		return (0);
@@ -119,9 +120,6 @@ acl_match(acl_entry_t aclent, struct myacl_t *myacl)
 		break;
 	case ACL_MASK:
 		if (myacl->tag != ARCHIVE_ENTRY_ACL_MASK) return (0);
-		break;
-	case ACL_OTHER:
-		if (myacl->tag != ARCHIVE_ENTRY_ACL_OTHER) return (0);
 		break;
 	}
 	return (1);
@@ -168,9 +166,9 @@ compare_acls(acl_t acl, struct myacl_t *myacls)
 
 	/* Dump entries in the myacls array that weren't in the system acl. */
 	for (i = 0; i < n; ++i) {
-		failure(" ACL entry missing from file: "
+		failure(" ACL entry %d missing from file: "
 		    "type=%d,permset=%d,tag=%d,qual=%d,name=``%s''\n",
-		    myacls[marker[i]].type, myacls[marker[i]].permset,
+		    i, myacls[marker[i]].type, myacls[marker[i]].permset,
 		    myacls[marker[i]].tag, myacls[marker[i]].qual,
 		    myacls[marker[i]].name);
 		assert(0); /* Record this as a failure. */
@@ -188,9 +186,9 @@ compare_acls(acl_t acl, struct myacl_t *myacls)
 DEFINE_TEST(test_acl_freebsd_nfs4)
 {
 #if !defined(__FreeBSD__)
-	skipping("FreeBSD-specific ACL restore test");
-#elif __FreeBSD__ < 5
-	skipping("ACL restore supported only on FreeBSD 5.0 and later");
+	skipping("FreeBSD-specific NFS4 ACL restore test");
+#elif __FreeBSD__ < 8
+	skipping("NFS4 ACLs supported only on FreeBSD 8.0 and later");
 #else
 	struct stat st;
 	struct archive *a;
@@ -203,26 +201,25 @@ DEFINE_TEST(test_acl_freebsd_nfs4)
 	 * verify that the local filesystem does support ACLs.
 	 * If it doesn't, we'll simply skip the remaining tests.
 	 */
-	acl = acl_from_text("u::rwx,u:1:rw,g::rwx,g:15:rx,o::rwx,m::rwx");
+	acl = acl_from_text("owner@:rwxp::allow,group@:rwp:f:allow");
 	assert((void *)acl != NULL);
-	/* Create a test file and try to set an ACL on it. */
-	fd = open("pretest", O_WRONLY | O_CREAT | O_EXCL, 0777);
-	failure("Could not create test file?!");
-	if (!assert(fd >= 0)) {
+	/* Create a test dir and try to set an ACL on it. */
+	if (!assertMakeDir("pretest", 0755)) {
 		acl_free(acl);
 		return;
 	}
 
-	n = acl_set_fd(fd, acl);
+	n = acl_set_file("pretest", ACL_TYPE_NFS4, acl);
 	acl_free(acl);
 	if (n != 0 && errno == EOPNOTSUPP) {
 		close(fd);
-		skipping("ACL tests require that ACL support be enabled on the filesystem");
+		skipping("NFS4 ACL tests require that NFS4 ACLs"
+		    " be enabled on the filesystem");
 		return;
 	}
 	if (n != 0 && errno == EINVAL) {
 		close(fd);
-		skipping("This filesystem does not support POSIX.1e ACLs");
+		skipping("This filesystem does not support NFS4 ACLs");
 		return;
 	}
 	failure("acl_set_fd(): errno = %d (%s)",
@@ -239,9 +236,12 @@ DEFINE_TEST(test_acl_freebsd_nfs4)
 	ae = archive_entry_new();
 	assert(ae != NULL);
 	archive_entry_set_pathname(ae, "test0");
+	archive_entry_set_perm(ae, 0654);
 	archive_entry_set_mtime(ae, 123456, 7890);
 	archive_entry_set_size(ae, 0);
 	set_acls(ae, acls2);
+
+	/* Write the entry to disk, including ACLs. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
 	archive_entry_free(ae);
 
@@ -252,7 +252,7 @@ DEFINE_TEST(test_acl_freebsd_nfs4)
 	/* Verify the data on disk. */
 	assertEqualInt(0, stat("test0", &st));
 	assertEqualInt(st.st_mtime, 123456);
-	acl = acl_get_file("test0", ACL_TYPE_ACCESS);
+	acl = acl_get_file("test0", ACL_TYPE_NFS4);
 	assert(acl != (acl_t)NULL);
 	compare_acls(acl, acls2);
 	acl_free(acl);

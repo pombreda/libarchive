@@ -176,6 +176,7 @@ struct archive_entry {
 	/* ACL support. */
 	struct ae_acl	*acl_head;
 	struct ae_acl	*acl_p;
+	int		 acl_types;	/* OR of all types */
 	int		 acl_state;	/* See acl_next for details. */
 	wchar_t		*acl_text_w;
 

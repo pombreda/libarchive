@@ -8,9 +8,11 @@ IF(ENABLE_TEST)
     main.c
     read_open_memory.c
     test.h
-    test_acl_basic.c
     test_acl_freebsd.c
+    test_acl_freebsd_nfs4.c
+    test_acl_nfs4.c
     test_acl_pax.c
+    test_acl_posix1e.c
     test_archive_api_feature.c
     test_bad_fd.c
     test_compat_bzip2.c
@@ -132,6 +134,8 @@ IF(ENABLE_TEST)
   TARGET_LINK_LIBRARIES(libarchive_test archive_static ${ADDITIONAL_LIBS})
   SET_PROPERTY(TARGET libarchive_test PROPERTY COMPILE_DEFINITIONS
     LIBARCHIVE_STATIC LIST_H)
+  SET_PROPERTY(TARGET libarchive_test PROPERTY LINK_FLAGS_DEBUG "-g -static")
+  SET_PROPERTY(TARGET libarchive_test PROPERTY LINK_SEARCH_END_STATIC true)
 
   #
   # Generate list.h by grepping DEFINE_TEST() lines out of the C sources.

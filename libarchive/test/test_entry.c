@@ -329,7 +329,8 @@ DEFINE_TEST(test_entry)
 	assertEqualInt(7, clear);
 #endif
 
-	/* See test_acl_basic.c for tests of ACL set/get consistency. */
+	/* See test_acl_posix1e.c and test_acl_nfs4.c for tests of ACL
+	 * set/get consistency. */
 
 	/* Test xattrs set/get consistency. */
 	archive_entry_xattr_add_entry(e, "xattr1", "xattrvalue1", 12);

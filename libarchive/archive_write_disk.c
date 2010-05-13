@@ -31,6 +31,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_disk.c 201159 2009-12-29 0
 #include <sys/types.h>
 #endif
 #ifdef HAVE_SYS_ACL_H
+#define _ACL_PRIVATE /* XXX DEBUGGING XXX */
 #include <sys/acl.h>
 #endif
 #ifdef HAVE_SYS_EXTATTR_H
@@ -2378,13 +2379,20 @@ set_acls(struct archive_write_disk *a)
 {
 	int		 ret;
 
-	ret = set_acl(a, a->fd, a->entry, ACL_TYPE_ACCESS,
-	    ARCHIVE_ENTRY_ACL_TYPE_ACCESS, "access");
-	if (ret != ARCHIVE_OK)
+	if (archive_entry_acl_count(a->entry, ARCHIVE_ENTRY_ACL_TYPE_POSIX1E) > 0) {
+		ret = set_acl(a, a->fd, a->entry, ACL_TYPE_ACCESS,
+		    ARCHIVE_ENTRY_ACL_TYPE_ACCESS, "access");
+		if (ret != ARCHIVE_OK)
+			return (ret);
+		ret = set_acl(a, a->fd, a->entry, ACL_TYPE_DEFAULT,
+		    ARCHIVE_ENTRY_ACL_TYPE_DEFAULT, "default");
 		return (ret);
-	ret = set_acl(a, a->fd, a->entry, ACL_TYPE_DEFAULT,
-	    ARCHIVE_ENTRY_ACL_TYPE_DEFAULT, "default");
-	return (ret);
+	} else if (archive_entry_acl_count(a->entry, ARCHIVE_ENTRY_ACL_TYPE_NFS4) > 0) {
+		ret = set_acl(a, a->fd, a->entry, ACL_TYPE_NFS4,
+		    ARCHIVE_ENTRY_ACL_TYPE_NFS4, "nfs4");
+		return (ret);
+	} else
+		return ARCHIVE_OK;
 }
 
 
@@ -2442,14 +2450,39 @@ set_acl(struct archive_write_disk *a, int fd, struct archive_entry *entry,
 			break;
 		}
 
+		switch (ae_type) {
+		case ARCHIVE_ENTRY_ACL_TYPE_ALLOW:
+			acl_set_entry_type_np(acl_entry, ACL_ENTRY_TYPE_ALLOW);
+			break;
+		case ARCHIVE_ENTRY_ACL_TYPE_DENY:
+			acl_set_entry_type_np(acl_entry, ACL_ENTRY_TYPE_DENY);
+			break;
+		case ARCHIVE_ENTRY_ACL_TYPE_AUDIT:
+			acl_set_entry_type_np(acl_entry, ACL_ENTRY_TYPE_AUDIT);
+			break;
+		case ARCHIVE_ENTRY_ACL_TYPE_ALARM:
+			acl_set_entry_type_np(acl_entry, ACL_ENTRY_TYPE_ALARM);
+			break;
+		case ARCHIVE_ENTRY_ACL_TYPE_ACCESS:
+		case ARCHIVE_ENTRY_ACL_TYPE_DEFAULT:
+			// These don't translate directly into the system ACL.
+			break;
+		default:
+			// XXX error handling here.
+			break;
+		}
+
 		acl_get_permset(acl_entry, &acl_permset);
 		acl_clear_perms(acl_permset);
+
 		if (ae_permset & ARCHIVE_ENTRY_ACL_EXECUTE)
 			acl_add_perm(acl_permset, ACL_EXECUTE);
 		if (ae_permset & ARCHIVE_ENTRY_ACL_WRITE)
 			acl_add_perm(acl_permset, ACL_WRITE);
 		if (ae_permset & ARCHIVE_ENTRY_ACL_READ)
 			acl_add_perm(acl_permset, ACL_READ);
+		if (ae_permset & ARCHIVE_ENTRY_ACL_READ_DATA)
+			acl_add_perm(acl_permset, ACL_READ_DATA);
 	}
 
 	name = archive_entry_pathname(entry);

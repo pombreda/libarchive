@@ -356,6 +356,31 @@ __LA_DECL void	archive_entry_copy_stat(struct archive_entry *, const struct stat
 #define	ARCHIVE_ENTRY_ACL_WRITE_ACL           0x00002000
 #define	ARCHIVE_ENTRY_ACL_WRITE_OWNER         0x00004000
 #define	ARCHIVE_ENTRY_ACL_SYNCHRONIZE         0x00008000
+
+#define	ARCHIVE_ENTRY_ACL_PERMS_POSIX1E			\
+	(ARCHIVE_ENTRY_ACL_EXECUTE			\
+	    | ARCHIVE_ENTRY_ACL_WRITE			\
+	    | ARCHIVE_ENTRY_ACL_READ)
+
+#define ARCHIVE_ENTRY_ACL_PERMS_NFS4			\
+	(ARCHIVE_ENTRY_ACL_EXECUTE			\
+	    | ARCHIVE_ENTRY_ACL_READ_DATA		\
+	    | ARCHIVE_ENTRY_ACL_LIST_DIRECTORY 		\
+	    | ARCHIVE_ENTRY_ACL_WRITE_DATA		\
+	    | ARCHIVE_ENTRY_ACL_ADD_FILE		\
+	    | ARCHIVE_ENTRY_ACL_APPEND_DATA		\
+	    | ARCHIVE_ENTRY_ACL_ADD_SUBDIRECTORY	\
+	    | ARCHIVE_ENTRY_ACL_READ_NAMED_ATTRS	\
+	    | ARCHIVE_ENTRY_ACL_WRITE_NAMED_ATTRS	\
+	    | ARCHIVE_ENTRY_ACL_DELETE_CHILD		\
+	    | ARCHIVE_ENTRY_ACL_READ_ATTRIBUTES		\
+	    | ARCHIVE_ENTRY_ACL_WRITE_ATTRIBUTES	\
+	    | ARCHIVE_ENTRY_ACL_DELETE			\
+	    | ARCHIVE_ENTRY_ACL_READ_ACL		\
+	    | ARCHIVE_ENTRY_ACL_WRITE_ACL		\
+	    | ARCHIVE_ENTRY_ACL_WRITE_OWNER		\
+	    | ARCHIVE_ENTRY_ACL_SYNCHRONIZE)
+
 /*
  * Inheritance values (NFS4 ACLs only); included in permset.
  */
@@ -373,6 +398,8 @@ __LA_DECL void	archive_entry_copy_stat(struct archive_entry *, const struct stat
 #define	ARCHIVE_ENTRY_ACL_TYPE_DENY	2048 /* NFS4 only */
 #define	ARCHIVE_ENTRY_ACL_TYPE_AUDIT	4096 /* NFS4 only */
 #define	ARCHIVE_ENTRY_ACL_TYPE_ALARM	8192 /* NFS4 only */
+#define	ARCHIVE_ENTRY_ACL_TYPE_POSIX1E	(ARCHIVE_ENTRY_ACL_TYPE_ACCESS \
+	    | ARCHIVE_ENTRY_ACL_TYPE_DEFAULT)
 #define	ARCHIVE_ENTRY_ACL_TYPE_NFS4	(ARCHIVE_ENTRY_ACL_TYPE_ALLOW \
 	    | ARCHIVE_ENTRY_ACL_TYPE_DENY \
 	    | ARCHIVE_ENTRY_ACL_TYPE_AUDIT \
@@ -385,7 +412,7 @@ __LA_DECL void	archive_entry_copy_stat(struct archive_entry *, const struct stat
 #define	ARCHIVE_ENTRY_ACL_GROUP_OBJ	10004	/* Group who owns the file. */
 #define	ARCHIVE_ENTRY_ACL_MASK		10005	/* Modify group access (POSIX.1e only) */
 #define	ARCHIVE_ENTRY_ACL_OTHER		10006	/* Public. */
-#define	ARCHIVE_ENTRY_ACL_EVERYONE	10007   /* Everyone (NFS4 only) */
+#define	ARCHIVE_ENTRY_ACL_EVERYONE	10107   /* Everyone (NFS4 only) */
 
 /*
  * Set the ACL by clearing it and adding entries one at a time.
@@ -397,10 +424,10 @@ __LA_DECL void	archive_entry_copy_stat(struct archive_entry *, const struct stat
  * default and access information in a single ACL list.
  */
 __LA_DECL void	 archive_entry_acl_clear(struct archive_entry *);
-__LA_DECL void	 archive_entry_acl_add_entry(struct archive_entry *,
+__LA_DECL int	 archive_entry_acl_add_entry(struct archive_entry *,
 	    int /* type */, int /* permset */, int /* tag */,
 	    int /* qual */, const char * /* name */);
-__LA_DECL void	 archive_entry_acl_add_entry_w(struct archive_entry *,
+__LA_DECL int	 archive_entry_acl_add_entry_w(struct archive_entry *,
 	    int /* type */, int /* permset */, int /* tag */,
 	    int /* qual */, const wchar_t * /* name */);
 
