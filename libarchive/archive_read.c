@@ -298,6 +298,20 @@ client_close_proxy(struct archive_read_filter *self)
 	return (r);
 }
 
+static int64_t
+client_seek_proxy(struct archive_read_filter *self, int64_t offset, int whence)
+{
+	return (self->archive->client.seeker)((struct archive *)self->archive,
+	    self->data, offset, whence);
+}
+
+int
+archive_read_set_seek_callback(struct archive *_a, archive_seek_callback *client_seeker)
+{
+	struct archive_read *a = (struct archive_read *)_a;
+	a->client.seeker = client_seeker;
+	return (ARCHIVE_OK);
+}
 
 int
 archive_read_open2(struct archive *_a, void *client_data,
@@ -343,6 +357,7 @@ archive_read_open2(struct archive *_a, void *client_data,
 	filter->data = client_data;
 	filter->read = client_read_proxy;
 	filter->skip = client_skip_proxy;
+	filter->seek = a->client.seeker == NULL ? NULL : client_seek_proxy;
 	filter->close = client_close_proxy;
 	filter->name = "none";
 	filter->code = ARCHIVE_COMPRESSION_NONE;
@@ -765,7 +780,7 @@ free_filters(struct archive_read *a)
 	}
 }
 
-/* 
+/*
  * return the count of # of filters in use
  */
 static int
@@ -780,8 +795,8 @@ _archive_filter_count(struct archive *_a)
 	}
 	return count;
 }
-		
-	
+
+
 /*
  * Close the file and all I/O.
  */
@@ -996,13 +1011,6 @@ __archive_read_get_bidder(struct archive_read *a)
  *    to fit your request, so use this technique cautiously.  This
  *    technique is used, for example, by some of the format tasting
  *    code that has uncertain look-ahead needs.
- *
- * TODO: Someday, provide a more generic __archive_read_seek() for
- * those cases where it's useful.  This is tricky because there are lots
- * of cases where seek() is not available (reading gzip data from a
- * network socket, for instance), so there needs to be a good way to
- * communicate whether seek() is available and users of that interface
- * need to use non-seeking strategies whenever seek() is not available.
  */
 
 /*
@@ -1111,7 +1119,6 @@ __archive_read_filter_ahead(struct archive_read_filter *filter,
 					*avail = filter->avail;
 				return (NULL);
 			}
-			filter->position += bytes_read;
 			filter->client_total = bytes_read;
 			filter->client_avail = filter->client_total;
 			filter->client_next = filter->client_buff;
@@ -1284,8 +1291,6 @@ advance_file_pointer(struct archive_read_filter *filter, int64_t request)
 			return (total_bytes_skipped);
 		}
 
-		filter->position += bytes_read;
-
 		if (bytes_read >= request) {
 			filter->client_next =
 			    ((const char *)filter->client_buff) + request;
@@ -1298,4 +1303,42 @@ advance_file_pointer(struct archive_read_filter *filter, int64_t request)
 		total_bytes_skipped += bytes_read;
 		request -= bytes_read;
 	}
+}
+
+int64_t
+__archive_read_seek(struct archive_read *a, int64_t offset, int whence)
+{
+	return (__archive_read_filter_seek(a->filter, offset, whence));
+}
+
+int64_t
+__archive_read_filter_seek(struct archive_read_filter *filter,
+    int64_t offset, int whence)
+{
+	int64_t ret;
+
+	/* Basic sanity checks. */
+	if (whence == SEEK_SET && offset < 0)
+		return (ARCHIVE_FAILED);
+	if (whence == SEEK_END && offset > 0)
+		return (ARCHIVE_FAILED);
+	if (filter->seek == NULL)
+		return (ARCHIVE_FAILED);
+	/*
+	 * Note: We cannot use skip() here if seek() is unavailable,
+	 * even if the request is one that could theoretically be
+	 * handled by seek.  Clients depend on the return value
+	 * indicating the actual file position, and skip() cannot
+	 * reliably provide that.
+	 */
+
+	ret = (filter->seek)(filter, offset, whence);
+	if (ret >= 0) { /* Success has consequences. */
+		filter->end_of_file = 0;
+		filter->client_avail = 0; /* Forget in-flight data. */
+		filter->avail = 0;
+		filter->bytes_consumed = ret; /* Our new position. */
+	}
+	/* N.B.: If seek failed, file pointer must be unchanged! */
+	return ret;
 }

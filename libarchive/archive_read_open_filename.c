@@ -82,6 +82,7 @@ static off_t	file_skip(struct archive *, void *, off_t request);
 static int64_t	file_skip(struct archive *, void *, int64_t request);
 #endif
 static off_t	file_skip_lseek(struct archive *, void *, off_t request);
+static off_t	file_seek(struct archive *, void *, int64_t, int);
 
 int
 archive_read_open_file(struct archive *a, const char *filename,
@@ -218,8 +219,10 @@ archive_read_open_filename(struct archive *a, const char *filename,
 	mine->st_mode = st.st_mode;
 
 	/* Disk-like inputs can use lseek(). */
-	if (is_disk_like)
+	if (is_disk_like) {
 		mine->use_lseek = 1;
+		archive_read_set_seek_callback(a, file_seek);
+	}
 
 	return (archive_read_open2(a, mine,
 		NULL, file_read, file_skip, file_close));
@@ -301,6 +304,18 @@ file_skip_lseek(struct archive *a, void *client_data, off_t request)
 		archive_set_error(a, errno, "Error seeking in '%s'",
 		    mine->filename);
 	return (-1);
+}
+
+/*
+ * General seek for regular files and disk-like devices.
+ * This has some of the same issues as file_skip_lseek above.
+ */
+static int64_t
+file_seek(struct archive *a, void *client_data, int64_t request, int whence)
+{
+	struct read_file_data *mine = (struct read_file_data *)client_data;
+
+	return lseek(mine->fd, request, whence);
 }
 
 

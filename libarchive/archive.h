@@ -226,6 +226,14 @@ typedef __LA_INT64_T	archive_skip_callback(struct archive *,
 			    void *_client_data, __LA_INT64_T request);
 #endif
 
+/*
+ * General seek function.  Use 'whence' constants from stdio.h.
+ * Warning: Do not hook this up to lseek() unless you're certain that
+ * you're working with a regular file on disk!
+ */
+typedef __LA_INT64_T	archive_seek_callback(struct archive *,
+    void * /* client_data */, __LA_INT64_T /* offset */, int /* whence */);
+
 /* Returns size actually written, zero on EOF, -1 on error. */
 typedef __LA_SSIZE_T	archive_write_callback(struct archive *,
 			    void *_client_data,
@@ -358,6 +366,9 @@ __LA_DECL int archive_read_support_format_tar(struct archive *);
 __LA_DECL int archive_read_support_format_xar(struct archive *);
 __LA_DECL int archive_read_support_format_zip(struct archive *);
 
+
+__LA_DECL int archive_read_set_seek_callback(struct archive *,
+		     archive_seek_callback *);
 
 /* Open the archive using callbacks for archive I/O. */
 __LA_DECL int archive_read_open(struct archive *, void *_client_data,

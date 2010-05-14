@@ -86,6 +86,8 @@ struct archive_read_filter {
 	ssize_t (*read)(struct archive_read_filter *, const void **);
 	/* Skip forward this many bytes. */
 	int64_t (*skip)(struct archive_read_filter *self, int64_t request);
+	/* General seek. */
+	int64_t (*seek)(struct archive_read_filter *self, int64_t offset, int whence);
 	/* Close (just this filter) and free(self). */
 	int (*close)(struct archive_read_filter *self);
 	/* My private data. */
@@ -103,7 +105,6 @@ struct archive_read_filter {
 	size_t		 client_total;
 	const char	*client_next;
 	size_t		 client_avail;
-	int64_t		 position;
 	char		 end_of_file;
 	char		 fatal;
 };
@@ -119,6 +120,7 @@ struct archive_read_filter {
 struct archive_read_client {
 	archive_read_callback	*reader;
 	archive_skip_callback	*skipper;
+	archive_seek_callback	*seeker;
 	archive_close_callback	*closer;
 };
 
@@ -158,10 +160,7 @@ struct archive_read {
 
 	/*
 	 * Format detection is mostly the same as compression
-	 * detection, with one significant difference: The bidders
-	 * use the read_ahead calls above to examine the stream rather
-	 * than having the supervisor hand them a block of data to
-	 * examine.
+	 * detection.
 	 */
 
 	struct archive_format_descriptor {
@@ -210,5 +209,7 @@ const void *__archive_read_filter_ahead(struct archive_read_filter *,
     size_t, ssize_t *);
 int64_t	__archive_read_consume(struct archive_read *, int64_t);
 int64_t	__archive_read_filter_consume(struct archive_read_filter *, int64_t);
+int64_t __archive_read_seek(struct archive_read *, int64_t, int);
+int64_t __archive_read_filter_seek(struct archive_read_filter *, int64_t, int);
 int __archive_read_program(struct archive_read_filter *, const char *);
 #endif
