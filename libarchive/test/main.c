@@ -1826,6 +1826,16 @@ get_refdir(const char *d)
 	strncat(tried, buff, sizeof(tried) - strlen(tried) - 1);
 	strncat(tried, "\n", sizeof(tried) - strlen(tried) - 1);
 
+#if defined(LIBRARY)
+	snprintf(buff, sizeof(buff), "%s/../%s/test", pwd, LIBRARY);
+#else
+	snprintf(buff, sizeof(buff), "%s/../%s/test", pwd, PROGRAM);
+#endif
+	p = slurpfile(NULL, "%s/%s", buff, KNOWNREF);
+	if (p != NULL) goto success;
+	strncat(tried, buff, sizeof(tried) - strlen(tried) - 1);
+	strncat(tried, "\n", sizeof(tried) - strlen(tried) - 1);
+
 	if (memcmp(pwd, "/usr/obj", 8) == 0) {
 		snprintf(buff, sizeof(buff), "%s", pwd + 8);
 		p = slurpfile(NULL, "%s/%s", buff, KNOWNREF);
