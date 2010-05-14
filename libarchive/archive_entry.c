@@ -1344,7 +1344,9 @@ acl_new_entry(struct archive_entry *entry,
 		if (entry->acl_types & ~ARCHIVE_ENTRY_ACL_TYPE_NFS4) {
 			return (NULL);
 		}
-		if (permset & ~ARCHIVE_ENTRY_ACL_PERMS_NFS4) {
+		if (permset &
+		    ~(ARCHIVE_ENTRY_ACL_PERMS_NFS4
+			| ARCHIVE_ENTRY_ACL_INHERITANCE_NFS4)) {
 			return (NULL);
 		}
 	} else	if (type & ARCHIVE_ENTRY_ACL_TYPE_POSIX1E) {
@@ -1364,9 +1366,9 @@ acl_new_entry(struct archive_entry *entry,
 	case ARCHIVE_ENTRY_ACL_USER_OBJ:
 	case ARCHIVE_ENTRY_ACL_GROUP:
 	case ARCHIVE_ENTRY_ACL_GROUP_OBJ:
-	case ARCHIVE_ENTRY_ACL_MASK:
 		/* Tags valid in both NFS4 and POSIX.1e */
 		break;
+	case ARCHIVE_ENTRY_ACL_MASK:
 	case ARCHIVE_ENTRY_ACL_OTHER:
 		/* Tags valid only in POSIX.1e. */
 		if (type & ~ARCHIVE_ENTRY_ACL_TYPE_POSIX1E) {

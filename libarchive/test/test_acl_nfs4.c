@@ -63,29 +63,91 @@ static struct acl_t acls1[] = {
 	  ARCHIVE_ENTRY_ACL_EVERYONE, -1, "" },
 };
 
-#if 0
 static struct acl_t acls2[] = {
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, ARCHIVE_ENTRY_ACL_EXECUTE | ARCHIVE_ENTRY_ACL_READ,
+	/* An entry for each type. */
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, 0,
+	  ARCHIVE_ENTRY_ACL_USER, 108, "user108" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_DENY, 0,
+	  ARCHIVE_ENTRY_ACL_USER, 109, "user109" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_AUDIT, 0,
+	  ARCHIVE_ENTRY_ACL_USER, 110, "user110" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALARM, 0,
+	  ARCHIVE_ENTRY_ACL_USER, 111, "user111" },
+
+	/* An entry for each permission. */
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_EXECUTE,
+	  ARCHIVE_ENTRY_ACL_USER, 112, "user112" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_READ_DATA,
+	  ARCHIVE_ENTRY_ACL_USER, 113, "user113" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_LIST_DIRECTORY,
+	  ARCHIVE_ENTRY_ACL_USER, 114, "user114" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_WRITE_DATA,
+	  ARCHIVE_ENTRY_ACL_USER, 115, "user115" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_ADD_FILE,
+	  ARCHIVE_ENTRY_ACL_USER, 116, "user116" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_APPEND_DATA,
+	  ARCHIVE_ENTRY_ACL_USER, 117, "user117" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_ADD_SUBDIRECTORY,
+	  ARCHIVE_ENTRY_ACL_USER, 118, "user118" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_READ_NAMED_ATTRS,
+	  ARCHIVE_ENTRY_ACL_USER, 119, "user119" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_WRITE_NAMED_ATTRS,
+	  ARCHIVE_ENTRY_ACL_USER, 120, "user120" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_DELETE_CHILD,
+	  ARCHIVE_ENTRY_ACL_USER, 121, "user121" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_READ_ATTRIBUTES,
+	  ARCHIVE_ENTRY_ACL_USER, 122, "user122" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_WRITE_ATTRIBUTES,
+	  ARCHIVE_ENTRY_ACL_USER, 123, "user123" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_DELETE,
+	  ARCHIVE_ENTRY_ACL_USER, 124, "user124" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_READ_ACL,
+	  ARCHIVE_ENTRY_ACL_USER, 125, "user125" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_WRITE_ACL,
+	  ARCHIVE_ENTRY_ACL_USER, 126, "user126" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_WRITE_OWNER,
+	  ARCHIVE_ENTRY_ACL_USER, 127, "user127" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_SYNCHRONIZE,
+	  ARCHIVE_ENTRY_ACL_USER, 128, "user128" },
+
+	/* One entry with each inheritance value. */
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW,
+	  ARCHIVE_ENTRY_ACL_READ_DATA | ARCHIVE_ENTRY_ACL_ENTRY_FILE_INHERIT,
+	  ARCHIVE_ENTRY_ACL_USER, 129, "user129" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW,
+	  ARCHIVE_ENTRY_ACL_READ_DATA | ARCHIVE_ENTRY_ACL_ENTRY_DIRECTORY_INHERIT,
+	  ARCHIVE_ENTRY_ACL_USER, 130, "user130" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW,
+	  ARCHIVE_ENTRY_ACL_READ_DATA | ARCHIVE_ENTRY_ACL_ENTRY_NO_PROPAGATE_INHERIT,
+	  ARCHIVE_ENTRY_ACL_USER, 131, "user131" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW,
+	  ARCHIVE_ENTRY_ACL_READ_DATA | ARCHIVE_ENTRY_ACL_ENTRY_INHERIT_ONLY,
+	  ARCHIVE_ENTRY_ACL_USER, 132, "user132" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_AUDIT,
+	  ARCHIVE_ENTRY_ACL_READ_DATA | ARCHIVE_ENTRY_ACL_ENTRY_SUCCESSFUL_ACCESS,
+	  ARCHIVE_ENTRY_ACL_USER, 133, "user133" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_AUDIT,
+	  ARCHIVE_ENTRY_ACL_READ_DATA | ARCHIVE_ENTRY_ACL_ENTRY_FAILED_ACCESS,
+	  ARCHIVE_ENTRY_ACL_USER, 134, "user134" },
+
+	/* One entry for each qualifier. */
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_EXECUTE,
+	  ARCHIVE_ENTRY_ACL_USER, 135, "user135" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_EXECUTE,
 	  ARCHIVE_ENTRY_ACL_USER_OBJ, -1, "" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, ARCHIVE_ENTRY_ACL_READ,
-	  ARCHIVE_ENTRY_ACL_USER, 77, "user77" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, 0,
-	  ARCHIVE_ENTRY_ACL_USER, 78, "user78" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, ARCHIVE_ENTRY_ACL_READ,
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_EXECUTE,
+	  ARCHIVE_ENTRY_ACL_GROUP, 136, "group136" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_EXECUTE,
 	  ARCHIVE_ENTRY_ACL_GROUP_OBJ, -1, "" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, 0007,
-	  ARCHIVE_ENTRY_ACL_GROUP, 78, "group78" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, ARCHIVE_ENTRY_ACL_WRITE | ARCHIVE_ENTRY_ACL_EXECUTE,
-	  ARCHIVE_ENTRY_ACL_OTHER, -1, "" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_EXECUTE,
+	  ARCHIVE_ENTRY_ACL_EVERYONE, -1, "" },
 };
-#endif
 
 /*
- * POSIX.1e entry types; attempts to set these on top of NFS4
- * attributes should fail.
+ * Entries that should be rejected when we attempt to set them
+ * on an ACL that already has NFS4 entries.
  */
-#if 0
-static struct acl_t acls_posix1e[] = {
+static struct acl_t acls_bad[] = {
 	/* POSIX.1e ACL types */
 	{ ARCHIVE_ENTRY_ACL_TYPE_ACCESS, ARCHIVE_ENTRY_ACL_EXECUTE,
 	  ARCHIVE_ENTRY_ACL_USER, 78, "" },
@@ -95,8 +157,15 @@ static struct acl_t acls_posix1e[] = {
 	/* POSIX.1e tags */
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_EXECUTE,
 	  ARCHIVE_ENTRY_ACL_OTHER, -1, "" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_EXECUTE,
+	  ARCHIVE_ENTRY_ACL_MASK, -1, "" },
+
+	/* POSIX.1e permissions */
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_READ,
+	  ARCHIVE_ENTRY_ACL_EVERYONE, -1, "" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_WRITE,
+	  ARCHIVE_ENTRY_ACL_EVERYONE, -1, "" },
 };
-#endif
 
 static void
 set_acls(struct archive_entry *ae, struct acl_t *acls, int n)
@@ -105,6 +174,9 @@ set_acls(struct archive_entry *ae, struct acl_t *acls, int n)
 
 	archive_entry_acl_clear(ae);
 	for (i = 0; i < n; i++) {
+		failure("type=%d, permset=%d, tag=%d, qual=%d name=%s",
+		    acls[i].type, acls[i].permset, acls[i].tag,
+		    acls[i].qual, acls[i].name);
 		assertEqualInt(ARCHIVE_OK,
 		    archive_entry_acl_add_entry(ae,
 			acls[i].type, acls[i].permset, acls[i].tag,
@@ -154,7 +226,7 @@ compare_acls(struct archive_entry *ae, struct acl_t *acls, int n)
 		marker[i] = i;
 
 	while (0 == (r = archive_entry_acl_next(ae,
-			 ARCHIVE_ENTRY_ACL_TYPE_ACCESS,
+			 ARCHIVE_ENTRY_ACL_TYPE_NFS4,
 			 &type, &permset, &tag, &qual, &name))) {
 		for (i = 0, matched = 0; i < n && !matched; i++) {
 			if (acl_match(&acls[marker[i]], type, permset,
@@ -182,6 +254,7 @@ compare_acls(struct archive_entry *ae, struct acl_t *acls, int n)
 DEFINE_TEST(test_acl_nfs4)
 {
 	struct archive_entry *ae;
+	int i;
 
 	/* Create a simple archive_entry. */
 	assert((ae = archive_entry_new()) != NULL);
@@ -193,45 +266,37 @@ DEFINE_TEST(test_acl_nfs4)
 	assertEqualInt(4,
 	    archive_entry_acl_reset(ae, ARCHIVE_ENTRY_ACL_TYPE_NFS4));
 	compare_acls(ae, acls1, sizeof(acls1)/sizeof(acls1[0]));
-	failure("Basic ACLs should set mode to 0142, not %04o",
-	    archive_entry_mode(ae)&0777);
-	assert((archive_entry_mode(ae) & 0777) == 0142);
 
-#if 0
 	/* A more extensive set of ACLs. */
 	set_acls(ae, acls2, sizeof(acls2)/sizeof(acls2[0]));
-	assertEqualInt(6, archive_entry_acl_reset(ae, ARCHIVE_ENTRY_ACL_TYPE_ACCESS));
-	compare_acls(ae, acls2, sizeof(acls2)/sizeof(acls2[0]), 0543);
-	failure("Basic ACLs should set mode to 0543, not %04o",
-	    archive_entry_mode(ae)&0777);
-	assert((archive_entry_mode(ae) & 0777) == 0543);
+	assertEqualInt(32,
+	    archive_entry_acl_reset(ae, ARCHIVE_ENTRY_ACL_TYPE_NFS4));
+	compare_acls(ae, acls2, sizeof(acls2)/sizeof(acls2[0]));
 
 	/*
 	 * Check that clearing ACLs gets rid of them all by repeating
 	 * the first test.
 	 */
-	set_acls(ae, acls0, sizeof(acls0)/sizeof(acls0[0]));
+	set_acls(ae, acls1, sizeof(acls1)/sizeof(acls1[0]));
 	failure("Basic ACLs shouldn't be stored as extended ACLs");
-	assert(0 == archive_entry_acl_reset(ae, ARCHIVE_ENTRY_ACL_TYPE_ACCESS));
-	failure("Basic ACLs should set mode to 0142, not %04o",
-	    archive_entry_mode(ae)&0777);
-	assert((archive_entry_mode(ae) & 0777) == 0142);
+	assertEqualInt(4,
+	    archive_entry_acl_reset(ae, ARCHIVE_ENTRY_ACL_TYPE_NFS4));
 
 	/*
 	 * Different types of malformed ACL entries that should
-	 * fail when added to existing POSIX.1e ACLs.
+	 * fail when added to existing NFS4 ACLs.
 	 */
 	set_acls(ae, acls2, sizeof(acls2)/sizeof(acls2[0]));
-	for (i = 0; i < sizeof(acls_nfs4)/sizeof(acls_nfs4[0]); ++i) {
-		struct acl_t *p = &acls_nfs4[i];
+	for (i = 0; i < sizeof(acls_bad)/sizeof(acls_bad[0]); ++i) {
+		struct acl_t *p = &acls_bad[i];
 		failure("Malformed ACL test #%d", i);
 		assertEqualInt(ARCHIVE_FAILED,
 		    archive_entry_acl_add_entry(ae,
 			p->type, p->permset, p->tag, p->qual, p->name));
-		assertEqualInt(6,
+		failure("Malformed ACL test #%d", i);
+		assertEqualInt(32,
 		    archive_entry_acl_reset(ae,
-			ARCHIVE_ENTRY_ACL_TYPE_ACCESS));
+			ARCHIVE_ENTRY_ACL_TYPE_NFS4));
 	}
-#endif
 	archive_entry_free(ae);
 }

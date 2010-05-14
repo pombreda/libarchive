@@ -391,6 +391,14 @@ __LA_DECL void	archive_entry_copy_stat(struct archive_entry *, const struct stat
 #define	ARCHIVE_ENTRY_ACL_ENTRY_SUCCESSFUL_ACCESS           0x20000000
 #define	ARCHIVE_ENTRY_ACL_ENTRY_FAILED_ACCESS               0x40000000
 
+#define	ARCHIVE_ENTRY_ACL_INHERITANCE_NFS4			\
+	(ARCHIVE_ENTRY_ACL_ENTRY_FILE_INHERIT			\
+	    | ARCHIVE_ENTRY_ACL_ENTRY_DIRECTORY_INHERIT		\
+	    | ARCHIVE_ENTRY_ACL_ENTRY_NO_PROPAGATE_INHERIT	\
+	    | ARCHIVE_ENTRY_ACL_ENTRY_INHERIT_ONLY		\
+	    | ARCHIVE_ENTRY_ACL_ENTRY_SUCCESSFUL_ACCESS		\
+	    | ARCHIVE_ENTRY_ACL_ENTRY_FAILED_ACCESS)
+
 /* We need to be able to specify combinations of these. */
 #define	ARCHIVE_ENTRY_ACL_TYPE_ACCESS	256  /* POSIX.1e only */
 #define	ARCHIVE_ENTRY_ACL_TYPE_DEFAULT	512  /* POSIX.1e only */
@@ -411,7 +419,7 @@ __LA_DECL void	archive_entry_copy_stat(struct archive_entry *, const struct stat
 #define	ARCHIVE_ENTRY_ACL_GROUP		10003	/* Specified group. */
 #define	ARCHIVE_ENTRY_ACL_GROUP_OBJ	10004	/* Group who owns the file. */
 #define	ARCHIVE_ENTRY_ACL_MASK		10005	/* Modify group access (POSIX.1e only) */
-#define	ARCHIVE_ENTRY_ACL_OTHER		10006	/* Public. */
+#define	ARCHIVE_ENTRY_ACL_OTHER		10006	/* Public (POSIX.1e only) */
 #define	ARCHIVE_ENTRY_ACL_EVERYONE	10107   /* Everyone (NFS4 only) */
 
 /*
