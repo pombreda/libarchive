@@ -239,15 +239,19 @@ file_read(struct transform *t, void *client_data, const void **buff)
 	 * worth of data. */
 
 	*buff = mine->buffer;
-	bytes_read = read(mine->fd, mine->buffer, mine->block_size);
-	if (bytes_read < 0) {
-		if (mine->filename[0] == '\0')
-			transform_set_error(t, errno, "Error reading stdin");
-		else
-			transform_set_error(t, errno, "Error reading '%s'",
-			    mine->filename);
+	for (;;) {
+		bytes_read = read(mine->fd, mine->buffer, mine->block_size);
+		if (bytes_read < 0) {
+			if (errno == EINTR)
+				continue;
+			else if (mine->filename[0] == '\0')
+				transform_set_error(t, errno, "Error reading stdin");
+			else
+				transform_set_error(t, errno, "Error reading '%s'",
+				    mine->filename);
+		}
+		return (bytes_read);
 	}
-	return (bytes_read);
 }
 
 /*
