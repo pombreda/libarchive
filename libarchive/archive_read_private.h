@@ -37,8 +37,6 @@
 #include "archive_string.h"
 #include "archive_private.h"
 
-struct archive_read;
-
 struct archive_read {
 	struct archive	archive;
 
