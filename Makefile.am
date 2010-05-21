@@ -243,6 +243,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_compat_cpio.c			\
 	libarchive/test/test_compat_gtar.c			\
 	libarchive/test/test_compat_gzip.c			\
+	libarchive/test/test_compat_lzip.c			\
 	libarchive/test/test_compat_lzma.c			\
 	libarchive/test/test_compat_solaris_tar_acl.c		\
 	libarchive/test/test_compat_tar_hardlink.c		\
@@ -272,6 +273,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_read_format_cpio_bin_be.c		\
 	libarchive/test/test_read_format_cpio_bin_bz2.c		\
 	libarchive/test/test_read_format_cpio_bin_gz.c		\
+	libarchive/test/test_read_format_cpio_bin_lzip.c	\
 	libarchive/test/test_read_format_cpio_bin_lzma.c	\
 	libarchive/test/test_read_format_cpio_bin_xz.c		\
 	libarchive/test/test_read_format_cpio_odc.c		\
@@ -317,6 +319,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_write_compress.c			\
 	libarchive/test/test_write_compress_bzip2.c		\
 	libarchive/test/test_write_compress_gzip.c		\
+	libarchive/test/test_write_compress_lzip.c		\
 	libarchive/test/test_write_compress_lzma.c		\
 	libarchive/test/test_write_compress_program.c		\
 	libarchive/test/test_write_compress_xz.c		\

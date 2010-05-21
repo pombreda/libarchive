@@ -256,7 +256,7 @@ static int	set_fflags_platform(struct archive_write_disk *, int fd,
 static int	set_ownership(struct archive_write_disk *);
 static int	set_mode(struct archive_write_disk *, int mode);
 static int	set_time(int, int, const char *, time_t, long, time_t, long);
-static int	set_times(int, int, const char *,
+static int	set_times(struct archive_write_disk *, int, int, const char *,
 		    time_t, long, time_t, long, time_t, long);
 static int	set_times_from_entry(struct archive_write_disk *);
 static struct fixup_entry *sort_dir_list(struct fixup_entry *p);
@@ -813,10 +813,6 @@ _archive_write_disk_finish_entry(struct archive *_a)
 		int r2 = set_mode(a, a->mode);
 		if (r2 < ret) ret = r2;
 	}
-	if (a->todo & TODO_ACLS) {
-		int r2 = set_acls(a);
-		if (r2 < ret) ret = r2;
-	}
 
 	/*
 	 * Security-related extended attributes (such as
@@ -842,6 +838,15 @@ _archive_write_disk_finish_entry(struct archive *_a)
 	 */
 	if (a->todo & TODO_TIMES) {
 		int r2 = set_times_from_entry(a);
+		if (r2 < ret) ret = r2;
+	}
+
+	/*
+	 * ACLs must be restored after timestamps because there are
+	 * ACLs that prevent attribute changes (including time).
+	 */
+	if (a->todo & TODO_ACLS) {
+		int r2 = set_acls(a);
 		if (r2 < ret) ret = r2;
 	}
 
@@ -1323,7 +1328,7 @@ _archive_write_disk_close(struct archive *_a)
 	while (p != NULL) {
 		a->pst = NULL; /* Mark stat cache as out-of-date. */
 		if (p->fixup & TODO_TIMES) {
-			set_times(-1, p->mode, p->name,
+			set_times(a, -1, p->mode, p->name,
 			    p->atime, p->atime_nanos,
 			    p->birthtime, p->birthtime_nanos,
 			    p->mtime, p->mtime_nanos);
@@ -1894,7 +1899,9 @@ set_ownership(struct archive_write_disk *a)
 	return (ARCHIVE_WARN);
 }
 
-
+/*
+ * Note: Returns 0 on success, non-zero on failure.
+ */
 static int
 set_time(int fd, int mode, const char *name,
     time_t atime, long atime_nsec,
@@ -1974,12 +1981,15 @@ set_time(int fd, int mode, const char *name,
 }
 
 static int
-set_times(int fd, int mode, const char *name,
+set_times(struct archive_write_disk *a,
+    int fd, int mode, const char *name,
     time_t atime, long atime_nanos,
     time_t birthtime, long birthtime_nanos,
     time_t mtime, long mtime_nanos)
 {
-	int r1 = ARCHIVE_OK, r2 = ARCHIVE_OK;
+	/* Note: set_time doesn't use libarchive return conventions!
+	 * It uses syscall conventions.  So 0 here instead of ARCHIVE_OK. */
+	int r1 = 0, r2 = 0;
 
 #ifdef HAVE_STRUCT_STAT_ST_BIRTHTIME
 	/*
@@ -1999,7 +2009,12 @@ set_times(int fd, int mode, const char *name,
 	r2 = set_time(fd, mode, name,
 		      atime, atime_nanos,
 		      mtime, mtime_nanos);
-	return (r1 || r2) ? ARCHIVE_WARN : ARCHIVE_OK;
+	if (r1 != 0 || r2 != 0) {
+		archive_set_error(&a->archive, errno,
+				  "Can't restore time");
+		return (ARCHIVE_WARN);
+	}
+	return (ARCHIVE_OK);
 }
 
 static int
@@ -2033,7 +2048,7 @@ set_times_from_entry(struct archive_write_disk *a)
 		mtime_nsec = archive_entry_mtime_nsec(a->entry);
 	}
 
-	return set_times(a->fd, a->mode, a->name,
+	return set_times(a, a->fd, a->mode, a->name,
 			 atime, atime_nsec,
 			 birthtime, birthtime_nsec,
 			 mtime, mtime_nsec);

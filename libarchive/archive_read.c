@@ -864,7 +864,16 @@ get_filter(struct archive *_a, int n)
 {
 	struct archive_read *a = (struct archive_read *)_a;
 	struct archive_read_filter *f = a->filter;
-	/* XXX handle n == -1 */
+	/* We use n == -1 for 'the last filter', which is always the client proxy. */
+	if (n == -1 && f != NULL) {
+		struct archive_read_filter *last = f;
+		f = f->upstream;
+		while (f != NULL) {
+			last = f;
+			f = f->upstream;
+		}
+		return (last);
+	}
 	if (n < 0)
 		return NULL;
 	while (n > 0 && f != NULL) {
@@ -1111,7 +1120,6 @@ __archive_read_filter_ahead(struct archive_read_filter *filter,
 					*avail = filter->avail;
 				return (NULL);
 			}
-			filter->position += bytes_read;
 			filter->client_total = bytes_read;
 			filter->client_avail = filter->client_total;
 			filter->client_next = filter->client_buff;
@@ -1283,8 +1291,6 @@ advance_file_pointer(struct archive_read_filter *filter, int64_t request)
 			filter->end_of_file = 1;
 			return (total_bytes_skipped);
 		}
-
-		filter->position += bytes_read;
 
 		if (bytes_read >= request) {
 			filter->client_next =
