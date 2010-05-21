@@ -1999,7 +1999,7 @@ set_times(int fd, int mode, const char *name,
 	r2 = set_time(fd, mode, name,
 		      atime, atime_nanos,
 		      mtime, mtime_nanos);
-	return (r1 < r2) ? r1 : r2;
+	return (r1 || r2) ? ARCHIVE_WARN : ARCHIVE_OK;
 }
 
 static int

@@ -41,17 +41,6 @@ struct acl_t {
 	const char *name; /* Name of user/group, depending on tag. */
 };
 
-#if 0
-static struct acl_t acls0[] = {
-	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_EXECUTE,
-	  ARCHIVE_ENTRY_ACL_USER_OBJ, 0, "" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_READ_DATA,
-	  ARCHIVE_ENTRY_ACL_GROUP_OBJ, 0, "" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_WRITE_DATA,
-	  ARCHIVE_ENTRY_ACL_EVERYONE, 0, "" },
-};
-#endif
-
 static struct acl_t acls1[] = {
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_EXECUTE,
 	  ARCHIVE_ENTRY_ACL_USER_OBJ, -1, "" },
