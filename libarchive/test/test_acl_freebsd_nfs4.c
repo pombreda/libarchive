@@ -26,6 +26,7 @@
 __FBSDID("$FreeBSD$");
 
 #if defined(__FreeBSD__) && __FreeBSD__ >= 8
+#define _ACL_PRIVATE
 #include <sys/acl.h>
 
 struct myacl_t {
@@ -37,6 +38,11 @@ struct myacl_t {
 };
 
 static struct myacl_t acls_reg[] = {
+	/* For this test, we need to be able to read and write the ACL. */
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW,
+	  ARCHIVE_ENTRY_ACL_READ_ACL | ARCHIVE_ENTRY_ACL_WRITE_ACL,
+	  ARCHIVE_ENTRY_ACL_USER_OBJ, -1, ""},
+
 	/* An entry for each type. */
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_EXECUTE,
 	  ARCHIVE_ENTRY_ACL_USER, 108, "user108" },
@@ -149,6 +155,10 @@ acl_match(acl_entry_t aclent, struct myacl_t *myacl)
 		permset |= ARCHIVE_ENTRY_ACL_READ;
 	if (acl_get_perm_np(opaque_ps, ACL_READ_DATA))
 		permset |= ARCHIVE_ENTRY_ACL_READ_DATA;
+	if (acl_get_perm_np(opaque_ps, ACL_READ_ACL))
+		permset |= ARCHIVE_ENTRY_ACL_READ_ACL;
+	if (acl_get_perm_np(opaque_ps, ACL_WRITE_ACL))
+		permset |= ARCHIVE_ENTRY_ACL_WRITE_ACL;
 
 	if (permset != myacl->permset)
 		return (0);
@@ -212,6 +222,7 @@ compare_acls(acl_t acl, struct myacl_t *myacls)
 		/* Search for a matching entry (tag and qualifier) */
 		for (i = 0, matched = 0; i < n && !matched; i++) {
 			if (acl_match(acl_entry, &myacls[marker[i]])) {
+fprintf(stderr, "Found match!\n");
 				/* We found a match; remove it. */
 				marker[i] = marker[n - 1];
 				n--;

@@ -2498,6 +2498,10 @@ set_acl(struct archive_write_disk *a, int fd, struct archive_entry *entry,
 			acl_add_perm(acl_permset, ACL_READ);
 		if (ae_permset & ARCHIVE_ENTRY_ACL_READ_DATA)
 			acl_add_perm(acl_permset, ACL_READ_DATA);
+		if (ae_permset & ARCHIVE_ENTRY_ACL_READ_ACL)
+			acl_add_perm(acl_permset, ACL_READ_ACL);
+		if (ae_permset & ARCHIVE_ENTRY_ACL_WRITE_ACL)
+			acl_add_perm(acl_permset, ACL_WRITE_ACL);
 	}
 
 	name = archive_entry_pathname(entry);
