@@ -2410,6 +2410,38 @@ set_acls(struct archive_write_disk *a)
 		return ARCHIVE_OK;
 }
 
+static struct {
+	int archive_perm;
+	int platform_perm;
+} acl_perm_map[] = {
+	{ARCHIVE_ENTRY_ACL_EXECUTE, ACL_EXECUTE},
+	{ARCHIVE_ENTRY_ACL_WRITE, ACL_WRITE},
+	{ARCHIVE_ENTRY_ACL_READ, ACL_READ},
+	{ARCHIVE_ENTRY_ACL_READ_DATA, ACL_READ_DATA},
+	{ARCHIVE_ENTRY_ACL_LIST_DIRECTORY, ACL_LIST_DIRECTORY},
+	{ARCHIVE_ENTRY_ACL_WRITE_DATA, ACL_WRITE_DATA},
+	{ARCHIVE_ENTRY_ACL_ADD_FILE, ACL_ADD_FILE},
+	{ARCHIVE_ENTRY_ACL_APPEND_DATA, ACL_APPEND_DATA},
+	{ARCHIVE_ENTRY_ACL_ADD_SUBDIRECTORY, ACL_ADD_SUBDIRECTORY},
+	{ARCHIVE_ENTRY_ACL_READ_NAMED_ATTRS, ACL_READ_NAMED_ATTRS},
+	{ARCHIVE_ENTRY_ACL_WRITE_NAMED_ATTRS, ACL_WRITE_NAMED_ATTRS},
+	{ARCHIVE_ENTRY_ACL_DELETE_CHILD, ACL_DELETE_CHILD},
+	{ARCHIVE_ENTRY_ACL_READ_ATTRIBUTES, ACL_READ_ATTRIBUTES},
+	{ARCHIVE_ENTRY_ACL_WRITE_ATTRIBUTES, ACL_WRITE_ATTRIBUTES},
+	{ARCHIVE_ENTRY_ACL_DELETE, ACL_DELETE},
+	{ARCHIVE_ENTRY_ACL_READ_ACL, ACL_READ_ACL},
+	{ARCHIVE_ENTRY_ACL_WRITE_ACL, ACL_WRITE_ACL},
+	{ARCHIVE_ENTRY_ACL_WRITE_OWNER, ACL_WRITE_OWNER},
+	{ARCHIVE_ENTRY_ACL_SYNCHRONIZE, ACL_SYNCHRONIZE}
+};
+
+static struct {
+	int archive_inherit;
+	int platform_inherit;
+} acl_inherit_map[] = {
+	{ARCHIVE_ENTRY_ACL_ENTRY_FILE_INHERIT, ACL_ENTRY_FILE_INHERIT},
+};
+
 
 static int
 set_acl(struct archive_write_disk *a, int fd, struct archive_entry *entry,
@@ -2418,7 +2450,8 @@ set_acl(struct archive_write_disk *a, int fd, struct archive_entry *entry,
 	acl_t		 acl;
 	acl_entry_t	 acl_entry;
 	acl_permset_t	 acl_permset;
-	int		 ret;
+	acl_flagset_t	 acl_flagset;
+	int		 ret, i;
 	int		 ae_type, ae_permset, ae_tag, ae_id;
 	uid_t		 ae_uid;
 	gid_t		 ae_gid;
@@ -2460,6 +2493,9 @@ set_acl(struct archive_write_disk *a, int fd, struct archive_entry *entry,
 		case ARCHIVE_ENTRY_ACL_OTHER:
 			acl_set_tag_type(acl_entry, ACL_OTHER);
 			break;
+		case ARCHIVE_ENTRY_ACL_EVERYONE:
+			acl_set_tag_type(acl_entry, ACL_EVERYONE);
+			break;
 		default:
 			/* XXX */
 			break;
@@ -2490,18 +2526,17 @@ set_acl(struct archive_write_disk *a, int fd, struct archive_entry *entry,
 		acl_get_permset(acl_entry, &acl_permset);
 		acl_clear_perms(acl_permset);
 
-		if (ae_permset & ARCHIVE_ENTRY_ACL_EXECUTE)
-			acl_add_perm(acl_permset, ACL_EXECUTE);
-		if (ae_permset & ARCHIVE_ENTRY_ACL_WRITE)
-			acl_add_perm(acl_permset, ACL_WRITE);
-		if (ae_permset & ARCHIVE_ENTRY_ACL_READ)
-			acl_add_perm(acl_permset, ACL_READ);
-		if (ae_permset & ARCHIVE_ENTRY_ACL_READ_DATA)
-			acl_add_perm(acl_permset, ACL_READ_DATA);
-		if (ae_permset & ARCHIVE_ENTRY_ACL_READ_ACL)
-			acl_add_perm(acl_permset, ACL_READ_ACL);
-		if (ae_permset & ARCHIVE_ENTRY_ACL_WRITE_ACL)
-			acl_add_perm(acl_permset, ACL_WRITE_ACL);
+		for (i = 0; i < sizeof(acl_perm_map) / sizeof(acl_perm_map[0]); ++i) {
+			if (ae_permset & acl_perm_map[i].archive_perm)
+				acl_add_perm(acl_permset, acl_perm_map[i].platform_perm);
+		}
+
+		acl_get_flagset_np(acl_entry, &acl_flagset);
+		acl_clear_flags_np(acl_flagset);
+		for (i = 0; i < sizeof(acl_inherit_map) / sizeof(acl_inherit_map[0]); ++i) {
+			if (ae_permset & acl_inherit_map[i].archive_inherit)
+				acl_add_flag_np(acl_flagset, acl_inherit_map[i].platform_inherit);
+		}
 	}
 
 	name = archive_entry_pathname(entry);
