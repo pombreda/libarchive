@@ -193,8 +193,8 @@ work; the Solaris tar design above might be his?)
 
 = Libarchive's implementation =
 
-_The following is purely hypothetical at the moment.
-The final implementation is likely to be significantly different._
+_I've started work on this approach and expect the
+final implementation to be pretty close to this._
 
 == Core requirements ==
 
@@ -203,7 +203,7 @@ The final implementation is likely to be significantly different._
  * It should be easy to store such ACLs as pax extended attributes, which heavily favors a UTF-8 representation.
  * Although pax has no such limitation, other formats may prefer a single-line format.
  * It must have both numeric IDs and names for each user or group.
- * It should support an extended GUID (MacOS) or SID (Windows) identifier on each entry, probably in addition to a basic numeric ID and name.
+ * It should provide an obvious path for adding extended GUID (MacOS) or SID (Windows) identifiers on each entry.
 
 == Proposed design ==
 
@@ -231,7 +231,9 @@ Within the archive, it would actually be stored as a single line:
 }}}
 
 Format description:
- * First character is type '+' for allow, '-' for deny, '?' for audit
+The ACL consists of a series of ACEs separated by commas.
+Each ACE has the following format:
+ * First character is type: '+' for allow, '-' for deny, '?' for audit
  * Permission characters (following Solaris encoding)
  * Colon
  * Inheritance characters (following Solaris encoding)
@@ -241,13 +243,13 @@ Format description:
  * Colon
  * Username
  * Colon
- * UserID
+ * Numeric user ID
+ * Someday:  colon and GUID/SID
 
-Individual ACEs are separated by commas.
 This satisfies the concerns listed earlier:
   * Textual.  Except for user/group names, everything here is 7-bit ASCII and is therefore UTF-8 compatible if the user/group names are.
   * Compact. This has no extraneous whitespace or '-' characters
-  * Username is delimited by colons before and after.
+  * Username is delimited by colons before and after.  (Many systems permit '.' or ',' characters in usernames.)
   * Variable fields appear at end to simplify parsing.
   * It will be easy to add an additional field for User/Group GUID if that proves useful.
 
