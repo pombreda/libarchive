@@ -186,6 +186,8 @@ The star website and manpages have a couple of
 oblique references to NFSv4 ACL support, but I've
 not seen any documentation or announcement of such
 functionality.
+(I do know Joerg Schilling was involved with OpenSolaris
+work; the Solaris tar design above might be his?)
 
 ------------------------------------------------------------------
 
@@ -206,14 +208,48 @@ The final implementation is likely to be significantly different._
 == Proposed design ==
 
 I propose using the following format for storing NFSv4 ACLs in pax archives written by libarchive:
- * Textual format essentially the same as the Solaris format above
-   * Omit '-' characters for size.  (Make them optional when reading the ACL.)
-   * Use single-character 'd'/'a' instead of 'deny' and 'allow'  (Parser should read either format.)
-   * Permit an additional colon-separated field after the UID/GID to hold a GUID.
  * Store the ACL in a pax attribute named LIBARCHIVE.acl.nfs4
+ * Textual format with entire ACL on one line.
 
-As a bonus, this should make it easy to read the Solaris format, since the
-same parser can be used for both.
+Example:
+{{{
+   -c::u:bin:2,
+   -x::o@,
+   +rwpAWCo::o@,
+   -rwxp::g@,
+   +::g@,
+   -rwxpAWCo::e@,
+   +aRcs::e@
+}}}
+The ACL here is the same one used in the Solaris example above.
+Compare these examples to better understand the proposed encoding.
+Note that the whitespace and line breaks here are purely for
+ease of reading.
+Within the archive, it would actually be stored as a single line:
+{{{
+-c::u:bin:2,-x::o@,+rwpAWCo::o@,-rwxp::g@,+::g@,-rwxpAWCo::e@,+aRcs::e@
+}}}
+
+Format description:
+ * First character is type '+' for allow, '-' for deny, '?' for audit
+ * Permission characters (following Solaris encoding)
+ * Colon
+ * Inheritance characters (following Solaris encoding)
+ * Colon
+ * Flag indicating who this applies to: 'u' for user, 'g' for group, 'o@' for owner, 'g@' for owning group, 'e@' for everyone
+ * If 'u' or 'g', user information follows:
+ * Colon
+ * Username
+ * Colon
+ * UserID
+
+Individual ACEs are separated by commas.
+This satisfies the concerns listed earlier:
+  * Textual.  Except for user/group names, everything here is 7-bit ASCII and is therefore UTF-8 compatible if the user/group names are.
+  * Compact. This has no extraneous whitespace or '-' characters
+  * Username is delimited by colons before and after.
+  * Variable fields appear at end to simplify parsing.
+  * It will be easy to add an additional field for User/Group GUID if that proves useful.
 
 == Implementation checklist ==
 
@@ -222,9 +258,9 @@ Fortunately, most of these are pretty minor:
 
  * Machine-independent
   * archive_entry needs to be able to store and produce ACLs.
-   * Accept a UTF-8 encoded text format.
+   * Accept and parse a UTF-8 encoded text format.
    * Produce such a string.
-   * Add an entry to the existing ACL (provided as a set of broken-down fields)
+   * Add an entry to the existing ACL (provided as a set of broken-down fields) (this is done)
    * Iterate over ACL entries providing broken-down fields.
   * Pax writer
    * Write a LIBARCHIVE.acl.nfs4 attribute when it exists in the entry
@@ -233,12 +269,12 @@ Fortunately, most of these are pretty minor:
    * Read Solaris tar 'A' record (?)
  * Machine-dependent
   * archive_read_entry_from_disk()
-   * FreeBSD 8
+   * FreeBSD 9
    * Linux (?)
    * Windows (?)
    * Mac OS X (?)
   * archive_write_disk()
-   * FreeBSD 8
+   * FreeBSD 9 (this is done)
    * Linux (?)
    * Windows (?)
    * Mac OS X (?)
