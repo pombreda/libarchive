@@ -189,6 +189,12 @@ functionality.
 (I do know Joerg Schilling was involved with OpenSolaris
 work; the Solaris tar design above might be his?)
 
+== Others? ==
+
+If you know of other tar implementations that have
+full or partial support for NFS4-style ACLs, please
+let me know.
+
 ------------------------------------------------------------------
 
 = Libarchive's implementation =
@@ -287,3 +293,9 @@ Note that with the above, bsdtar and bsdcpio will both pick up this capability f
 
 It would be nice to support NFS4 ACLs in a cpio extension.
 It would be nice to be able to read NFS4-style ACLs written by Mac OS 'tar'.
+
+-------------------------------------------------------------------
+= References =
+
+ * [http://tools.ietf.org/html/rfc3530.txt RFC 3530 - NFS4 specification]
+ * [http://tools.ietf.org/html/rfc5661 RFC 5661 - NFS4.1 specification]
