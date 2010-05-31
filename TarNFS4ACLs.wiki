@@ -272,8 +272,8 @@ Fortunately, most of these are pretty minor:
   * archive_entry needs to be able to store and produce ACLs.
    * Accept and parse a UTF-8 encoded text format.
    * Produce such a string.
-   * Add an entry to the existing ACL (provided as a set of broken-down fields) (this is done)
-   * Iterate over ACL entries providing broken-down fields.
+   * Done: Add an entry to the existing ACL (provided as a set of broken-down fields)
+   * Done: Iterate over ACL entries providing broken-down fields.
   * Pax writer
    * Write a LIBARCHIVE.acl.nfs4 attribute when it exists in the entry
   * Pax reader
@@ -286,7 +286,7 @@ Fortunately, most of these are pretty minor:
    * Windows (?)
    * Mac OS X (?)
   * archive_write_disk()
-   * FreeBSD 9 (this is done)
+   * Done: FreeBSD 9
    * Linux (?)
    * Windows (?)
    * Mac OS X (?)
