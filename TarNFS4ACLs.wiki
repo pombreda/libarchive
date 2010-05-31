@@ -242,12 +242,13 @@ Within the archive, it would actually be stored as a single line:
 Format description:
 The ACL consists of a series of ACEs separated by commas.
 Each ACE has the following format:
- * First character is type: '+' for allow, '-' for deny, '?' for audit
- * Permission characters (following Solaris encoding)
- * Colon
- * Inheritance characters (following Solaris encoding)
- * Colon
- * Flag indicating who this applies to: 'u' for user, 'g' for group, 'o@' for owner, 'g@' for owning group, 'e@' for everyone
+ * Fixed fields that appear in every ACE:
+   * First character is type: '+' for allow, '-' for deny, '?' for audit
+   * Permission characters (following Solaris encoding)
+   * Colon
+   * Inheritance characters (following Solaris encoding)
+   * Colon
+   * Flag indicating who this applies to: 'u' for user, 'g' for group, 'o@' for owner, 'g@' for owning group, 'e@' for everyone
  * If 'u' or 'g', user information follows:
    * Colon
    * Username
