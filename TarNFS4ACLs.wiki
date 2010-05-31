@@ -35,9 +35,11 @@ ACLs is quite relevant.
 I've tried to document this at [TarPosix1eACLs].
 
 
-== Apple version of GNU tar ==
+== Apple tar ==
 
-Apple stores the ACLs as an extended attribute named com.apple.acl.text
+Apple used a patched version of GNU tar until Mac OS X 10.5 and
+uses a patched version of bsdtar starting with Mac OS X 10.6.
+Both of these store the ACLs as an extended attribute named com.apple.acl.text
 in the associated resource file.
 (See [TarExtendedAttributes] for my attempt to document the resource file storage.)
 
@@ -199,12 +201,13 @@ let me know.
 
 = Libarchive's implementation =
 
-_I've started work on this approach and expect the
+_As of June 2010, I've started work on this approach and expect the
 final implementation to be pretty close to this._
 
 == Core requirements ==
 
  * The ACL should be stored in a compact format.  This argues for a textual format similar to the AIX or Solaris format above.  Several OSes support some variant of this approach in their standard tools.
+ * The format should be portable and platform-independent so that ACLs can be correctly transferred between platforms.
  * The ACL representation should be easy to reverse-engineer so that other tools can support the libarchive format.  This also argues for a textual representation.
  * It should be easy to store such ACLs as pax extended attributes, which heavily favors a UTF-8 representation.
  * Although pax has no such limitation, other formats may prefer a single-line format.
@@ -246,11 +249,11 @@ Each ACE has the following format:
  * Colon
  * Flag indicating who this applies to: 'u' for user, 'g' for group, 'o@' for owner, 'g@' for owning group, 'e@' for everyone
  * If 'u' or 'g', user information follows:
- * Colon
- * Username
- * Colon
- * Numeric user ID
- * Someday:  colon and GUID/SID
+   * Colon
+   * Username
+   * Colon
+   * Numeric user ID
+   * Someday:  colon and GUID/SID
 
 This satisfies the concerns listed earlier:
   * Textual.  Except for user/group names, everything here is 7-bit ASCII and is therefore UTF-8 compatible if the user/group names are.
