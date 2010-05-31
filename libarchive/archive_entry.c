@@ -134,7 +134,7 @@ static void	append_id_w(wchar_t **wp, int id);
 
 static int	acl_special(struct archive_entry *entry,
 		    int type, int permset, int tag);
-static struct ae_acl *acl_new_entry(struct archive_entry *entry,
+static struct ae_ace *acl_new_entry(struct archive_entry *entry,
 		    int type, int permset, int tag, int id);
 static int	isint_w(const wchar_t *start, const wchar_t *end, int *result);
 static int	ismode_w(const wchar_t *start, const wchar_t *end, int *result);
@@ -408,7 +408,7 @@ struct archive_entry *
 archive_entry_clone(struct archive_entry *entry)
 {
 	struct archive_entry *entry2;
-	struct ae_acl *ap, *ap2;
+	struct ae_ace *ap, *ap2;
 	struct ae_xattr *xp;
 	struct ae_sparse *sp;
 
@@ -1229,7 +1229,7 @@ archive_entry_update_uname_utf8(struct archive_entry *entry, const char *name)
 void
 archive_entry_acl_clear(struct archive_entry *entry)
 {
-	struct ae_acl	*ap;
+	struct ae_ace	*ap;
 
 	while (entry->acl_head != NULL) {
 		ap = entry->acl_head->next;
@@ -1246,13 +1246,13 @@ archive_entry_acl_clear(struct archive_entry *entry)
 }
 
 /*
- * Add a single ACL entry to the internal list of ACL data.
+ * Add a single access control entry to the access control list.
  */
 int
 archive_entry_acl_add_entry(struct archive_entry *entry,
     int type, int permset, int tag, int id, const char *name)
 {
-	struct ae_acl *ap;
+	struct ae_ace *ap;
 
 	if (acl_special(entry, type, permset, tag) == 0)
 		return ARCHIVE_OK;
@@ -1283,7 +1283,7 @@ static int
 archive_entry_acl_add_entry_w_len(struct archive_entry *entry,
     int type, int permset, int tag, int id, const wchar_t *name, size_t len)
 {
-	struct ae_acl *ap;
+	struct ae_ace *ap;
 
 	if (acl_special(entry, type, permset, tag) == 0)
 		return ARCHIVE_OK;
@@ -1330,11 +1330,11 @@ acl_special(struct archive_entry *entry, int type, int permset, int tag)
  * Allocate and populate a new ACL entry with everything but the
  * name.
  */
-static struct ae_acl *
+static struct ae_ace *
 acl_new_entry(struct archive_entry *entry,
     int type, int permset, int tag, int id)
 {
-	struct ae_acl *ap, *aq;
+	struct ae_ace *ap, *aq;
 
 
 	/* Type argument must be a valid NFS4 or POSIX.1e type.
@@ -1406,7 +1406,7 @@ acl_new_entry(struct archive_entry *entry,
 	}
 
 	/* Add a new entry to the end of the list. */
-	ap = (struct ae_acl *)malloc(sizeof(*ap));
+	ap = (struct ae_ace *)malloc(sizeof(*ap));
 	if (ap == NULL)
 		return (NULL);
 	memset(ap, 0, sizeof(*ap));
@@ -1430,7 +1430,7 @@ int
 archive_entry_acl_count(struct archive_entry *entry, int want_type)
 {
 	int count;
-	struct ae_acl *ap;
+	struct ae_ace *ap;
 
 	count = 0;
 	ap = entry->acl_head;
@@ -1476,7 +1476,7 @@ archive_entry_acl_reset(struct archive_entry *entry, int want_type)
 }
 
 /*
- * Return the next ACL entry in the list.  Fake entries for the
+ * Return the next access control entry in the list.  Fake entries for the
  * standard permissions and include them in the returned list.
  */
 
@@ -1554,7 +1554,7 @@ archive_entry_acl_text_w(struct archive_entry *entry, int flags)
 	const wchar_t *wname;
 	const wchar_t *prefix;
 	wchar_t separator;
-	struct ae_acl *ap;
+	struct ae_ace *ap;
 	int id;
 	wchar_t *wp;
 

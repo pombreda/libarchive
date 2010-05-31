@@ -95,73 +95,73 @@ static struct myacl_t acls_reg[] = {
 
 static struct myacl_t acls_dir[] = {
 	/* For this test, we need to be able to read and write the ACL. */
-	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW,
-	  ARCHIVE_ENTRY_ACL_READ_ACL | ARCHIVE_ENTRY_ACL_WRITE_ACL,
-	  ARCHIVE_ENTRY_ACL_USER_OBJ, -1, ""},
 
 	/* An entry for each type. */
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_LIST_DIRECTORY,
-	  ARCHIVE_ENTRY_ACL_USER, 108, "user108" },
+	  ARCHIVE_ENTRY_ACL_USER, 101, "user101" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_DENY, ARCHIVE_ENTRY_ACL_LIST_DIRECTORY,
-	  ARCHIVE_ENTRY_ACL_USER, 109, "user109" },
+	  ARCHIVE_ENTRY_ACL_USER, 102, "user102" },
 
 	/* An entry for each permission. */
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_LIST_DIRECTORY,
-	  ARCHIVE_ENTRY_ACL_USER, 114, "user114" },
+	  ARCHIVE_ENTRY_ACL_USER, 201, "user201" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_ADD_FILE,
-	  ARCHIVE_ENTRY_ACL_USER, 116, "user116" },
+	  ARCHIVE_ENTRY_ACL_USER, 202, "user202" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_ADD_SUBDIRECTORY,
-	  ARCHIVE_ENTRY_ACL_USER, 118, "user118" },
+	  ARCHIVE_ENTRY_ACL_USER, 203, "user203" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_READ_NAMED_ATTRS,
-	  ARCHIVE_ENTRY_ACL_USER, 119, "user119" },
+	  ARCHIVE_ENTRY_ACL_USER, 204, "user204" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_WRITE_NAMED_ATTRS,
-	  ARCHIVE_ENTRY_ACL_USER, 120, "user120" },
+	  ARCHIVE_ENTRY_ACL_USER, 205, "user205" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_DELETE_CHILD,
-	  ARCHIVE_ENTRY_ACL_USER, 121, "user121" },
+	  ARCHIVE_ENTRY_ACL_USER, 206, "user206" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_READ_ATTRIBUTES,
-	  ARCHIVE_ENTRY_ACL_USER, 122, "user122" },
+	  ARCHIVE_ENTRY_ACL_USER, 207, "user207" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_WRITE_ATTRIBUTES,
-	  ARCHIVE_ENTRY_ACL_USER, 123, "user123" },
+	  ARCHIVE_ENTRY_ACL_USER, 208, "user208" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_DELETE,
-	  ARCHIVE_ENTRY_ACL_USER, 124, "user124" },
+	  ARCHIVE_ENTRY_ACL_USER, 209, "user209" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_READ_ACL,
-	  ARCHIVE_ENTRY_ACL_USER, 125, "user125" },
+	  ARCHIVE_ENTRY_ACL_USER, 210, "user210" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_WRITE_ACL,
-	  ARCHIVE_ENTRY_ACL_USER, 126, "user126" },
+	  ARCHIVE_ENTRY_ACL_USER, 211, "user211" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_WRITE_OWNER,
-	  ARCHIVE_ENTRY_ACL_USER, 127, "user127" },
+	  ARCHIVE_ENTRY_ACL_USER, 212, "user212" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_SYNCHRONIZE,
-	  ARCHIVE_ENTRY_ACL_USER, 128, "user128" },
+	  ARCHIVE_ENTRY_ACL_USER, 213, "user213" },
 
 	/* One entry with each inheritance value. */
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW,
 	  ARCHIVE_ENTRY_ACL_READ_DATA | ARCHIVE_ENTRY_ACL_ENTRY_FILE_INHERIT,
-	  ARCHIVE_ENTRY_ACL_USER, 129, "user129" },
+	  ARCHIVE_ENTRY_ACL_USER, 301, "user301" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW,
 	  ARCHIVE_ENTRY_ACL_READ_DATA | ARCHIVE_ENTRY_ACL_ENTRY_DIRECTORY_INHERIT,
-	  ARCHIVE_ENTRY_ACL_USER, 130, "user130" },
+	  ARCHIVE_ENTRY_ACL_USER, 302, "user302" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW,
 	  ARCHIVE_ENTRY_ACL_READ_DATA | ARCHIVE_ENTRY_ACL_ENTRY_NO_PROPAGATE_INHERIT,
-	  ARCHIVE_ENTRY_ACL_USER, 131, "user131" },
+	  ARCHIVE_ENTRY_ACL_USER, 303, "user303" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW,
 	  ARCHIVE_ENTRY_ACL_READ_DATA | ARCHIVE_ENTRY_ACL_ENTRY_INHERIT_ONLY,
-	  ARCHIVE_ENTRY_ACL_USER, 132, "user132" },
+	  ARCHIVE_ENTRY_ACL_USER, 304, "user304" },
 
-// FreeBSD does not support audit entries.
-//	{ ARCHIVE_ENTRY_ACL_TYPE_AUDIT,
-//	  ARCHIVE_ENTRY_ACL_READ_DATA | ARCHIVE_ENTRY_ACL_ENTRY_SUCCESSFUL_ACCESS,
-//	  ARCHIVE_ENTRY_ACL_USER, 133, "user133" },
-//	{ ARCHIVE_ENTRY_ACL_TYPE_AUDIT,
-//	  ARCHIVE_ENTRY_ACL_READ_DATA | ARCHIVE_ENTRY_ACL_ENTRY_FAILED_ACCESS,
-//	  ARCHIVE_ENTRY_ACL_USER, 134, "user134" },
+#if 0
+	/* FreeBSD does not support audit entries. */
+	{ ARCHIVE_ENTRY_ACL_TYPE_AUDIT,
+	  ARCHIVE_ENTRY_ACL_READ_DATA | ARCHIVE_ENTRY_ACL_ENTRY_SUCCESSFUL_ACCESS,
+	  ARCHIVE_ENTRY_ACL_USER, 401, "user401" },
+	{ ARCHIVE_ENTRY_ACL_TYPE_AUDIT,
+	  ARCHIVE_ENTRY_ACL_READ_DATA | ARCHIVE_ENTRY_ACL_ENTRY_FAILED_ACCESS,
+	  ARCHIVE_ENTRY_ACL_USER, 402, "user402" },
+#endif
 
 	/* One entry for each qualifier. */
+	/* USER_OBJ entry must ensure we can actually read back the ACL. */
+	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_READ_ACL,
+	  ARCHIVE_ENTRY_ACL_USER_OBJ, -1, ""},
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_LIST_DIRECTORY,
-	  ARCHIVE_ENTRY_ACL_USER, 135, "user135" },
+	  ARCHIVE_ENTRY_ACL_USER, 501, "user501" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_LIST_DIRECTORY,
-	  ARCHIVE_ENTRY_ACL_USER_OBJ, -1, "" },
-	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_LIST_DIRECTORY,
-	  ARCHIVE_ENTRY_ACL_GROUP, 136, "group136" },
+	  ARCHIVE_ENTRY_ACL_GROUP, 502, "group502" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_LIST_DIRECTORY,
 	  ARCHIVE_ENTRY_ACL_GROUP_OBJ, -1, "" },
 	{ ARCHIVE_ENTRY_ACL_TYPE_ALLOW, ARCHIVE_ENTRY_ACL_LIST_DIRECTORY,
@@ -185,60 +185,71 @@ set_acls(struct archive_entry *ae, struct myacl_t *acls)
 }
 
 static int
+acl_permset_to_bitmap(acl_permset_t opaque_ps)
+{
+	static struct { int machine; int portable; } perms[] = {
+		{ACL_EXECUTE, ARCHIVE_ENTRY_ACL_EXECUTE},
+		{ACL_WRITE, ARCHIVE_ENTRY_ACL_WRITE},
+		{ACL_READ, ARCHIVE_ENTRY_ACL_READ},
+		{ACL_READ_DATA, ARCHIVE_ENTRY_ACL_READ_DATA},
+		{ACL_LIST_DIRECTORY, ARCHIVE_ENTRY_ACL_LIST_DIRECTORY},
+		{ACL_WRITE_DATA, ARCHIVE_ENTRY_ACL_WRITE_DATA},
+		{ACL_ADD_FILE, ARCHIVE_ENTRY_ACL_ADD_FILE},
+		{ACL_APPEND_DATA, ARCHIVE_ENTRY_ACL_APPEND_DATA},
+		{ACL_ADD_SUBDIRECTORY, ARCHIVE_ENTRY_ACL_ADD_SUBDIRECTORY},
+		{ACL_READ_NAMED_ATTRS, ARCHIVE_ENTRY_ACL_READ_NAMED_ATTRS},
+		{ACL_WRITE_NAMED_ATTRS, ARCHIVE_ENTRY_ACL_WRITE_NAMED_ATTRS},
+		{ACL_DELETE_CHILD, ARCHIVE_ENTRY_ACL_DELETE_CHILD},
+		{ACL_READ_ATTRIBUTES, ARCHIVE_ENTRY_ACL_READ_ATTRIBUTES},
+		{ACL_WRITE_ATTRIBUTES, ARCHIVE_ENTRY_ACL_WRITE_ATTRIBUTES},
+		{ACL_DELETE, ARCHIVE_ENTRY_ACL_DELETE},
+		{ACL_READ_ACL, ARCHIVE_ENTRY_ACL_READ_ACL},
+		{ACL_WRITE_ACL, ARCHIVE_ENTRY_ACL_WRITE_ACL},
+		{ACL_WRITE_OWNER, ARCHIVE_ENTRY_ACL_WRITE_OWNER},
+		{ACL_SYNCHRONIZE, ARCHIVE_ENTRY_ACL_SYNCHRONIZE}
+	};
+	int i, permset = 0;
+
+	for (i = 0; i < sizeof(perms)/sizeof(perms[0]); ++i)
+		if (acl_get_perm_np(opaque_ps, perms[i].machine))
+			permset |= perms[i].portable;
+	return permset;
+}
+
+static int
+acl_flagset_to_bitmap(acl_flagset_t opaque_fs)
+{
+	static struct { int machine; int portable; } flags[] = {
+		{ACL_ENTRY_FILE_INHERIT, ARCHIVE_ENTRY_ACL_ENTRY_FILE_INHERIT},
+		{ACL_ENTRY_DIRECTORY_INHERIT, ARCHIVE_ENTRY_ACL_ENTRY_DIRECTORY_INHERIT},
+		{ACL_ENTRY_NO_PROPAGATE_INHERIT, ARCHIVE_ENTRY_ACL_ENTRY_NO_PROPAGATE_INHERIT},
+		{ACL_ENTRY_INHERIT_ONLY, ARCHIVE_ENTRY_ACL_ENTRY_INHERIT_ONLY},
+	};
+	int i, flagset = 0;
+
+	for (i = 0; i < sizeof(flags)/sizeof(flags[0]); ++i)
+		if (acl_get_flag_np(opaque_fs, flags[i].machine))
+			flagset |= flags[i].portable;
+	return flagset;
+}
+
+static int
 acl_match(acl_entry_t aclent, struct myacl_t *myacl)
 {
 	gid_t g, *gp;
 	uid_t u, *up;
 	acl_tag_t tag_type;
 	acl_permset_t opaque_ps;
-	int permset = 0;
+	acl_flagset_t opaque_fs;
+	int perms;
 
 	acl_get_tag_type(aclent, &tag_type);
 
 	/* translate the silly opaque permset to a bitmap */
 	acl_get_permset(aclent, &opaque_ps);
-	if (acl_get_perm_np(opaque_ps, ACL_EXECUTE))
-		permset |= ARCHIVE_ENTRY_ACL_EXECUTE;
-	if (acl_get_perm_np(opaque_ps, ACL_WRITE))
-		permset |= ARCHIVE_ENTRY_ACL_WRITE;
-	if (acl_get_perm_np(opaque_ps, ACL_READ))
-		permset |= ARCHIVE_ENTRY_ACL_READ;
-	if (acl_get_perm_np(opaque_ps, ACL_READ_DATA))
-		permset |= ARCHIVE_ENTRY_ACL_READ_DATA;
-	if (acl_get_perm_np(opaque_ps, ACL_LIST_DIRECTORY))
-		permset |= ARCHIVE_ENTRY_ACL_LIST_DIRECTORY;
-	if (acl_get_perm_np(opaque_ps, ACL_WRITE_DATA))
-		permset |= ARCHIVE_ENTRY_ACL_WRITE_DATA;
-	if (acl_get_perm_np(opaque_ps, ACL_ADD_FILE))
-		permset |= ARCHIVE_ENTRY_ACL_ADD_FILE;
-	if (acl_get_perm_np(opaque_ps, ACL_APPEND_DATA))
-		permset |= ARCHIVE_ENTRY_ACL_APPEND_DATA;
-	if (acl_get_perm_np(opaque_ps, ACL_ADD_SUBDIRECTORY))
-		permset |= ARCHIVE_ENTRY_ACL_ADD_SUBDIRECTORY;
-	if (acl_get_perm_np(opaque_ps, ACL_READ_NAMED_ATTRS))
-		permset |= ARCHIVE_ENTRY_ACL_READ_NAMED_ATTRS;
-	if (acl_get_perm_np(opaque_ps, ACL_WRITE_NAMED_ATTRS))
-		permset |= ARCHIVE_ENTRY_ACL_WRITE_NAMED_ATTRS;
-	if (acl_get_perm_np(opaque_ps, ACL_DELETE_CHILD))
-		permset |= ARCHIVE_ENTRY_ACL_DELETE_CHILD;
-	if (acl_get_perm_np(opaque_ps, ACL_READ_ATTRIBUTES))
-		permset |= ARCHIVE_ENTRY_ACL_READ_ATTRIBUTES;
-	if (acl_get_perm_np(opaque_ps, ACL_WRITE_ATTRIBUTES))
-		permset |= ARCHIVE_ENTRY_ACL_WRITE_ATTRIBUTES;
-	if (acl_get_perm_np(opaque_ps, ACL_DELETE))
-		permset |= ARCHIVE_ENTRY_ACL_DELETE;
-	if (acl_get_perm_np(opaque_ps, ACL_READ_ACL))
-		permset |= ARCHIVE_ENTRY_ACL_READ_ACL;
-	if (acl_get_perm_np(opaque_ps, ACL_WRITE_ACL))
-		permset |= ARCHIVE_ENTRY_ACL_WRITE_ACL;
-	if (acl_get_perm_np(opaque_ps, ACL_WRITE_OWNER))
-		permset |= ARCHIVE_ENTRY_ACL_WRITE_OWNER;
-	if (acl_get_perm_np(opaque_ps, ACL_SYNCHRONIZE))
-		permset |= ARCHIVE_ENTRY_ACL_SYNCHRONIZE;
-
-
-
-	if (permset != myacl->permset)
+	acl_get_flagset_np(aclent, &opaque_fs);
+	perms = acl_permset_to_bitmap(opaque_ps) | acl_flagset_to_bitmap(opaque_fs);
+	if (perms != myacl->permset)
 		return (0);
 
 	switch (tag_type) {
@@ -277,7 +288,7 @@ acl_match(acl_entry_t aclent, struct myacl_t *myacl)
 }
 
 static void
-compare_acls(acl_t acl, struct myacl_t *myacls)
+compare_acls(acl_t acl, struct myacl_t *myacls, const char *filename)
 {
 	int *marker;
 	int entry_id = ACL_FIRST_ENTRY;
@@ -310,16 +321,16 @@ compare_acls(acl_t acl, struct myacl_t *myacls)
 			}
 		}
 
-		/* TODO: Print out more details in this case. */
 		failure("ACL entry on file that shouldn't be there");
 		assert(matched == 1);
 	}
 
 	/* Dump entries in the myacls array that weren't in the system acl. */
 	for (i = 0; i < n; ++i) {
-		failure(" ACL entry %d missing from file: "
-		    "type=%d,permset=%d,tag=%d,qual=%d,name=``%s''\n",
-		    i, myacls[marker[i]].type, myacls[marker[i]].permset,
+		failure(" ACL entry %d missing from %s: "
+		    "type=%d,permset=%x,tag=%d,qual=%d,name=``%s''\n",
+		    marker[i], filename,
+		    myacls[marker[i]].type, myacls[marker[i]].permset,
 		    myacls[marker[i]].tag, myacls[marker[i]].qual,
 		    myacls[marker[i]].name);
 		assert(0); /* Record this as a failure. */
@@ -415,7 +426,16 @@ DEFINE_TEST(test_acl_freebsd_nfs4)
 	assertEqualInt(st.st_mtime, 123456);
 	acl = acl_get_file("test0", ACL_TYPE_NFS4);
 	assert(acl != (acl_t)NULL);
-	compare_acls(acl, acls_reg);
+	compare_acls(acl, acls_reg, "test0");
+	acl_free(acl);
+
+
+	/* Verify the data on disk. */
+	assertEqualInt(0, stat("dir0", &st));
+	assertEqualInt(st.st_mtime, 123456);
+	acl = acl_get_file("dir0", ACL_TYPE_NFS4);
+	assert(acl != (acl_t)NULL);
+	compare_acls(acl, acls_dir, "dir0");
 	acl_free(acl);
 #endif
 }

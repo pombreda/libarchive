@@ -53,12 +53,12 @@ struct aes {
 #define	AES_SET_WCS 4
 };
 
-struct ae_acl {
-	struct ae_acl *next;
-	int	type;			/* E.g., access or default */
-	int	tag;			/* E.g., user/group/other/mask */
-	int	permset;		/* r/w/x bits */
-	int	id;			/* uid/gid for user/group */
+struct ae_ace {
+	struct ae_ace *next;
+	int16_t	type;			/* E.g., access or default */
+	int16_t	tag;			/* E.g., user/group/other/mask */
+	int32_t	permset;		/* r/w/x bits */
+	int64_t	id;			/* uid/gid for user/group */
 	struct aes name;		/* uname/gname */
 };
 
@@ -174,8 +174,8 @@ struct archive_entry {
 	struct aes ae_sourcepath;	/* Path this entry is sourced from. */
 
 	/* ACL support. */
-	struct ae_acl	*acl_head;
-	struct ae_acl	*acl_p;
+	struct ae_ace	*acl_head;
+	struct ae_ace	*acl_p;
 	int		 acl_types;	/* OR of all types */
 	int		 acl_state;	/* See acl_next for details. */
 	wchar_t		*acl_text_w;
