@@ -303,4 +303,4 @@ It would be nice to be able to read NFS4-style ACLs written by Mac OS 'tar'.
 
  * [http://tools.ietf.org/html/rfc3530.txt RFC 3530 - NFS4 specification]
  * [http://tools.ietf.org/html/rfc5661 RFC 5661 - NFS4.1 specification]
- * [http://tools.ietf.org/id/draft-ietf-nfsv4-acl-mapping-03.txt Internet Draft discussing possible mechanisms for mapping permission models] (Summary: Don't translate ACL models if you can possibly avoid it, it's way more complicated than you want to deal with or have to explain to your users.)
+ * [http://tools.ietf.org/id/draft-ietf-nfsv4-acl-mapping-03.txt Internet Draft discussing possible mechanisms for mapping permission models] (Summary: Don't translate ACL models--such as between NFS4 and POSIX.1e--if you can possibly avoid it, it's way more complicated than you want to deal with or have to explain to your users.)
