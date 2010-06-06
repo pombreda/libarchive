@@ -56,3 +56,14 @@ This constrains the possible implementations (libarchive, for
 example, wants to see all metadata before reading the body).
 The format used is also pretty non-portable.
 The [TarNFS4ACLs] has some additional details about this format.
+
+= Footnote: About POSIX.1e =
+
+POSIX.1e was an attempt to define standard mechanisms for handling
+extended attributes and ACLs on POSIX systems.
+Unfortunately, the committee working on POSIX.1e was unable
+to come to a consensus and the standard was never completed.
+The final version of POSIX.1e is "Draft 17" which has served
+as the basis for many system implementations.
+Unfortunately, the final draft has several obvious omissions
+that have been filled in different fashions.
