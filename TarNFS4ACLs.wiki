@@ -54,8 +54,8 @@ The inclusion of both a POSIX-style numeric ID and a GUID for each user and grou
 
 == AIX tar ==
 
-AIX tar stores an additional 'A' entry after the regular
-file entry.  The pathname of this entry is "NFS4", the body
+AIX tar stores an additional 'A' header after the regular
+file body.  The pathname of this entry is "NFS4", the body
 is a binary formatted ACL.  Björn Jacke was kind enough
 to send me an example.  This is the contents of the
 'A' entry body:
@@ -129,8 +129,8 @@ used on AIX.
 The AIXC ACLs are neither POSIX.1e nor NFSv4 compliant, of
 course, but this example does shed a little light on AIX tar's handling
 of NFSv4 ACLs.
-In particular, AIX tar again uses an "A" entry, but this time the pathname
-is "AIXC"; it appears the pathname of the "A" entry specifies the ACL type,
+In particular, AIX tar again uses an "A" header, but this time the pathname
+is "AIXC"; it appears the pathname of the "A" header specifies the ACL type,
 duplicating the first four bytes of the entry body.
 Here's an sample body of such an "A" entry:
 
@@ -167,6 +167,7 @@ extended permissions
 Edward Thomas Napierala sent me an example of an archive from SunOS (version?) with an NFSv4 ACL.  This seems to follow the same outline used by SunOS for POSIX.1e ACLs.  The ACL is held by an 'A' entry in the tar archive that precedes the main entry for the file.
 
 The name of the 'A' entry matches the name of the file and the body of the 'A' entry contains an octal number, a null byte, and a textual representation of the ACL.
+I don't know how this interacts with long filename support.
 The octal number is 03000000 plus the number of entries in the ACL.
 In Edward's example, there are 7 entries, represented as follows (the line breaks here are added only for readability, they're not in the original).
 
