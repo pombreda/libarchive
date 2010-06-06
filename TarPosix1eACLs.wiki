@@ -15,6 +15,10 @@ here is a little clearer than for NFSv4 ACLs (or other
 system-specific ACL implementations).  I've begun to
 document NFSv4 ACL storage approaches in [TarNFS4ACLs].
 
+Some of these techniques are similar to ones used for
+storing POSIX.1e extended attributes.  See [TarExtendedAttributes]
+for more information.
+
 = star's approach =
 
 Star stores POSIX.1e ACLs in pax attributes with the
