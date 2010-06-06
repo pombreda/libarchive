@@ -51,17 +51,42 @@ approach that supports Solaris as well.
 As of January 2009, GNU tar seems to be considering this approach,
 based on patches contributed by Red Hat.
 
-= Apple's modified GNU tar =
+Libarchive reads this format but does not currently write it.
+
+= Apple tar =
 
 Apple stores a separate resource file for each file written
-to a tar archive.  This is based on a technique supported by
-the "`CopyFile()`" library function.  The resource file is
-stored as a tar file entry just before the regular file in
-the archive and has the same name, except it is prepended with "`._`".
-For example, the file "foo" would have a resource file "`._foo`".
+to a tar archive.  This is based on the
+"`copyfile()`" library function.  The resource file is
+stored as a full tar file entry just before the regular file in
+the archive and has the same name, except the last path
+element has "`._`" prepended.
+For example, the file "`some/dir/foo`" would have
+a resource file "`some/dir/._foo`".
 
-I've not yet tracked down documentation for the format of this
-resource file.  libarchive support may be possible.
+Note that because the resource file has the same name,
+long filename extensions get unnecessarily duplicated
+with this arrangement.
+For example, using Apple's patched GNU tar distributed
+with Mac OS X through version 10.5, a long filename
+would generate the following sequence in the tar archive:
+ * 'L' header for the long filename of the resource file
+ * Body of the 'L' header with the filename for the resource file
+ * '0' header for the resource file itself
+ * Contents of the resource file
+ * 'L' header for the long filename of the file itself
+ * Body of the 'L' header with the filename for the file
+ * '0' header for the file
+ * Contents of the file.
+
+Since Mac OS 10.6, Apple is using a patched version of
+bsdtar.  Although this defaults to using pax extensions,
+it suffers from the same basic problem outlined above.
+
+Starting with libarchive 3.0, the main libarchive distribution
+supports the Apple format on Mac OS.
+It does not parse the contents of the resource file or
+provide any support for Mac OS resources on other platforms.
 
 = AIX tar =
 
@@ -88,4 +113,3 @@ all metadata (including EAs) precede the file data.
 I've seen references to an 'E' entry used by Solaris tar
 but haven't yet found any detailed documentation or examples
 of this entry.
-
