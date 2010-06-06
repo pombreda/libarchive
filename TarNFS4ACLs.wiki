@@ -26,6 +26,13 @@ since OS-specific library routines are unlikely to be useful.
 (Even when such routines do exist, they vary too much
 across platforms to support interchange.)
 
+It is also unfortunate that NFSv4 does not define
+a system interface for manipulating ACLs on local
+files.
+As a result, many people seem to be adapting the old
+POSIX.1e C language bindings for use with the newer
+ACL model.
+
 --------------------------------------------------------------------------
 
 = Prior Art =
