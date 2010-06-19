@@ -1,5 +1,7 @@
 #summary How to compile and install libarchive, bsdtar, and bsdcpio from source code.
 
+<wiki:toc />
+
 = Using _configure_ (for building from the command line on Linux, FreeBSD, Solaris, Cygwin, AIX, Interix, Mac OS X and other Unix-like systems) =
 
 The libarchive distribution includes a standard
@@ -81,7 +83,7 @@ Certain libarchive features require you to link against additional libraries.  T
   * Xar support: Install the libxml2 libraries.  XXX This is untested? XXX
   * Mtree and Xar support for cryptographic hashes:  Install the OpenSSL libraries.  XXX This is untested? XXX
 
-== Windows/Visual Studio ==
+=== Windows/Visual Studio ===
 
 A free version of Visual Studio C++ is available from Microsoft: http://www.microsoft.com/express/download/
 
@@ -96,7 +98,7 @@ Building is then a straightforward process:
    * Select *Build*
    * If there are any failures reported, please report it in our Issue Tracker
 
-== Windows/MinGW ==
+=== Windows/MinGW ===
 
 MinGW is a free command-line development environment for Windows based
 on the popular GNU C compiler.
@@ -151,3 +153,23 @@ If you find otherwise, please let me know:
  * CHECK_HEADER_STDC_path:PATH=/usr/include
  * CMAKE_BUILD_TYPE:STRING=
  * CRYPTO_LIBRARY:FILEPATH=/usr/lib/libcrypto.so
+
+-----------------------------------------
+
+= Building libarchive from SVN =
+
+Certain build files are created specifically as part
+of the distribution and are not stored in SVN.
+So if you want to build libarchive from an SVN checkout,
+you may have to do a little more work:
+
+== CMake builds ==
+
+Nothing additional is needed to perform CMake builds from an SVN checkout.
+Just follow the regular instructions above.
+
+== configure-based builds ==
+
+The `configure` script is created by GNU autoconf.
+In order to create this, you'll need suitable versions of GNU autoconf, GNU automake, and associated tools.
+There is a shell script called `build/autogen.sh` that will run the tools in the correct order to construct all the necessary files.
