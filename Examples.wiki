@@ -20,7 +20,7 @@ The basic lifecycle of an archive object is very simple:
  * Configure it using "support" or "set" calls.  ("Support" calls allow libarchive to decide when to use a feature, "set" calls enable the feature unconditionally.)
  * "Open" a particular data source.
  * Iterate over the contents:  ask alternately for "header" (which returns an entry object describing the next entry in the archive) and "data"
- * When you're done, you can "close", query metadata, then "finish" to free the archive object.
+ * When you're done, you can "close", query any final information or statistics, then call "finish" to free the archive object.  (The "finish" calls will be renamed "free" starting in libarchive 3.0.)
 
 Writing an archive is very similar, except that you provide header and data to libarchive instead of asking for them from libarchive.
 
@@ -50,7 +50,7 @@ Note 1: Beginning with libarchive 3.0, the `archive_read_open_filename()`
 function will inspect the file before deciding how to handle the blocksize.
 If the filename provided refers to a tape device, for example, it will
 use exactly the blocksize you specify.  For other devices, it may
-use a slightly different blocksize in order to obtain better performance.
+adjust the requested blocksize in order to obtain better performance.
 
 Note 2:  The call to `archive_read_data_skip()` here is not
 actually necessary, since libarchive will invoke it automatically
@@ -303,7 +303,7 @@ to permit an easy transition.
 = Handling Errors =
 
 
-For simplicity, the examples above do not demonstrate proper error
+For simplicity, the examples above do not all demonstrate proper error
 handling.
 Most libarchive functions return a status code that should be acted on.
 The most important values are:
