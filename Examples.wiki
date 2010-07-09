@@ -214,6 +214,7 @@ This is a little more complex than the read examples above
 because the write example actually does something with
 the file bodies.
 
+
 {{{
   void
   write_archive(const char *outname, const char **filename)
@@ -232,8 +233,10 @@ the file bodies.
     while (*filename) {
       stat(*filename, &st);
       entry = archive_entry_new(); // Note 2
-      archive_entry_copy_stat(entry, &st); // Note 3
       archive_entry_set_pathname(entry, *filename);
+      archive_entry_set_size(entry, st.st_size); // Note 3
+      archive_entry_set_filetype(entry, AE_IFREG);
+      archive_entry_set_perm(entry, 0644);
       archive_write_header(a, entry);
       fd = open(*filename, O_RDONLY);
       len = read(fd, buff, sizeof(buff));
@@ -241,10 +244,12 @@ the file bodies.
           archive_write_data(a, buff, len);
           len = read(fd, buff, sizeof(buff));
       }
+      close(fd);
       archive_entry_free(entry);
       filename++;
     }
-    archive_write_finish(a); // Note 4
+    archive_write_close(a); // Note 4
+    archive_write_finish(a); // Note 5
   }
 
   int main(int argc, const char **argv)
@@ -272,14 +277,40 @@ For better performance, you can reuse the same archive_entry
 object by using `archive_entry_clear()` to erase it
 after each use.
 
-Note 3: The `archive_read_disk` API provides an easy
+Note 3:  Size, file type, and pathname are all required
+attributes here.
+You can also use `archive_entry_copy_stat()` to copy all information from the `struct stat` to the archive entry, including file type.
+To get even more complete information, look at the `archive_read_disk`
+API, which provides an easy
 way to get more extensive file metadata---including ACLs
 and extended attributes on some systems---than using
 the system `stat()` system call.
 It also works on platforms such as Windows where `stat()`
 either doesn't exist or is broken.
 
-Note 4: Beginning with libarchive 3.0, this function is
+Note 4: The free/finish call will implicitly call
+`archive_write_close()` if necessary.
+However, the close call returns an error code and
+the free/finish call does not, so if you rely on
+the implicit close, you won't be able to detect
+any errors that happen with the final writes.
+
+Note 5: Beginning with libarchive 3.0, this function is
 renamed to `archive_write_free()`.
 The old name will remain available for several years
 to permit an easy transition.
+
+= Handling Errors =
+
+
+For simplicity, the examples above do not demonstrate proper error
+handling.
+Most libarchive functions return a status code that should be acted on.
+The most important values are:
+ * `ARCHIVE_OK` if the operation completed successfully
+ * `ARCHIVE_WARN` if the operation completed with some surprises.  You may want to report the issue to your user.  `archive_error_string` will return a suitable text message, `archive_errno` returns an associated system errno value.  (Since not all errors are caused by failing system calls, `archive_errno` does not always return a meaningful value.)
+ * `ARCHIVE_FAILED` if this operation failed.  In particular, this means that further operations on this entry are impossible.  This is returned, for example, if you try to write an entry type that's not supported by this archive format.  Recovery usually consists of simply going on to the next entry.
+ * `ARCHIVE_FATAL` if the archive object itself is no longer usable, typically because of an I/O failure or memory allocation failure.   Generally, your only recovery in this case is to invoke `archive_write_finish` to release the archive object.
+
+In certain extreme cases, libarchive will call abort() to terminate the program.
+For example, this occurs if you call library functions in nonsensical orders (such as calling `archive_write_header` before you've called one of the open functions or continuing to write data to an archive object that has previously returned ARCHIVE_FATAL).
