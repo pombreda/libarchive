@@ -139,8 +139,8 @@ struct archive_entry_header_gnutar {
  */
 struct sparse_block {
 	struct sparse_block	*next;
-	off_t	offset;
-	off_t	remaining;
+	int64_t	offset;
+	int64_t	remaining;
 };
 
 struct tar {
@@ -177,7 +177,7 @@ static ssize_t	UTF8_mbrtowc(wchar_t *pwc, const char *s, size_t n);
 static int	archive_block_is_null(const unsigned char *p);
 static char	*base64_decode(const char *, size_t, size_t *);
 static void	 gnu_add_sparse_entry(struct tar *,
-		    off_t offset, off_t remaining);
+		    int64_t offset, int64_t remaining);
 static void	gnu_clear_sparse_list(struct tar *);
 static int	gnu_sparse_old_read(struct archive_read *, struct tar *,
 		    const struct archive_entry_header_gnutar *header);
@@ -199,6 +199,8 @@ static int	header_longlink(struct archive_read *, struct tar *,
 		    struct archive_entry *, const void *h);
 static int	header_longname(struct archive_read *, struct tar *,
 		    struct archive_entry *, const void *h);
+static int	read_mac_metadata_blob(struct archive_read *, struct tar *,
+		    struct archive_entry *, const void *h);
 static int	header_volume(struct archive_read *, struct tar *,
 		    struct archive_entry *, const void *h);
 static int	header_ustar(struct archive_read *, struct tar *,
@@ -207,13 +209,8 @@ static int	header_gnutar(struct archive_read *, struct tar *,
 		    struct archive_entry *, const void *h);
 static int	archive_read_format_tar_bid(struct archive_read *);
 static int	archive_read_format_tar_cleanup(struct archive_read *);
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int	archive_read_format_tar_read_data(struct archive_read *a,
-		    const void **buff, size_t *size, off_t *offset);
-#else
 static int	archive_read_format_tar_read_data(struct archive_read *a,
 		    const void **buff, size_t *size, int64_t *offset);
-#endif
 static int	archive_read_format_tar_skip(struct archive_read *a);
 static int	archive_read_format_tar_read_header(struct archive_read *,
 		    struct archive_entry *);
@@ -455,15 +452,9 @@ archive_read_format_tar_read_header(struct archive_read *a,
 	return (r);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int
-archive_read_format_tar_read_data(struct archive_read *a,
-    const void **buff, size_t *size, off_t *offset)
-#else
 static int
 archive_read_format_tar_read_data(struct archive_read *a,
     const void **buff, size_t *size, int64_t *offset)
-#endif
 {
 	ssize_t bytes_read;
 	struct tar *tar;
@@ -654,6 +645,18 @@ tar_read_header(struct archive_read *a, struct tar *tar,
 		}
 	}
 	--tar->header_recursion_depth;
+	/* Yuck.  Apple's design here ends up storing long pathname
+	 * extensions for both the AppleDouble extension entry and the
+	 * regular entry.
+	 */
+	// TODO: Should this be disabled on non-Mac platforms?
+	if ((err == ARCHIVE_WARN || err == ARCHIVE_OK) &&
+	    tar->header_recursion_depth == 0) {
+		int err2 = read_mac_metadata_blob(a, tar, entry, h);
+		if (err2 < err)
+			err = err2;
+	}
+
 	/* We return warnings or success as-is.  Anything else is fatal. */
 	if (err == ARCHIVE_WARN || err == ARCHIVE_OK) {
 		if (tar->sparse_gnu_pending) {
@@ -894,7 +897,7 @@ static int
 read_body_to_string(struct archive_read *a, struct tar *tar,
     struct archive_string *as, const void *h)
 {
-	off_t size, padded_size;
+	int64_t size, padded_size;
 	const struct archive_entry_header_ustar *header;
 	const void *src;
 
@@ -1107,6 +1110,50 @@ header_old_tar(struct archive_read *a, struct tar *tar,
 
 	tar->entry_padding = 0x1ff & (-tar->entry_bytes_remaining);
 	return (0);
+}
+
+/*
+ * Read a Mac AppleDouble-encoded blob of file metadata,
+ * if there is one.
+ */
+static int
+read_mac_metadata_blob(struct archive_read *a, struct tar *tar,
+    struct archive_entry *entry, const void *h)
+{
+	size_t size, padded_size;
+	const void *data;
+	const char *p, *name;
+
+	// Find the last path element.
+	name = p = archive_entry_pathname(entry);
+	for (; *p != '\0'; ++p) {
+		if (p[0] == '/' && p[1] != '\0')
+			name = p + 1;
+	}
+	// If last path element starts with "._", then
+	// this is a Mac extension.
+	if (name[0] != '.' || name[1] != '_' || name[2] == '\0')
+		return ARCHIVE_OK;
+
+ 	/* Read the body as a Mac OS metadata blob. */
+	size = archive_entry_size(entry);
+	padded_size = (size + 511) & ~ 511;
+	/*
+	 * TODO: Look beyond the body here to peek at the next header.
+	 * If it's a regular header (not an extension header)
+	 * that has the wrong name, just return the current
+	 * entry as-is, without consuming the body here.
+	 * That would reduce the risk of us mis-identifying
+	 * an ordinary file that just happened to have
+	 * a name starting with "._".
+	 */
+	data = __archive_read_ahead(a, size, NULL);
+	if (data == NULL)
+		return (ARCHIVE_FATAL);
+	archive_entry_copy_mac_metadata(entry, data, size);
+	if (padded_size != __archive_read_consume(a, padded_size))
+		return (ARCHIVE_FATAL);
+	return (tar_read_header(a, tar, entry));
 }
 
 /*
@@ -1753,7 +1800,7 @@ header_gnutar(struct archive_read *a, struct tar *tar,
 }
 
 static void
-gnu_add_sparse_entry(struct tar *tar, off_t offset, off_t remaining)
+gnu_add_sparse_entry(struct tar *tar, int64_t offset, int64_t remaining)
 {
 	struct sparse_block *p;
 
@@ -1874,7 +1921,7 @@ static int
 gnu_sparse_01_parse(struct tar *tar, const char *p)
 {
 	const char *e;
-	off_t offset = -1, size = -1;
+	int64_t offset = -1, size = -1;
 
 	for (;;) {
 		e = p;
@@ -1974,7 +2021,7 @@ gnu_sparse_10_read(struct archive_read *a, struct tar *tar)
 {
 	ssize_t remaining, bytes_read;
 	int entries;
-	off_t offset, size, to_skip;
+	int64_t offset, size, to_skip;
 
 	/* Clear out the existing sparse list. */
 	gnu_clear_sparse_list(tar);

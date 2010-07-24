@@ -19,6 +19,7 @@ IF(ENABLE_TEST)
     test_compat_gzip.c
     test_compat_lzip.c
     test_compat_lzma.c
+    test_compat_mac_gnutar.c
     test_compat_solaris_tar_acl.c
     test_compat_tar_hardlink.c
     test_compat_xz.c
@@ -37,6 +38,7 @@ IF(ENABLE_TEST)
     test_read_compress_program.c
     test_read_data_large.c
     test_read_disk.c
+    test_read_disk_directory_traversals.c
     test_read_disk_entry_from_file.c
     test_read_extract.c
     test_read_file_nonexistent.c
@@ -64,6 +66,7 @@ IF(ENABLE_TEST)
     test_read_format_isojoliet_bz2.c
     test_read_format_isojoliet_long.c
     test_read_format_isojoliet_rr.c
+    test_read_format_isojoliet_versioned.c
     test_read_format_isorr_bz2.c
     test_read_format_isorr_ce.c
     test_read_format_isorr_new_bz2.c
@@ -123,6 +126,8 @@ IF(ENABLE_TEST)
     test_write_format_tar.c
     test_write_format_tar_empty.c
     test_write_format_tar_ustar.c
+    test_write_format_xar.c
+    test_write_format_xar_empty.c
     test_write_format_zip.c
     test_write_format_zip_empty.c
     test_write_format_zip_no_compression.c

@@ -54,6 +54,9 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_disk.c 201159 2009-12-29 0
 #ifdef HAVE_SYS_UTIME_H
 #include <sys/utime.h>
 #endif
+#ifdef HAVE_COPYFILE_H
+#include <copyfile.h>
+#endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
@@ -99,6 +102,20 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_disk.c 201159 2009-12-29 0
 #include <winioctl.h>
 #endif
 
+#if __APPLE__
+#include <TargetConditionals.h>
+#if TARGET_OS_MAC && !TARGET_OS_EMBEDDED && HAVE_QUARANTINE_H
+#include <quarantine.h>
+#define HAVE_QUARANTINE 1
+#endif
+#endif
+
+/* TODO: Support Mac OS 'quarantine' feature.  This is really just a
+ * standard tag to mark files that have been downloaded as "tainted".
+ * On Mac OS, we should mark the extracted files as tainted if the
+ * archive being read was tainted.  Windows has a similar feature; we
+ * should investigate ways to support this generically. */
+
 #include "archive.h"
 #include "archive_string.h"
 #include "archive_entry.h"
@@ -118,6 +135,8 @@ struct fixup_entry {
 	unsigned long            birthtime_nanos;
 	unsigned long		 mtime_nanos;
 	unsigned long		 fflags_set;
+	size_t			 mac_metadata_size;
+	void			*mac_metadata;
 	int			 fixup; /* bitmask of what needs fixing */
 	char			*name;
 };
@@ -147,6 +166,7 @@ struct fixup_entry {
 #define	TODO_FFLAGS		ARCHIVE_EXTRACT_FFLAGS
 #define	TODO_ACLS		ARCHIVE_EXTRACT_ACL
 #define	TODO_XATTR		ARCHIVE_EXTRACT_XATTR
+#define	TODO_MAC_METADATA	ARCHIVE_EXTRACT_MAC_METADATA
 
 struct archive_write_disk {
 	struct archive	archive;
@@ -247,6 +267,8 @@ static int	set_acl(struct archive_write_disk *, int fd, struct archive_entry *,
 		    acl_type_t, int archive_entry_acl_type, const char *tn);
 #endif
 static int	set_acls(struct archive_write_disk *);
+static int	set_mac_metadata(struct archive_write_disk *, const char *,
+				 const void *, size_t);
 static int	set_xattrs(struct archive_write_disk *);
 static int	set_fflags(struct archive_write_disk *);
 static int	set_fflags_platform(struct archive_write_disk *, int fd,
@@ -255,7 +277,7 @@ static int	set_fflags_platform(struct archive_write_disk *, int fd,
 static int	set_ownership(struct archive_write_disk *);
 static int	set_mode(struct archive_write_disk *, int mode);
 static int	set_time(int, int, const char *, time_t, long, time_t, long);
-static int	set_times(int, int, const char *,
+static int	set_times(struct archive_write_disk *, int, int, const char *,
 		    time_t, long, time_t, long, time_t, long);
 static int	set_times_from_entry(struct archive_write_disk *);
 static struct fixup_entry *sort_dir_list(struct fixup_entry *p);
@@ -458,6 +480,12 @@ _archive_write_disk_header(struct archive *_a, struct archive_entry *entry)
 		a->todo |= TODO_TIMES;
 	if (a->flags & ARCHIVE_EXTRACT_ACL)
 		a->todo |= TODO_ACLS;
+	if (a->flags & ARCHIVE_EXTRACT_MAC_METADATA) {
+		if (archive_entry_filetype(a->entry) == AE_IFDIR)
+			a->deferred |= TODO_MAC_METADATA;
+		else
+			a->todo |= TODO_MAC_METADATA;
+	}
 	if (a->flags & ARCHIVE_EXTRACT_XATTR)
 		a->todo |= TODO_XATTR;
 	if (a->flags & ARCHIVE_EXTRACT_FFLAGS)
@@ -538,6 +566,21 @@ _archive_write_disk_header(struct archive *_a, struct archive_entry *entry)
 			/* If birthtime is unset, use mtime. */
 			fe->birthtime = fe->mtime;
 			fe->birthtime_nanos = fe->mtime_nanos;
+		}
+	}
+
+	if (a->deferred & TODO_MAC_METADATA) {
+		const void *metadata;
+		size_t metadata_size;
+		metadata = archive_entry_mac_metadata(a->entry, &metadata_size);
+		if (metadata != NULL && metadata_size > 0) {
+			fe = current_fixup(a, archive_entry_pathname(entry));
+			fe->mac_metadata = malloc(metadata_size);
+			if (fe->mac_metadata != NULL) {
+				memcpy(fe->mac_metadata, metadata, metadata_size);
+				fe->mac_metadata_size = metadata_size;
+				fe->fixup |= TODO_MAC_METADATA;
+			}
 		}
 	}
 
@@ -812,10 +855,6 @@ _archive_write_disk_finish_entry(struct archive *_a)
 		int r2 = set_mode(a, a->mode);
 		if (r2 < ret) ret = r2;
 	}
-	if (a->todo & TODO_ACLS) {
-		int r2 = set_acls(a);
-		if (r2 < ret) ret = r2;
-	}
 
 	/*
 	 * Security-related extended attributes (such as
@@ -835,12 +874,35 @@ _archive_write_disk_finish_entry(struct archive *_a)
 		int r2 = set_fflags(a);
 		if (r2 < ret) ret = r2;
 	}
+
 	/*
 	 * Time has to be restored after all other metadata;
 	 * otherwise atime will get changed.
 	 */
 	if (a->todo & TODO_TIMES) {
 		int r2 = set_times_from_entry(a);
+		if (r2 < ret) ret = r2;
+	}
+
+	/*
+	 * Mac extended metadata includes ACLs.
+	 */
+	if (a->todo & TODO_MAC_METADATA) {
+		const void *metadata;
+		size_t metadata_size;
+		metadata = archive_entry_mac_metadata(a->entry, &metadata_size);
+		if (metadata != NULL && metadata_size > 0) {
+			int r2 = set_mac_metadata(a, archive_entry_pathname(a->entry), metadata, metadata_size);
+			if (r2 < ret) ret = r2;
+		}
+	}
+
+	/*
+	 * ACLs must be restored after timestamps because there are
+	 * ACLs that prevent attribute changes (including time).
+	 */
+	if (a->todo & TODO_ACLS) {
+		int r2 = set_acls(a);
 		if (r2 < ret) ret = r2;
 	}
 
@@ -1294,6 +1356,7 @@ create_filesystem_object(struct archive_write_disk *a)
  *     timestamps at the end as well.
  *   * Some file flags can interfere with the restore by, for example,
  *     preventing the creation of hardlinks to those files.
+ *   * Mac OS extended metadata includes ACLs, so must be deferred on dirs.
  *
  * Note that tar/cpio do not require that archives be in a particular
  * order; there is no way to know when the last file has been restored
@@ -1322,7 +1385,7 @@ _archive_write_disk_close(struct archive *_a)
 	while (p != NULL) {
 		a->pst = NULL; /* Mark stat cache as out-of-date. */
 		if (p->fixup & TODO_TIMES) {
-			set_times(-1, p->mode, p->name,
+			set_times(a, -1, p->mode, p->name,
 			    p->atime, p->atime_nanos,
 			    p->birthtime, p->birthtime_nanos,
 			    p->mtime, p->mtime_nanos);
@@ -1333,8 +1396,11 @@ _archive_write_disk_close(struct archive *_a)
 		if (p->fixup & TODO_FFLAGS)
 			set_fflags_platform(a, -1, p->name,
 			    p->mode, p->fflags_set, 0);
-
+		if (p->fixup & TODO_MAC_METADATA)
+			set_mac_metadata(a, p->name, p->mac_metadata,
+					 p->mac_metadata_size);
 		next = p->next;
+		free(p->mac_metadata);
 		free(p->name);
 		free(p);
 		p = next;
@@ -1444,7 +1510,7 @@ new_fixup(struct archive_write_disk *a, const char *pathname)
 {
 	struct fixup_entry *fe;
 
-	fe = (struct fixup_entry *)malloc(sizeof(struct fixup_entry));
+	fe = (struct fixup_entry *)calloc(1, sizeof(struct fixup_entry));
 	if (fe == NULL)
 		return (NULL);
 	fe->next = a->fixup_list;
@@ -1893,7 +1959,9 @@ set_ownership(struct archive_write_disk *a)
 	return (ARCHIVE_WARN);
 }
 
-
+/*
+ * Note: Returns 0 on success, non-zero on failure.
+ */
 static int
 set_time(int fd, int mode, const char *name,
     time_t atime, long atime_nsec,
@@ -1973,12 +2041,15 @@ set_time(int fd, int mode, const char *name,
 }
 
 static int
-set_times(int fd, int mode, const char *name,
+set_times(struct archive_write_disk *a,
+    int fd, int mode, const char *name,
     time_t atime, long atime_nanos,
     time_t birthtime, long birthtime_nanos,
     time_t mtime, long mtime_nanos)
 {
-	int r1 = ARCHIVE_OK, r2 = ARCHIVE_OK;
+	/* Note: set_time doesn't use libarchive return conventions!
+	 * It uses syscall conventions.  So 0 here instead of ARCHIVE_OK. */
+	int r1 = 0, r2 = 0;
 
 #ifdef HAVE_STRUCT_STAT_ST_BIRTHTIME
 	/*
@@ -1998,7 +2069,12 @@ set_times(int fd, int mode, const char *name,
 	r2 = set_time(fd, mode, name,
 		      atime, atime_nanos,
 		      mtime, mtime_nanos);
-	return (r1 < r2) ? r1 : r2;
+	if (r1 != 0 || r2 != 0) {
+		archive_set_error(&a->archive, errno,
+				  "Can't restore time");
+		return (ARCHIVE_WARN);
+	}
+	return (ARCHIVE_OK);
 }
 
 static int
@@ -2032,7 +2108,7 @@ set_times_from_entry(struct archive_write_disk *a)
 		mtime_nsec = archive_entry_mtime_nsec(a->entry);
 	}
 
-	return set_times(a->fd, a->mode, a->name,
+	return set_times(a, a->fd, a->mode, a->name,
 			 atime, atime_nsec,
 			 birthtime, birthtime_nsec,
 			 mtime, mtime_nsec);
@@ -2359,6 +2435,62 @@ set_fflags_platform(struct archive_write_disk *a, int fd, const char *name,
 
 #endif /* __linux */
 
+#ifndef HAVE_COPYFILE_H
+/* Default is to simply drop Mac extended metadata. */
+static int
+set_mac_metadata(struct archive_write_disk *a, const char *pathname,
+		 const void *metadata, size_t metadata_size)
+{
+	(void)a; /* UNUSED */
+	(void)pathname; /* UNUSED */
+	(void)metadata; /* UNUSED */
+	(void)metadata_size; /* UNUSED */
+	return (ARCHIVE_OK);
+}
+#else
+
+/*
+ * On Mac OS, we use copyfile() to unpack the metadata and
+ * apply it to the target file.
+ */
+static int
+set_mac_metadata(struct archive_write_disk *a, const char *pathname,
+		 const void *metadata, size_t metadata_size)
+{
+	struct archive_string tmp;
+	ssize_t written;
+	int fd;
+	int ret = ARCHIVE_OK;
+
+	/* This would be simpler if copyfile() could just accept the
+	 * metadata as a block of memory; then we could sidestep this
+	 * silly dance of writing the data to disk just so that
+	 * copyfile() can read it back in again. */
+	archive_string_init(&tmp);
+	archive_strcpy(&tmp, pathname);
+	archive_strcat(&tmp, ".XXXXXX");
+	fd = mkstemp(tmp.s);
+
+	if (fd < 0) {
+		archive_set_error(&a->archive, errno,
+				  "Failed to restore metadata");
+		return (ARCHIVE_WARN);
+	}
+	written = write(fd, metadata, metadata_size);
+	close(fd);
+	if (written != metadata_size
+	    || copyfile(tmp.s, pathname, 0,
+			COPYFILE_UNPACK | COPYFILE_NOFOLLOW
+			| COPYFILE_ACL | COPYFILE_XATTR)) {
+		archive_set_error(&a->archive, errno,
+				  "Failed to restore metadata");
+		ret = ARCHIVE_WARN;
+	}
+	unlink(tmp.s);
+	return (ret);
+}
+#endif
+
 #ifndef HAVE_POSIX_ACL
 /* Default empty function body to satisfy mainline code. */
 static int
@@ -2506,7 +2638,7 @@ set_xattrs(struct archive_write_disk *a)
 				    name, value, size, 0);
 			}
 			if (e == -1) {
-				if (errno == ENOTSUP) {
+				if (errno == ENOTSUP || errno == ENOSYS) {
 					if (!warning_done) {
 						warning_done = 1;
 						archive_set_error(&a->archive, errno,
@@ -2573,7 +2705,7 @@ set_xattrs(struct archive_write_disk *a)
 				    namespace, name, value, size);
 			}
 			if (e != (int)size) {
-				if (errno == ENOTSUP) {
+				if (errno == ENOTSUP || errno == ENOSYS) {
 					if (!warning_done) {
 						warning_done = 1;
 						archive_set_error(&a->archive, errno,

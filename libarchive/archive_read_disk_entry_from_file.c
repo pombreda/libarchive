@@ -55,6 +55,9 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_disk_entry_from_file.c 2010
 #ifdef HAVE_ATTR_XATTR_H
 #include <attr/xattr.h>
 #endif
+#ifdef HAVE_COPYFILE_H
+#include <copyfile.h>
+#endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
@@ -69,6 +72,19 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_disk_entry_from_file.c 2010
 #endif
 #ifdef HAVE_LINUX_FS_H
 #include <linux/fs.h>
+#endif
+/*
+ * Some Linux distributions have both linux/ext2_fs.h and ext2fs/ext2_fs.h.
+ * As the include guards don't agree, the order of include is important.
+ */
+#ifdef HAVE_LINUX_EXT2_FS_H
+#include <linux/ext2_fs.h>      /* for Linux file flags */
+#endif
+#if defined(HAVE_EXT2FS_EXT2_FS_H) && !defined(__CYGWIN__)
+#include <ext2fs/ext2_fs.h>     /* Linux file flags, broken on Cygwin */
+#endif
+#ifdef HAVE_PATHS_H
+#include <paths.h>
 #endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -94,6 +110,8 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_disk_entry_from_file.c 2010
 
 static int setup_acls_posix1e(struct archive_read_disk *,
     struct archive_entry *, int fd);
+static int setup_mac_metadata(struct archive_read_disk *,
+    struct archive_entry *, int fd);
 static int setup_xattrs(struct archive_read_disk *,
     struct archive_entry *, int fd);
 static int setup_sparse(struct archive_read_disk *,
@@ -102,7 +120,8 @@ static int setup_sparse(struct archive_read_disk *,
 int
 archive_read_disk_entry_from_file(struct archive *_a,
     struct archive_entry *entry,
-    int fd, const struct stat *st)
+    int fd,
+    const struct stat *st)
 {
 	struct archive_read_disk *a = (struct archive_read_disk *)_a;
 	const char *path, *name;
@@ -115,54 +134,39 @@ archive_read_disk_entry_from_file(struct archive *_a,
 	if (path == NULL)
 		path = archive_entry_pathname(entry);
 
-#ifdef EXT2_IOC_GETFLAGS
-	/* Linux requires an extra ioctl to pull the flags.  Although
-	 * this is an extra step, it has a nice side-effect: We get an
-	 * open file descriptor which we can use in the subsequent lookups. */
-	if ((S_ISREG(st->st_mode) || S_ISDIR(st->st_mode))) {
-		if (fd < 0)
-			fd = open(pathname, O_RDONLY | O_NONBLOCK | O_BINARY);
-		if (fd >= 0) {
-			unsigned long stflags;
-			int r = ioctl(fd, EXT2_IOC_GETFLAGS, &stflags);
-			if (r == 0 && stflags != 0)
-				archive_entry_set_fflags(entry, stflags, 0);
-		}
-	}
-#endif
-
-	if (st == NULL) {
-		/* TODO: On Windows, use GetFileInfoByHandle() here.
-		 * Using Windows stat() call is badly broken, but
-		 * even the stat() wrapper has problems because
-		 * 'struct stat' is broken on Windows.
-		 */
+	if (a->tree == NULL) {
+		if (st == NULL) {
+			/* TODO: On Windows, use GetFileInfoByHandle() here.
+			 * Windows stat() can't be fixed because 'struct stat'
+			 * is broken on Windows.
+			 */
 #if HAVE_FSTAT
-		if (fd >= 0) {
-			if (fstat(fd, &s) != 0) {
-				archive_set_error(&a->archive, errno,
-				    "Can't fstat");
-				return (ARCHIVE_FAILED);
-			}
-		} else
+			if (fd >= 0) {
+				if (fstat(fd, &s) != 0) {
+					archive_set_error(&a->archive, errno,
+					    "Can't fstat");
+					return (ARCHIVE_FAILED);
+				}
+			} else
 #endif
 #if HAVE_LSTAT
-		if (!a->follow_symlinks) {
-			if (lstat(path, &s) != 0) {
+			if (!a->follow_symlinks) {
+				if (lstat(path, &s) != 0) {
+					archive_set_error(&a->archive, errno,
+					    "Can't lstat %s", path);
+					return (ARCHIVE_FAILED);
+				}
+			} else
+#endif
+			if (stat(path, &s) != 0) {
 				archive_set_error(&a->archive, errno,
-				    "Can't lstat %s", path);
+				    "Can't stat %s", path);
 				return (ARCHIVE_FAILED);
 			}
-		} else
-#endif
-		if (stat(path, &s) != 0) {
-			archive_set_error(&a->archive, errno,
-			    "Can't stat %s", path);
-			return (ARCHIVE_FAILED);
+			st = &s;
 		}
-		st = &s;
+		archive_entry_copy_stat(entry, st);
 	}
-	archive_entry_copy_stat(entry, st);
 
 	/* Lookup uname/gname */
 	name = archive_read_disk_uname(_a, archive_entry_uid(entry));
@@ -177,6 +181,22 @@ archive_read_disk_entry_from_file(struct archive *_a,
 	/* TODO: Does this belong in copy_stat()? */
 	if (st->st_flags != 0)
 		archive_entry_set_fflags(entry, st->st_flags, 0);
+#endif
+
+#ifdef EXT2_IOC_GETFLAGS
+	/* Linux requires an extra ioctl to pull the flags.  Although
+	 * this is an extra step, it has a nice side-effect: We get an
+	 * open file descriptor which we can use in the subsequent lookups. */
+	if ((S_ISREG(st->st_mode) || S_ISDIR(st->st_mode))) {
+		if (fd < 0)
+			fd = open(path, O_RDONLY | O_NONBLOCK);
+		if (fd >= 0) {
+			unsigned long stflags;
+			int r = ioctl(fd, EXT2_IOC_GETFLAGS, &stflags);
+			if (r == 0 && stflags != 0)
+				archive_entry_set_fflags(entry, stflags, 0);
+		}
+	}
 #endif
 
 #ifdef HAVE_READLINK
@@ -208,17 +228,132 @@ archive_read_disk_entry_from_file(struct archive *_a,
 	r1 = setup_xattrs(a, entry, fd);
 	if (r1 < r)
 		r = r1;
-	if (S_ISREG(st->st_mode) && archive_entry_size(entry) > 0 &&
-	    archive_entry_hardlink(entry) == NULL) {
-		r1 = setup_sparse(a, entry, fd);
-		if (r1 < r)
-			r = r1;
-	}
+	r1 = setup_mac_metadata(a, entry, fd);
+	if (r1 < r)
+		r = r1;
+	r1 = setup_sparse(a, entry, fd);
+	if (r1 < r)
+		r = r1;
+
 	/* If we opened the file earlier in this function, close it. */
 	if (initial_fd != fd)
 		close(fd);
 	return (r);
 }
+
+#ifdef __APPLE__
+/*
+ * The Mac OS "copyfile()" API copies the extended metadata for a
+ * file into a separate file in AppleDouble format (see RFC 1740).
+ *
+ * Mac OS tar and cpio implementations store this extended
+ * metadata as a separate entry just before the regular entry
+ * with a "._" prefix added to the filename.
+ *
+ * Note that this is currently done unconditionally; the tar program has
+ * an option to discard this information before the archive is written.
+ *
+ * TODO: If there's a failure, report it and return ARCHIVE_WARN.
+ */
+static int
+setup_mac_metadata(struct archive_read_disk *a,
+    struct archive_entry *entry, int fd)
+{
+	int tempfd = -1;
+	int copyfile_flags = COPYFILE_NOFOLLOW | COPYFILE_ACL | COPYFILE_XATTR;
+	struct stat copyfile_stat;
+	int ret = ARCHIVE_OK;
+	void *buff;
+	int have_attrs;
+	const char *name, *tempdir, *tempfile = NULL;
+
+	name = archive_entry_sourcepath(entry);
+	if (name == NULL)
+		name = archive_entry_pathname(entry);
+	if (name == NULL) {
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+		    "Can't open file to read extended attributes: No name");
+		return (ARCHIVE_WARN);
+	}
+
+	// Short-circuit if there's nothing to do.
+	have_attrs = copyfile(name, NULL, 0, copyfile_flags | COPYFILE_CHECK);
+	if (have_attrs == -1) {
+		archive_set_error(&a->archive, errno,
+			"Could not check extended attributes");
+		return (ARCHIVE_WARN);
+	}
+	if (have_attrs == 0)
+		return (ARCHIVE_OK);
+
+	if (issetugid() == 0)
+		tempdir = getenv("TMPDIR");
+	if (tempdir == NULL)
+		tempdir = _PATH_TMP;
+	tempfile = tempnam(tempdir, "tar.md.");
+
+	/* XXX I wish copyfile() could pack directly to a memory
+	 * buffer; that would avoid the temp file here.  For that
+	 * matter, it would be nice if fcopyfile() actually worked,
+	 * that would reduce the many open/close races here. */
+	if (copyfile(name, tempfile, 0, copyfile_flags | COPYFILE_PACK)) {
+		archive_set_error(&a->archive, errno,
+		    "Could not pack extended attributes");
+		ret = ARCHIVE_WARN;
+		goto cleanup;
+	}
+	tempfd = open(tempfile, O_RDONLY);
+	if (tempfd < 0) {
+		archive_set_error(&a->archive, errno,
+		    "Could not open extended attribute file");
+		ret = ARCHIVE_WARN;
+		goto cleanup;
+	}
+	if (fstat(tempfd, &copyfile_stat)) {
+		archive_set_error(&a->archive, errno,
+		    "Could not check size of extended attributes");
+		ret = ARCHIVE_WARN;
+		goto cleanup;
+	}
+	buff = malloc(copyfile_stat.st_size);
+	if (buff == NULL) {
+		archive_set_error(&a->archive, errno,
+		    "Could not allocate memory for extended attributes");
+		ret = ARCHIVE_WARN;
+		goto cleanup;
+	}
+	if (copyfile_stat.st_size != read(tempfd, buff, copyfile_stat.st_size)) {
+		archive_set_error(&a->archive, errno,
+		    "Could not read extended attributes into memory");
+		ret = ARCHIVE_WARN;
+		goto cleanup;
+	}
+	archive_entry_copy_mac_metadata(entry, buff, copyfile_stat.st_size);
+
+cleanup:
+	if (tempfd >= 0)
+		close(tempfd);
+	if (tempfile != NULL)
+		unlink(tempfile);
+	return (ret);
+}
+
+#else
+
+/*
+ * Stub implementation for non-Mac systems.
+ */
+static int
+setup_mac_metadata(struct archive_read_disk *a,
+    struct archive_entry *entry, int fd)
+{
+	(void)a; /* UNUSED */
+	(void)entry; /* UNUSED */
+	(void)fd; /* UNUSED */
+	return (ARCHIVE_OK);
+}
+#endif
+
 
 #ifdef HAVE_POSIX_ACL
 static void setup_acl_posix1e(struct archive_read_disk *a,
@@ -422,7 +557,7 @@ setup_xattrs(struct archive_read_disk *a,
 		list_size = listxattr(path, NULL, 0);
 
 	if (list_size == -1) {
-		if (errno == ENOTSUP)
+		if (errno == ENOTSUP || errno == ENOSYS)
 			return (ARCHIVE_OK);
 		archive_set_error(&a->archive, errno,
 			"Couldn't list extended attributes");
@@ -622,6 +757,11 @@ setup_sparse(struct archive_read_disk *a,
 	int initial_fd = fd;
 	int exit_sts = ARCHIVE_OK;
 
+	if (archive_entry_filetype(entry) != AE_IFREG
+	    || archive_entry_size(entry) <= 0
+	    || archive_entry_hardlink(entry) != NULL)
+		return (ARCHIVE_OK);
+
 	if (fd < 0) {
 		const char *path;
 
@@ -705,9 +845,14 @@ setup_sparse(struct archive_read_disk *a,
 {
 	int64_t size;
 	int initial_fd = fd;
-	off_t initial_off;
-	off_t off_s, off_e;
+	off_t initial_off; // FreeBSD/Solaris only, so off_t okay here
+	off_t off_s, off_e; // FreeBSD/Solaris only, so off_t okay here
 	int exit_sts = ARCHIVE_OK;
+
+	if (archive_entry_filetype(entry) != AE_IFREG
+	    || archive_entry_size(entry) <= 0
+	    || archive_entry_hardlink(entry) != NULL)
+		return (ARCHIVE_OK);
 
 	/* Does filesystem support the reporting of hole ? */
 	if (fd >= 0) {
@@ -795,6 +940,11 @@ setup_sparse(struct archive_read_disk *a,
 	LARGE_INTEGER fsize;
 	int initial_fd = fd;
 	int exit_sts = ARCHIVE_OK;
+
+	if (archive_entry_filetype(entry) != AE_IFREG
+	    || archive_entry_size(entry) <= 0
+	    || archive_entry_hardlink(entry) != NULL)
+		return (ARCHIVE_OK);
 
 	if (fd < 0) {
 		const char *path;

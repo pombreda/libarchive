@@ -101,7 +101,7 @@ archive_read_open_filename(struct archive *a, const char *filename,
 	int fd;
 	int is_disk_like = 0;
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
-	off_t mediasize = 0;
+	off_t mediasize = 0; // FreeBSD-specific, so off_t okay here.
 #elif defined(__NetBSD__) || defined(__OpenBSD__)
 	struct disklabel dl;
 #elif defined(__DragonFly__)
@@ -248,15 +248,19 @@ file_read(struct archive *a, void *client_data, const void **buff)
 	 * worth of data. */
 
 	*buff = mine->buffer;
-	bytes_read = read(mine->fd, mine->buffer, mine->block_size);
-	if (bytes_read < 0) {
-		if (mine->filename[0] == '\0')
-			archive_set_error(a, errno, "Error reading stdin");
-		else
-			archive_set_error(a, errno, "Error reading '%s'",
-			    mine->filename);
+	for (;;) {
+		bytes_read = read(mine->fd, mine->buffer, mine->block_size);
+		if (bytes_read < 0) {
+			if (errno == EINTR)
+				continue;
+			else if (mine->filename[0] == '\0')
+				archive_set_error(a, errno, "Error reading stdin");
+			else
+				archive_set_error(a, errno, "Error reading '%s'",
+				    mine->filename);
+		}
+		return (bytes_read);
 	}
-	return (bytes_read);
 }
 
 /*

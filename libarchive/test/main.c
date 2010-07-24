@@ -491,6 +491,22 @@ wcsdump(const char *e, const wchar_t *w)
 	logprintf("\"\n");
 }
 
+#ifndef HAVE_WCSCMP
+static int
+wcscmp(const wchar_t *s1, const wchar_t *s2)
+{
+
+	while (*s1 == *s2++) {
+		if (*s1++ == L'\0')
+			return 0;
+	}
+	if (*s1 > *--s2)
+		return 1;
+	else
+		return -1;
+}
+#endif
+
 /* Verify that two wide strings are equal, dump them if not. */
 int
 assertion_equal_wstring(const char *file, int line,
@@ -578,9 +594,9 @@ assertion_equal_mem(const char *file, int line,
 		offset += 16;
 	}
 	logprintf("      Dump of %s\n", e1);
-	hexdump(v1, v2, l < 64 ? l : 64, offset);
+	hexdump(v1, v2, l < 128 ? l : 128, offset);
 	logprintf("      Dump of %s\n", e2);
-	hexdump(v2, v1, l < 64 ? l : 64, offset);
+	hexdump(v2, v1, l < 128 ? l : 128, offset);
 	logprintf("\n");
 	failure_finish(extra);
 	return (0);

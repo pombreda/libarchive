@@ -62,6 +62,11 @@
 #include <sys/stat.h>
 #include <process.h>
 #include <direct.h>
+#if defined(__MINGW32__) && defined(HAVE_UNISTD_H)
+/* Prevent build error from a type mismatch of ftruncate().
+ * This unistd.h defines it as ftruncate(int, off_t). */
+#include <unistd.h>
+#endif
 #define NOCRYPT
 #include <windows.h>
 //#define	EFTYPE 7
@@ -299,42 +304,6 @@ struct _timeval64i32 {
 #define __timeval _timeval64i32
 #endif
 
-/* Message digest define */
-#if defined(ARCHIVE_HASH_MD5_WIN)    ||\
-    defined(ARCHIVE_HASH_SHA1_WIN)   || defined(ARCHIVE_HASH_SHA256_WIN) ||\
-    defined(ARCHIVE_HASH_SHA384_WIN) || defined(ARCHIVE_HASH_SHA512_WIN)
-# if defined(_MSC_VER) && _MSC_VER < 1300
-#  define _WIN32_WINNT 0x0400
-# endif
-#include <wincrypt.h>
-typedef struct {
-	int		valid;
-	HCRYPTPROV cryptProv;
-	HCRYPTHASH hash;
-} Digest_CTX;
-#endif
-
-#if defined(ARCHIVE_HASH_MD5_WIN)
-#define MD5_DIGEST_LENGTH	16
-#define MD5_CTX Digest_CTX
-#endif
-#if defined(ARCHIVE_HASH_SHA1_WIN)
-#define SHA1_DIGEST_LENGTH	20
-#define SHA1_CTX Digest_CTX
-#endif
-#if defined(ARCHIVE_HASH_SHA256_WIN)
-#define SHA256_DIGEST_LENGTH	32
-#define SHA256_CTX Digest_CTX
-#endif
-#if defined(ARCHIVE_HASH_SHA384_WIN)
-#define SHA384_DIGEST_LENGTH	48
-#define SHA384_CTX Digest_CTX
-#endif
-#if defined(ARCHIVE_HASH_SHA512_WIN)
-#define SHA512_DIGEST_LENGTH	64
-#define SHA512_CTX Digest_CTX
-#endif
-
 /* End of Win32 definitions. */
 
 /* Tell libarchive code that we have simulations for these. */
@@ -356,10 +325,11 @@ extern int	 __la_chdir(const char *path);
 extern int	 __la_chmod(const char *path, mode_t mode);
 extern int	 __la_fcntl(int fd, int cmd, int val);
 extern int	 __la_fstat(int fd, struct stat *st);
-extern int	 __la_ftruncate(int fd, off_t length);
+extern int	 __la_ftruncate(int fd, int64_t length);
 extern int	 __la_futimes(int fd, const struct __timeval *times);
 extern int	 __la_link(const char *src, const char *dst);
 extern __int64	 __la_lseek(int fd, __int64 offset, int whence);
+extern int	 __la_lstat(const char *path, struct stat *st);
 extern size_t	 __la_mbstowcs(wchar_t *wcstr, const char *mbstr, size_t nwchars);
 extern int	 __la_mkdir(const char *path, mode_t mode);
 extern int	 __la_mkstemp(char *template);
@@ -377,37 +347,5 @@ extern ssize_t	 __la_write(int fd, const void *buf, size_t nbytes);
 /* for status returned by la_waitpid */
 #define WIFEXITED(sts)		((sts & 0x100) == 0)
 #define WEXITSTATUS(sts)	(sts & 0x0FF)
-
-/* Message digest function */
-#if defined(ARCHIVE_HASH_MD5_WIN)
-extern void	 __la_MD5_Init(Digest_CTX *ctx);
-extern void	 __la_MD5_Update(Digest_CTX *ctx, const unsigned char *buf,
-		     size_t len);
-extern void	 __la_MD5_Final(unsigned char *buf, Digest_CTX *ctx);
-#endif
-#if defined(ARCHIVE_HASH_SHA1_WIN)
-extern void	 __la_SHA1_Init(Digest_CTX *ctx);
-extern void	 __la_SHA1_Update(Digest_CTX *ctx, const unsigned char *buf,
-		     size_t len);
-extern void	 __la_SHA1_Final(unsigned char *buf, Digest_CTX *ctx);
-#endif
-#if defined(ARCHIVE_HASH_SHA256_WIN)
-extern void	 __la_SHA256_Init(Digest_CTX *ctx);
-extern void	 __la_SHA256_Update(Digest_CTX *ctx, const unsigned char *buf,
-		     size_t len);
-extern void	 __la_SHA256_Final(unsigned char *buf, Digest_CTX *ctx);
-#endif
-#if defined(ARCHIVE_HASH_SHA384_WIN)
-extern void	 __la_SHA384_Init(Digest_CTX *ctx);
-extern void	 __la_SHA384_Update(Digest_CTX *ctx, const unsigned char *buf,
-		     size_t len);
-extern void	 __la_SHA384_Final(unsigned char *buf, Digest_CTX *ctx);
-#endif
-#if defined(ARCHIVE_HASH_SHA512_WIN)
-extern void	 __la_SHA512_Init(Digest_CTX *ctx);
-extern void	 __la_SHA512_Update(Digest_CTX *ctx, const unsigned char *buf,
-		     size_t len);
-extern void	 __la_SHA512_Final(unsigned char *buf, Digest_CTX *ctx);
-#endif
 
 #endif /* LIBARCHIVE_ARCHIVE_WINDOWS_H_INCLUDED */

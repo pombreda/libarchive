@@ -28,6 +28,7 @@ __FBSDID("$FreeBSD$");
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
+#include <stdio.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
@@ -325,7 +326,7 @@ struct xar {
 	enum enctype 		 rd_encoding;
 	z_stream		 stream;
 	int			 stream_valid;
-#ifdef HAVE_BZLIB_H
+#if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 	bz_stream		 bzstream;
 	int			 bzstream_valid;
 #endif
@@ -371,13 +372,8 @@ struct xmlattr_list {
 static int	xar_bid(struct archive_read *);
 static int	xar_read_header(struct archive_read *,
 		    struct archive_entry *);
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int	xar_read_data(struct archive_read *,
-		    const void **, size_t *, off_t *);
-#else
 static int	xar_read_data(struct archive_read *,
 		    const void **, size_t *, int64_t *);
-#endif
 static int	xar_read_data_skip(struct archive_read *);
 static int	xar_cleanup(struct archive_read *);
 static int	move_reading_point(struct archive_read *, uint64_t);
@@ -761,15 +757,9 @@ xar_read_header(struct archive_read *a, struct archive_entry *entry)
 	return (r);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int
-xar_read_data(struct archive_read *a,
-    const void **buff, size_t *size, off_t *offset)
-#else
 static int
 xar_read_data(struct archive_read *a,
     const void **buff, size_t *size, int64_t *offset)
-#endif
 {
 	struct xar *xar;
 	size_t used;
@@ -1341,7 +1331,7 @@ decompression_init(struct archive_read *a, enum enctype encoding)
 		xar->stream.total_in = 0;
 		xar->stream.total_out = 0;
 		break;
-#ifdef HAVE_BZLIB_H
+#if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 	case BZIP2:
 		if (xar->bzstream_valid) {
 			BZ2_bzDecompressEnd(&(xar->bzstream));
@@ -1454,7 +1444,7 @@ decompression_init(struct archive_read *a, enum enctype encoding)
 	 * Unsupported compression.
 	 */
 	default:
-#ifndef HAVE_BZLIB_H
+#if !defined(HAVE_BZLIB_H) || !defined(BZ_CONFIG_ERROR)
 	case BZIP2:
 #endif
 #if !defined(HAVE_LZMA_H) || !defined(HAVE_LIBLZMA)
@@ -1514,7 +1504,7 @@ decompress(struct archive_read *a, const void **buff, size_t *outbytes,
 		*used = avail_in - xar->stream.avail_in;
 		*outbytes = avail_out - xar->stream.avail_out;
 		break;
-#ifdef HAVE_BZLIB_H
+#if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 	case BZIP2:
 		xar->bzstream.next_in = (char *)(uintptr_t)b;
 		xar->bzstream.avail_in = avail_in;
@@ -1605,7 +1595,7 @@ decompress(struct archive_read *a, const void **buff, size_t *outbytes,
 		*outbytes = avail_out - xar->lzstream.avail_out;
 		break;
 #endif
-#ifndef HAVE_BZLIB_H
+#if !defined(HAVE_BZLIB_H) || !defined(BZ_CONFIG_ERROR)
 	case BZIP2:
 #endif
 #if !defined(HAVE_LZMA_H) || !defined(HAVE_LIBLZMA)
@@ -1648,7 +1638,7 @@ decompression_cleanup(struct archive_read *a)
 			r = ARCHIVE_FATAL;
 		}
 	}
-#ifdef HAVE_BZLIB_H
+#if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 	if (xar->bzstream_valid) {
 		if (BZ2_bzDecompressEnd(&(xar->bzstream)) != BZ_OK) {
 			archive_set_error(&a->archive,
