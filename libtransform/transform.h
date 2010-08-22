@@ -254,6 +254,8 @@ __LA_DECL int transform_read_open(struct transform *, void *_client_data,
 /* Use this if you know the filename.  Note: NULL indicates stdin. */
 __LA_DECL int transform_read_open_filename(struct transform *,
 		     const char *_filename, size_t _block_size);
+__LA_DECL int transform_read_open_filename_fd(struct transform *a, const char *filename,
+    size_t block_size, int fd);
 /* transform_read_open_file() is a deprecated synonym for ..._open_filename(). */
 __LA_DECL int transform_read_open_file(struct transform *,
 		     const char *_filename, size_t _block_size);

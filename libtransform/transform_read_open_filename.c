@@ -90,10 +90,49 @@ int
 transform_read_open_filename(struct transform *a, const char *filename,
     size_t block_size)
 {
+	int fd;
+
+	transform_clear_error(a);
+	if (filename != NULL && filename[0] == '\0') {
+		/* We used to delegate stdin support by
+		 * directly calling transform_read_open_fd(a,0,block_size)
+		 * here, but that doesn't (and shouldn't) handle the
+		 * end-of-file flush when reading stdout from a pipe.
+		 * Basically, read_open_fd() is intended for folks who
+		 * are willing to handle such details themselves.  This
+		 * API is intended to be a little smarter for folks who
+		 * want easy handling of the common case.
+		 */
+		filename = "";
+		fd = 0;
+	} else {
+		fd = open(filename, O_RDONLY | O_BINARY);
+		if (fd < 0) {
+			transform_set_error(a, errno,
+			    "Failed to open '%s'", filename);
+			return (TRANSFORM_FATAL);
+		}
+	}
+
+	return transform_read_open_filename_fd(a, filename, block_size, fd);
+}
+
+
+/*
+ * primarily purpose of this secondary opener is to remove a potential attack
+ * against libarchive consumers- libarchive for example, uses this functionality
+ * but has to do it's own stating.  It's unlikely, but swapping in a different
+ * file in between stat and open raises questions this author doesn't want to
+ * deal with.
+ * Thus this method, given a filename for an opened fd.
+ */
+int
+transform_read_open_filename_fd(struct transform *a, const char *filename,
+    size_t block_size, int fd)
+{
 	struct stat st;
 	struct read_file_data *mine;
 	void *buffer;
-	int fd;
 	int is_disk_like = 0;
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 	off_t mediasize = 0; // FreeBSD-specific, so off_t okay here.
@@ -115,22 +154,21 @@ transform_read_open_filename(struct transform *a, const char *filename,
 		 * want easy handling of the common case.
 		 */
 		filename = ""; /* Normalize NULL to "" */
-		fd = 0;
-#if defined(__CYGWIN__) || defined(_WIN32)
-		setmode(0, O_BINARY);
-#endif
-	} else {
-		fd = open(filename, O_RDONLY | O_BINARY);
-		if (fd < 0) {
-			transform_set_error(a, errno,
-			    "Failed to open '%s'", filename);
-			return (TRANSFORM_FATAL);
-		}
 	}
+
 	if (fstat(fd, &st) != 0) {
 		transform_set_error(a, errno, "Can't stat '%s'", filename);
 		return (TRANSFORM_FATAL);
 	}
+
+	/* 
+	 * we just force O_BINARY always; it's redundant in light of common
+	 * pathways, but structuring it like this avoids any potential gotchas
+	 */
+	
+#if defined(__CYGWIN__) || defined(_WIN32)
+	setmode(0, O_BINARY);
+#endif
 
 	/*
 	 * Determine whether the input looks like a disk device or a
