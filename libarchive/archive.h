@@ -605,6 +605,7 @@ __LA_DECL int archive_write_open(struct archive *, void *,
 __LA_DECL int archive_write_open_transform(struct archive *, void *,
 		     transform_open_callback *, transform_write_callback *,
 		     transform_close_callback *);
+__LA_DECL int archive_write_open_preopened_transform(struct archive *);
 __LA_DECL int archive_write_open_fd(struct archive *, int _fd);
 __LA_DECL int archive_write_open_filename(struct archive *, const char *_file);
 /* A deprecated synonym for archive_write_open_filename() */

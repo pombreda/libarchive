@@ -274,8 +274,31 @@ archive_write_open_transform(struct archive *_a, void *client_data,
 	ret = __convert_transform_error_to_archive_error(&a->archive,
 		a->archive.transform, ret);
 
-	if(ARCHIVE_OK != ret)
-		return (ret);
+	if(ARCHIVE_OK == ret) {
+		ret = archive_write_open_preopened_transform(&a->archive);
+	}
+
+	return (ret);
+}
+
+/*
+ * Open the archive using the current settings.
+ */
+int
+archive_write_open_preopened_transform(struct archive *_a)
+{
+	struct archive_write *a = (struct archive_write *)_a;
+	int ret = ARCHIVE_OK;
+
+	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
+	    ARCHIVE_STATE_NEW, "archive_write_open");
+	archive_clear_error(&a->archive);
+
+	if(!transform_is_write(a->archive.transform)) {
+		archive_set_error(&a->archive, EINVAL,
+			"transform isn't writable");
+		return (ARCHIVE_FATAL);
+	}
 
 	a->archive.state = ARCHIVE_STATE_HEADER;
 
