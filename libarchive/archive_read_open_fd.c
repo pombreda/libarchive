@@ -49,28 +49,13 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_open_fd.c 201103 2009-12-28
 #endif
 
 #include "archive.h"
-
-struct read_fd_data {
-	int	 fd;
-	size_t	 block_size;
-	char	 can_skip;
-	void	*buffer;
-};
-
-static int	file_close(struct transform *, void *);
-static ssize_t	file_read(struct transform *, void *, const void **buff);
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static off_t	file_skip(struct transform *, void *, off_t request);
-#else
-static int64_t	file_skip(struct transform *, void *, int64_t request);
-#endif
+#include "archive_private.h"
 
 int
 archive_read_open_fd(struct archive *a, int fd, size_t block_size)
 {
 	struct stat st;
-	struct read_fd_data *mine;
-	void *b;
+	int e;
 
 	archive_clear_error(a);
 	if (fstat(fd, &st) != 0) {
@@ -78,17 +63,6 @@ archive_read_open_fd(struct archive *a, int fd, size_t block_size)
 		return (ARCHIVE_FATAL);
 	}
 
-	mine = (struct read_fd_data *)malloc(sizeof(*mine));
-	b = malloc(block_size);
-	if (mine == NULL || b == NULL) {
-		archive_set_error(a, ENOMEM, "No memory");
-		free(mine);
-		free(b);
-		return (ARCHIVE_FATAL);
-	}
-	mine->block_size = block_size;
-	mine->buffer = b;
-	mine->fd = fd;
 	/*
 	 * Skip support is a performance optimization for anything
 	 * that supports lseek().  On FreeBSD, only regular files and
@@ -98,93 +72,12 @@ archive_read_open_fd(struct archive *a, int fd, size_t block_size)
 	 */
 	if (S_ISREG(st.st_mode)) {
 		archive_read_extract_set_skip_file(a, st.st_dev, st.st_ino);
-		mine->can_skip = 1;
-	} else
-		mine->can_skip = 0;
-#if defined(__CYGWIN__) || defined(_WIN32)
-	setmode(mine->fd, O_BINARY);
-#endif
-
-	return (archive_read_open_transform(a, mine,
-		NULL, file_read, file_skip, file_close));
-}
-
-static ssize_t
-file_read(struct transform *t, void *client_data, const void **buff)
-{
-	struct read_fd_data *mine = (struct read_fd_data *)client_data;
-	ssize_t bytes_read;
-
-	*buff = mine->buffer;
-	for (;;) {
-		bytes_read = read(mine->fd, mine->buffer, mine->block_size);
-		if (bytes_read < 0) {
-			if (errno == EINTR)
-				continue;
-			transform_set_error(t, errno, "Error reading fd %d", mine->fd);
-		}
-		return (bytes_read);
 	}
-}
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static off_t
-file_skip(struct transform *t, void *client_data, off_t request)
-#else
-static int64_t
-file_skip(struct transform *t, void *client_data, int64_t request)
-#endif
-{
-	struct read_fd_data *mine = (struct read_fd_data *)client_data;
-	off_t old_offset, new_offset;
-
-	if (!mine->can_skip)
-		return (0);
-
-	/* Reduce request to the next smallest multiple of block_size */
-	request = (request / mine->block_size) * mine->block_size;
-	if (request == 0)
-		return (0);
-
-	/*
-	 * Hurray for lazy evaluation: if the first lseek fails, the second
-	 * one will not be executed.
-	 */
-	if (((old_offset = lseek(mine->fd, 0, SEEK_CUR)) < 0) ||
-	    ((new_offset = lseek(mine->fd, request, SEEK_CUR)) < 0))
-	{
-		/* If seek failed once, it will probably fail again. */
-		mine->can_skip = 0;
-
-		if (errno == ESPIPE)
-		{
-			/*
-			 * Failure to lseek() can be caused by the file
-			 * descriptor pointing to a pipe, socket or FIFO.
-			 * Return 0 here, so the compression layer will use
-			 * read()s instead to advance the file descriptor.
-			 * It's slower of course, but works as well.
-			 */
-			return (0);
-		}
-		/*
-		 * There's been an error other than ESPIPE. This is most
-		 * likely caused by a programmer error (too large request)
-		 * or a corrupted archive file.
-		 */
-		transform_set_error(t, errno, "Error seeking");
-		return (-1);
+	e = __convert_transform_error_to_archive_error(a, a->transform,
+		transform_read_open_fd(a->transform, fd, block_size));
+	if (ARCHIVE_OK == e) {
+		e = archive_read_open_preopened_transform(a);
 	}
-	return (new_offset - old_offset);
-}
-
-static int
-file_close(struct transform *t, void *client_data)
-{
-	struct read_fd_data *mine = (struct read_fd_data *)client_data;
-
-	(void)t; /* UNUSED */
-	free(mine->buffer);
-	free(mine);
-	return (TRANSFORM_OK);
+	return (e);
 }

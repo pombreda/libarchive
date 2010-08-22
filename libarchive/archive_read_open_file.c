@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2003-2007 Tim Kientzle
+ * Copyright (c) 2010 Brian Harring
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,117 +50,27 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_open_file.c 201093 2009-12-
 #endif
 
 #include "archive.h"
-
-struct read_FILE_data {
-	FILE    *f;
-	size_t	 block_size;
-	void	*buffer;
-	char	 can_skip;
-};
-
-static int	file_close(struct transform *, void *);
-static ssize_t	file_read(struct transform *, void *, const void **buff);
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static off_t	file_skip(struct transform *, void *, off_t request);
-#else
-static int64_t	file_skip(struct transform *, void *, int64_t request);
-#endif
+#include "archive_private.h"
 
 int
 archive_read_open_FILE(struct archive *a, FILE *f)
 {
+	int e;
 	struct stat st;
-	struct read_FILE_data *mine;
-	size_t block_size = 128 * 1024;
-	void *b;
 
 	archive_clear_error(a);
-	mine = (struct read_FILE_data *)malloc(sizeof(*mine));
-	b = malloc(block_size);
-	if (mine == NULL || b == NULL) {
-		archive_set_error(a, ENOMEM, "No memory");
-		free(mine);
-		free(b);
-		return (ARCHIVE_FATAL);
-	}
-	mine->block_size = block_size;
-	mine->buffer = b;
-	mine->f = f;
-	/*
-	 * If we can't fstat() the file, it may just be that it's not
-	 * a file.  (FILE * objects can wrap many kinds of I/O
-	 * streams, some of which don't support fileno()).)
-	 */
-	if (fstat(fileno(mine->f), &st) == 0 && S_ISREG(st.st_mode)) {
+	
+	if (fstat(fileno(f), &st) == 0 && S_ISREG(st.st_mode)) {
 		archive_read_extract_set_skip_file(a, st.st_dev, st.st_ino);
 		/* Enable the seek optimization only for regular files. */
-		mine->can_skip = 1;
-	} else
-		mine->can_skip = 0;
-
-#if defined(__CYGWIN__) || defined(_WIN32)
-	setmode(fileno(mine->f), O_BINARY);
-#endif
-
-	return (archive_read_open_transform(a, mine, NULL, file_read,
-		    file_skip, file_close));
-}
-
-static ssize_t
-file_read(struct transform *t, void *client_data, const void **buff)
-{
-	struct read_FILE_data *mine = (struct read_FILE_data *)client_data;
-	ssize_t bytes_read;
-
-	*buff = mine->buffer;
-	bytes_read = fread(mine->buffer, 1, mine->block_size, mine->f);
-	if (bytes_read < 0) {
-		transform_set_error(t, errno, "Error reading file");
 	}
-	return (bytes_read);
-}
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static off_t
-file_skip(struct transform *t, void *client_data, off_t request)
-#else
-static int64_t
-file_skip(struct transform *t, void *client_data, int64_t request)
-#endif
-{
-	struct read_FILE_data *mine = (struct read_FILE_data *)client_data;
+	e = __convert_transform_error_to_archive_error(a, a->transform,
+		transform_read_open_FILE(a->transform, f));
 
-	(void)t; /* UNUSED */
-
-	/*
-	 * If we can't skip, return 0 as the amount we did step and
-	 * the caller will work around by reading and discarding.
-	 */
-	if (!mine->can_skip)
-		return (0);
-	if (request == 0)
-		return (0);
-
-#if HAVE_FSEEKO
-	if (fseeko(mine->f, request, SEEK_CUR) != 0)
-#else
-	if (fseek(mine->f, request, SEEK_CUR) != 0)
-#endif
-	{
-		mine->can_skip = 0;
-		return (0);
+	if (ARCHIVE_OK == e) {
+		e = archive_read_open_preopened_transform(a);
 	}
-	return (request);
-}
 
-static int
-file_close(struct transform *t, void *client_data)
-{
-	struct read_FILE_data *mine = (struct read_FILE_data *)client_data;
-
-	(void)t; /* UNUSED */
-	if (mine->buffer != NULL)
-		free(mine->buffer);
-	free(mine);
-	return (TRANSFORM_OK);
+	return (e);
 }

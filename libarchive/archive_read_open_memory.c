@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2003-2007 Tim Kientzle
+ * Copyright (c) 2010 Brian Harring
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,34 +27,8 @@
 #include "archive_platform.h"
 __FBSDID("$FreeBSD: src/lib/libarchive/archive_read_open_memory.c,v 1.6 2007/07/06 15:51:59 kientzle Exp $");
 
-#include <errno.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "archive.h"
-
-/*
- * Glue to read an archive from a block of memory.
- *
- * This is mostly a huge help in building test harnesses;
- * test programs can build archives in memory and read them
- * back again without having to mess with files on disk.
- */
-
-struct read_memory_data {
-	unsigned char	*buffer;
-	unsigned char	*end;
-	ssize_t	 read_size;
-};
-
-static int	memory_read_close(struct transform *, void *);
-static int	memory_read_open(struct transform *, void *);
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static off_t	memory_read_skip(struct transform *, void *, off_t request);
-#else
-static int64_t	memory_read_skip(struct transform *, void *, int64_t request);
-#endif
-static ssize_t	memory_read(struct transform *, void *, const void **buff);
+#include "archive_private.h"
 
 int
 archive_read_open_memory(struct archive *a, void *buff, size_t size)
@@ -70,87 +45,13 @@ int
 archive_read_open_memory2(struct archive *a, void *buff,
     size_t size, size_t read_size)
 {
-	struct read_memory_data *mine;
+	int e;
 
-	mine = (struct read_memory_data *)malloc(sizeof(*mine));
-	if (mine == NULL) {
-		archive_set_error(a, ENOMEM, "No memory");
-		return (ARCHIVE_FATAL);
+	e = __convert_transform_error_to_archive_error(a, a->transform,
+		transform_read_open_memory2(a->transform, buff, size, read_size));
+	if (ARCHIVE_OK == e) {
+		e = archive_read_open_preopened_transform(a);
 	}
-	memset(mine, 0, sizeof(*mine));
-	mine->buffer = (unsigned char *)buff;
-	mine->end = mine->buffer + size;
-	mine->read_size = read_size;
-	return (archive_read_open_transform(a, mine, memory_read_open,
-		    memory_read, memory_read_skip, memory_read_close));
-}
 
-/*
- * There's nothing to open.
- */
-static int
-memory_read_open(struct transform *t, void *client_data)
-{
-	(void)t; /* UNUSED */
-	(void)client_data; /* UNUSED */
-	return (TRANSFORM_OK);
-}
-
-/*
- * This is scary simple:  Just advance a pointer.  Limiting
- * to read_size is not technically necessary, but it exercises
- * more of the internal logic when used with a small block size
- * in a test harness.  Production use should not specify a block
- * size; then this is much faster.
- */
-static ssize_t
-memory_read(struct transform *t, void *client_data, const void **buff)
-{
-	struct read_memory_data *mine = (struct read_memory_data *)client_data;
-	ssize_t size;
-
-	(void)t; /* UNUSED */
-	*buff = mine->buffer;
-	size = mine->end - mine->buffer;
-	if (size > mine->read_size)
-		size = mine->read_size;
-        mine->buffer += size;
-	return (size);
-}
-
-/*
- * Advancing is just as simple.  Again, this is doing more than
- * necessary in order to better exercise internal code when used
- * as a test harness.
- */
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static off_t
-memory_read_skip(struct transform *t, void *client_data, off_t skip)
-#else
-static int64_t
-memory_read_skip(struct transform *t, void *client_data, int64_t skip)
-#endif
-{
-	struct read_memory_data *mine = (struct read_memory_data *)client_data;
-
-	(void)t; /* UNUSED */
-	if ((off_t)skip > (off_t)(mine->end - mine->buffer))
-		skip = mine->end - mine->buffer;
-	/* Round down to block size. */
-	skip /= mine->read_size;
-	skip *= mine->read_size;
-	mine->buffer += skip;
-	return (skip);
-}
-
-/*
- * Close is just cleaning up our one small bit of data.
- */
-static int
-memory_read_close(struct transform *t, void *client_data)
-{
-	struct read_memory_data *mine = (struct read_memory_data *)client_data;
-	(void)t; /* UNUSED */
-	free(mine);
-	return (TRANSFORM_OK);
+	return (e);
 }
