@@ -164,6 +164,6 @@ __archive_shim_read(struct transform *t, void *data, const void **buff)
 		return ((mine->reader)(mine->archive, mine->client_data, buff));
 	}
 
-	transform_set_error(t, ARCHIVE_ERRNO_PROGRAMMER, "unset writer");
+	transform_set_error(t, ARCHIVE_ERRNO_PROGRAMMER, "unset reader");
 	return (0);
 }
