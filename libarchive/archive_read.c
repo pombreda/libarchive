@@ -249,6 +249,22 @@ archive_read_open2(struct archive *a, void *_client_data,
 }
 
 int
+archive_read_open_preopened_transform(struct archive *a)
+{
+	archive_check_magic(a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
+	    "archive_read_open");
+	archive_clear_error(a);
+
+	if (!transform_is_read(a->transform)) {
+		archive_set_error(a, EINVAL,
+			"archive_read_open_from_transform transform must be readable");
+		return (ARCHIVE_FATAL);
+	}
+	a->state = ARCHIVE_STATE_HEADER;
+	return (ARCHIVE_OK);
+}
+
+int
 archive_read_open_transform(struct archive *a, void *client_data,
     transform_open_callback *client_opener,
     transform_read_callback *client_reader,
@@ -268,8 +284,10 @@ archive_read_open_transform(struct archive *a, void *client_data,
 		client_skipper,
 		client_closer);
 	e = __convert_transform_error_to_archive_error(a, a->transform, e);
-	if (ARCHIVE_OK == e)
-		a->state = ARCHIVE_STATE_HEADER;
+
+	if (ARCHIVE_OK == e) {
+		e = archive_read_open_preopened_transform(a);
+	}
 
 	return (e);
 }
