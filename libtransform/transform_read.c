@@ -844,3 +844,8 @@ transform_read_bytes_consumed(struct transform *_a)
 	return a->filter->bytes_consumed;
 }
 
+int
+transform_is_read(struct transform *t)
+{
+	return (t->magic == TRANSFORM_READ_MAGIC);
+}

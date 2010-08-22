@@ -583,3 +583,9 @@ _transform_filter_bytes(struct transform *_a, int n)
 	struct transform_write_filter *f = filter_lookup(_a, n);
 	return f == NULL ? -1 : f->bytes_written;
 }
+
+int
+transform_is_write(struct transform *t)
+{
+	return (t->magic == TRANSFORM_WRITE_MAGIC);
+}

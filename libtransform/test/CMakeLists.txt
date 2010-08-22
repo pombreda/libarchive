@@ -14,6 +14,7 @@ IF(ENABLE_TEST)
     test_acl_pax.c
     test_transform_api_feature.c
     test_bad_fd.c
+    test_transform_type.c
     test_compat_bzip2.c
     test_compat_cpio.c
     test_compat_gtar.c

@@ -426,6 +426,9 @@ __LA_DECL int		transform_write_set_options(struct transform *_a,
 __LA_DECL int		transform_write_set_filter_options(struct transform *_a,
 			    const char *s);
 
+__LA_DECL int transform_is_read(struct transform *);
+__LA_DECL int transform_is_write(struct transform *);
+
 /*
  * Accessor functions to read/set various information in
  * the struct transform object:
