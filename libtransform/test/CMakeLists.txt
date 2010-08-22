@@ -31,6 +31,7 @@ IF(ENABLE_TEST)
     test_filter_count.c
     test_fuzz.c
     test_link_resolver.c
+    test_open_failure.c
     test_open_fd.c
     test_open_file.c
     test_open_filename.c
@@ -65,6 +66,7 @@ IF(ENABLE_TEST)
     test_read_format_isojoliet_bz2.c
     test_read_format_isojoliet_long.c
     test_read_format_isojoliet_rr.c
+    test_read_format_isojoliet_versioned.c
     test_read_format_isorr_bz2.c
     test_read_format_isorr_ce.c
     test_read_format_isorr_new_bz2.c
@@ -123,6 +125,8 @@ IF(ENABLE_TEST)
     test_write_format_tar.c
     test_write_format_tar_empty.c
     test_write_format_tar_ustar.c
+    test_write_format_xar.c
+    test_write_format_xar_empty.c
     test_write_format_zip.c
     test_write_format_zip_empty.c
     test_write_format_zip_no_compression.c

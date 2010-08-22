@@ -369,7 +369,7 @@ __la_link(const char *src, const char *dst)
 }
 
 int
-__la_ftruncate(int fd, off_t length)
+__la_ftruncate(int fd, int64_t length)
 {
 	LARGE_INTEGER distance;
 	HANDLE handle;
@@ -948,7 +948,7 @@ __la_stat(const char *path, struct stat *st)
 	int ret;
 
 	handle = la_CreateFile(path, 0, 0, NULL, OPEN_EXISTING,
-		FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_READONLY,
+		FILE_FLAG_BACKUP_SEMANTICS,
 		NULL);
 	if (handle == INVALID_HANDLE_VALUE) {
 		la_dosmaperr(GetLastError());

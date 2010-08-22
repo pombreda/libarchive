@@ -31,7 +31,7 @@
 
 __FBSDID("$FreeBSD: head/lib/libtransform/filter_fork.c 182958 2008-09-12 05:33:00Z kientzle $");
 
-#if defined(HAVE_POLL)
+#if defined(HAVE_POLL) && (defined(HAVE_POLL_H) || defined(HAVE_SYS_POLL_H))
 #  if defined(HAVE_POLL_H)
 #    include <poll.h>
 #  elif defined(HAVE_SYS_POLL_H)
@@ -121,7 +121,7 @@ state_allocated:
 void
 __transform_check_child(int in, int out)
 {
-#if defined(HAVE_POLL)
+#if defined(HAVE_POLL) && (defined(HAVE_POLL_H) || defined(HAVE_SYS_POLL_H))
 	struct pollfd fds[2];
 	int idx;
 

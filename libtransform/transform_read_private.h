@@ -131,7 +131,7 @@ struct transform_read {
 	 */
 	const char	 *read_data_block;
 	int64_t		  read_data_offset;
-	off_t		  read_data_output_offset;
+	int64_t		  read_data_output_offset;
 	size_t		  read_data_remaining;
 
 	/* Callbacks to open/read/write/close client transform stream. */

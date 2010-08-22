@@ -45,7 +45,7 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_write_set_compression_bzip2.
 #include "transform_private.h"
 #include "transform_write_private.h"
 
-#ifndef HAVE_BZLIB_H
+#if !defined(HAVE_BZLIB_H) || !defined(BZ_CONFIG_ERROR)
 int
 transform_write_add_filter_bzip2(struct transform *a)
 {
@@ -332,4 +332,4 @@ drive_compressor(struct transform_write_filter *f,
 	}
 }
 
-#endif /* HAVE_BZLIB_H */
+#endif /* HAVE_BZLIB_H && BZ_CONFIG_ERROR */

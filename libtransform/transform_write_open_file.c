@@ -86,13 +86,16 @@ file_write(struct transform *t, void *client_data, const void *buff, size_t leng
 	size_t	bytesWritten;
 
 	mine = client_data;
-	bytesWritten = fwrite(buff, 1, length, mine->f);
-	if (bytesWritten < length) {
-		transform_set_error(t, errno, "Write error");
-		/* XXX this won't fly, use proper error code */
-		return (-1);
+	for (;;) {
+		bytesWritten = fwrite(buff, 1, length, mine->f);
+		if (bytesWritten <= 0) {
+			if (errno == EINTR)
+				continue;
+			transform_set_error(t, errno, "Write error");
+			return (-1);
+		}
+		return (bytesWritten);
 	}
-	return (bytesWritten);
 }
 
 static int

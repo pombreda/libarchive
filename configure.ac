@@ -4,8 +4,10 @@ dnl First, define all of the version numbers up front.
 dnl In particular, this allows the version macro to be used in AC_INIT
 
 dnl These first two version numbers are updated automatically on each release.
-m4_define([LIBTRANSFORM_VERSION_S],[2.8.900a])
-m4_define([LIBTRANSFORM_VERSION_N],[2008900])
+m4_define([LIBTRANSFORM_VERSION_S],[3.0.0a])
+m4_define([LIBTRANSFORM_VERSION_N],[3000000])
+
+AC_PREREQ(2.65)
 
 #
 # Now starts the "real" configure script.
@@ -100,8 +102,10 @@ AC_CHECK_HEADERS([linux/fiemap.h linux/fs.h])
 AC_CHECK_HEADERS([locale.h paths.h poll.h pwd.h regex.h signal.h stdarg.h])
 AC_CHECK_HEADERS([stdint.h stdlib.h string.h])
 AC_CHECK_HEADERS([sys/cdefs.h sys/extattr.h sys/ioctl.h sys/mkdev.h])
-AC_CHECK_HEADERS([sys/param.h sys/poll.h sys/select.h sys/time.h sys/utime.h])
+AC_CHECK_HEADERS([sys/param.h sys/poll.h sys/select.h])
 AC_CHECK_HEADERS([sys/utsname.h time.h unistd.h utime.h wchar.h wctype.h])
+AC_CHECK_HEADERS([sys/time.h sys/utime.h sys/utsname.h])
+AC_CHECK_HEADERS([time.h unistd.h utime.h wchar.h wctype.h])
 AC_CHECK_HEADERS([windows.h winioctl])
 
 # Checks for libraries.
@@ -214,14 +218,14 @@ AC_FUNC_VPRINTF
 AC_CHECK_STDCALL_FUNC([CreateHardLinkA],[const char *, const char *, void *])
 AC_CHECK_FUNCS([chflags chown chroot ctime_r])
 AC_CHECK_FUNCS([fchdir fchflags fchmod fchown fcntl fork])
-AC_CHECK_FUNCS([fstat ftruncate geteuid getpid])
+AC_CHECK_FUNCS([fstat ftruncate futimens futimes])
 AC_CHECK_FUNCS([lchflags lchmod lchown link localtime_r lstat])
 AC_CHECK_FUNCS([brtowc memmove memset mkdir mkfifo mknod mkstemp])
 AC_CHECK_FUNCS([nl_langinfo pipe poll readlink])
 AC_CHECK_FUNCS([select setenv setlocale sigaction])
 AC_CHECK_FUNCS([strchr strdup strerror strncpy_s strrchr symlink timegm])
 AC_CHECK_FUNCS([tzset unsetenv utime utimensat utimes vfork])
-AC_CHECK_FUNCS([wcrtomb wcscpy wcslen wctomb wmemcmp wmemcpy])
+AC_CHECK_FUNCS([wcrtomb wcscmp wcscpy wcslen wctomb wmemcmp wmemcpy])
 # detects cygwin-1.7, as opposed to older versions
 AC_CHECK_FUNCS([cygwin_conv_path])
 

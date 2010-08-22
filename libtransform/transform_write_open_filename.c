@@ -52,7 +52,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_write_open_filename.c 191165
 #endif
 
 struct write_file_data {
-	struct transform *transform;
 	int		fd;
 	char		filename[1];
 };
@@ -82,7 +81,6 @@ transform_write_open_filename(struct transform *a, const char *filename)
 	}
 	strcpy(mine->filename, filename);
 	mine->fd = -1;
-	mine->transform = a;
 	return (transform_write_open(a, mine,
 		file_open, file_write, file_close));
 }
@@ -130,18 +128,22 @@ file_open(struct transform *t, void *client_data)
 }
 
 static ssize_t
-file_write(struct transform *a, void *client_data, const void *buff, size_t length)
+file_write(struct transform *t, void *client_data, const void *buff, size_t length)
 {
 	struct write_file_data	*mine;
 	ssize_t	bytesWritten;
 
 	mine = (struct write_file_data *)client_data;
-	bytesWritten = write(mine->fd, buff, length);
-	if (bytesWritten <= 0) {
-		transform_set_error(a, errno, "Write error");
-		return (-1);
+	for (;;) {
+		bytesWritten = write(mine->fd, buff, length);
+		if (bytesWritten <= 0) {
+			if (errno == EINTR)
+				continue;
+			transform_set_error(t, errno, "Write error");
+			return (-1);
+		}
+		return (bytesWritten);
 	}
-	return (bytesWritten);
 }
 
 static int

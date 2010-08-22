@@ -287,6 +287,13 @@ build_stream(struct transform_read *a)
 
 		/* If no bidder, we're done. */
 		if (best_bidder == NULL) {
+			/* Verify the filter by asking it for some data. */
+			__transform_read_filter_ahead(a->filter, 1, &avail);
+			if (avail < 0) {
+				close_filters(a);
+				free_filters(a);
+				return (TRANSFORM_FATAL);
+			}
 			return (TRANSFORM_OK);
 		}
 
@@ -297,15 +304,9 @@ build_stream(struct transform_read *a)
 		filter->bidder = best_bidder;
 		filter->transform = a;
 		filter->upstream = a->filter;
-		r = (best_bidder->init)(filter);
-		if (r != TRANSFORM_OK) {
-			free(filter);
-			return (r);
-		}
 		a->filter = filter;
-		/* Verify the filter by asking it for some data. */
-		__transform_read_filter_ahead(filter, 1, &avail);
-		if (avail < 0) {
+		r = (best_bidder->init)(a->filter);
+		if (r != TRANSFORM_OK) {
 			close_filters(a);
 			free_filters(a);
 			return (TRANSFORM_FATAL);
@@ -343,6 +344,9 @@ free_filters(struct transform_read *a)
 	}
 }
 
+/*
+ * return the count of # of filters in use
+ */
 static int
 _transform_filter_count(struct transform *_a)
 {
@@ -423,7 +427,16 @@ get_filter(struct transform *_a, int n)
 {
 	struct transform_read *a = (struct transform_read *)_a;
 	struct transform_read_filter *f = a->filter;
-	/* XXX handle n == -1 */
+	/* We use n == -1 for 'the last filter', which is always the client proxy. */
+	if (n == -1 && f != NULL) {
+		struct transform_read_filter *last = f;
+		f = f->upstream;
+		while (f != NULL) {
+			last = f;
+			f = f->upstream;
+		}
+		return (last);
+	}
 	if (n < 0)
 		return NULL;
 	while (n > 0 && f != NULL) {
@@ -454,6 +467,7 @@ _transform_filter_bytes(struct transform *_a, int n)
 	return f == NULL ? -1 : f->bytes_consumed;
 }
 
+
 /*
  * Used internally by decompression routines to register their bid and
  * initialization functions.
@@ -478,7 +492,7 @@ __transform_read_get_bidder(struct transform_read *a)
 
 /*
  * The next section implements the peek/consume internal I/O
- * system used by archive readers.  This system allows simple
+ * system used by transform readers.  This system allows simple
  * read-ahead for consumers while preserving zero-copy operation
  * most of the time.
  *
@@ -489,7 +503,7 @@ __transform_read_get_bidder(struct transform_read *a)
  *
  * In the ideal case, filters generate blocks of data
  * and transform_read_ahead() just returns pointers directly into
- * those blocks.  Then __transform_read_consume() just bumps those
+ * those blocks.  Then transform_read_consume() just bumps those
  * pointers.  Only if your request would span blocks does the I/O
  * layer use a copy buffer to provide you with a contiguous block of
  * data.
@@ -533,9 +547,8 @@ __transform_read_get_bidder(struct transform_read *a)
  * a NULL return as an error.
  *
  * Important:  This does NOT move the file pointer.  See
- * __transform_read_consume() below.
+ * transform_read_consume() below.
  */
-
 const void *
 transform_read_ahead(struct transform *_a, size_t min, ssize_t *avail)
 {
@@ -712,12 +725,6 @@ __transform_read_filter_ahead(struct transform_read_filter *filter,
  * ahead by more than the amount of data available according to
  * transform_read_ahead().
  */
-/*
- * Mark the appropriate data as used.  Note that the request here will
- * often be much smaller than the size of the previous read_ahead
- * request.
- */
-
 int64_t
 transform_read_consume(struct transform *_a, int64_t request)
 {
@@ -730,7 +737,7 @@ transform_read_consume(struct transform *_a, int64_t request)
 
 int64_t
 __transform_read_filter_consume(struct transform_read_filter *filter,
-	int64_t request)
+    int64_t request)
 {
 	int64_t skipped = advance_file_pointer(filter, request);
 	if (skipped == request)
@@ -751,7 +758,7 @@ __transform_read_filter_consume(struct transform_read_filter *filter,
  * request if EOF is encountered first.
  * Returns a negative value if there's an I/O error.
  */
-int64_t
+static int64_t
 advance_file_pointer(struct transform_read_filter *filter, int64_t request)
 {
 	int64_t bytes_skipped, total_bytes_skipped = 0;
@@ -761,9 +768,9 @@ advance_file_pointer(struct transform_read_filter *filter, int64_t request)
 	if (filter->fatal)
 		return (-1);
 
-	/* Use up the copy buffer first */
+	/* Use up the copy buffer first. */
 	if (filter->avail > 0) {
-		min = minimum(request, filter->avail);
+		min = minimum(request, (int64_t)filter->avail);
 		filter->next += min;
 		filter->avail -= min;
 		request -= min;
@@ -771,9 +778,9 @@ advance_file_pointer(struct transform_read_filter *filter, int64_t request)
 		total_bytes_skipped += min;
 	}
 
-	/* Then use up the client buffer */
+	/* Then use up the client buffer. */
 	if (filter->client_avail > 0) {
-		min = minimum(request, filter->client_avail);
+		min = minimum(request, (int64_t)filter->client_avail);
 		filter->client_next += min;
 		filter->client_avail -= min;
 		request -= min;
@@ -783,7 +790,7 @@ advance_file_pointer(struct transform_read_filter *filter, int64_t request)
 	if (request == 0)
 		return (total_bytes_skipped);
 
-	/* If there's an optimized skip function, use it */
+	/* If there's an optimized skip function, use it. */
 	if (filter->skip != NULL) {
 		bytes_skipped = (filter->skip)(filter, request);
 		if (bytes_skipped < 0) {	/* error */
@@ -793,7 +800,7 @@ advance_file_pointer(struct transform_read_filter *filter, int64_t request)
 		filter->bytes_consumed += bytes_skipped;
 		total_bytes_skipped += bytes_skipped;
 		request -= bytes_skipped;
-		if(request == 0)
+		if (request == 0)
 			return (total_bytes_skipped);
 	}
 
@@ -815,7 +822,7 @@ advance_file_pointer(struct transform_read_filter *filter, int64_t request)
 
 		if (bytes_read >= request) {
 			filter->client_next =
-				((const char *)filter->client_buff) + request;
+			    ((const char *)filter->client_buff) + request;
 			filter->client_avail = bytes_read - request;
 			filter->client_total = bytes_read;
 			total_bytes_skipped += request;
@@ -831,6 +838,9 @@ int64_t
 transform_read_bytes_consumed(struct transform *_a)
 {
 	struct transform_read *a = (struct transform_read *)_a;
+	transform_check_magic(_a, TRANSFORM_READ_MAGIC,
+		TRANSFORM_STATE_DATA, "transform_read_bytes_consumed");
+
 	return a->filter->bytes_consumed;
 }
 

@@ -51,8 +51,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_write_open_fd.c 201093 2009-
 #include "transform.h"
 
 struct write_fd_data {
-	struct transform *transform;
-	off_t		offset;
 	int		fd;
 };
 
@@ -70,7 +68,6 @@ transform_write_open_fd(struct transform *a, int fd)
 		transform_set_error(a, ENOMEM, "No memory");
 		return (TRANSFORM_FATAL);
 	}
-	mine->transform = a;
 	mine->fd = fd;
 #if defined(__CYGWIN__) || defined(_WIN32)
 	setmode(mine->fd, O_BINARY);
@@ -118,13 +115,16 @@ file_write(struct transform *t, void *client_data, const void *buff, size_t leng
 	ssize_t	bytesWritten;
 
 	mine = (struct write_fd_data *)client_data;
-	bytesWritten = write(mine->fd, buff, length);
-	if (bytesWritten <= 0) {
-		transform_set_error(t, errno, "Write error");
-		/* XXX this won't fly */
-		return (-1);
+	for (;;) {
+		bytesWritten = write(mine->fd, buff, length);
+		if (bytesWritten <= 0) {
+			if (errno == EINTR)
+				continue;
+			transform_set_error(t, errno, "Write error");
+			return (-1);
+		}
+		return (bytesWritten);
 	}
-	return (bytesWritten);
 }
 
 static int

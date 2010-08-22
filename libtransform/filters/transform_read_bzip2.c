@@ -48,7 +48,7 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_support_compression_bzi
 #include "transform_private.h"
 #include "transform_read_private.h"
 
-#if HAVE_BZLIB_H
+#if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 struct private_data {
 	bz_stream	 stream;
 	char		*out_block;
@@ -86,7 +86,7 @@ transform_read_support_compression_bzip2(struct transform *_a)
 	reader->init = bzip2_reader_init;
 	reader->options = NULL;
 	reader->free = bzip2_reader_free;
-#if HAVE_BZLIB_H
+#if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 	return (TRANSFORM_OK);
 #else
 	transform_set_error(_a, TRANSFORM_ERRNO_MISC,
@@ -146,7 +146,7 @@ bzip2_reader_bid(struct transform_read_filter_bidder *self, struct transform_rea
 	return (bits_checked);
 }
 
-#ifndef HAVE_BZLIB_H
+#if !defined(HAVE_BZLIB_H) || !defined(BZ_CONFIG_ERROR)
 
 /*
  * If we don't have the library on this system, we can't actually do the
@@ -351,4 +351,4 @@ bzip2_filter_close(struct transform_read_filter *self)
 	return (ret);
 }
 
-#endif /* HAVE_BZLIB_H */
+#endif /* HAVE_BZLIB_H && BZ_CONFIG_ERROR */

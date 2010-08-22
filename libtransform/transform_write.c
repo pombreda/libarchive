@@ -63,12 +63,12 @@ static struct transform_vtable *transform_write_vtable(void);
 
 static int	_transform_filter_code(struct transform *, int);
 static const char *_transform_filter_name(struct transform *, int);
-static int  _transform_filter_count(struct transform *);
 static int64_t	_transform_filter_bytes(struct transform *, int);
+static int  _transform_write_filter_count(struct transform *);
 static int	_transform_write_close(struct transform *);
 static int	_transform_write_free(struct transform *);
 static ssize_t	_transform_write_data(struct transform *, const void *, size_t);
-void __transform_write_filters_free(struct transform_write *);
+static void __transform_write_filters_free(struct transform_write *);
 
 struct transform_none {
 	size_t buffer_size;
@@ -88,7 +88,7 @@ transform_write_vtable(void)
 		av.transform_filter_bytes = _transform_filter_bytes;
 		av.transform_filter_code = _transform_filter_code;
 		av.transform_filter_name = _transform_filter_name;
-		av.transform_filter_count = _transform_filter_count;
+		av.transform_filter_count = _transform_write_filter_count;
 		av.transform_free = _transform_write_free;
 		av.transform_write_data = _transform_write_data;
 	}
@@ -172,7 +172,6 @@ transform_write_get_bytes_in_last_block(struct transform *_a)
 	return (a->bytes_in_last_block);
 }
 
-
 /*
  * Allocate and return the next filter structure.
  */
@@ -224,9 +223,11 @@ __transform_write_open_filter(struct transform_write_filter *f)
 int
 __transform_write_close_filter(struct transform_write_filter *f)
 {
-	if (f->close == NULL)
-		return (TRANSFORM_OK);
-	return (f->close)(f);
+	if (f->close != NULL)
+		return (f->close)(f);
+	if (f->next_filter != NULL)
+		return (__transform_write_close_filter(f->next_filter));
+	return (TRANSFORM_OK);
 }
 
 int
@@ -234,7 +235,7 @@ transform_write_output(struct transform *_a, const void *buff, size_t length)
 {
 	struct transform_write *a = (struct transform_write *)_a;
 	transform_check_magic(_a, TRANSFORM_WRITE_MAGIC,
-		TRANSFORM_STATE_DATA, "transform_write_output");	
+		TRANSFORM_STATE_DATA, "transform_write_output");
 	return (__transform_write_filter(a->filter_first, buff, length));
 }
 
@@ -307,7 +308,7 @@ transform_write_client_write(struct transform_write_filter *f,
                 /* If buffer is not empty... */
                 /* ... copy data into buffer ... */
                 to_copy = ((size_t)remaining > state->avail) ?
-                    state->avail : remaining;
+			state->avail : (size_t)remaining;
                 memcpy(state->next, buff, to_copy);
                 state->next += to_copy;
                 state->avail -= to_copy;
@@ -315,11 +316,21 @@ transform_write_client_write(struct transform_write_filter *f,
                 remaining -= to_copy;
                 /* ... if it's full, write it out. */
                 if (state->avail == 0) {
-                        bytes_written = (a->client_writer)(&a->transform,
-                            a->client_data, state->buffer, state->buffer_size);
-                        if (bytes_written <= 0)
-                                return (TRANSFORM_FATAL);
-                        /* XXX TODO: if bytes_written < state->buffer_size */
+			char *p = state->buffer;
+			size_t to_write = state->buffer_size;
+			while (to_write > 0) {
+				bytes_written = (a->client_writer)(&a->transform,
+				    a->client_data, p, to_write);
+				if (bytes_written <= 0)
+					return (TRANSFORM_FATAL);
+				if ((size_t)bytes_written > to_write) {
+					transform_set_error(&(a->transform),
+					    -1, "write overrun");
+					return (TRANSFORM_FATAL);
+				}
+				p += bytes_written;
+				to_write -= bytes_written;
+			}
                         state->next = state->buffer;
                         state->avail = state->buffer_size;
                 }
@@ -396,7 +407,7 @@ transform_write_open(struct transform *_a, void *client_data,
 {
 	struct transform_write *a = (struct transform_write *)_a;
 	struct transform_write_filter *client_filter;
-	int ret;
+	int ret, r1;
 
 	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
 	    TRANSFORM_STATE_NEW, "transform_write_open");
@@ -413,9 +424,12 @@ transform_write_open(struct transform *_a, void *client_data,
 	client_filter->close = transform_write_client_close;
 
 	ret = __transform_write_open_filter(a->filter_first);
+	if (ret < TRANSFORM_WARN) {
+		r1 = __transform_write_close_filter(a->filter_first);
+		return (r1 < ret ? r1 : ret);
+	}
 
 	a->transform.state = TRANSFORM_STATE_DATA;
-
 	return (ret);
 }
 
@@ -452,12 +466,25 @@ transform_write_reset_filters(struct transform *_a)
 {
 	struct transform_write *a = (struct transform_write *)_a;
 	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_NEW, "transform_write_reset_filters");
+		TRANSFORM_STATE_NEW, "transform_write_reset_filters");
 	__transform_write_filters_free(a);
 	return (TRANSFORM_OK);
 }
 
-void
+static int
+_transform_write_filter_count(struct transform *_a)
+{
+	struct transform_write *a = (struct transform_write *)_a;
+	struct transform_write_filter *p = a->filter_first;
+	int count = 0;
+	while(p) {
+		count++;
+		p = p->next_filter;
+	}
+	return count;
+}
+
+static void
 __transform_write_filters_free(struct transform_write *a)
 {
 	int r = TRANSFORM_OK, r1;
@@ -499,11 +526,13 @@ _transform_write_free(struct transform *_a)
 
 	__transform_write_filters_free(a);
 
+	/* Release various dynamic buffers. */
 	transform_string_free(&a->transform.error_string);
 	a->transform.magic = 0;
 	free(a);
 	return (r);
 }
+
 
 /*
  * Note that the compressor is responsible for blocking.
@@ -546,20 +575,6 @@ _transform_filter_name(struct transform *_a, int n)
 {
 	struct transform_write_filter *f = filter_lookup(_a, n);
 	return f == NULL ? NULL : f->name;
-}
-
-
-static int
-_transform_filter_count(struct transform *_a)
-{
-	struct transform_write *a = (struct transform_write *)_a;
-	struct transform_write_filter *p = a->filter_first;
-	int count = 0;
-	while(p) {
-		count++;
-		p = p->next_filter;
-	}
-	return count;
 }
 
 static int64_t

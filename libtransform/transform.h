@@ -87,7 +87,7 @@
 #  endif
 # else
 #  ifdef __GNUC__
-#   define __LA_DECL	__attribute__((dllimport)) extern
+#   define __LA_DECL
 #  else
 #   define __LA_DECL	__declspec(dllimport)
 #  endif
@@ -116,14 +116,13 @@ extern "C" {
  * header and library are very different, you should expect some
  * strangeness.  Don't do that.
  */
-
-#define	TRANSFORM_VERSION_NUMBER 2008900
+#define	TRANSFORM_VERSION_NUMBER 3000000
 __LA_DECL int		transform_version_number(void);
 
 /*
  * Textual name/version of the library, useful for version displays.
  */
-#define	TRANSFORM_VERSION_STRING "libtransform 2.8.900a"
+#define	TRANSFORM_VERSION_STRING "libtransform 3.0.0a"
 __LA_DECL const char *	transform_version_string(void);
 
 /* Declare our basic types. */

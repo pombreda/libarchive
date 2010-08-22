@@ -491,6 +491,22 @@ wcsdump(const char *e, const wchar_t *w)
 	logprintf("\"\n");
 }
 
+#ifndef HAVE_WCSCMP
+static int
+wcscmp(const wchar_t *s1, const wchar_t *s2)
+{
+
+	while (*s1 == *s2++) {
+		if (*s1++ == L'\0')
+			return 0;
+	}
+	if (*s1 > *--s2)
+		return 1;
+	else
+		return -1;
+}
+#endif
+
 /* Verify that two wide strings are equal, dump them if not. */
 int
 assertion_equal_wstring(const char *file, int line,
@@ -578,9 +594,9 @@ assertion_equal_mem(const char *file, int line,
 		offset += 16;
 	}
 	logprintf("      Dump of %s\n", e1);
-	loghexdump(v1, v2, l < 64 ? l : 64, offset);
+	loghexdump(v1, v2, l < 128 ? l : 128, offset);
 	logprintf("      Dump of %s\n", e2);
-	loghexdump(v2, v1, l < 64 ? l : 64, offset);
+	loghexdump(v2, v1, l < 128 ? l : 128, offset);
 	logprintf("\n");
 	failure_finish(extra);
 	return (0);
@@ -906,151 +922,6 @@ assertion_is_not_hardlink(const char *file, int line,
 	    "Files %s and %s should not be hardlinked", path1, path2);
 	failure_finish(NULL);
 	return (0);
-}
-
-/* Verify a/b/mtime of 'pathname'. */
-/* If 'recent', verify that it's within last 10 seconds. */
-static int
-assertion_file_time(const char *file, int line,
-    const char *pathname, long t, long nsec, char type, int recent)
-{
-	long long filet, filet_nsec;
-	int r;
-
-#if defined(_WIN32) && !defined(__CYGWIN__)
-#define EPOC_TIME	(116444736000000000ULL)
-	FILETIME ftime, fbirthtime, fatime, fmtime;
-	ULARGE_INTEGER wintm;
-	HANDLE h;
-	ftime.dwLowDateTime = 0;
-	ftime.dwHighDateTime = 0;
-
-	assertion_count(file, line);
-	h = CreateFile(pathname, FILE_READ_ATTRIBUTES, 0, NULL,
-	    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (h == INVALID_HANDLE_VALUE) {
-		failure_start(file, line, "Can't access %s\n", pathname);
-		failure_finish(NULL);
-		return (0);
-	}
-	r = GetFileTime(h, &fbirthtime, &fatime, &fmtime);
-	switch (type) {
-	case 'a': ftime = fatime; break;
-	case 'b': ftime = fbirthtime; break;
-	case 'm': ftime = fmtime; break;
-	}
-	CloseHandle(h);
-	if (r == 0) {
-		failure_start(file, line, "Can't GetFileTime %s\n", pathname);
-		failure_finish(NULL);
-		return (0);
-	}
-	wintm.LowPart = ftime.dwLowDateTime;
-	wintm.HighPart = ftime.dwHighDateTime;
-	filet = (wintm.QuadPart - EPOC_TIME) / 10000000;
-	filet_nsec = ((wintm.QuadPart - EPOC_TIME) % 10000000) * 100;
-	nsec = (nsec / 100) * 100; /* Round the request */
-#else
-	struct stat st;
-
-	assertion_count(file, line);
-	r = lstat(pathname, &st);
-	if (r != 0) {
-		failure_start(file, line, "Can't stat %s\n", pathname);
-		failure_finish(NULL);
-		return (0);
-	}
-	switch (type) {
-	case 'a': filet = st.st_atime; break;
-	case 'm': filet = st.st_mtime; break;
-	case 'b': filet = 0; break;
-	default: fprintf(stderr, "INTERNAL: Bad type %c for file time", type);
-		exit(1);
-	}
-#if defined(__FreeBSD__)
-	switch (type) {
-	case 'a': filet_nsec = st.st_atimespec.tv_nsec; break;
-	case 'b': filet = st.st_birthtime;
-		filet_nsec = st.st_birthtimespec.tv_nsec; break;
-	case 'm': filet_nsec = st.st_mtimespec.tv_nsec; break;
-	default: fprintf(stderr, "INTERNAL: Bad type %c for file time", type);
-		exit(1);
-	}
-	/* FreeBSD generally only stores to microsecond res, so round. */
-	filet_nsec = (filet_nsec / 1000) * 1000;
-	nsec = (nsec / 1000) * 1000;
-#else
-	filet_nsec = nsec = 0;	/* Generic POSIX only has whole seconds. */
-	if (type == 'b') return (1); /* Generic POSIX doesn't have birthtime */
-#if defined(__HAIKU__)
-	if (type == 'a') return (1); /* Haiku doesn't have atime. */
-#endif
-#endif
-#endif
-	if (recent) {
-		/* Check that requested time is up-to-date. */
-		time_t now = time(NULL);
-		if (filet < now - 10 || filet > now + 1) {
-			failure_start(file, line,
-			    "File %s has %ctime %ld, %ld seconds ago\n",
-			    pathname, type, filet, now - filet);
-			failure_finish(NULL);
-			return (0);
-		}
-	} else if (filet != t || filet_nsec != nsec) {
-		failure_start(file, line,
-		    "File %s has %ctime %ld.%09ld, expected %ld.%09ld",
-		    pathname, type, filet, filet_nsec, t, nsec);
-		failure_finish(NULL);
-		return (0);
-	}
-	return (1);
-}
-
-/* Verify atime of 'pathname'. */
-int
-assertion_file_atime(const char *file, int line,
-    const char *pathname, long t, long nsec)
-{
-	return assertion_file_time(file, line, pathname, t, nsec, 'a', 0);
-}
-
-/* Verify atime of 'pathname' is up-to-date. */
-int
-assertion_file_atime_recent(const char *file, int line, const char *pathname)
-{
-	return assertion_file_time(file, line, pathname, 0, 0, 'a', 1);
-}
-
-/* Verify birthtime of 'pathname'. */
-int
-assertion_file_birthtime(const char *file, int line,
-    const char *pathname, long t, long nsec)
-{
-	return assertion_file_time(file, line, pathname, t, nsec, 'b', 0);
-}
-
-/* Verify birthtime of 'pathname' is up-to-date. */
-int
-assertion_file_birthtime_recent(const char *file, int line,
-    const char *pathname)
-{
-	return assertion_file_time(file, line, pathname, 0, 0, 'b', 1);
-}
-
-/* Verify mtime of 'pathname'. */
-int
-assertion_file_mtime(const char *file, int line,
-    const char *pathname, long t, long nsec)
-{
-	return assertion_file_time(file, line, pathname, t, nsec, 'm', 0);
-}
-
-/* Verify mtime of 'pathname' is up-to-date. */
-int
-assertion_file_mtime_recent(const char *file, int line, const char *pathname)
-{
-	return assertion_file_time(file, line, pathname, 0, 0, 'm', 1);
 }
 
 /* Verify number of links to 'pathname'. */

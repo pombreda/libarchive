@@ -1,80 +1,5 @@
 /* config.h.  Generated from config.h.cmake by cmake configure */
 
-/* MD5 via ARCHIVE_HASH_MD5_LIBC supported. */
-#cmakedefine ARCHIVE_HASH_MD5_LIBC
-
-/* MD5 via ARCHIVE_HASH_MD5_OPENSSL supported. */
-#cmakedefine ARCHIVE_HASH_MD5_OPENSSL
-
-/* MD5 via ARCHIVE_HASH_MD5_WIN supported. */
-#cmakedefine ARCHIVE_HASH_MD5_WIN
-
-/* RMD160 via ARCHIVE_HASH_RMD160_LIBC supported. */
-#cmakedefine ARCHIVE_HASH_RMD160_LIBC
-
-/* RMD160 via ARCHIVE_HASH_RMD160_OPENSSL supported. */
-#cmakedefine ARCHIVE_HASH_RMD160_OPENSSL
-
-/* SHA1 via ARCHIVE_HASH_SHA1_LIBC supported. */
-#cmakedefine ARCHIVE_HASH_SHA1_LIBC
-
-/* SHA1 via ARCHIVE_HASH_SHA1_OPENSSL supported. */
-#cmakedefine ARCHIVE_HASH_SHA1_OPENSSL
-
-/* SHA1 via ARCHIVE_HASH_SHA1_WIN supported. */
-#cmakedefine ARCHIVE_HASH_SHA1_WIN
-
-/* SHA256 via ARCHIVE_HASH_SHA256_LIBC supported. */
-#cmakedefine ARCHIVE_HASH_SHA256_LIBC
-
-/* SHA256 via ARCHIVE_HASH_SHA256_LIBC2 supported. */
-#cmakedefine ARCHIVE_HASH_SHA256_LIBC2
-
-/* SHA256 via ARCHIVE_HASH_SHA256_LIBC3 supported. */
-#cmakedefine ARCHIVE_HASH_SHA256_LIBC3
-
-/* SHA256 via ARCHIVE_HASH_SHA256_OPENSSL supported. */
-#cmakedefine ARCHIVE_HASH_SHA256_OPENSSL
-
-/* SHA256 via ARCHIVE_HASH_SHA256_WIN supported. */
-#cmakedefine ARCHIVE_HASH_SHA256_WIN
-
-/* SHA384 via ARCHIVE_HASH_SHA384_LIBC supported. */
-#cmakedefine ARCHIVE_HASH_SHA384_LIBC
-
-/* SHA384 via ARCHIVE_HASH_SHA384_LIBC2 supported. */
-#cmakedefine ARCHIVE_HASH_SHA384_LIBC2
-
-/* SHA384 via ARCHIVE_HASH_SHA384_LIBC3 supported. */
-#cmakedefine ARCHIVE_HASH_SHA384_LIBC3
-
-/* SHA384 via ARCHIVE_HASH_SHA384_OPENSSL supported. */
-#cmakedefine ARCHIVE_HASH_SHA384_OPENSSL
-
-/* SHA384 via ARCHIVE_HASH_SHA384_WIN supported. */
-#cmakedefine ARCHIVE_HASH_SHA384_WIN
-
-/* SHA512 via ARCHIVE_HASH_SHA512_LIBC supported. */
-#cmakedefine ARCHIVE_HASH_SHA512_LIBC
-
-/* SHA512 via ARCHIVE_HASH_SHA512_LIBC2 supported. */
-#cmakedefine ARCHIVE_HASH_SHA512_LIBC2
-
-/* SHA512 via ARCHIVE_HASH_SHA512_LIBC3 supported. */
-#cmakedefine ARCHIVE_HASH_SHA512_LIBC3
-
-/* SHA512 via ARCHIVE_HASH_SHA512_OPENSSL supported. */
-#cmakedefine ARCHIVE_HASH_SHA512_OPENSSL
-
-/* SHA512 via ARCHIVE_HASH_SHA512_WIN supported. */
-#cmakedefine ARCHIVE_HASH_SHA512_WIN
-
-/* Version number of bsdcpio */
-#cmakedefine BSDCPIO_VERSION_STRING "${BSDCPIO_VERSION_STRING}"
-
-/* Version number of bsdtar */
-#cmakedefine BSDTAR_VERSION_STRING "${BSDTAR_VERSION_STRING}"
-
 /* Define to 1 if you have the <bzlib.h> header file. */
 #cmakedefine HAVE_BZLIB_H 1
 
@@ -86,9 +11,6 @@
 
 /* Define to 1 if you have the `chroot' function. */
 #cmakedefine HAVE_CHROOT 1
-
-/* Define to 1 if you have the `ctime_r' function. */
-#cmakedefine HAVE_CTIME_R 1
 
 /* Define to 1 if you have the <ctype.h> header file. */
 #cmakedefine HAVE_CTYPE_H 1
@@ -206,18 +128,6 @@
 /* Define to 1 if you have the `futimes' function. */
 #cmakedefine HAVE_FUTIMES 1
 
-/* Define to 1 if you have the `geteuid' function. */
-#cmakedefine HAVE_GETEUID 1
-
-/* Define to 1 if you have the `getgrnam_r' function. */
-#cmakedefine HAVE_GETGRNAM_R 1
-
-/* Define to 1 if you have the `getpwnam_r' function. */
-#cmakedefine HAVE_GETPWNAM_R 1
-
-/* Define to 1 if you have the `getpid' function. */
-#cmakedefine HAVE_GETPID 1
-
 /* Define to 1 if you have the <grp.h> header file. */
 #cmakedefine HAVE_GRP_H 1
 
@@ -254,9 +164,6 @@
 /* Define to 1 if you have the `lzmadec' library (-llzmadec). */
 #cmakedefine HAVE_LIBLZMADEC 1
 
-/* Define to 1 if you have the <libxml/xmlreader.h> header file. */
-#cmakedefine HAVE_LIBXML_XMLREADER_H 1
-
 /* Define to 1 if you have the `z' library (-lz). */
 #cmakedefine HAVE_LIBZ 1
 
@@ -275,9 +182,6 @@
 /* Define to 1 if you have the <locale.h> header file. */
 #cmakedefine HAVE_LOCALE_H 1
 
-/* Define to 1 if you have the `localtime_r' function. */
-#cmakedefine HAVE_LOCALTIME_R 1
-
 /* Define to 1 if the system has the type `long long int'. */
 #cmakedefine HAVE_LONG_LONG_INT 1
 
@@ -287,9 +191,6 @@
 /* Define to 1 if `lstat' has the bug that it succeeds when given the
    zero-length file name argument. */
 #cmakedefine HAVE_LSTAT_EMPTY_STRING_BUG 1
-
-/* Define to 1 if you have the `lutimes' function. */
-#cmakedefine HAVE_LUTIMES 1
 
 /* Define to 1 if you have the <lzmadec.h> header file. */
 #cmakedefine HAVE_LZMADEC_H 1
@@ -509,6 +410,9 @@
 
 /* Define to 1 if you have the `wcrtomb' function. */
 #cmakedefine HAVE_WCRTOMB 1
+
+/* Define to 1 if you have the `wcscmp' function. */
+#cmakedefine HAVE_WCSCMP 1
 
 /* Define to 1 if you have the `wcscpy' function. */
 #cmakedefine HAVE_WCSCPY 1
