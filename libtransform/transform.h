@@ -185,6 +185,9 @@ typedef int	transform_open_callback(struct transform *, void *_client_data);
 
 typedef int	transform_close_callback(struct transform *, void *_client_data);
 
+typedef int transform_filter_fd_visitor(struct transform *, int position,
+	int fd, void *visitor_data);
+
 /*
  * Codes to identify various stream filters.
  */
@@ -444,6 +447,8 @@ __LA_DECL int		 transform_filter_count(struct transform *);
 __LA_DECL __LA_INT64_T	 transform_filter_bytes(struct transform *, int);
 __LA_DECL int		 transform_filter_code(struct transform *, int);
 __LA_DECL const char *	 transform_filter_name(struct transform *, int);
+__LA_DECL int        transform_visit_fds(struct transform *,
+	transform_filter_fd_visitor *, const void *);
 
 __LA_DECL int		 transform_errno(struct transform *);
 __LA_DECL const char	*transform_error_string(struct transform *);

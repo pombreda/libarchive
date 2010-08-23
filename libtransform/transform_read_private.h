@@ -40,6 +40,16 @@ struct transform_read;
 struct transform_read_filter_bidder;
 struct transform_read_filter;
 
+typedef int transform_filter_visit_fds(struct transform_read_filter *self,
+	int position, transform_filter_fd_visitor *, const void *);
+
+int transform_read_open2(struct transform *_a, void *client_data,
+    transform_open_callback *client_opener,
+    transform_read_callback *client_reader,
+    transform_skip_callback *client_skipper,
+    transform_close_callback *client_closer,
+    transform_filter_visit_fds *);
+
 /*
  * How bidding works for filters:
  *   * The bid manager initializes the client-provided reader as the
@@ -88,6 +98,8 @@ struct transform_read_filter {
 	int64_t (*skip)(struct transform_read_filter *self, int64_t request);
 	/* Close (just this filter) and free(self). */
 	int (*close)(struct transform_read_filter *self);
+	/* visit any fd's this filter may hold */
+	transform_filter_visit_fds *visit_fds;
 	/* My private data. */
 	void *data;
 
