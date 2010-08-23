@@ -124,16 +124,6 @@ struct transform_read_client {
 struct transform_read {
 	struct transform	transform;
 
-
-	/*
-	 * Used by transform_read_data() to track blocks and copy
-	 * data to client buffers, filling gaps with zero bytes.
-	 */
-	const char	 *read_data_block;
-	int64_t		  read_data_offset;
-	int64_t		  read_data_output_offset;
-	size_t		  read_data_remaining;
-
 	/* Callbacks to open/read/write/close client transform stream. */
 	struct transform_read_client client;
 
