@@ -76,7 +76,7 @@ transform_filter_bytes(struct transform *a, int n)
 }
 
 int
-transform_visit_fds(struct transform *t, transform_filter_fd_visitor *visitor,
+transform_visit_fds(struct transform *t, transform_fd_visitor *visitor,
 	const void *visitor_data)
 {
 	if (!visitor) {

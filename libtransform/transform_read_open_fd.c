@@ -62,7 +62,7 @@ static int	file_close(struct transform *, void *);
 static ssize_t	file_read(struct transform *, void *, const void **buff);
 static int64_t	file_skip(struct transform *, void *, int64_t request);
 static int      file_visit_fds(struct transform_read_filter *t, int position,
-	transform_filter_fd_visitor *visitor, const void *visitor_data);
+	transform_fd_visitor *visitor, const void *visitor_data);
 
 int
 transform_read_open_fd(struct transform *a, int fd, size_t block_size)
@@ -171,7 +171,7 @@ file_close(struct transform *t, void *client_data)
 
 static int
 file_visit_fds(struct transform_read_filter *f, int position,
-	transform_filter_fd_visitor *visitor, const void *visitor_data)
+	transform_fd_visitor *visitor, const void *visitor_data)
 {
 	/*
 	 * hack, but used until transform sources like this are converted into

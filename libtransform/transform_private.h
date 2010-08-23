@@ -66,7 +66,7 @@ struct transform_vtable {
 	int	(*transform_filter_code)(struct transform *, int);
 	const char * (*transform_filter_name)(struct transform *, int);
 	int (*transform_visit_fds)(struct transform *,
-		transform_filter_fd_visitor *, const void *);
+		transform_fd_visitor *, const void *);
 };
 
 struct transform {

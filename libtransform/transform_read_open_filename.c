@@ -80,7 +80,7 @@ static ssize_t	file_read(struct transform *, void *, const void **buff);
 static int64_t	file_skip(struct transform *, void *, int64_t request);
 static off_t	file_skip_lseek(struct transform *, void *, off_t request);
 static int      file_visit_fds(struct transform_read_filter *f, int position,
-    transform_filter_fd_visitor *visitor, const void *visitor_data);
+    transform_fd_visitor *visitor, const void *visitor_data);
 
 int
 transform_read_open_file(struct transform *a, const char *filename,
@@ -401,7 +401,7 @@ file_close(struct transform *t, void *client_data)
 
 static int
 file_visit_fds(struct transform_read_filter *f, int position,
-    transform_filter_fd_visitor *visitor, const void *visitor_data)
+    transform_fd_visitor *visitor, const void *visitor_data)
 {
 	struct read_file_data *mine = (struct read_file_data *)f->data;
 	return visitor((struct transform *)f->transform,

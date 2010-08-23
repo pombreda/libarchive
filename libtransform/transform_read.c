@@ -60,7 +60,7 @@ static int	close_filters(struct transform_read *);
 static struct transform_vtable *transform_read_vtable(void);
 static int64_t	_transform_filter_bytes(struct transform *, int);
 static int	_transform_filter_code(struct transform *, int);
-static int	_transform_visit_fds(struct transform *, transform_filter_fd_visitor *,
+static int	_transform_visit_fds(struct transform *, transform_fd_visitor *,
 	const void *);
 static const char *_transform_filter_name(struct transform *, int);
 static int  _transform_filter_count(struct transform *);
@@ -217,7 +217,7 @@ transform_read_open2(struct transform *_a, void *client_data,
     transform_read_callback *client_reader,
     transform_skip_callback *client_skipper,
     transform_close_callback *client_closer,
-    transform_filter_visit_fds *visit_fds)
+    transform_read_filter_visit_fds *visit_fds)
 {
 
 	struct transform_read *a = (struct transform_read *)_a;
@@ -382,7 +382,7 @@ _transform_filter_count(struct transform *_a)
  * what fd's we own
  */
 static int
-_transform_visit_fds(struct transform *_a, transform_filter_fd_visitor *visitor,
+_transform_visit_fds(struct transform *_a, transform_fd_visitor *visitor,
 	const void *visitor_data)
 {
 	struct transform_read *a = (struct transform_read *)_a;
