@@ -36,22 +36,47 @@ callback(struct transform *t, int position, int fd, void *data)
 	return (TRANSFORM_OK);
 }
 
-#define TARGET_DATA "test_compat_bzip2_1.tbz"
-
-/* Verify that attempting to open an invalid fd returns correct error. */
-DEFINE_TEST(test_visit_fds)
+static void
+read_test(char *filename)
 {
 	struct transform *t;
 	int fd;
 	int fds[] = {-1, 0};
 	assert((t = transform_read_new()) != NULL);
-	extract_reference_file(TARGET_DATA);
-	fd = open(TARGET_DATA, O_RDONLY);
-	assert(fd != -1);
+	extract_reference_file(filename);
+	fd = open(filename, O_RDONLY);
+	assert(fd >= 0);
 	transform_read_support_compression_all(t);
 	assertEqualIntA(t, TRANSFORM_OK, transform_read_open_fd(t, fd, 0));
 	assertEqualIntA(t, TRANSFORM_OK, transform_visit_fds(t, callback, (void *)fds));
 	assertEqualInt(fds[0], fd);
 	assertEqualInt(fds[1], 1);
-	transform_read_free(t);	
+	transform_read_free(t);
+}
+
+static void
+write_test()
+{
+	struct transform *t;
+	int fd;
+	int fds[] = {-1, 0};
+	assert((t = transform_write_new()) != NULL);
+#if defined(__BORLANDC__)
+	fd = open("test.tar", O_RDWR | O_CREAT | O_BINARY);
+#else
+	fd = open("test.tar", O_RDWR | O_CREAT | O_BINARY, 0777);
+#endif
+	assert(fd >= 0);
+	assertEqualIntA(t, TRANSFORM_OK, transform_write_open_fd(t, fd));
+	assertEqualIntA(t, TRANSFORM_OK, transform_visit_fds(t, callback, (void *)fds));
+	assertEqualInt(fds[0], fd);
+	assertEqualInt(fds[1], 1);
+	transform_write_free(t);
+}
+
+/* Verify that attempting to open an invalid fd returns correct error. */
+DEFINE_TEST(test_visit_fds)
+{
+	read_test("test_compat_bzip2_1.tbz");
+	write_test();
 }

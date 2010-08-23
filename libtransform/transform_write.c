@@ -65,6 +65,8 @@ static int	_transform_filter_code(struct transform *, int);
 static const char *_transform_filter_name(struct transform *, int);
 static int64_t	_transform_filter_bytes(struct transform *, int);
 static int  _transform_write_filter_count(struct transform *);
+static int  _transform_visit_fds(struct transform *, 
+	transform_fd_visitor *, const void *);
 static int	_transform_write_close(struct transform *);
 static int	_transform_write_free(struct transform *);
 static ssize_t	_transform_write_data(struct transform *, const void *, size_t);
@@ -91,6 +93,7 @@ transform_write_vtable(void)
 		av.transform_filter_count = _transform_write_filter_count;
 		av.transform_free = _transform_write_free;
 		av.transform_write_data = _transform_write_data;
+		av.transform_visit_fds = _transform_visit_fds;
 	}
 	return (&av);
 }
@@ -405,6 +408,15 @@ transform_write_open(struct transform *_a, void *client_data,
     transform_open_callback *opener, transform_write_callback *writer,
     transform_close_callback *closer)
 {
+	return transform_write_open2(_a, client_data, opener, writer,
+		closer, NULL);
+}
+
+int
+transform_write_open2(struct transform *_a, void *client_data,
+    transform_open_callback *opener, transform_write_callback *writer,
+    transform_close_callback *closer, transform_write_filter_visit_fds *visit_fds)
+{
 	struct transform_write *a = (struct transform_write *)_a;
 	struct transform_write_filter *client_filter;
 	int ret, r1;
@@ -422,6 +434,8 @@ transform_write_open(struct transform *_a, void *client_data,
 	client_filter->open = transform_write_client_open;
 	client_filter->write = transform_write_client_write;
 	client_filter->close = transform_write_client_close;
+	client_filter->visit_fds = visit_fds;
+	client_filter->data = client_data;
 
 	ret = __transform_write_open_filter(a->filter_first);
 	if (ret < TRANSFORM_WARN) {
@@ -482,6 +496,25 @@ _transform_write_filter_count(struct transform *_a)
 		p = p->next_filter;
 	}
 	return count;
+}
+
+static int
+_transform_visit_fds(struct transform *_t,
+	transform_fd_visitor *visitor, const void *visitor_data)
+{
+	struct transform_write *t = (struct transform_write *)_t;
+	struct transform_write_filter *p;
+	int position, ret = TRANSFORM_OK;
+
+	for(position=0, p=t->filter_first; NULL != p; position++, p = p->next_filter) {
+		if (p->visit_fds) {
+			if (TRANSFORM_OK != (ret = (p->visit_fds)(p, position, visitor,
+				visitor_data))) {
+				break;
+			}
+		}
+	}
+	return (ret);
 }
 
 static void

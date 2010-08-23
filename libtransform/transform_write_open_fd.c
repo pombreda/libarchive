@@ -49,6 +49,7 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_write_open_fd.c 201093 2009-
 #endif
 
 #include "transform.h"
+#include "transform_write_private.h"
 
 struct write_fd_data {
 	int		fd;
@@ -57,6 +58,8 @@ struct write_fd_data {
 static int	file_close(struct transform *, void *);
 static int	file_open(struct transform *, void *);
 static ssize_t	file_write(struct transform *, void *, const void *buff, size_t);
+static int      file_visit_fds(struct transform_write_filter *t, int position,
+    transform_fd_visitor *visitor, const void *visitor_data);
 
 int
 transform_write_open_fd(struct transform *a, int fd)
@@ -72,8 +75,8 @@ transform_write_open_fd(struct transform *a, int fd)
 #if defined(__CYGWIN__) || defined(_WIN32)
 	setmode(mine->fd, O_BINARY);
 #endif
-	return (transform_write_open(a, mine,
-		    file_open, file_write, file_close));
+	return (transform_write_open2(a, mine,
+		    file_open, file_write, file_close, file_visit_fds));
 }
 
 static int
@@ -135,4 +138,13 @@ file_close(struct transform *a, void *client_data)
 	(void)a; /* UNUSED */
 	free(mine);
 	return (TRANSFORM_OK);
+}
+
+static int
+file_visit_fds(struct transform_write_filter *f, int position,
+    transform_fd_visitor *visitor, const void *visitor_data)
+{
+	struct write_fd_data *mine = (struct write_fd_data *)f->data;
+	return visitor((struct transform *)f->transform,
+		position, mine->fd, (void *)visitor_data);
 }

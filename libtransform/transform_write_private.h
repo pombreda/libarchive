@@ -37,6 +37,14 @@
 #include "transform_private.h"
 
 struct transform_write;
+struct transform_write_filter;
+
+typedef int transform_write_filter_visit_fds(struct transform_write_filter *self,
+    int position, transform_fd_visitor *, const void *);
+
+int transform_write_open2(struct transform *, void *,
+	transform_open_callback *, transform_write_callback *,
+	transform_close_callback *, transform_write_filter_visit_fds *);
 
 struct transform_write_filter {
 	int64_t bytes_written;
@@ -48,6 +56,7 @@ struct transform_write_filter {
 	int	(*write)(struct transform_write_filter *, const void *, size_t);
 	int	(*close)(struct transform_write_filter *);
 	int	(*free)(struct transform_write_filter *);
+	transform_write_filter_visit_fds *visit_fds;
 	void	 *data;
 	const char *name;
 	int	  code;
