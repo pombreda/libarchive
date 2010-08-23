@@ -170,7 +170,7 @@ transform_read_open_filename_fd(struct transform *a, const char *filename,
 	 */
 	
 #if defined(__CYGWIN__) || defined(_WIN32)
-	setmode(0, O_BINARY);
+	setmode(fd, O_BINARY);
 #endif
 
 	/*
