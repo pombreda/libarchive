@@ -49,6 +49,7 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_open_file.c 201093 2009
 #endif
 
 #include "transform.h"
+#include "transform_read_private.h"
 
 struct read_FILE_data {
 	FILE    *f;
@@ -60,6 +61,8 @@ struct read_FILE_data {
 static int	file_close(struct transform *, void *);
 static ssize_t	file_read(struct transform *, void *, const void **buff);
 static int64_t	file_skip(struct transform *, void *, int64_t request);
+static int      file_visit_fds(struct transform_read_filter *f, int position,
+    transform_filter_fd_visitor *visitor, const void *visitor_data);
 
 int
 transform_read_open_FILE(struct transform *a, FILE *f)
@@ -96,8 +99,8 @@ transform_read_open_FILE(struct transform *a, FILE *f)
 	setmode(fileno(mine->f), O_BINARY);
 #endif
 
-	return (transform_read_open(a, mine, NULL, file_read,
-		    file_skip, file_close));
+	return (transform_read_open2(a, mine, NULL, file_read,
+		    file_skip, file_close, file_visit_fds));
 }
 
 static ssize_t
@@ -151,5 +154,28 @@ file_close(struct transform *t, void *client_data)
 	if (mine->buffer != NULL)
 		free(mine->buffer);
 	free(mine);
+	return (TRANSFORM_OK);
+}
+
+static int
+file_visit_fds(struct transform_read_filter *f, int position,
+    transform_filter_fd_visitor *visitor, const void *visitor_data)
+{
+	struct read_FILE_data *mine = (struct read_FILE_data *)f->data;
+	struct stat st;
+	int fd = fileno(mine->f);
+	if(-1 == fd) {
+		transform_set_error((struct transform *)f->transform,
+			errno, "fstating failed");
+		return (TRANSFORM_FATAL);
+	}
+	/* 
+	 * do a fstat to ensure it's actually a file of some sort.
+	 * note we're mainly just matching behaviour from above...
+	 */
+	if(0 == fstat(fd, &st)) {
+		return visitor((struct transform *)f->transform,
+			position, fd, (void *)visitor_data);
+	}
 	return (TRANSFORM_OK);
 }

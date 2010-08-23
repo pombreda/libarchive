@@ -60,6 +60,7 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_open_filename.c 201093 
 #endif
 
 #include "transform.h"
+#include "transform_read_private.h"
 
 #ifndef O_BINARY
 #define O_BINARY 0
@@ -78,6 +79,8 @@ static int	file_close(struct transform *, void *);
 static ssize_t	file_read(struct transform *, void *, const void **buff);
 static int64_t	file_skip(struct transform *, void *, int64_t request);
 static off_t	file_skip_lseek(struct transform *, void *, off_t request);
+static int      file_visit_fds(struct transform_read_filter *f, int position,
+    transform_filter_fd_visitor *visitor, const void *visitor_data);
 
 int
 transform_read_open_file(struct transform *a, const char *filename,
@@ -253,8 +256,8 @@ transform_read_open_filename_fd(struct transform *a, const char *filename,
 	if (is_disk_like)
 		mine->use_lseek = 1;
 
-	return (transform_read_open(a, mine,
-		NULL, file_read, file_skip, file_close));
+	return (transform_read_open2(a, mine,
+		NULL, file_read, file_skip, file_close, file_visit_fds));
 }
 
 static ssize_t
@@ -394,4 +397,13 @@ file_close(struct transform *t, void *client_data)
 	free(mine->buffer);
 	free(mine);
 	return (TRANSFORM_OK);
+}
+
+static int
+file_visit_fds(struct transform_read_filter *f, int position,
+    transform_filter_fd_visitor *visitor, const void *visitor_data)
+{
+	struct read_file_data *mine = (struct read_file_data *)f->data;
+	return visitor((struct transform *)f->transform,
+		position, mine->fd, (void *)visitor_data);
 }
