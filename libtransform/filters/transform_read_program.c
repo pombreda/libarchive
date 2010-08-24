@@ -85,12 +85,17 @@ transform_read_support_compression_program_signature(struct transform *_a,
 }
 
 int
-__transform_read_program(struct transform_read_filter *self, const char *cmd)
+__transform_read_program(struct transform *transform, 
+	struct transform_read_bidder *bidder, const char *cmd,
+	const char *name, int magic)
 {
-	(void)self; /* UNUSED */
+	(void)transform; /* UNUSED */
+	(void)bidder; /* UNUSED */
 	(void)cmd; /* UNUSED */
+	(void)name; /* UNUSED */
+	(void)magic; /* UNUSED */
 
-	transform_set_error(&self->transform->transform, -1,
+	transform_set_error(transform, -1,
 	    "External compression programs not supported on this platform");
 	return (TRANSFORM_FATAL);
 }
@@ -111,10 +116,11 @@ struct program_bidder {
 	int inhibit;
 };
 
-static int	program_bidder_bid(struct transform_read_filter_bidder *,
-		    struct transform_read_filter *upstream);
-static int	program_bidder_init(struct transform_read_filter *);
-static int	program_bidder_free(struct transform_read_filter_bidder *);
+static int program_bidder_bid(const void *_state, struct transform_read_filter *upstream);
+static int	program_bidder_init(struct transform *,
+	struct transform_read_bidder *, const void *);
+static int	program_bidder_free(const void *);
+
 
 /*
  * The actual filter needs to track input and output data.
@@ -130,29 +136,21 @@ struct program_filter {
 	size_t		 out_buf_len;
 };
 
-static ssize_t	program_filter_read(struct transform_read_filter *,
-		    const void **);
-static int	program_filter_close(struct transform_read_filter *);
+static ssize_t	program_filter_read(struct transform *, void *,
+	struct transform_read_filter *, const void **);
+static int	program_filter_close(struct transform *, void *);
 
 int
-transform_read_support_compression_program_signature(struct transform *_a,
+transform_read_support_compression_program_signature(struct transform *_t,
     const char *cmd, const void *signature, size_t signature_len)
 {
-	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter_bidder *bidder;
 	struct program_bidder *state;
-
-	/*
-	 * Get a bidder object from the read core.
-	 */
-	bidder = __transform_read_get_bidder(a);
-	if (bidder == NULL)
-		return (TRANSFORM_FATAL);
+	int ret;
 
 	/*
 	 * Allocate our private state.
 	 */
-	state = (struct program_bidder *)calloc(sizeof (*state), 1);
+	state = (struct program_bidder *)calloc(1, sizeof (*state));
 	if (state == NULL)
 		return (TRANSFORM_FATAL);
 	state->cmd = strdup(cmd);
@@ -162,24 +160,21 @@ transform_read_support_compression_program_signature(struct transform *_a,
 		memcpy(state->signature, signature, signature_len);
 	}
 
-	/*
-	 * Fill in the bidder object.
-	 */
-	bidder->data = state;
-	bidder->bid = program_bidder_bid;
-	bidder->init = program_bidder_init;
-	bidder->options = NULL;
-	bidder->free = program_bidder_free;
-	return (TRANSFORM_OK);
+    ret = transform_read_bidder_add(_t, state, program_bidder_bid,
+    	program_bidder_init, program_bidder_free, NULL);
+    if (TRANSFORM_FATAL == ret) {
+		program_bidder_free(state);
+	}
+	return (ret);
 }
 
 static int
-program_bidder_free(struct transform_read_filter_bidder *self)
+program_bidder_free(const void *_data)
 {
-	struct program_bidder *state = (struct program_bidder *)self->data;
+	struct program_bidder *state = (struct program_bidder *)_data;
 	free(state->cmd);
 	free(state->signature);
-	free(self->data);
+	free((void *)_data);
 	return (TRANSFORM_OK);
 }
 
@@ -190,10 +185,9 @@ program_bidder_free(struct transform_read_filter_bidder *self)
  * we're called, then never bid again.
  */
 static int
-program_bidder_bid(struct transform_read_filter_bidder *self,
-    struct transform_read_filter *upstream)
+program_bidder_bid(const void *_state, struct transform_read_filter *upstream)
 {
-	struct program_bidder *state = self->data;
+	struct program_bidder *state = (struct program_bidder *)_state;
 	const char *p;
 
 	/* If we have a signature, use that to match. */
@@ -223,7 +217,7 @@ program_bidder_bid(struct transform_read_filter_bidder *self,
  * (including error message if the child came to a bad end).
  */
 static int
-child_stop(struct transform_read_filter *self, struct program_filter *state)
+child_stop(struct transform *transform, struct program_filter *state)
 {
 	/* Close our side of the I/O with the child. */
 	if (state->child_stdin != -1) {
@@ -246,7 +240,7 @@ child_stop(struct transform_read_filter *self, struct program_filter *state)
 
 	if (state->waitpid_return < 0) {
 		/* waitpid() failed?  This is ugly. */
-		transform_set_error(&self->transform->transform, TRANSFORM_ERRNO_MISC,
+		transform_set_error(transform, TRANSFORM_ERRNO_MISC,
 		    "Child process exited badly");
 		return (TRANSFORM_WARN);
 	}
@@ -263,7 +257,7 @@ child_stop(struct transform_read_filter *self, struct program_filter *state)
 		if (WTERMSIG(state->exit_status) == SIGPIPE)
 			return (TRANSFORM_OK);
 #endif
-		transform_set_error(&self->transform->transform, TRANSFORM_ERRNO_MISC,
+		transform_set_error(transform, TRANSFORM_ERRNO_MISC,
 		    "Child process exited with signal %d",
 		    WTERMSIG(state->exit_status));
 		return (TRANSFORM_WARN);
@@ -274,7 +268,7 @@ child_stop(struct transform_read_filter *self, struct program_filter *state)
 		if (WEXITSTATUS(state->exit_status) == 0)
 			return (TRANSFORM_OK);
 
-		transform_set_error(&self->transform->transform,
+		transform_set_error(transform,
 		    TRANSFORM_ERRNO_MISC,
 		    "Child process exited with status %d",
 		    WEXITSTATUS(state->exit_status));
@@ -288,9 +282,9 @@ child_stop(struct transform_read_filter *self, struct program_filter *state)
  * Use select() to decide whether the child is ready for read or write.
  */
 static ssize_t
-child_read(struct transform_read_filter *self, char *buf, size_t buf_len)
+child_read(struct transform *transform, struct program_filter *state,
+	struct transform_read_filter *upstream, char *buf, size_t buf_len)
 {
-	struct program_filter *state = self->data;
 	ssize_t ret, requested, avail;
 	const char *p;
 
@@ -306,7 +300,7 @@ child_read(struct transform_read_filter *self, char *buf, size_t buf_len)
 		if (ret == 0 || (ret == -1 && errno == EPIPE))
 			/* Child has closed its output; reap the child
 			 * and return the status. */
-			return (child_stop(self, state));
+			return (child_stop(transform, state));
 		if (ret == -1 && errno != EAGAIN)
 			return (-1);
 
@@ -318,7 +312,7 @@ child_read(struct transform_read_filter *self, char *buf, size_t buf_len)
 		}
 
 		/* Get some more data from upstream. */
-		p = __transform_read_filter_ahead(self->upstream, 1, &avail);
+		p = __transform_read_filter_ahead(upstream, 1, &avail);
 		if (p == NULL) {
 			close(state->child_stdin);
 			state->child_stdin = -1;
@@ -334,7 +328,7 @@ child_read(struct transform_read_filter *self, char *buf, size_t buf_len)
 
 		if (ret > 0) {
 			/* Consume whatever we managed to write. */
-			__transform_read_filter_consume(self->upstream, ret);
+			__transform_read_filter_consume(upstream, ret);
 		} else if (ret == -1 && errno == EAGAIN) {
 			/* Block until child has some I/O ready. */
 			__transform_check_child(state->child_stdin,
@@ -354,19 +348,22 @@ child_read(struct transform_read_filter *self, char *buf, size_t buf_len)
 }
 
 int
-__transform_read_program(struct transform_read_filter *self, const char *cmd)
+__transform_read_program(struct transform *transform, 
+	struct transform_read_bidder *bidder, const char *cmd,
+	const char *name, int magic)
 {
 	struct program_filter	*state;
 	static const size_t out_buf_len = 65536;
 	char *out_buf;
 	char *description;
 	const char *prefix = "Program: ";
+	int ret;
 
 	state = (struct program_filter *)calloc(1, sizeof(*state));
 	out_buf = (char *)malloc(out_buf_len);
 	description = (char *)malloc(strlen(prefix) + strlen(cmd) + 1);
 	if (state == NULL || out_buf == NULL || description == NULL) {
-		transform_set_error(&self->transform->transform, ENOMEM,
+		transform_set_error(transform, ENOMEM,
 		    "Can't allocate input data");
 		free(state);
 		free(out_buf);
@@ -374,12 +371,12 @@ __transform_read_program(struct transform_read_filter *self, const char *cmd)
 		return (TRANSFORM_FATAL);
 	}
 
-	self->code = TRANSFORM_FILTER_PROGRAM;
+	if (!name)
+		name = description;
+
 	state->description = description;
 	strcpy(state->description, prefix);
 	strcat(state->description, cmd);
-	self->name = state->description;
-
 	state->out_buf = out_buf;
 	state->out_buf_len = out_buf_len;
 
@@ -387,43 +384,44 @@ __transform_read_program(struct transform_read_filter *self, const char *cmd)
 		 &state->child_stdin, &state->child_stdout)) == -1) {
 		free(state->out_buf);
 		free(state);
-		transform_set_error(&self->transform->transform, EINVAL,
+		transform_set_error(transform, EINVAL,
 		    "Can't initialise filter");
 		return (TRANSFORM_FATAL);
 	}
 
-	self->data = state;
-	self->read = program_filter_read;
-	self->skip = NULL;
-	self->close = program_filter_close;
+	ret = transform_read_filter_add(transform, bidder, (void *)state,
+		name, magic,
+		program_filter_read, NULL, program_filter_close, NULL);
 
-	/* XXX Check that we can read at least one byte? */
-	return (TRANSFORM_OK);
+	if (TRANSFORM_OK != ret) {
+		program_filter_close(transform, state);
+	}
+
+	return (ret);
 }
 
 static int
-program_bidder_init(struct transform_read_filter *self)
+program_bidder_init(struct transform *transform,
+	struct transform_read_bidder *bidder, const void *bidder_state)
 {
-	struct program_bidder   *bidder_state;
-
-	bidder_state = (struct program_bidder *)self->bidder->data;
-	return (__transform_read_program(self, bidder_state->cmd));
+	struct program_bidder *state = (struct program_bidder *)bidder_state;
+	return (__transform_read_program(transform, bidder, state->cmd,
+		NULL, TRANSFORM_FILTER_PROGRAM));
 }
 
 static ssize_t
-program_filter_read(struct transform_read_filter *self, const void **buff)
+program_filter_read(struct transform *transform, void *_state,
+	struct transform_read_filter *upstream, const void **buff)
 {
-	struct program_filter *state;
+	struct program_filter *state = (struct program_filter *)_state;
 	ssize_t bytes;
 	size_t total;
 	char *p;
 
-	state = (struct program_filter *)self->data;
-
 	total = 0;
 	p = state->out_buf;
 	while (state->child_stdout != -1 && total < state->out_buf_len) {
-		bytes = child_read(self, p, state->out_buf_len - total);
+		bytes = child_read(transform, state, upstream, p, state->out_buf_len - total);
 		if (bytes < 0)
 			/* No recovery is possible if we can no longer
 			 * read from the child. */
@@ -440,13 +438,12 @@ program_filter_read(struct transform_read_filter *self, const void **buff)
 }
 
 static int
-program_filter_close(struct transform_read_filter *self)
+program_filter_close(struct transform *transform, void *_state)
 {
-	struct program_filter	*state;
+	struct program_filter	*state = (struct program_filter *)_state;
 	int e;
 
-	state = (struct program_filter *)self->data;
-	e = child_stop(self, state);
+	e = child_stop(transform, state);
 
 	/* Release our private data. */
 	free(state->out_buf);

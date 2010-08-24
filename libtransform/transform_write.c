@@ -415,7 +415,7 @@ transform_write_open(struct transform *_a, void *client_data,
 int
 transform_write_open2(struct transform *_a, void *client_data,
     transform_open_callback *opener, transform_write_callback *writer,
-    transform_close_callback *closer, transform_write_filter_visit_fds *visit_fds)
+    transform_close_callback *closer, transform_visit_fds_callback *visit_fds)
 {
 	struct transform_write *a = (struct transform_write *)_a;
 	struct transform_write_filter *client_filter;
@@ -508,7 +508,7 @@ _transform_visit_fds(struct transform *_t,
 
 	for(position=0, p=t->filter_first; NULL != p; position++, p = p->next_filter) {
 		if (p->visit_fds) {
-			if (TRANSFORM_OK != (ret = (p->visit_fds)(p, position, visitor,
+			if (TRANSFORM_OK != (ret = (p->visit_fds)(_t, p->data, visitor,
 				visitor_data))) {
 				break;
 			}

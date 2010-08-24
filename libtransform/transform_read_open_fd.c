@@ -59,9 +59,10 @@ struct read_fd_data {
 };
 
 static int	file_close(struct transform *, void *);
-static ssize_t	file_read(struct transform *, void *, const void **buff);
+static ssize_t	file_read(struct transform *, void *, struct transform_read_filter *,
+	const void **buff);
 static int64_t	file_skip(struct transform *, void *, int64_t request);
-static int      file_visit_fds(struct transform_read_filter *t, int position,
+static int      file_visit_fds(struct transform *, const void *,
 	transform_fd_visitor *visitor, const void *visitor_data);
 
 int
@@ -107,7 +108,8 @@ transform_read_open_fd(struct transform *a, int fd, size_t block_size)
 }
 
 static ssize_t
-file_read(struct transform *t, void *client_data, const void **buff)
+file_read(struct transform *t, void *client_data, struct transform_read_filter *upstream,
+	const void **buff)
 {
 	struct read_fd_data *mine = (struct read_fd_data *)client_data;
 	ssize_t bytes_read;
@@ -170,15 +172,9 @@ file_close(struct transform *t, void *client_data)
 }
 
 static int
-file_visit_fds(struct transform_read_filter *f, int position,
+file_visit_fds(struct transform *transform, const void *_data,
 	transform_fd_visitor *visitor, const void *visitor_data)
 {
-	/*
-	 * hack, but used until transform sources like this are converted into
-	 * normal filters
-	 */
-	struct read_fd_data *mine = (struct read_fd_data *)f->data;
-	return visitor((struct transform *)f->transform,
-		position, mine->fd,
-		(void *)visitor_data);
+	struct read_fd_data *mine = (struct read_fd_data *)_data;
+	return visitor(transform, mine->fd, (void *)visitor_data);
 }

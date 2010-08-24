@@ -58,7 +58,7 @@ struct write_fd_data {
 static int	file_close(struct transform *, void *);
 static int	file_open(struct transform *, void *);
 static ssize_t	file_write(struct transform *, void *, const void *buff, size_t);
-static int      file_visit_fds(struct transform_write_filter *t, int position,
+static int      file_visit_fds(struct transform *, const void *,
     transform_fd_visitor *visitor, const void *visitor_data);
 
 int
@@ -141,10 +141,9 @@ file_close(struct transform *a, void *client_data)
 }
 
 static int
-file_visit_fds(struct transform_write_filter *f, int position,
+file_visit_fds(struct transform *transform, const void *_data,
     transform_fd_visitor *visitor, const void *visitor_data)
 {
-	struct write_fd_data *mine = (struct write_fd_data *)f->data;
-	return visitor((struct transform *)f->transform,
-		position, mine->fd, (void *)visitor_data);
+	struct write_fd_data *mine = (struct write_fd_data *)_data;
+	return visitor(transform, mine->fd, (void *)visitor_data);
 }

@@ -26,11 +26,10 @@
 __FBSDID("$FreeBSD: src/lib/libtransform/test/test_bad_fd.c,v 1.2 2008/09/01 05:38:33 kientzle Exp $");
 
 int
-callback(struct transform *t, int position, int fd, void *data)
+callback(struct transform *t, int fd, void *data)
 {
 	int *fds = (int *)data;
 	(void)t;        /* UNUSED */
-	(void)position; /* UNUSED */
 	fds[0] = fd;
 	fds[1]++;
 	return (TRANSFORM_OK);

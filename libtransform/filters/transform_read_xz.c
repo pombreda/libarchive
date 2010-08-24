@@ -67,12 +67,20 @@ struct private_data {
 	uint32_t	 crc32;
 	int64_t		 member_in;
 	int64_t		 member_out;
+	int code;
 };
 
 /* Combined lzip/lzma/xz filter */
-static ssize_t	xz_filter_read(struct transform_read_filter *, const void **);
-static int	xz_filter_close(struct transform_read_filter *);
-static int	xz_lzma_bidder_init(struct transform_read_filter *);
+static ssize_t	xz_filter_read(struct transform *, void *, 
+	struct transform_read_filter *, const void **);
+static int	xz_filter_close(struct transform *, void *);
+//static int	xz_lzma_bidder_init(struct transform *, struct transform_read_bidder *,
+//	const void *);
+
+static int  common_bidder_init(struct transform *, 
+	struct transform_read_bidder *, const void *,
+	const char *, int);
+
 
 #elif HAVE_LZMADEC_H && HAVE_LIBLZMADEC
 
@@ -82,11 +90,13 @@ struct private_data {
 	size_t		 out_block_size;
 	int64_t		 total_out;
 	char		 eof; /* True = found end of compressed data. */
+	int code;
 };
 
 /* Lzma-only filter */
-static ssize_t	lzma_filter_read(struct transform_read_filter *, const void **);
-static int	lzma_filter_close(struct transform_read_filter *);
+static ssize_t	lzma_filter_read(struct transform *, void *, 
+	struct transform_read_filter *, const void **);
+static int	lzma_filter_close(struct transform *, void *);
 #endif
 
 /*
@@ -95,86 +105,68 @@ static int	lzma_filter_close(struct transform_read_filter *);
  * can give better error messages.)  So the bid framework here gets
  * compiled even if no lzma library is available.
  */
-static int	xz_bidder_bid(struct transform_read_filter_bidder *,
-		    struct transform_read_filter *);
-static int	xz_bidder_init(struct transform_read_filter *);
-static int	lzma_bidder_bid(struct transform_read_filter_bidder *,
-		    struct transform_read_filter *);
-static int	lzma_bidder_init(struct transform_read_filter *);
+static int	xz_bidder_bid(const void *, struct transform_read_filter *);
+static int	xz_bidder_init(struct transform *, struct transform_read_bidder *,
+	const void *);
+static int	lzma_bidder_bid(const void *, struct transform_read_filter *);
+static int	lzma_bidder_init(struct transform *, struct transform_read_bidder *,
+	const  void *);
+static int	lzip_bidder_bid(const void *, struct transform_read_filter *);
+static int	lzip_bidder_init(struct transform *, struct transform_read_bidder *,
+	const void *);
 static int	lzip_has_member(struct transform_read_filter *);
-static int	lzip_bidder_bid(struct transform_read_filter_bidder *,
-		    struct transform_read_filter *);
-static int	lzip_bidder_init(struct transform_read_filter *);
 
 int
-transform_read_support_compression_xz(struct transform *_a)
+transform_read_support_compression_xz(struct transform *_t)
 {
-	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter_bidder *bidder = __transform_read_get_bidder(a);
+	int ret = transform_read_bidder_add(_t, NULL, xz_bidder_bid,
+		xz_bidder_init, NULL, NULL);
 
-	transform_clear_error(_a);
-	if (bidder == NULL)
-		return (TRANSFORM_FATAL);
+	if (TRANSFORM_OK != ret)
+		return (ret);
 
-	bidder->data = NULL;
-	bidder->bid = xz_bidder_bid;
-	bidder->init = xz_bidder_init;
-	bidder->options = NULL;
-	bidder->free = NULL;
 #if HAVE_LZMA_H && HAVE_LIBLZMA
 	return (TRANSFORM_OK);
 #else
-	transform_set_error(_a, TRANSFORM_ERRNO_MISC,
+	transform_set_error(_t, TRANSFORM_ERRNO_MISC,
 	    "Using external unxz program for xz decompression");
 	return (TRANSFORM_WARN);
 #endif
 }
 
 int
-transform_read_support_compression_lzma(struct transform *_a)
+transform_read_support_compression_lzma(struct transform *_t)
 {
-	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter_bidder *bidder = __transform_read_get_bidder(a);
+	int ret = transform_read_bidder_add(_t, NULL, lzma_bidder_bid,
+		lzma_bidder_init, NULL, NULL);
 
-	transform_clear_error(_a);
-	if (bidder == NULL)
-		return (TRANSFORM_FATAL);
+	if (TRANSFORM_OK != ret)
+		return (ret);
 
-	bidder->data = NULL;
-	bidder->bid = lzma_bidder_bid;
-	bidder->init = lzma_bidder_init;
-	bidder->options = NULL;
-	bidder->free = NULL;
 #if HAVE_LZMA_H && HAVE_LIBLZMA
 	return (TRANSFORM_OK);
 #elif HAVE_LZMADEC_H && HAVE_LIBLZMADEC
 	return (TRANSFORM_OK);
 #else
-	transform_set_error(_a, TRANSFORM_ERRNO_MISC,
+	transform_set_error(_t, TRANSFORM_ERRNO_MISC,
 	    "Using external unlzma program for lzma decompression");
 	return (TRANSFORM_WARN);
 #endif
 }
 
 int
-transform_read_support_compression_lzip(struct transform *_a)
+transform_read_support_compression_lzip(struct transform *_t)
 {
-	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter_bidder *bidder = __transform_read_get_bidder(a);
+	int ret = transform_read_bidder_add(_t, NULL, lzip_bidder_bid,
+		lzip_bidder_init, NULL, NULL);
 
-	transform_clear_error(_a);
-	if (bidder == NULL)
-		return (TRANSFORM_FATAL);
+	if (TRANSFORM_OK != ret)
+		return (ret);
 
-	bidder->data = NULL;
-	bidder->bid = lzip_bidder_bid;
-	bidder->init = lzip_bidder_init;
-	bidder->options = NULL;
-	bidder->free = NULL;
 #if HAVE_LZMA_H && HAVE_LIBLZMA
 	return (TRANSFORM_OK);
 #else
-	transform_set_error(_a, TRANSFORM_ERRNO_MISC,
+	transform_set_error(_t, TRANSFORM_ERRNO_MISC,
 	    "Using external lzip program for lzip decompression");
 	return (TRANSFORM_WARN);
 #endif
@@ -184,14 +176,11 @@ transform_read_support_compression_lzip(struct transform *_a)
  * Test whether we can handle this data.
  */
 static int
-xz_bidder_bid(struct transform_read_filter_bidder *self,
-    struct transform_read_filter *filter)
+xz_bidder_bid(const void *_data, struct transform_read_filter *filter)
 {
 	const unsigned char *buffer;
 	ssize_t avail;
 	int bits_checked;
-
-	(void)self; /* UNUSED */
 
 	buffer = __transform_read_filter_ahead(filter, 6, &avail);
 	if (buffer == NULL)
@@ -236,16 +225,13 @@ xz_bidder_bid(struct transform_read_filter_bidder *self,
  * they have other evidence (file name, command-line option) to go on.
  */
 static int
-lzma_bidder_bid(struct transform_read_filter_bidder *self,
-    struct transform_read_filter *filter)
+lzma_bidder_bid(const void *_data, struct transform_read_filter *filter)
 {
 	const unsigned char *buffer;
 	ssize_t avail;
 	uint32_t dicsize;
 	uint64_t uncompressed_size;
 	int bits_checked;
-
-	(void)self; /* UNUSED */
 
 	buffer = __transform_read_filter_ahead(filter, 14, &avail);
 	if (buffer == NULL)
@@ -386,11 +372,8 @@ lzip_has_member(struct transform_read_filter *filter)
 }
 
 static int
-lzip_bidder_bid(struct transform_read_filter_bidder *self,
-    struct transform_read_filter *filter)
+lzip_bidder_bid(const void *_data, struct transform_read_filter *filter)
 {
-
-	(void)self; /* UNUSED */
 	return (lzip_has_member(filter));
 }
 
@@ -400,34 +383,34 @@ lzip_bidder_bid(struct transform_read_filter_bidder *self,
  * liblzma 4.999.7 and later support both lzma and xz streams.
  */
 static int
-xz_bidder_init(struct transform_read_filter *self)
+xz_bidder_init(struct transform *transform,
+	struct transform_read_bidder *bidder, const void *bidder_data)
 {
-	self->code = TRANSFORM_FILTER_XZ;
-	self->name = "xz";
-	return (xz_lzma_bidder_init(self));
+	return common_bidder_init(transform, bidder, bidder_data,
+		"xz", TRANSFORM_FILTER_XZ);
 }
 
 static int
-lzma_bidder_init(struct transform_read_filter *self)
+lzma_bidder_init(struct transform *transform,
+	struct transform_read_bidder *bidder, const void *bidder_data)
 {
-	self->code = TRANSFORM_FILTER_LZMA;
-	self->name = "lzma";
-	return (xz_lzma_bidder_init(self));
+	return common_bidder_init(transform, bidder, bidder_data,
+		"lzma", TRANSFORM_FILTER_LZMA);
 }
 
 static int
-lzip_bidder_init(struct transform_read_filter *self)
+lzip_bidder_init(struct transform *transform,
+	struct transform_read_bidder *bidder, const void *bidder_data)
 {
-	self->code = TRANSFORM_FILTER_LZIP;
-	self->name = "lzip";
-	return (xz_lzma_bidder_init(self));
+	return common_bidder_init(transform, bidder, bidder_data,
+		"lzip", TRANSFORM_FILTER_LZIP);
 }
 
 /*
  * Set an error code and choose an error message
  */
 static void
-set_error(struct transform_read_filter *self, int ret)
+set_error(struct transform *transform, int ret)
 {
 
 	switch (ret) {
@@ -435,36 +418,36 @@ set_error(struct transform_read_filter *self, int ret)
 	case LZMA_OK: /* Decompressor made some progress. */
 		break;
 	case LZMA_MEM_ERROR:
-		transform_set_error(&self->transform->transform, ENOMEM,
+		transform_set_error(transform, ENOMEM,
 		    "Lzma library error: Cannot allocate memory");
 		break;
 	case LZMA_MEMLIMIT_ERROR:
-		transform_set_error(&self->transform->transform, ENOMEM,
+		transform_set_error(transform, ENOMEM,
 		    "Lzma library error: Out of memory");
 		break;
 	case LZMA_FORMAT_ERROR:
-		transform_set_error(&self->transform->transform,
+		transform_set_error(transform,
 		    TRANSFORM_ERRNO_MISC,
 		    "Lzma library error: format not recognized");
 		break;
 	case LZMA_OPTIONS_ERROR:
-		transform_set_error(&self->transform->transform,
+		transform_set_error(transform,
 		    TRANSFORM_ERRNO_MISC,
 		    "Lzma library error: Invalid options");
 		break;
 	case LZMA_DATA_ERROR:
-		transform_set_error(&self->transform->transform,
+		transform_set_error(transform,
 		    TRANSFORM_ERRNO_MISC,
 		    "Lzma library error: Corrupted input data");
 		break;
 	case LZMA_BUF_ERROR:
-		transform_set_error(&self->transform->transform,
+		transform_set_error(transform,
 		    TRANSFORM_ERRNO_MISC,
 		    "Lzma library error:  No progress is possible");
 		break;
 	default:
 		/* Return an error. */
-		transform_set_error(&self->transform->transform,
+		transform_set_error(transform,
 		    TRANSFORM_ERRNO_MISC,
 		    "Lzma decompression failed:  Unknown error");
 		break;
@@ -474,77 +457,79 @@ set_error(struct transform_read_filter *self, int ret)
 /*
  * Setup the callbacks.
  */
+
 static int
-xz_lzma_bidder_init(struct transform_read_filter *self)
+common_bidder_init(struct transform *transform,
+	struct transform_read_bidder *bidder, const void *bidder_data,
+	const char *name, int code)
 {
 	static const size_t out_block_size = 64 * 1024;
 	void *out_block;
 	struct private_data *state;
 	int ret;
 
-	state = (struct private_data *)calloc(sizeof(*state), 1);
+	state = (struct private_data *)calloc(1, sizeof(*state));
 	out_block = (unsigned char *)malloc(out_block_size);
 	if (state == NULL || out_block == NULL) {
-		transform_set_error(&self->transform->transform, ENOMEM,
+		transform_set_error(transform, ENOMEM,
 		    "Can't allocate data for xz decompression");
 		free(out_block);
 		free(state);
 		return (TRANSFORM_FATAL);
 	}
-
-	self->data = state;
 	state->out_block_size = out_block_size;
 	state->out_block = out_block;
-	self->read = xz_filter_read;
-	self->skip = NULL; /* not supported */
-	self->close = xz_filter_close;
-
 	state->stream.avail_in = 0;
-
 	state->stream.next_out = state->out_block;
 	state->stream.avail_out = state->out_block_size;
-
 	state->crc32 = 0;
-	if (self->code == TRANSFORM_FILTER_LZIP) {
+	state->code = code;
+
+	if (code == TRANSFORM_FILTER_LZIP) {
 		/*
 		 * We have to read a lzip header and use it to initialize
 		 * compression library, thus we cannot initialize the
 		 * library for lzip here.
 		 */
 		state->in_stream = 0;
-		return (TRANSFORM_OK);
-	} else
+	} else {
 		state->in_stream = 1;
 
-	/* Initialize compression library.
-	 * TODO: I don't know what value is best for memlimit.
-	 *       maybe, it needs to check memory size which
-	 *       running system has.
-	 */
-	if (self->code == TRANSFORM_FILTER_XZ)
-		ret = lzma_stream_decoder(&(state->stream),
-		    (1U << 30),/* memlimit */
-		    LZMA_CONCATENATED);
-	else
-		ret = lzma_alone_decoder(&(state->stream),
-		    (1U << 30));/* memlimit */
+		/* Initialize compression library.
+		 * TODO: I don't know what value is best for memlimit.
+		 *       maybe, it needs to check memory size which
+		 *       running system has.
+		 */
+		if (code == TRANSFORM_FILTER_XZ)
+			ret = lzma_stream_decoder(&(state->stream),
+		    	(1U << 30),/* memlimit */
+			    LZMA_CONCATENATED);
+		else
+			ret = lzma_alone_decoder(&(state->stream),
+		    	(1U << 30));/* memlimit */
 
-	if (ret == LZMA_OK)
-		return (TRANSFORM_OK);
+		if (ret != LZMA_OK) {
+			/* Library setup failed: Choose an error message and clean up. */
+			set_error(transform, ret);
+			xz_filter_close(transform, state);
+			return (TRANSFORM_FATAL);
+		}
+	}
 
-	/* Library setup failed: Choose an error message and clean up. */
-	set_error(self, ret);
+	ret = transform_read_filter_add(transform, bidder, (void *)state,
+		name, code,
+		xz_filter_read, NULL, xz_filter_close, NULL);
 
-	free(state->out_block);
-	free(state);
-	self->data = NULL;
-	return (TRANSFORM_FATAL);
+	if (TRANSFORM_OK != ret) {
+		xz_filter_close(transform, state);
+	}
+	return (ret);
 }
 
 static int
-lzip_init(struct transform_read_filter *self)
+lzip_init(struct transform *transform, struct private_data *state,
+	struct transform_read_filter *upstream)
 {
-	struct private_data *state;
 	const unsigned char *h;
 	lzma_filter filters[2];
 	unsigned char props[5];
@@ -552,8 +537,7 @@ lzip_init(struct transform_read_filter *self)
 	uint32_t dicsize;
 	int log2dic, ret;
 
-	state = (struct private_data *)self->data;
-	h = __transform_read_filter_ahead(self->upstream, 6, &avail_in);
+	h = __transform_read_filter_ahead(upstream, 6, &avail_in);
 	if (h == NULL && avail_in < 0)
 		return (TRANSFORM_FATAL);
 
@@ -575,7 +559,7 @@ lzip_init(struct transform_read_filter *self)
 	transform_le32enc(props+1, dicsize);
 
 	/* Consume lzip header. */
-	__transform_read_filter_consume(self->upstream, 6);
+	__transform_read_filter_consume(upstream, 6);
 	state->member_in = 6;
 
 	filters[0].id = LZMA_FILTER_LZMA1;
@@ -585,35 +569,34 @@ lzip_init(struct transform_read_filter *self)
 
 	ret = lzma_properties_decode(&filters[0], NULL, props, sizeof(props));
 	if (ret != LZMA_OK) {
-		set_error(self, ret);
+		set_error(transform, ret);
 		return (TRANSFORM_FATAL);
 	}
 	ret = lzma_raw_decoder(&(state->stream), filters);
 	if (ret != LZMA_OK) {
-		set_error(self, ret);
+		set_error(transform, ret);
 		return (TRANSFORM_FATAL);
 	}
 	return (TRANSFORM_OK);
 }
 
 static int
-lzip_tail(struct transform_read_filter *self)
+lzip_tail(struct transform *transform, struct private_data *state,
+	struct transform_read_filter *upstream)
 {
-	struct private_data *state;
 	const unsigned char *f;
 	ssize_t avail_in;
 	int tail;
 
-	state = (struct private_data *)self->data;
 	if (state->lzip_ver == 0)
 		tail = 12;
 	else
 		tail = 20;
-	f = __transform_read_filter_ahead(self->upstream, tail, &avail_in);
+	f = __transform_read_filter_ahead(upstream, tail, &avail_in);
 	if (f == NULL && avail_in < 0)
 		return (TRANSFORM_FATAL);
 	if (avail_in < tail) {
-		transform_set_error(&self->transform->transform, TRANSFORM_ERRNO_MISC,
+		transform_set_error(transform, TRANSFORM_ERRNO_MISC,
 		    "Lzip: Remaining data is less bytes");
 		return (TRANSFORM_FAILED);
 	}
@@ -621,14 +604,14 @@ lzip_tail(struct transform_read_filter *self)
 	/* Check the crc32 value of the uncompressed data of the current
 	 * member */
 	if (state->crc32 != transform_le32dec(f)) {
-		transform_set_error(&self->transform->transform, TRANSFORM_ERRNO_MISC,
+		transform_set_error(transform, TRANSFORM_ERRNO_MISC,
 		    "Lzip: CRC32 error");
 		return (TRANSFORM_FAILED);
 	}
 
 	/* Check the uncompressed size of the current member */
 	if ((uint64_t)state->member_out != transform_le64dec(f + 4)) {
-		transform_set_error(&self->transform->transform, TRANSFORM_ERRNO_MISC,
+		transform_set_error(transform, TRANSFORM_ERRNO_MISC,
 		    "Lzip: Uncompressed size error");
 		return (TRANSFORM_FAILED);
 	}
@@ -636,15 +619,15 @@ lzip_tail(struct transform_read_filter *self)
 	/* Check the total size of the current member */
 	if (state->lzip_ver == 1 &&
 	    (uint64_t)state->member_in + tail != transform_le64dec(f + 12)) {
-		transform_set_error(&self->transform->transform, TRANSFORM_ERRNO_MISC,
+		transform_set_error(transform, TRANSFORM_ERRNO_MISC,
 		    "Lzip: Member size error");
 		return (TRANSFORM_FAILED);
 	}
-	__transform_read_filter_consume(self->upstream, tail);
+	__transform_read_filter_consume(upstream, tail);
 
 	/* If current lzip data consists of multi member, try decompressing
 	 * a next member. */
-	if (lzip_has_member(self->upstream) != 0) {
+	if (lzip_has_member(upstream) != 0) {
 		state->in_stream = 0;
 		state->crc32 = 0;
 		state->member_out = 0;
@@ -658,14 +641,13 @@ lzip_tail(struct transform_read_filter *self)
  * Return the next block of decompressed data.
  */
 static ssize_t
-xz_filter_read(struct transform_read_filter *self, const void **p)
+xz_filter_read(struct transform *transform, void *_state, 
+	struct transform_read_filter *upstream, const void **p)
 {
-	struct private_data *state;
+	struct private_data *state = (struct private_data *)_state;
 	size_t decompressed;
 	ssize_t avail_in;
 	int ret;
-
-	state = (struct private_data *)self->data;
 
 	/* Empty our output buffer. */
 	state->stream.next_out = state->out_block;
@@ -677,13 +659,13 @@ xz_filter_read(struct transform_read_filter *self, const void **p)
 			/*
 			 * Initialize liblzma for lzip
 			 */
-			ret = lzip_init(self);
+			ret = lzip_init(transform, state, upstream);
 			if (ret != TRANSFORM_OK)
 				return (ret);
 			state->in_stream = 1;
 		}
 		state->stream.next_in =
-		    __transform_read_filter_ahead(self->upstream, 1, &avail_in);
+		    __transform_read_filter_ahead(upstream, 1, &avail_in);
 		if (state->stream.next_in == NULL && avail_in < 0)
 			return (TRANSFORM_FATAL);
 		state->stream.avail_in = avail_in;
@@ -696,13 +678,13 @@ xz_filter_read(struct transform_read_filter *self, const void **p)
 			state->eof = 1;
 			/* FALL THROUGH */
 		case LZMA_OK: /* Decompressor made some progress. */
-			__transform_read_filter_consume(self->upstream,
+			__transform_read_filter_consume(upstream,
 			    avail_in - state->stream.avail_in);
 			state->member_in +=
 			    avail_in - state->stream.avail_in;
 			break;
 		default:
-			set_error(self, ret);
+			set_error(transform, ret);
 			return (TRANSFORM_FATAL);
 		}
 	}
@@ -714,11 +696,11 @@ xz_filter_read(struct transform_read_filter *self, const void **p)
 		*p = NULL;
 	else {
 		*p = state->out_block;
-		if (self->code == TRANSFORM_FILTER_LZIP) {
+		if (state->code == TRANSFORM_FILTER_LZIP) {
 			state->crc32 = lzma_crc32(state->out_block,
 			    decompressed, state->crc32);
 			if (state->eof) {
-				ret = lzip_tail(self);
+				ret = lzip_tail(transform, state, upstream);
 				if (ret != TRANSFORM_OK)
 					return (ret);
 			}
@@ -731,14 +713,16 @@ xz_filter_read(struct transform_read_filter *self, const void **p)
  * Clean up the decompressor.
  */
 static int
-xz_filter_close(struct transform_read_filter *self)
+xz_filter_close(struct transform *transform, void *_state)
 {
-	struct private_data *state;
+	struct private_data *state = (struct private_data *)_state;
 
-	state = (struct private_data *)self->data;
 	lzma_end(&(state->stream));
-	free(state->out_block);
-	free(state);
+	if(state->out_block)
+		free(state->out_block);
+	state->out_block = NULL;
+	if (state)
+		free(state);
 	return (TRANSFORM_OK);
 }
 
@@ -755,7 +739,8 @@ xz_filter_close(struct transform_read_filter *self)
  * Setup the callbacks.
  */
 static int
-lzma_bidder_init(struct transform_read_filter *self)
+lzma_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
+	const void *bidder_data)
 {
 	static const size_t out_block_size = 64 * 1024;
 	void *out_block;
@@ -765,7 +750,7 @@ lzma_bidder_init(struct transform_read_filter *self)
 	self->code = TRANSFORM_FILTER_LZMA;
 	self->name = "lzma";
 
-	state = (struct private_data *)calloc(sizeof(*state), 1);
+	state = (struct private_data *)calloc(1, sizeof(*state));
 	out_block = (unsigned char *)malloc(out_block_size);
 	if (state == NULL || out_block == NULL) {
 		transform_set_error(&self->transform->transform, ENOMEM,
@@ -827,13 +812,12 @@ lzma_bidder_init(struct transform_read_filter *self)
  * Return the next block of decompressed data.
  */
 static ssize_t
-lzma_filter_read(struct transform_read_filter *self, const void **p)
+lzma_filter_read(struct transform *transform, void *_state,
+	struct transform_read_filter *filter, const void **p)
 {
-	struct private_data *state;
+	struct private_data *state = (struct private_date *)_state;
 	size_t decompressed;
 	ssize_t avail_in, ret;
-
-	state = (struct private_data *)self->data;
 
 	/* Empty our output buffer. */
 	state->stream.next_out = state->out_block;
@@ -842,7 +826,7 @@ lzma_filter_read(struct transform_read_filter *self, const void **p)
 	/* Try to fill the output buffer. */
 	while (state->stream.avail_out > 0 && !state->eof) {
 		state->stream.next_in = (unsigned char *)(uintptr_t)
-		    __transform_read_filter_ahead(self->upstream, 1, &avail_in);
+		    __transform_read_filter_ahead(upstream, 1, &avail_in);
 		if (state->stream.next_in == NULL && avail_in < 0)
 			return (TRANSFORM_FATAL);
 		state->stream.avail_in = avail_in;
@@ -854,17 +838,17 @@ lzma_filter_read(struct transform_read_filter *self, const void **p)
 			state->eof = 1;
 			/* FALL THROUGH */
 		case LZMADEC_OK: /* Decompressor made some progress. */
-			__transform_read_filter_consume(self->upstream,
+			__transform_read_filter_consume(upstream,
 			    avail_in - state->stream.avail_in);
 			break;
 		case LZMADEC_BUF_ERROR: /* Insufficient input data? */
-			transform_set_error(&self->transform->transform,
+			transform_set_error(transform,
 			    TRANSFORM_ERRNO_MISC,
 			    "Insufficient compressed data");
 			return (TRANSFORM_FATAL);
 		default:
 			/* Return an error. */
-			transform_set_error(&self->transform->transform,
+			transform_set_error(transform,
 			    TRANSFORM_ERRNO_MISC,
 			    "Lzma decompression failed");
 			return (TRANSFORM_FATAL);
@@ -884,18 +868,17 @@ lzma_filter_read(struct transform_read_filter *self, const void **p)
  * Clean up the decompressor.
  */
 static int
-lzma_filter_close(struct transform_read_filter *self)
+lzma_filter_close(struct transform *transform, void *_state)
 {
-	struct private_data *state;
+	struct private_data *state = (struct private_data *)_state;
 	int ret;
 
-	state = (struct private_data *)self->data;
 	ret = TRANSFORM_OK;
 	switch (lzmadec_end(&(state->stream))) {
 	case LZMADEC_OK:
 		break;
 	default:
-		transform_set_error(&(self->transform->transform),
+		transform_set_error(transform,
 		    TRANSFORM_ERRNO_MISC,
 		    "Failed to clean up %s compressor",
 		    self->transform->transform.compression_name);
@@ -917,49 +900,30 @@ lzma_filter_close(struct transform_read_filter *self)
  *
  */
 static int
-lzma_bidder_init(struct transform_read_filter *self)
+lzma_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
+	const void *bidder_data)
 {
-	int r;
-
-	r = __transform_read_program(self, "unlzma");
-	/* Note: We set the format here even if __transform_read_program()
-	 * above fails.  We do, after all, know what the format is
-	 * even if we weren't able to read it. */
-	self->code = TRANSFORM_FILTER_LZMA;
-	self->name = "lzma";
-	return (r);
+	return (__transform_read_program(transform, bidder, "unlzma",
+		"lzma",	TRANSFORM_FILTER_LZMA));
 }
 
 #endif /* HAVE_LZMADEC_H */
 
 
 static int
-xz_bidder_init(struct transform_read_filter *self)
+xz_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
+	const void *bidder_data)
 {
-	int r;
-
-	r = __transform_read_program(self, "unxz");
-	/* Note: We set the format here even if __transform_read_program()
-	 * above fails.  We do, after all, know what the format is
-	 * even if we weren't able to read it. */
-	self->code = TRANSFORM_FILTER_XZ;
-	self->name = "xz";
-	return (r);
+	return (__transform_read_program(transform, bidder, "unxz",
+		"xz", TRANSFORM_FILTER_XZ));
 }
 
 static int
-lzip_bidder_init(struct transform_read_filter *self)
+lzip_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
+	const void *bidder_data)
 {
-	int r;
-
-	r = __transform_read_program(self, "unlzip");
-	/* Note: We set the format here even if __transform_read_program()
-	 * above fails.  We do, after all, know what the format is
-	 * even if we weren't able to read it. */
-	self->code = TRANSFORM_FILTER_LZIP;
-	self->name = "lzip";
-	return (r);
+	return (__transform_read_program(transform, bidder, "unlzip",
+		"lzip", TRANSFORM_FILTER_LZIP));
 }
-
 
 #endif /* HAVE_LZMA_H */

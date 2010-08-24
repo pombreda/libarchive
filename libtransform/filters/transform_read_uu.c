@@ -55,31 +55,19 @@ struct uudecode {
 #define ST_READ_BASE64	3
 };
 
-static int	uudecode_bidder_bid(struct transform_read_filter_bidder *,
-		    struct transform_read_filter *filter);
-static int	uudecode_bidder_init(struct transform_read_filter *);
+static int	uudecode_bidder_bid(const void *, struct transform_read_filter *);
+static int	uudecode_bidder_init(struct transform *, struct transform_read_bidder *,
+	const void *);
 
-static ssize_t	uudecode_filter_read(struct transform_read_filter *,
-		    const void **);
-static int	uudecode_filter_close(struct transform_read_filter *);
+static ssize_t	uudecode_filter_read(struct transform *, void *,
+	struct transform_read_filter *upstream, const void **);
+static int	uudecode_filter_close(struct transform *, void *);
 
 int
-transform_read_support_compression_uu(struct transform *_a)
+transform_read_support_compression_uu(struct transform *_t)
 {
-	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter_bidder *bidder;
-
-	bidder = __transform_read_get_bidder(a);
-	transform_clear_error(_a);
-	if (bidder == NULL)
-		return (TRANSFORM_FATAL);
-
-	bidder->data = NULL;
-	bidder->bid = uudecode_bidder_bid;
-	bidder->init = uudecode_bidder_init;
-	bidder->options = NULL;
-	bidder->free = NULL;
-	return (TRANSFORM_OK);
+	return transform_read_bidder_add(_t, NULL, uudecode_bidder_bid,
+		uudecode_bidder_init, NULL, NULL);
 }
 
 static const unsigned char ascii[256] = {
@@ -230,7 +218,7 @@ bid_get_line(struct transform_read_filter *filter,
 #define UUDECODE(c) (((c) - 0x20) & 0x3f)
 
 static int
-uudecode_bidder_bid(struct transform_read_filter_bidder *self,
+uudecode_bidder_bid(const void *_bidder_data,
     struct transform_read_filter *filter)
 {
 	const unsigned char *b;
@@ -238,8 +226,6 @@ uudecode_bidder_bid(struct transform_read_filter_bidder *self,
 	ssize_t len, nl;
 	int l;
 	int firstline;
-
-	(void)self; /* UNUSED */
 
 	b = __transform_read_filter_ahead(filter, 1, &avail);
 	if (b == NULL)
@@ -338,23 +324,19 @@ uudecode_bidder_bid(struct transform_read_filter_bidder *self,
 }
 
 static int
-uudecode_bidder_init(struct transform_read_filter *self)
+uudecode_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
+	const void *bidder_data)
 {
 	struct uudecode   *uudecode;
 	void *out_buff;
 	void *in_buff;
-
-	self->code = TRANSFORM_FILTER_UU;
-	self->name = "uu";
-	self->read = uudecode_filter_read;
-	self->skip = NULL; /* not supported */
-	self->close = uudecode_filter_close;
+	int ret;
 
 	uudecode = (struct uudecode *)calloc(sizeof(*uudecode), 1);
 	out_buff = malloc(OUT_BUFF_SIZE);
 	in_buff = malloc(IN_BUFF_SIZE);
 	if (uudecode == NULL || out_buff == NULL || in_buff == NULL) {
-		transform_set_error(&self->transform->transform, ENOMEM,
+		transform_set_error(transform, ENOMEM,
 		    "Can't allocate data for uudecode");
 		free(uudecode);
 		free(out_buff);
@@ -362,18 +344,24 @@ uudecode_bidder_init(struct transform_read_filter *self)
 		return (TRANSFORM_FATAL);
 	}
 
-	self->data = uudecode;
 	uudecode->in_buff = in_buff;
 	uudecode->in_cnt = 0;
 	uudecode->in_allocated = IN_BUFF_SIZE;
 	uudecode->out_buff = out_buff;
 	uudecode->state = ST_FIND_HEAD;
 
-	return (TRANSFORM_OK);
+	ret = transform_read_filter_add(transform, bidder, (void *)uudecode,
+		"uu", TRANSFORM_FILTER_UU,
+		uudecode_filter_read, NULL, uudecode_filter_close, NULL);
+
+	if (TRANSFORM_OK != ret) {
+		uudecode_filter_close(transform, (void *)uudecode);
+	}
+	return (ret);
 }
 
 static int
-ensure_in_buff_size(struct transform_read_filter *self,
+ensure_in_buff_size(struct transform *transform,
     struct uudecode *uudecode, size_t size)
 {
 
@@ -386,7 +374,7 @@ ensure_in_buff_size(struct transform_read_filter *self,
 		if (ptr == NULL ||
 		    newsize < uudecode->in_allocated) {
 			free(ptr);
-			transform_set_error(&self->transform->transform,
+			transform_set_error(transform,
 			    ENOMEM,
     			    "Can't allocate data for uudecode");
 			return (TRANSFORM_FATAL);
@@ -402,9 +390,10 @@ ensure_in_buff_size(struct transform_read_filter *self,
 }
 
 static ssize_t
-uudecode_filter_read(struct transform_read_filter *self, const void **buff)
+uudecode_filter_read(struct transform *transform, void *_data,
+	struct transform_read_filter *upstream, const void **buff)
 {
-	struct uudecode *uudecode;
+	struct uudecode *uudecode = (struct uudecode *)_data;
 	const unsigned char *b, *d;
 	unsigned char *out;
 	ssize_t avail_in, ravail;
@@ -412,10 +401,8 @@ uudecode_filter_read(struct transform_read_filter *self, const void **buff)
 	ssize_t total;
 	ssize_t len, llen, nl;
 
-	uudecode = (struct uudecode *)self->data;
-
 read_more:
-	d = __transform_read_filter_ahead(self->upstream, 1, &avail_in);
+	d = __transform_read_filter_ahead(upstream, 1, &avail_in);
 	if (d == NULL && avail_in < 0)
 		return (TRANSFORM_FATAL);
 	/* Quiet a code analyzer; make sure avail_in must be zero
@@ -431,7 +418,7 @@ read_more:
 		 * If there is remaining data which is saved by
 		 * previous calling, use it first.
 		 */
-		if (ensure_in_buff_size(self, uudecode,
+		if (ensure_in_buff_size(transform, uudecode,
 		    avail_in + uudecode->in_cnt) != TRANSFORM_OK)
 			return (TRANSFORM_FATAL);
 		memcpy(uudecode->in_buff + uudecode->in_cnt,
@@ -447,7 +434,7 @@ read_more:
 		len = get_line(b, avail_in - used, &nl);
 		if (len < 0) {
 			/* Non-ascii character is found. */
-			transform_set_error(&self->transform->transform,
+			transform_set_error(transform,
 			    TRANSFORM_ERRNO_MISC,
 			    "Insufficient compressed data");
 			return (TRANSFORM_FATAL);
@@ -458,7 +445,7 @@ read_more:
 			 * Save remaining data which does not contain
 			 * NL('\n','\r').
 			 */
-			if (ensure_in_buff_size(self, uudecode, len)
+			if (ensure_in_buff_size(transform, uudecode, len)
 			    != TRANSFORM_OK)
 				return (TRANSFORM_FATAL);
 			if (uudecode->in_buff != b)
@@ -468,7 +455,7 @@ read_more:
 				/* Do not return 0; it means end-of-file.
 				 * We should try to read bytes more. */
 				__transform_read_filter_consume(
-				    self->upstream, ravail);
+				    upstream, ravail);
 				goto read_more;
 			}
 			break;
@@ -497,7 +484,7 @@ read_more:
 		case ST_READ_UU:
 			body = len - nl;
 			if (!uuchar[*b] || body <= 0) {
-				transform_set_error(&self->transform->transform,
+				transform_set_error(transform,
 				    TRANSFORM_ERRNO_MISC,
 				    "Insufficient compressed data");
 				return (TRANSFORM_FATAL);
@@ -506,7 +493,7 @@ read_more:
 			l = UUDECODE(*b++);
 			body--;
 			if (l > body) {
-				transform_set_error(&self->transform->transform,
+				transform_set_error(transform,
 				    TRANSFORM_ERRNO_MISC,
 				    "Insufficient compressed data");
 				return (TRANSFORM_FATAL);
@@ -542,7 +529,7 @@ read_more:
 				}
 			}
 			if (l) {
-				transform_set_error(&self->transform->transform,
+				transform_set_error(transform,
 				    TRANSFORM_ERRNO_MISC,
 				    "Insufficient compressed data");
 				return (TRANSFORM_FATAL);
@@ -552,7 +539,7 @@ read_more:
 			if (len - nl == 3 && memcmp(b, "end ", 3) == 0)
 				uudecode->state = ST_FIND_HEAD;
 			else {
-				transform_set_error(&self->transform->transform,
+				transform_set_error(transform,
 				    TRANSFORM_ERRNO_MISC,
 				    "Insufficient compressed data");
 				return (TRANSFORM_FATAL);
@@ -596,7 +583,7 @@ read_more:
 				}
 			}
 			if (l && *b != '=') {
-				transform_set_error(&self->transform->transform,
+				transform_set_error(transform,
 				    TRANSFORM_ERRNO_MISC,
 				    "Insufficient compressed data");
 				return (TRANSFORM_FATAL);
@@ -605,7 +592,7 @@ read_more:
 		}
 	}
 
-	__transform_read_filter_consume(self->upstream, ravail);
+	__transform_read_filter_consume(upstream, ravail);
 
 	*buff = uudecode->out_buff;
 	uudecode->total += total;
@@ -613,11 +600,12 @@ read_more:
 }
 
 static int
-uudecode_filter_close(struct transform_read_filter *self)
+uudecode_filter_close(struct transform *transform, void *_data)
 {
-	struct uudecode *uudecode;
+	struct uudecode *uudecode = (struct uudecode *)_data;
 
-	uudecode = (struct uudecode *)self->data;
+	(void)transform; /* UNUSED */
+
 	free(uudecode->in_buff);
 	free(uudecode->out_buff);
 	free(uudecode);

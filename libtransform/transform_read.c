@@ -114,7 +114,7 @@ transform_read_set_filter_options(struct transform *_a, const char *s)
 {
 	struct transform_read *a;
 	struct transform_read_filter *filter;
-	struct transform_read_filter_bidder *bidder;
+	struct transform_read_bidder *bidder;
 	char key[64], val[64];
 	int len, r;
 
@@ -129,15 +129,15 @@ transform_read_set_filter_options(struct transform *_a, const char *s)
 		bidder = filter->bidder;
 		if (bidder == NULL)
 			continue;
-		if (bidder->options == NULL)
+		if (bidder->set_option == NULL)
 			/* This bidder does not support option */
 			continue;
 		while ((len = __transform_parse_options(s, filter->name,
 		    sizeof(key), key, sizeof(val), val)) > 0) {
 			if (val[0] == '\0')
-				r = bidder->options(bidder, key, NULL);
+				r = bidder->set_option(bidder->data, key, NULL);
 			else
-				r = bidder->options(bidder, key, val);
+				r = bidder->set_option(bidder->data, key, val);
 			if (r == TRANSFORM_FATAL)
 				return (r);
 			s += len;
@@ -150,52 +150,6 @@ transform_read_set_filter_options(struct transform *_a, const char *s)
 	}
 	return (TRANSFORM_OK);
 }
-
-static ssize_t
-client_read_proxy(struct transform_read_filter *self, const void **buff)
-{
-	ssize_t r;
-	r = (self->transform->client.reader)(&self->transform->transform,
-	    self->data, buff);
-	return (r);
-}
-
-static int64_t
-client_skip_proxy(struct transform_read_filter *self, int64_t request)
-{
-	int64_t ask, get, total;
-	/* Limit our maximum seek request to 1GB on platforms
-	* with 32-bit off_t (such as Windows). */
-	int64_t skip_limit = ((int64_t)1) << (sizeof(off_t) * 8 - 2);
-
-	if (self->transform->client.skipper == NULL)
-		return (0);
-	total = 0;
-	for (;;) {
-		ask = request;
-		if (ask > skip_limit)
-			ask = skip_limit;
-		get = (self->transform->client.skipper)(&self->transform->transform,
-			self->data, ask);
-		if (get == 0)
-			return (total);
-		request -= get;
-		total += get;
-	}
-}
-
-static int
-client_close_proxy(struct transform_read_filter *self)
-{
-	int r = TRANSFORM_OK;
-
-	if (self->transform->client.closer != NULL)
-		r = (self->transform->client.closer)((struct transform *)self->transform,
-		    self->data);
-	self->data = NULL;
-	return (r);
-}
-
 
 /*
  * Open the transform
@@ -217,7 +171,7 @@ transform_read_open2(struct transform *_a, void *client_data,
     transform_read_callback *client_reader,
     transform_skip_callback *client_skipper,
     transform_close_callback *client_closer,
-    transform_read_filter_visit_fds *visit_fds)
+	transform_read_filter_visit_fds_callback *visit_fds)
 {
 
 	struct transform_read *a = (struct transform_read *)_a;
@@ -248,16 +202,16 @@ transform_read_open2(struct transform *_a, void *client_data,
 	a->client.skipper = client_skipper;
 	a->client.closer = client_closer;
 
-	filter = calloc(1, sizeof(*filter));
+	filter = calloc(1, sizeof(struct transform_read_filter));
 	if (filter == NULL)
 		return (TRANSFORM_FATAL);
 	filter->bidder = NULL;
 	filter->upstream = NULL;
 	filter->transform = a;
 	filter->data = client_data;
-	filter->read = client_read_proxy;
-	filter->skip = client_skip_proxy;
-	filter->close = client_close_proxy;
+	filter->read = client_reader;
+	filter->skip = client_skipper;
+	filter->close = client_closer;
 	filter->visit_fds = visit_fds;
 	filter->name = "none";
 	filter->code = TRANSFORM_FILTER_NONE;
@@ -279,22 +233,18 @@ transform_read_open2(struct transform *_a, void *client_data,
 static int
 build_stream(struct transform_read *a)
 {
-	int number_bidders, i, bid, best_bid;
-	struct transform_read_filter_bidder *bidder, *best_bidder;
-	struct transform_read_filter *filter;
+	int bid, best_bid, ret;
+	struct transform_read_bidder *bidder, *best_bidder;
 	ssize_t avail;
-	int r;
 
 	for (;;) {
-		number_bidders = sizeof(a->bidders) / sizeof(a->bidders[0]);
-
 		best_bid = 0;
 		best_bidder = NULL;
 
 		bidder = a->bidders;
-		for (i = 0; i < number_bidders; i++, bidder++) {
+		for (bidder = a->bidders; NULL != bidder; bidder = bidder->next) {
 			if (bidder->bid != NULL) {
-				bid = (bidder->bid)(bidder, a->filter);
+				bid = (bidder->bid)(bidder->data, a->filter);
 				if (bid > best_bid) {
 					best_bid = bid;
 					best_bidder = bidder;
@@ -314,16 +264,11 @@ build_stream(struct transform_read *a)
 			return (TRANSFORM_OK);
 		}
 
-		filter
-		    = (struct transform_read_filter *)calloc(1, sizeof(*filter));
-		if (filter == NULL)
-			return (TRANSFORM_FATAL);
-		filter->bidder = best_bidder;
-		filter->transform = a;
-		filter->upstream = a->filter;
-		a->filter = filter;
-		r = (best_bidder->init)(a->filter);
-		if (r != TRANSFORM_OK) {
+		ret = (best_bidder->create_filter)((struct transform *)a, best_bidder,
+			best_bidder->data);
+
+		/* cleanup and deallocation... */
+		if (TRANSFORM_FATAL == ret) {
 			close_filters(a);
 			free_filters(a);
 			return (TRANSFORM_FATAL);
@@ -340,11 +285,14 @@ close_filters(struct transform_read *a)
 	while (f != NULL) {
 		struct transform_read_filter *t = f->upstream;
 		if (f->close != NULL) {
-			int r1 = (f->close)(f);
+			int r1 = (f->close)((struct transform *)a, f->data);
 			if (r1 < r)
 				r = r1;
+			f->data = NULL;
 		}
-		free(f->buffer);
+		if(f->buffer) {
+			free(f->buffer);
+		}
 		f->buffer = NULL;
 		f = t;
 	}
@@ -391,7 +339,7 @@ _transform_visit_fds(struct transform *_a, transform_fd_visitor *visitor,
 	
 	for(p=a->filter, position=0; NULL != p; position++, p = p->upstream) {
 		if (p->visit_fds) {
-			if(TRANSFORM_OK != (ret = (p->visit_fds)(p, position,
+			if(TRANSFORM_OK != (ret = (p->visit_fds)(_a, p->data,
 				visitor, visitor_data))) {
 				break;
 			}
@@ -509,26 +457,76 @@ _transform_filter_bytes(struct transform *_a, int n)
 
 
 /*
- * Used internally by decompression routines to register their bid and
- * initialization functions.
+ * create a new bidder, adding it to this transform
  */
-struct transform_read_filter_bidder *
-__transform_read_get_bidder(struct transform_read *a)
+int transform_read_bidder_add(struct transform *_t,
+	const void *bidder_data,
+	transform_read_bidder_bid_method *bid,
+	transform_read_bidder_create_filter *create_filter,
+	transform_read_bidder_free *dealloc,
+	transform_read_bidder_set_option *set_option)
 {
-	int i, number_slots;
+	struct transform_read *t = (struct transform_read *)_t;
+	struct transform_read_bidder *bidder;
 
-	number_slots = sizeof(a->bidders) / sizeof(a->bidders[0]);
+	transform_check_magic(_t, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
+		"transform_read_bidder_add");
 
-	for (i = 0; i < number_slots; i++) {
-		if (a->bidders[i].bid == NULL) {
-			memset(a->bidders + i, 0, sizeof(a->bidders[0]));
-			return (a->bidders + i);
-		}
+	bidder = calloc(1, sizeof(struct transform_read_bidder));
+	if (!bidder) {
+		transform_set_error(_t, ENOMEM,
+			"bidder allocation failed");
+		return (TRANSFORM_FATAL);
+	}
+	bidder->data = (void *)bidder_data;
+	bidder->bid = bid;
+	bidder->create_filter = create_filter;
+	bidder->free = dealloc;
+	bidder->set_option = set_option;
+	bidder->next = t->bidders;
+	t->bidders = bidder;
+	return (TRANSFORM_OK);
+}
+
+/*
+ * add a new filter to the stack
+ */
+
+int transform_read_filter_add(struct transform *_t,
+	struct transform_read_bidder *bidder,
+	const void *data, const char *name, int code,
+	transform_read_filter_read_callback *reader,
+	transform_read_filter_skip_callback *skipper,
+	transform_read_filter_close_callback *closer,
+	transform_read_filter_visit_fds_callback *visit_fds)
+{
+	struct transform_read *t = (struct transform_read *)_t;
+	struct transform_read_filter *f = calloc(1, sizeof(struct transform_read_filter));
+
+	transform_check_magic(_t, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
+		"transform_read_filter_add");
+
+	if (NULL == f) {
+		transform_set_error(_t, ENOMEM,
+			"failed to allocate a read filter");
+		return (TRANSFORM_FATAL);
 	}
 
-	__transform_errx(1, "Not enough slots for compression registration");
-	return (NULL); /* Never actually executed. */
+	f->bidder = bidder;
+	f->code = code;
+	f->name = name;
+	f->transform = t;
+	f->data = (void *)data;
+	f->read = reader;
+	f->skip = skipper;
+	f->close = closer;
+	f->visit_fds = visit_fds;
+	f->upstream = t->filter;
+	t->filter = f;
+
+	return (TRANSFORM_OK);
 }
+
 
 /*
  * The next section implements the peek/consume internal I/O
@@ -662,8 +660,8 @@ __transform_read_filter_ahead(struct transform_read_filter *filter,
 					*avail = 0;
 				return (NULL);
 			}
-			bytes_read = (filter->read)(filter,
-			    &filter->client_buff);
+			bytes_read = (filter->read)((struct transform *)filter->transform, filter->data,
+			    filter->upstream, &filter->client_buff);
 			if (bytes_read < 0) {		/* Read error. */
 				filter->client_total = filter->client_avail = 0;
 				filter->client_next = filter->client_buff = NULL;
@@ -706,6 +704,7 @@ __transform_read_filter_ahead(struct transform_read_filter *filter,
 				while (s < min) {
 					t *= 2;
 					if (t <= s) { /* Integer overflow! */
+						abort();
 						transform_set_error(
 							&filter->transform->transform,
 							ENOMEM,
@@ -720,6 +719,7 @@ __transform_read_filter_ahead(struct transform_read_filter *filter,
 				/* Now s >= min, so allocate a new buffer. */
 				p = (char *)malloc(s);
 				if (p == NULL) {
+						abort();
 					transform_set_error(
 						&filter->transform->transform,
 						ENOMEM,
@@ -832,7 +832,8 @@ advance_file_pointer(struct transform_read_filter *filter, int64_t request)
 
 	/* If there's an optimized skip function, use it. */
 	if (filter->skip != NULL) {
-		bytes_skipped = (filter->skip)(filter, request);
+		bytes_skipped = (filter->skip)((struct transform *)filter->transform, 
+			filter->data, request);
 		if (bytes_skipped < 0) {	/* error */
 			filter->fatal = 1;
 			return (bytes_skipped);
@@ -846,7 +847,8 @@ advance_file_pointer(struct transform_read_filter *filter, int64_t request)
 
 	/* Use ordinary reads as necessary to complete the request. */
 	for (;;) {
-		bytes_read = (filter->read)(filter, &filter->client_buff);
+		bytes_read = (filter->read)((struct transform *)filter->transform,
+			filter->data, filter->upstream, &filter->client_buff);
 
 		if (bytes_read < 0) {
 			filter->client_buff = NULL;

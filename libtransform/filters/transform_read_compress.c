@@ -128,33 +128,25 @@ struct private_data {
 	 */
 	unsigned char		*stackp;
 	unsigned char		 stack[65300];
+	int 				dead_init_invoked;
 };
 
-static int	compress_bidder_bid(struct transform_read_filter_bidder *, struct transform_read_filter *);
-static int	compress_bidder_init(struct transform_read_filter *);
-static int	compress_bidder_free(struct transform_read_filter_bidder *);
+static int	compress_bidder_bid(const void *, struct transform_read_filter *);
+static int	compress_bidder_init(struct transform *, struct transform_read_bidder *, const void *);
 
-static ssize_t	compress_filter_read(struct transform_read_filter *, const void **);
-static int	compress_filter_close(struct transform_read_filter *);
+static ssize_t	compress_filter_read(struct transform *, void *,
+	struct transform_read_filter *, const void **);
+static int	compress_filter_close(struct transform *, void *);
 
-static int	getbits(struct transform_read_filter *, int n);
-static int	next_code(struct transform_read_filter *);
+static int getbits(struct private_data *, struct transform_read_filter *, int n);
+static int next_code(struct transform *, struct private_data *,
+	struct transform_read_filter *);
 
 int
-transform_read_support_compression_compress(struct transform *_a)
+transform_read_support_compression_compress(struct transform *_t)
 {
-	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter_bidder *bidder = __transform_read_get_bidder(a);
-
-	if (bidder == NULL)
-		return (TRANSFORM_FATAL);
-
-	bidder->data = NULL;
-	bidder->bid = compress_bidder_bid;
-	bidder->init = compress_bidder_init;
-	bidder->options = NULL;
-	bidder->free = compress_bidder_free;
-	return (TRANSFORM_OK);
+	return transform_read_bidder_add(_t, NULL, compress_bidder_bid, 
+		compress_bidder_init, NULL, NULL);
 }
 
 /*
@@ -165,14 +157,11 @@ transform_read_support_compression_compress(struct transform *_a)
  * from verifying as much as we would like.
  */
 static int
-compress_bidder_bid(struct transform_read_filter_bidder *self,
-    struct transform_read_filter *filter)
+compress_bidder_bid(const void *bidder_data, struct transform_read_filter *filter)
 {
 	const unsigned char *buffer;
 	ssize_t avail;
 	int bits_checked;
-
-	(void)self; /* UNUSED */
 
 	buffer = __transform_read_filter_ahead(filter, 2, &avail);
 
@@ -199,40 +188,48 @@ compress_bidder_bid(struct transform_read_filter_bidder *self,
  * Setup the callbacks.
  */
 static int
-compress_bidder_init(struct transform_read_filter *self)
+compress_bidder_init(struct transform *transform,
+	struct transform_read_bidder *bidder, const void *bidder_data)
 {
 	struct private_data *state;
 	static const size_t out_block_size = 64 * 1024;
 	void *out_block;
-	int code;
-
-	self->code = TRANSFORM_FILTER_COMPRESS;
-	self->name = "compress (.Z)";
+	int ret;
 
 	state = (struct private_data *)calloc(sizeof(*state), 1);
 	out_block = malloc(out_block_size);
 	if (state == NULL || out_block == NULL) {
 		free(out_block);
 		free(state);
-		transform_set_error(&self->transform->transform, ENOMEM,
-		    "Can't allocate data for %s decompression",
-		    self->name);
+		transform_set_error(transform, ENOMEM,
+		    "Can't allocate data for compress (.Z) decompression");
 		return (TRANSFORM_FATAL);
 	}
 
-	self->data = state;
 	state->out_block_size = out_block_size;
 	state->out_block = out_block;
-	self->read = compress_filter_read;
-	self->skip = NULL; /* not supported */
-	self->close = compress_filter_close;
 
+    ret = transform_read_filter_add(transform, bidder, (void *)state,
+    	"compress (.Z)", TRANSFORM_FILTER_COMPRESS,
+		compress_filter_read, NULL, compress_filter_close, NULL);
+
+	if (TRANSFORM_OK != ret) {
+		compress_filter_close(transform, state);
+	}
+	return (ret);
+}
+
+static int
+dead_init(struct transform *transform, struct private_data *state, 
+	struct transform_read_filter *upstream)
+{
+	int code;
 	/* XXX MOVE THE FOLLOWING OUT OF INIT() XXX */
 
-	(void)getbits(self, 8); /* Skip first signature byte. */
-	(void)getbits(self, 8); /* Skip second signature byte. */
+	(void)getbits(state, upstream, 8); /* Skip first signature byte. */
+	(void)getbits(state, upstream, 8); /* Skip second signature byte. */
 
-	code = getbits(self, 8);
+	code = getbits(state, upstream, 8);
 	state->maxcode_bits = code & 0x1f;
 	state->maxcode = (1 << state->maxcode_bits);
 	state->use_reset_code = code & 0x80;
@@ -249,7 +246,7 @@ compress_bidder_init(struct transform_read_filter *self)
 		state->prefix[code] = 0;
 		state->suffix[code] = code;
 	}
-	next_code(self);
+	next_code(transform, state, upstream);
 
 	return (TRANSFORM_OK);
 }
@@ -259,13 +256,18 @@ compress_bidder_init(struct transform_read_filter *self)
  * as necessary.
  */
 static ssize_t
-compress_filter_read(struct transform_read_filter *self, const void **pblock)
+compress_filter_read(struct transform *transform, void *_state,
+	struct transform_read_filter *upstream, const void **pblock)
 {
-	struct private_data *state;
+	struct private_data *state = (struct private_data *)_state;
 	unsigned char *p, *start, *end;
 	int ret;
 
-	state = (struct private_data *)self->data;
+	if(!state->dead_init_invoked) {
+		dead_init(transform, state, upstream);
+		state->dead_init_invoked = 1;
+	}
+
 	if (state->end_of_stream) {
 		*pblock = NULL;
 		return (0);
@@ -277,7 +279,7 @@ compress_filter_read(struct transform_read_filter *self, const void **pblock)
 		if (state->stackp > state->stack) {
 			*p++ = *--state->stackp;
 		} else {
-			ret = next_code(self);
+			ret = next_code(transform, state, upstream);
 			if (ret == -1)
 				state->end_of_stream = ret;
 			else if (ret != TRANSFORM_OK)
@@ -290,22 +292,12 @@ compress_filter_read(struct transform_read_filter *self, const void **pblock)
 }
 
 /*
- * Clean up the reader.
- */
-static int
-compress_bidder_free(struct transform_read_filter_bidder *self)
-{
-	self->data = NULL;
-	return (TRANSFORM_OK);
-}
-
-/*
  * Close and release the filter.
  */
 static int
-compress_filter_close(struct transform_read_filter *self)
+compress_filter_close(struct transform *self, void *_data)
 {
-	struct private_data *state = (struct private_data *)self->data;
+	struct private_data *state = (struct private_data *)_data;
 
 	free(state->out_block);
 	free(state);
@@ -318,15 +310,15 @@ compress_filter_close(struct transform_read_filter *self)
  * format error, TRANSFORM_EOF if we hit end of data, TRANSFORM_OK otherwise.
  */
 static int
-next_code(struct transform_read_filter *self)
+next_code(struct transform *transform, struct private_data *state,
+	struct transform_read_filter *upstream)
 {
-	struct private_data *state = (struct private_data *)self->data;
 	int code, newcode;
 
 	static int debug_buff[1024];
 	static unsigned debug_index;
 
-	code = newcode = getbits(self, state->bits);
+	code = newcode = getbits(state, upstream, state->bits);
 	if (code < 0)
 		return (code);
 
@@ -348,7 +340,7 @@ next_code(struct transform_read_filter *self)
 		skip_bytes %= state->bits;
 		state->bits_avail = 0; /* Discard rest of this byte. */
 		while (skip_bytes-- > 0) {
-			code = getbits(self, 8);
+			code = getbits(state, upstream, 8);
 			if (code < 0)
 				return (code);
 		}
@@ -358,12 +350,12 @@ next_code(struct transform_read_filter *self)
 		state->section_end_code = (1 << state->bits) - 1;
 		state->free_ent = 257;
 		state->oldcode = -1;
-		return (next_code(self));
+		return (next_code(transform, state, upstream));
 	}
 
 	if (code > state->free_ent) {
 		/* An invalid code is a fatal error. */
-		transform_set_error(&(self->transform->transform), -1,
+		transform_set_error(transform, -1,
 		    "Invalid compressed data");
 		return (TRANSFORM_FATAL);
 	}
@@ -408,9 +400,9 @@ next_code(struct transform_read_filter *self)
  * -1 indicates end of available data.
  */
 static int
-getbits(struct transform_read_filter *self, int n)
+getbits(struct private_data *state, struct transform_read_filter *upstream,
+	int n)
 {
-	struct private_data *state = (struct private_data *)self->data;
 	int code;
 	ssize_t ret;
 	static const int mask[] = {
@@ -421,14 +413,13 @@ getbits(struct transform_read_filter *self, int n)
 	while (state->bits_avail < n) {
 		if (state->avail_in <= 0) {
 			state->next_in
-			    = __transform_read_filter_ahead(self->upstream,
-				1, &ret);
+			    = __transform_read_filter_ahead(upstream, 1, &ret);
 			if (ret == 0)
 				return (-1);
 			if (ret < 0 || state->next_in == NULL)
 				return (TRANSFORM_FATAL);
 			state->avail_in = ret;
-			__transform_read_filter_consume(self->upstream, ret);
+			__transform_read_filter_consume(upstream, ret);
 		}
 		state->bit_buffer |= *state->next_in++ << state->bits_avail;
 		state->avail_in--;

@@ -55,44 +55,29 @@ struct rpm {
 };
 #define RPM_LEAD_SIZE	96	/* Size of 'Lead' section. */
 
-static int	rpm_bidder_bid(struct transform_read_filter_bidder *,
-		    struct transform_read_filter *);
-static int	rpm_bidder_init(struct transform_read_filter *);
+static int	rpm_bidder_bid(const void *, struct transform_read_filter *upstream);
+static int	rpm_bidder_init(struct transform *, struct transform_read_bidder *,
+	const void *);
 
-static ssize_t	rpm_filter_read(struct transform_read_filter *,
-		    const void **);
-static int	rpm_filter_close(struct transform_read_filter *);
+static ssize_t	rpm_filter_read(struct transform *, void *,
+	struct transform_read_filter *upstream, const void **);
+static int	rpm_filter_close(struct transform *, void *);
 
 int
-transform_read_support_compression_rpm(struct transform *_a)
+transform_read_support_compression_rpm(struct transform *_t)
 {
-	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter_bidder *bidder;
-
-	bidder = __transform_read_get_bidder(a);
-	transform_clear_error(_a);
-	if (bidder == NULL)
-		return (TRANSFORM_FATAL);
-
-	bidder->data = NULL;
-	bidder->bid = rpm_bidder_bid;
-	bidder->init = rpm_bidder_init;
-	bidder->options = NULL;
-	bidder->free = NULL;
-	return (TRANSFORM_OK);
+	return transform_read_bidder_add(_t, NULL, rpm_bidder_bid,
+		rpm_bidder_init, NULL, NULL);
 }
 
 static int
-rpm_bidder_bid(struct transform_read_filter_bidder *self,
-    struct transform_read_filter *filter)
+rpm_bidder_bid(const void *_data, struct transform_read_filter *upstream)
 {
 	const unsigned char *b;
 	ssize_t avail;
 	int bits_checked;
 
-	(void)self; /* UNUSED */
-
-	b = __transform_read_filter_ahead(filter, 8, &avail);
+	b = __transform_read_filter_ahead(upstream, 8, &avail);
 	if (b == NULL)
 		return (0);
 
@@ -132,47 +117,48 @@ rpm_bidder_bid(struct transform_read_filter_bidder *self,
 }
 
 static int
-rpm_bidder_init(struct transform_read_filter *self)
+rpm_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
+	const void *bidder_data)
 {
-	struct rpm   *rpm;
-
-	self->code = TRANSFORM_FILTER_RPM;
-	self->name = "rpm";
-	self->read = rpm_filter_read;
-	self->skip = NULL; /* not supported */
-	self->close = rpm_filter_close;
+	struct rpm *rpm;
+	int ret;
 
 	rpm = (struct rpm *)calloc(sizeof(*rpm), 1);
 	if (rpm == NULL) {
-		transform_set_error(&self->transform->transform, ENOMEM,
+		transform_set_error(transform, ENOMEM,
 		    "Can't allocate data for rpm");
 		return (TRANSFORM_FATAL);
 	}
-
-	self->data = rpm;
 	rpm->state = ST_LEAD;
 
-	return (TRANSFORM_OK);
+	ret = transform_read_filter_add(transform, bidder, (void *)rpm,
+		"rpm", TRANSFORM_FILTER_RPM,
+		rpm_filter_read, NULL, rpm_filter_close, NULL);
+	if (TRANSFORM_OK != ret) {
+		rpm_filter_close(transform, rpm);
+	}
+
+	return (ret);
 }
 
 static ssize_t
-rpm_filter_read(struct transform_read_filter *self, const void **buff)
+rpm_filter_read(struct transform *transform, void *_data,
+	struct transform_read_filter *upstream, const void **buff)
 {
-	struct rpm *rpm;
+	struct rpm *rpm = (struct rpm *)_data;
 	const unsigned char *b;
 	ssize_t avail_in, total;
 	size_t used, n;
 	uint32_t section;
 	uint32_t bytes;
 
-	rpm = (struct rpm *)self->data;
 	*buff = NULL;
 	total = avail_in = 0;
 	b = NULL;
 	used = 0;
 	do {
 		if (b == NULL) {
-			b = __transform_read_filter_ahead(self->upstream, 1,
+			b = __transform_read_filter_ahead(upstream, 1,
 			    &avail_in);
 			if (b == NULL) {
 				if (avail_in < 0)
@@ -212,7 +198,7 @@ rpm_filter_read(struct transform_read_filter *self, const void **buff)
 				    rpm->header[3] != 0x01) {
 					if (rpm->first_header) {
 						transform_set_error(
-						    &self->transform->transform,
+						    transform,
 						    TRANSFORM_ERRNO_FILE_FORMAT,
 						    "Unrecoginized rpm header");
 						return (TRANSFORM_FATAL);
@@ -261,7 +247,7 @@ rpm_filter_read(struct transform_read_filter *self, const void **buff)
 		}
 		if (used == (size_t)avail_in) {
 			rpm->total_in += used;
-			__transform_read_filter_consume(self->upstream, used);
+			__transform_read_filter_consume(upstream, used);
 			b = NULL;
 			used = 0;
 		}
@@ -269,18 +255,19 @@ rpm_filter_read(struct transform_read_filter *self, const void **buff)
 
 	if (used > 0 && b != NULL) {
 		rpm->total_in += used;
-		__transform_read_filter_consume(self->upstream, used);
+		__transform_read_filter_consume(upstream, used);
 	}
 	return (total);
 }
 
 static int
-rpm_filter_close(struct transform_read_filter *self)
+rpm_filter_close(struct transform *transform, void *_data)
 {
-	struct rpm *rpm;
+	struct rpm *data = (struct rpm *)_data;
 
-	rpm = (struct rpm *)self->data;
-	free(rpm);
+	(void)transform; /* UNUSED */
+
+	free(data);
 
 	return (TRANSFORM_OK);
 }

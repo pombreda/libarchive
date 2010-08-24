@@ -59,9 +59,10 @@ struct read_FILE_data {
 };
 
 static int	file_close(struct transform *, void *);
-static ssize_t	file_read(struct transform *, void *, const void **buff);
+static ssize_t	file_read(struct transform *, void *,
+	struct transform_read_filter *, const void **buff);
 static int64_t	file_skip(struct transform *, void *, int64_t request);
-static int      file_visit_fds(struct transform_read_filter *f, int position,
+static int      file_visit_fds(struct transform *, const void *,
     transform_fd_visitor *visitor, const void *visitor_data);
 
 int
@@ -104,7 +105,8 @@ transform_read_open_FILE(struct transform *a, FILE *f)
 }
 
 static ssize_t
-file_read(struct transform *t, void *client_data, const void **buff)
+file_read(struct transform *t, void *client_data,
+	struct transform_read_filter *f, const void **buff)
 {
 	struct read_FILE_data *mine = (struct read_FILE_data *)client_data;
 	ssize_t bytes_read;
@@ -158,14 +160,14 @@ file_close(struct transform *t, void *client_data)
 }
 
 static int
-file_visit_fds(struct transform_read_filter *f, int position,
+file_visit_fds(struct transform *transform, const void *_data,
     transform_fd_visitor *visitor, const void *visitor_data)
 {
-	struct read_FILE_data *mine = (struct read_FILE_data *)f->data;
+	struct read_FILE_data *mine = (struct read_FILE_data *)_data;
 	struct stat st;
 	int fd = fileno(mine->f);
 	if(-1 == fd) {
-		transform_set_error((struct transform *)f->transform,
+		transform_set_error((struct transform *)transform,
 			errno, "fstating failed");
 		return (TRANSFORM_FATAL);
 	}
@@ -174,8 +176,7 @@ file_visit_fds(struct transform_read_filter *f, int position,
 	 * note we're mainly just matching behaviour from above...
 	 */
 	if(0 == fstat(fd, &st)) {
-		return visitor((struct transform *)f->transform,
-			position, fd, (void *)visitor_data);
+		return visitor(transform, fd, (void *)visitor_data);
 	}
 	return (TRANSFORM_OK);
 }

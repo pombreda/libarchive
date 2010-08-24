@@ -31,6 +31,7 @@ __FBSDID("$FreeBSD: src/lib/libtransform/transform_read_open_memory.c,v 1.6 2007
 #include <string.h>
 
 #include "transform.h"
+#include "transform_read_private.h"
 
 /*
  * Glue to read an transform from a block of memory.
@@ -49,7 +50,8 @@ struct read_memory_data {
 static int	memory_read_close(struct transform *, void *);
 static int	memory_read_open(struct transform *, void *);
 static int64_t	memory_read_skip(struct transform *, void *, int64_t request);
-static ssize_t	memory_read(struct transform *, void *, const void **buff);
+static ssize_t	memory_read(struct transform *, void *, struct transform_read_filter *,
+	const void **buff);
 
 int
 transform_read_open_memory(struct transform *a, void *buff, size_t size)
@@ -100,7 +102,8 @@ memory_read_open(struct transform *t, void *client_data)
  * size; then this is much faster.
  */
 static ssize_t
-memory_read(struct transform *t, void *client_data, const void **buff)
+memory_read(struct transform *t, void *client_data,
+	struct transform_read_filter *f, const void **buff)
 {
 	struct read_memory_data *mine = (struct read_memory_data *)client_data;
 	ssize_t size;

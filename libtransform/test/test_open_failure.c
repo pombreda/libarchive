@@ -39,7 +39,8 @@ struct my_data {
 };
 
 static ssize_t
-my_read(struct transform *a, void *_private, const void **buff)
+my_read(struct transform *a, void *_private, struct transform_read_filter *upstream,
+	const void **buff)
 {
 	struct my_data *private = (struct my_data *)_private;
 	assertEqualInt(MAGIC, private->magic);

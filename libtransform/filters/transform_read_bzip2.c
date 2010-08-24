@@ -58,8 +58,9 @@ struct private_data {
 };
 
 /* Bzip2 filter */
-static ssize_t	bzip2_filter_read(struct transform_read_filter *, const void **);
-static int	bzip2_filter_close(struct transform_read_filter *);
+static ssize_t	bzip2_filter_read(struct transform *, void *,
+	struct transform_read_filter *, const void **);
+static int	bzip2_filter_close(struct transform *, void *);
 #endif
 
 /*
@@ -68,24 +69,19 @@ static int	bzip2_filter_close(struct transform_read_filter *);
  * error messages.)  So the bid framework here gets compiled even
  * if bzlib is unavailable.
  */
-static int	bzip2_reader_bid(struct transform_read_filter_bidder *, struct transform_read_filter *);
-static int	bzip2_reader_init(struct transform_read_filter *);
-static int	bzip2_reader_free(struct transform_read_filter_bidder *);
+static int	bzip2_reader_bid(const void *, struct transform_read_filter *);
+static int	bzip2_reader_init(struct transform *, struct transform_read_bidder *,
+	const void *);
 
 int
-transform_read_support_compression_bzip2(struct transform *_a)
+transform_read_support_compression_bzip2(struct transform *_t)
 {
-	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter_bidder *reader = __transform_read_get_bidder(a);
+	int ret = transform_read_bidder_add(_t, NULL, bzip2_reader_bid,
+		bzip2_reader_init, NULL, NULL);
 
-	if (reader == NULL)
-		return (TRANSFORM_FATAL);
-
-	reader->data = NULL;
-	reader->bid = bzip2_reader_bid;
-	reader->init = bzip2_reader_init;
-	reader->options = NULL;
-	reader->free = bzip2_reader_free;
+	if (TRANSFORM_OK != ret)
+		return (ret);
+	
 #if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 	return (TRANSFORM_OK);
 #else
@@ -93,12 +89,6 @@ transform_read_support_compression_bzip2(struct transform *_a)
 	    "Using external bunzip2 program");
 	return (TRANSFORM_WARN);
 #endif
-}
-
-static int
-bzip2_reader_free(struct transform_read_filter_bidder *self){
-	(void)self; /* UNUSED */
-	return (TRANSFORM_OK);
 }
 
 /*
@@ -109,13 +99,11 @@ bzip2_reader_free(struct transform_read_filter_bidder *self){
  * from verifying as much as we would like.
  */
 static int
-bzip2_reader_bid(struct transform_read_filter_bidder *self, struct transform_read_filter *filter)
+bzip2_reader_bid(const void *bidder_data, struct transform_read_filter *filter)
 {
 	const unsigned char *buffer;
 	ssize_t avail;
 	int bits_checked;
-
-	(void)self; /* UNUSED */
 
 	/* Minimal bzip2 transform is 14 bytes. */
 	buffer = __transform_read_filter_ahead(filter, 14, &avail);
@@ -154,17 +142,11 @@ bzip2_reader_bid(struct transform_read_filter_bidder *self, struct transform_rea
  * and emit a useful message.
  */
 static int
-bzip2_reader_init(struct transform_read_filter *self)
+bzip2_reader_init(struct transform *transform, struct transform_read_bidder *bidder
+	const void *bidder_data)
 {
-	int r;
-
-	r = __transform_read_program(self, "bunzip2");
-	/* Note: We set the format here even if __transform_read_program()
-	 * above fails.  We do, after all, know what the format is
-	 * even if we weren't able to read it. */
-	self->code = TRANSFORM_FILTER_BZIP2;
-	self->name = "bzip2";
-	return (r);
+	return (__transform_read_program(transform, bidder, "bunzip2",
+		"bzip2", TRANSFORM_FILTER_BZIP2));
 }
 
 
@@ -174,47 +156,50 @@ bzip2_reader_init(struct transform_read_filter *self)
  * Setup the callbacks.
  */
 static int
-bzip2_reader_init(struct transform_read_filter *self)
+bzip2_reader_init(struct transform *transform,
+	struct transform_read_bidder *bidder, const void *bidder_data)
 {
+	int ret;
 	static const size_t out_block_size = 64 * 1024;
 	void *out_block;
 	struct private_data *state;
 
-	self->code = TRANSFORM_FILTER_BZIP2;
-	self->name = "bzip2";
-
 	state = (struct private_data *)calloc(sizeof(*state), 1);
 	out_block = (unsigned char *)malloc(out_block_size);
-	if (self == NULL || state == NULL || out_block == NULL) {
-		transform_set_error(&self->transform->transform, ENOMEM,
+	if (state == NULL || out_block == NULL) {
+		transform_set_error(transform, ENOMEM,
 		    "Can't allocate data for bzip2 decompression");
 		free(out_block);
 		free(state);
 		return (TRANSFORM_FATAL);
 	}
 
-	self->data = state;
 	state->out_block_size = out_block_size;
 	state->out_block = out_block;
-	self->read = bzip2_filter_read;
-	self->skip = NULL; /* not supported */
-	self->close = bzip2_filter_close;
+	
+	ret = transform_read_filter_add(transform, bidder, (void *)state, "bzip2",
+		TRANSFORM_FILTER_BZIP2,
+		bzip2_filter_read, NULL,
+		bzip2_filter_close, NULL);
 
-	return (TRANSFORM_OK);
+	if (TRANSFORM_OK != ret) {
+		bzip2_filter_close(transform, state);
+	}
+
+	return (ret);
 }
 
 /*
  * Return the next block of decompressed data.
  */
 static ssize_t
-bzip2_filter_read(struct transform_read_filter *self, const void **p)
+bzip2_filter_read(struct transform *transform, void *_state,
+	struct transform_read_filter *upstream, const void **p)
 {
-	struct private_data *state;
+	struct private_data *state = (struct private_data *)_state;
 	size_t decompressed;
 	const char *read_buf;
 	ssize_t ret;
-
-	state = (struct private_data *)self->data;
 
 	if (state->eof) {
 		*p = NULL;
@@ -228,7 +213,11 @@ bzip2_filter_read(struct transform_read_filter *self, const void **p)
 	/* Try to fill the output buffer. */
 	for (;;) {
 		if (!state->valid) {
-			if (bzip2_reader_bid(self->bidder, self->upstream) == 0) {
+			/* 
+			 * might seem special, but the bidder doesn't need bidder data
+			 * long term, should restructure to remove the need.
+			 */
+			if (bzip2_reader_bid(NULL, upstream) == 0) {
 				state->eof = 1;
 				*p = state->out_block;
 				decompressed = state->stream.next_out
@@ -261,7 +250,7 @@ bzip2_filter_read(struct transform_read_filter *self, const void **p)
 					detail = "mis-compiled library";
 					break;
 				}
-				transform_set_error(&self->transform->transform, err,
+				transform_set_error(transform, err,
 				    "Internal error initializing decompressor%s%s",
 				    detail == NULL ? "" : ": ",
 				    detail);
@@ -273,7 +262,7 @@ bzip2_filter_read(struct transform_read_filter *self, const void **p)
 		/* stream.next_in is really const, but bzlib
 		 * doesn't declare it so. <sigh> */
 		read_buf =
-		    __transform_read_filter_ahead(self->upstream, 1, &ret);
+		    __transform_read_filter_ahead(upstream, 1, &ret);
 		if (read_buf == NULL)
 			return (TRANSFORM_FATAL);
 		state->stream.next_in = (char *)(uintptr_t)read_buf;
@@ -289,7 +278,7 @@ bzip2_filter_read(struct transform_read_filter *self, const void **p)
 
 		/* Decompress as much as we can in one pass. */
 		ret = BZ2_bzDecompress(&(state->stream));
-		__transform_read_filter_consume(self->upstream,
+		__transform_read_filter_consume(upstream,
 		    state->stream.next_in - read_buf);
 
 		switch (ret) {
@@ -298,7 +287,7 @@ bzip2_filter_read(struct transform_read_filter *self, const void **p)
 			case BZ_OK:
 				break;
 			default:
-				transform_set_error(&(self->transform->transform),
+				transform_set_error(transform,
 					  TRANSFORM_ERRNO_MISC,
 					  "Failed to clean up decompressor");
 				return (TRANSFORM_FATAL);
@@ -315,7 +304,7 @@ bzip2_filter_read(struct transform_read_filter *self, const void **p)
 			}
 			break;
 		default: /* Return an error. */
-			transform_set_error(&self->transform->transform,
+			transform_set_error(transform,
 			    TRANSFORM_ERRNO_MISC, "bzip decompression failed");
 			return (TRANSFORM_FATAL);
 		}
@@ -326,19 +315,17 @@ bzip2_filter_read(struct transform_read_filter *self, const void **p)
  * Clean up the decompressor.
  */
 static int
-bzip2_filter_close(struct transform_read_filter *self)
+bzip2_filter_close(struct transform *transform, void *_state)
 {
-	struct private_data *state;
+	struct private_data *state = (struct private_data *)_state;
 	int ret = TRANSFORM_OK;
-
-	state = (struct private_data *)self->data;
 
 	if (state->valid) {
 		switch (BZ2_bzDecompressEnd(&state->stream)) {
 		case BZ_OK:
 			break;
 		default:
-			transform_set_error(&self->transform->transform,
+			transform_set_error(transform,
 					  TRANSFORM_ERRNO_MISC,
 					  "Failed to clean up decompressor");
 			ret = TRANSFORM_FATAL;

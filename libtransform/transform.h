@@ -166,9 +166,11 @@ struct transform;
  * library.
  */
 
+struct transform_read_filter;
+
 /* Returns pointer and size of next block of data from transform. */
 typedef __LA_SSIZE_T	transform_read_callback(struct transform *,
-			    void *_client_data, const void **_buffer);
+	void *_client_data, struct transform_read_filter *, const void **_buffer);
 
 /* Skips at most request bytes from transform and returns the skipped amount */
 /* Libtransform 3.0 uses int64_t here, which is actually guaranteed to be
@@ -185,7 +187,7 @@ typedef int	transform_open_callback(struct transform *, void *_client_data);
 
 typedef int	transform_close_callback(struct transform *, void *_client_data);
 
-typedef int transform_fd_visitor(struct transform *, int position,
+typedef int transform_fd_visitor(struct transform *,
 	int fd, void *visitor_data);
 
 /*
@@ -457,6 +459,46 @@ __LA_DECL void		 transform_set_error(struct transform *, int _err,
 			    const char *fmt, ...) __LA_PRINTF(3, 4);
 __LA_DECL void		 transform_copy_error(struct transform *dest,
 			    struct transform *src);
+
+struct transform_read_bidder;
+struct transform_read_filter;
+/*
+ * read bidders
+ */
+
+typedef int transform_read_bidder_bid_method(const void *bidder_data,
+	struct transform_read_filter *source);
+typedef int transform_read_bidder_set_option(const void *bidder_data,
+	const char *key, const char *value);
+typedef int	transform_read_bidder_create_filter(struct transform *,
+	struct transform_read_bidder *,	const void *bidder_data);
+typedef int transform_read_bidder_free(const void *bidder_data);
+
+__LA_DECL int transform_read_bidder_add(struct transform *,
+	const void *data,
+	transform_read_bidder_bid_method *,
+	transform_read_bidder_create_filter *,
+	transform_read_bidder_free *,
+	transform_read_bidder_set_option *);
+
+typedef int transform_visit_fds_callback(struct transform *,
+	const void *data, transform_fd_visitor *visitor, const void *visitor_data);
+
+#define transform_read_filter_visit_fds_callback transform_visit_fds_callback
+#define transform_read_filter_close_callback transform_close_callback
+#define transform_read_filter_skip_callback transform_skip_callback
+#define transform_read_filter_read_callback transform_read_callback
+
+/* Returns size actually written, zero on EOF, -1 on error. */
+
+                        
+__LA_DECL int transform_read_filter_add(struct transform *,
+	struct transform_read_bidder *,
+	const void *data, const char *filter_name, int code,
+	transform_read_filter_read_callback *,
+	transform_read_filter_skip_callback *,
+	transform_read_filter_close_callback *,
+	transform_read_filter_visit_fds_callback *);
 
 #ifdef __cplusplus
 }

@@ -60,8 +60,9 @@ struct private_data {
 };
 
 /* Gzip Filter. */
-static ssize_t	gzip_filter_read(struct transform_read_filter *, const void **);
-static int	gzip_filter_close(struct transform_read_filter *);
+static ssize_t	gzip_filter_read(struct transform *, void *,
+	struct transform_read_filter *, const void **);
+static int	gzip_filter_close(struct transform *, void *);
 #endif
 
 /*
@@ -74,29 +75,24 @@ static int	gzip_filter_close(struct transform_read_filter *);
  * use the compress_program framework to try to fire up an external
  * gunzip program.
  */
-static int	gzip_bidder_bid(struct transform_read_filter_bidder *,
-		    struct transform_read_filter *);
-static int	gzip_bidder_init(struct transform_read_filter *);
+static int	gzip_bidder_bid(const void *, struct transform_read_filter *);
+static int	gzip_bidder_init(struct transform *, struct transform_read_bidder *,
+	const void *);
 
 int
-transform_read_support_compression_gzip(struct transform *_a)
+transform_read_support_compression_gzip(struct transform *_t)
 {
-	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter_bidder *bidder = __transform_read_get_bidder(a);
+	int ret = transform_read_bidder_add(_t, NULL, gzip_bidder_bid,
+		gzip_bidder_init, NULL, NULL);
 
-	if (bidder == NULL)
-		return (TRANSFORM_FATAL);
+	if (TRANSFORM_OK != ret)
+		return (ret);
 
-	bidder->data = NULL;
-	bidder->bid = gzip_bidder_bid;
-	bidder->init = gzip_bidder_init;
-	bidder->options = NULL;
-	bidder->free = NULL; /* No data, so no cleanup necessary. */
 	/* Signal the extent of gzip support with the return value here. */
 #if HAVE_ZLIB_H
 	return (TRANSFORM_OK);
 #else
-	transform_set_error(_a, TRANSFORM_ERRNO_MISC,
+	transform_set_error(_t, TRANSFORM_ERRNO_MISC,
 	    "Using external gunzip program");
 	return (TRANSFORM_WARN);
 #endif
@@ -199,12 +195,9 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
  * Bidder just verifies the header and returns the number of verified bits.
  */
 static int
-gzip_bidder_bid(struct transform_read_filter_bidder *self,
-    struct transform_read_filter *filter)
+gzip_bidder_bid(const void *_data, struct transform_read_filter *filter)
 {
 	int bits_checked;
-
-	(void)self; /* UNUSED */
 
 	if (peek_at_header(filter, &bits_checked))
 		return (bits_checked);
@@ -220,17 +213,11 @@ gzip_bidder_bid(struct transform_read_filter_bidder *self,
  * in case that's available.
  */
 static int
-gzip_bidder_init(struct transform_read_filter *self)
+gzip_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
+	const void *bidder_data)
 {
-	int r;
-
-	r = __transform_read_program(self, "gunzip");
-	/* Note: We set the format here even if __transform_read_program()
-	 * above fails.  We do, after all, know what the format is
-	 * even if we weren't able to read it. */
-	self->code = TRANSFORM_FILTER_GZIP;
-	self->name = "gzip";
-	return (r);
+	return (__transform_read_program(transform, bidder, "gunzip",
+		"gzip", TRANSFORM_FILTER_GZIP));
 }
 
 #else
@@ -239,59 +226,57 @@ gzip_bidder_init(struct transform_read_filter *self)
  * Initialize the filter object.
  */
 static int
-gzip_bidder_init(struct transform_read_filter *self)
+gzip_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
+	const void *bidder_data)
 {
 	struct private_data *state;
 	static const size_t out_block_size = 64 * 1024;
 	void *out_block;
-
-	self->code = TRANSFORM_FILTER_GZIP;
-	self->name = "gzip";
+	int ret;
 
 	state = (struct private_data *)calloc(sizeof(*state), 1);
 	out_block = (unsigned char *)malloc(out_block_size);
 	if (state == NULL || out_block == NULL) {
 		free(out_block);
 		free(state);
-		transform_set_error(&self->transform->transform, ENOMEM,
+		transform_set_error(transform, ENOMEM,
 		    "Can't allocate data for gzip decompression");
 		return (TRANSFORM_FATAL);
 	}
-
-	self->data = state;
 	state->out_block_size = out_block_size;
 	state->out_block = out_block;
-	self->read = gzip_filter_read;
-	self->skip = NULL; /* not supported */
-	self->close = gzip_filter_close;
-
 	state->in_stream = 0; /* We're not actually within a stream yet. */
 
-	return (TRANSFORM_OK);
+	ret = transform_read_filter_add(transform, bidder, (void *)state,
+		"gzip", TRANSFORM_FILTER_GZIP,
+		gzip_filter_read, NULL, gzip_filter_close, NULL);
+
+	if (TRANSFORM_OK != ret) {
+		gzip_filter_close(transform, state);
+	}
+	return (ret);
 }
 
 static int
-consume_header(struct transform_read_filter *self)
+consume_header(struct transform *transform, struct private_data *state,
+	struct transform_read_filter *upstream)
 {
-	struct private_data *state;
 	ssize_t avail;
 	size_t len;
 	int ret;
 
-	state = (struct private_data *)self->data;
-
 	/* If this is a real header, consume it. */
-	len = peek_at_header(self->upstream, NULL);
+	len = peek_at_header(upstream, NULL);
 	if (len == 0)
 		return (TRANSFORM_EOF);
-	__transform_read_filter_consume(self->upstream, len);
+	__transform_read_filter_consume(upstream, len);
 
 	/* Initialize CRC accumulator. */
 	state->crc = crc32(0L, NULL, 0);
 
 	/* Initialize compression library. */
 	state->stream.next_in = (unsigned char *)(uintptr_t)
-	    __transform_read_filter_ahead(self->upstream, 1, &avail);
+	    __transform_read_filter_ahead(upstream, 1, &avail);
 	state->stream.avail_in = avail;
 	ret = inflateInit2(&(state->stream),
 	    -15 /* Don't check for zlib header */);
@@ -302,24 +287,24 @@ consume_header(struct transform_read_filter *self)
 		state->in_stream = 1;
 		return (TRANSFORM_OK);
 	case Z_STREAM_ERROR:
-		transform_set_error(&self->transform->transform,
+		transform_set_error(transform,
 		    TRANSFORM_ERRNO_MISC,
 		    "Internal error initializing compression library: "
 		    "invalid setup parameter");
 		break;
 	case Z_MEM_ERROR:
-		transform_set_error(&self->transform->transform, ENOMEM,
+		transform_set_error(transform, ENOMEM,
 		    "Internal error initializing compression library: "
 		    "out of memory");
 		break;
 	case Z_VERSION_ERROR:
-		transform_set_error(&self->transform->transform,
+		transform_set_error(transform,
 		    TRANSFORM_ERRNO_MISC,
 		    "Internal error initializing compression library: "
 		    "invalid library version");
 		break;
 	default:
-		transform_set_error(&self->transform->transform,
+		transform_set_error(transform,
 		    TRANSFORM_ERRNO_MISC,
 		    "Internal error initializing compression library: "
 		    " Zlib error %d", ret);
@@ -329,47 +314,44 @@ consume_header(struct transform_read_filter *self)
 }
 
 static int
-consume_trailer(struct transform_read_filter *self)
+consume_trailer(struct transform *transform, struct private_data *state,
+	struct transform_read_filter *upstream)
 {
-	struct private_data *state;
 	const unsigned char *p;
 	ssize_t avail;
-
-	state = (struct private_data *)self->data;
 
 	state->in_stream = 0;
 	switch (inflateEnd(&(state->stream))) {
 	case Z_OK:
 		break;
 	default:
-		transform_set_error(&self->transform->transform,
+		transform_set_error(transform,
 		    TRANSFORM_ERRNO_MISC,
 		    "Failed to clean up gzip decompressor");
 		return (TRANSFORM_FATAL);
 	}
 
 	/* GZip trailer is a fixed 8 byte structure. */
-	p = __transform_read_filter_ahead(self->upstream, 8, &avail);
+	p = __transform_read_filter_ahead(upstream, 8, &avail);
 	if (p == NULL || avail == 0)
 		return (TRANSFORM_FATAL);
 
 	/* XXX TODO: Verify the length and CRC. */
 
 	/* We've verified the trailer, so consume it now. */
-	__transform_read_filter_consume(self->upstream, 8);
+	__transform_read_filter_consume(upstream, 8);
 
 	return (TRANSFORM_OK);
 }
 
 static ssize_t
-gzip_filter_read(struct transform_read_filter *self, const void **p)
+gzip_filter_read(struct transform *transform, void *_state,
+	struct transform_read_filter *upstream, const void **p)
 {
-	struct private_data *state;
+	struct private_data *state = (struct private_data *)_state;
 	size_t decompressed;
 	ssize_t avail_in;
 	int ret;
-
-	state = (struct private_data *)self->data;
 
 	/* Empty our output buffer. */
 	state->stream.next_out = state->out_block;
@@ -380,7 +362,7 @@ gzip_filter_read(struct transform_read_filter *self, const void **p)
 		/* If we're not in a stream, read a header
 		 * and initialize the decompression library. */
 		if (!state->in_stream) {
-			ret = consume_header(self);
+			ret = consume_header(transform, state, upstream);
 			if (ret == TRANSFORM_EOF) {
 				state->eof = 1;
 				break;
@@ -393,7 +375,7 @@ gzip_filter_read(struct transform_read_filter *self, const void **p)
 		/* ZLib treats stream.next_in as const but doesn't declare
 		 * it so, hence this ugly cast. */
 		state->stream.next_in = (unsigned char *)(uintptr_t)
-		    __transform_read_filter_ahead(self->upstream, 1, &avail_in);
+		    __transform_read_filter_ahead(upstream, 1, &avail_in);
 		if (state->stream.next_in == NULL)
 			return (TRANSFORM_FATAL);
 		state->stream.avail_in = avail_in;
@@ -402,21 +384,21 @@ gzip_filter_read(struct transform_read_filter *self, const void **p)
 		ret = inflate(&(state->stream), 0);
 		switch (ret) {
 		case Z_OK: /* Decompressor made some progress. */
-			__transform_read_filter_consume(self->upstream,
+			__transform_read_filter_consume(upstream,
 			    avail_in - state->stream.avail_in);
 			break;
 		case Z_STREAM_END: /* Found end of stream. */
-			__transform_read_filter_consume(self->upstream,
+			__transform_read_filter_consume(upstream,
 			    avail_in - state->stream.avail_in);
 			/* Consume the stream trailer; release the
 			 * decompression library. */
-			ret = consume_trailer(self);
+			ret = consume_trailer(transform, state, upstream);
 			if (ret < TRANSFORM_OK)
 				return (ret);
 			break;
 		default:
 			/* Return an error. */
-			transform_set_error(&self->transform->transform,
+			transform_set_error(transform,
 			    TRANSFORM_ERRNO_MISC,
 			    "gzip decompression failed");
 			return (TRANSFORM_FATAL);
@@ -437,12 +419,11 @@ gzip_filter_read(struct transform_read_filter *self, const void **p)
  * Clean up the decompressor.
  */
 static int
-gzip_filter_close(struct transform_read_filter *self)
+gzip_filter_close(struct transform *transform, void *_state)
 {
-	struct private_data *state;
+	struct private_data *state = (struct private_data *)_state;
 	int ret;
 
-	state = (struct private_data *)self->data;
 	ret = TRANSFORM_OK;
 
 	if (state->in_stream) {
@@ -450,7 +431,7 @@ gzip_filter_close(struct transform_read_filter *self)
 		case Z_OK:
 			break;
 		default:
-			transform_set_error(&(self->transform->transform),
+			transform_set_error(transform,
 			    TRANSFORM_ERRNO_MISC,
 			    "Failed to clean up gzip compressor");
 			ret = TRANSFORM_FATAL;
