@@ -704,7 +704,6 @@ __transform_read_filter_ahead(struct transform_read_filter *filter,
 				while (s < min) {
 					t *= 2;
 					if (t <= s) { /* Integer overflow! */
-						abort();
 						transform_set_error(
 							&filter->transform->transform,
 							ENOMEM,
@@ -719,7 +718,6 @@ __transform_read_filter_ahead(struct transform_read_filter *filter,
 				/* Now s >= min, so allocate a new buffer. */
 				p = (char *)malloc(s);
 				if (p == NULL) {
-						abort();
 					transform_set_error(
 						&filter->transform->transform,
 						ENOMEM,
