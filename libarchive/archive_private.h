@@ -140,7 +140,8 @@ int64_t __archive_shim_skip(struct transform *, void *, int64_t);
 #endif
 
 ssize_t __archive_shim_write(struct transform *, void *, const void *, size_t);
-ssize_t __archive_shim_read(struct transform *, void *, const void **);
+ssize_t __archive_shim_read(struct transform *, void *, 
+	struct transform_read_filter *, const void **);
 
 
 #define	err_combine(a,b)	((a) < (b) ? (a) : (b))

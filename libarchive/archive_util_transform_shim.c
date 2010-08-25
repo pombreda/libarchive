@@ -156,7 +156,8 @@ __archive_shim_write(struct transform *t, void *data, const void *buff,
 }
 
 ssize_t
-__archive_shim_read(struct transform *t, void *data, const void **buff)
+__archive_shim_read(struct transform *t, void *data, struct transform_read_filter *upstream,
+	const void **buff)
 {
 	struct archive_shim *mine = (struct archive_shim *)data;
 

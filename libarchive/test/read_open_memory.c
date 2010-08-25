@@ -54,7 +54,8 @@ static off_t	memory_read_skip(struct transform *, void *, off_t request);
 #else
 static int64_t	memory_read_skip(struct transform *, void *, int64_t request);
 #endif
-static ssize_t	memory_read(struct transform *, void *, const void **buff);
+static ssize_t	memory_read(struct transform *, void *, 
+	struct transform_read_filter *, const void **buff);
 static int	read_open_memory_internal(struct archive *a, void *buff,
     size_t size, size_t read_size, int fullapi);
 
@@ -120,7 +121,8 @@ memory_read_open(struct transform *t, void *client_data)
  * will screw up.
  */
 static ssize_t
-memory_read(struct transform *t, void *client_data, const void **buff)
+memory_read(struct transform *t, void *client_data,
+	struct transform_read_filter *upstream, const void **buff)
 {
 	struct read_memory_data *mine = (struct read_memory_data *)client_data;
 	size_t size;

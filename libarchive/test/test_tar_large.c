@@ -78,7 +78,8 @@ static off_t	memory_read_skip(struct transform *, void *, off_t request);
 #else
 static int64_t	memory_read_skip(struct transform *, void *, int64_t request);
 #endif
-static ssize_t	memory_read(struct transform *, void *, const void **buff);
+static ssize_t	memory_read(struct transform *, void *,
+	struct transform_read_filter *upstream, const void **buff);
 static ssize_t	memory_write(struct transform *, void *, const void *, size_t);
 
 
@@ -121,7 +122,8 @@ memory_write(struct transform *t, void *_private, const void *buff, size_t size)
 }
 
 static ssize_t
-memory_read(struct transform *t, void *_private, const void **buff)
+memory_read(struct transform *t, void *_private,
+	struct transform_read_filter *upstream, const void **buff)
 {
 	struct memdata *private = _private;
 	struct memblock *block;
