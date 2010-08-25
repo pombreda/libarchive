@@ -105,7 +105,7 @@ bzip2_reader_bid(const void *bidder_data, struct transform_read_filter *filter)
 	int bits_checked;
 
 	/* Minimal bzip2 transform is 14 bytes. */
-	buffer = __transform_read_filter_ahead(filter, 14, &avail);
+	buffer = transform_read_filter_ahead(filter, 14, &avail);
 	if (buffer == NULL)
 		return (0);
 
@@ -259,7 +259,7 @@ bzip2_filter_read(struct transform *transform, void *_state,
 		/* stream.next_in is really const, but bzlib
 		 * doesn't declare it so. <sigh> */
 		read_buf =
-		    __transform_read_filter_ahead(upstream, 1, &ret);
+		    transform_read_filter_ahead(upstream, 1, &ret);
 		if (read_buf == NULL)
 			return (TRANSFORM_FATAL);
 		state->stream.next_in = (char *)(uintptr_t)read_buf;
@@ -275,7 +275,7 @@ bzip2_filter_read(struct transform *transform, void *_state,
 
 		/* Decompress as much as we can in one pass. */
 		ret = BZ2_bzDecompress(&(state->stream));
-		__transform_read_filter_consume(upstream,
+		transform_read_filter_consume(upstream,
 		    state->stream.next_in - read_buf);
 
 		switch (ret) {

@@ -198,12 +198,12 @@ bid_get_line(struct transform_read_filter *filter,
 	while (*nl == 0 && len == *avail && !quit) {
 		ssize_t diff = *ravail - *avail;
 
-		*b = __transform_read_filter_ahead(filter, 160 + *ravail, avail);
+		*b = transform_read_filter_ahead(filter, 160 + *ravail, avail);
 		if (*b == NULL) {
 			if (*ravail >= *avail)
 				return (0);
 			/* Reading bytes reaches the end of file. */
-			*b = __transform_read_filter_ahead(filter, *avail, avail);
+			*b = transform_read_filter_ahead(filter, *avail, avail);
 			quit = 1;
 		}
 		*ravail = *avail;
@@ -226,7 +226,7 @@ uudecode_bidder_bid(const void *_bidder_data,
 	int l;
 	int firstline;
 
-	b = __transform_read_filter_ahead(filter, 1, &avail);
+	b = transform_read_filter_ahead(filter, 1, &avail);
 	if (b == NULL)
 		return (0);
 
@@ -400,7 +400,7 @@ uudecode_filter_read(struct transform *transform, void *_data,
 	ssize_t len, llen, nl;
 
 read_more:
-	d = __transform_read_filter_ahead(upstream, 1, &avail_in);
+	d = transform_read_filter_ahead(upstream, 1, &avail_in);
 	if (d == NULL && avail_in < 0)
 		return (TRANSFORM_FATAL);
 	/* Quiet a code analyzer; make sure avail_in must be zero
@@ -452,7 +452,7 @@ read_more:
 			if (total == 0) {
 				/* Do not return 0; it means end-of-file.
 				 * We should try to read bytes more. */
-				__transform_read_filter_consume(
+				transform_read_filter_consume(
 				    upstream, ravail);
 				goto read_more;
 			}
@@ -590,7 +590,7 @@ read_more:
 		}
 	}
 
-	__transform_read_filter_consume(upstream, ravail);
+	transform_read_filter_consume(upstream, ravail);
 
 	*buff = uudecode->out_buff;
 	uudecode->total += total;

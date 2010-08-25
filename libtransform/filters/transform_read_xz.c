@@ -176,7 +176,7 @@ xz_bidder_bid(const void *_data, struct transform_read_filter *filter)
 	ssize_t avail;
 	int bits_checked;
 
-	buffer = __transform_read_filter_ahead(filter, 6, &avail);
+	buffer = transform_read_filter_ahead(filter, 6, &avail);
 	if (buffer == NULL)
 		return (0);
 
@@ -227,7 +227,7 @@ lzma_bidder_bid(const void *_data, struct transform_read_filter *filter)
 	uint64_t uncompressed_size;
 	int bits_checked;
 
-	buffer = __transform_read_filter_ahead(filter, 14, &avail);
+	buffer = transform_read_filter_ahead(filter, 14, &avail);
 	if (buffer == NULL)
 		return (0);
 
@@ -330,7 +330,7 @@ lzip_has_member(struct transform_read_filter *filter)
 	int bits_checked;
 	int log2dic;
 
-	buffer = __transform_read_filter_ahead(filter, 6, &avail);
+	buffer = transform_read_filter_ahead(filter, 6, &avail);
 	if (buffer == NULL)
 		return (0);
 
@@ -527,7 +527,7 @@ lzip_init(struct transform *transform, struct private_data *state,
 	uint32_t dicsize;
 	int log2dic, ret;
 
-	h = __transform_read_filter_ahead(upstream, 6, &avail_in);
+	h = transform_read_filter_ahead(upstream, 6, &avail_in);
 	if (h == NULL && avail_in < 0)
 		return (TRANSFORM_FATAL);
 
@@ -549,7 +549,7 @@ lzip_init(struct transform *transform, struct private_data *state,
 	transform_le32enc(props+1, dicsize);
 
 	/* Consume lzip header. */
-	__transform_read_filter_consume(upstream, 6);
+	transform_read_filter_consume(upstream, 6);
 	state->member_in = 6;
 
 	filters[0].id = LZMA_FILTER_LZMA1;
@@ -582,7 +582,7 @@ lzip_tail(struct transform *transform, struct private_data *state,
 		tail = 12;
 	else
 		tail = 20;
-	f = __transform_read_filter_ahead(upstream, tail, &avail_in);
+	f = transform_read_filter_ahead(upstream, tail, &avail_in);
 	if (f == NULL && avail_in < 0)
 		return (TRANSFORM_FATAL);
 	if (avail_in < tail) {
@@ -613,7 +613,7 @@ lzip_tail(struct transform *transform, struct private_data *state,
 		    "Lzip: Member size error");
 		return (TRANSFORM_FAILED);
 	}
-	__transform_read_filter_consume(upstream, tail);
+	transform_read_filter_consume(upstream, tail);
 
 	/* If current lzip data consists of multi member, try decompressing
 	 * a next member. */
@@ -655,7 +655,7 @@ xz_filter_read(struct transform *transform, void *_state,
 			state->in_stream = 1;
 		}
 		state->stream.next_in =
-		    __transform_read_filter_ahead(upstream, 1, &avail_in);
+		    transform_read_filter_ahead(upstream, 1, &avail_in);
 		if (state->stream.next_in == NULL && avail_in < 0)
 			return (TRANSFORM_FATAL);
 		state->stream.avail_in = avail_in;
@@ -668,7 +668,7 @@ xz_filter_read(struct transform *transform, void *_state,
 			state->eof = 1;
 			/* FALL THROUGH */
 		case LZMA_OK: /* Decompressor made some progress. */
-			__transform_read_filter_consume(upstream,
+			transform_read_filter_consume(upstream,
 			    avail_in - state->stream.avail_in);
 			state->member_in +=
 			    avail_in - state->stream.avail_in;
@@ -759,7 +759,7 @@ lzma_bidder_init(struct transform *transform, struct transform_read_bidder *bidd
 
 	/* Prime the lzma library with 18 bytes of input. */
 	state->stream.next_in = (unsigned char *)(uintptr_t)
-	    __transform_read_filter_ahead(self->upstream, 18, &avail_in);
+	    transform_read_filter_ahead(self->upstream, 18, &avail_in);
 	if (state->stream.next_in == NULL)
 		return (TRANSFORM_FATAL);
 	state->stream.avail_in = avail_in;
@@ -768,7 +768,7 @@ lzma_bidder_init(struct transform *transform, struct transform_read_bidder *bidd
 
 	/* Initialize compression library. */
 	ret = lzmadec_init(&(state->stream));
-	__transform_read_filter_consume(self->upstream,
+	transform_read_filter_consume(self->upstream,
 	    avail_in - state->stream.avail_in);
 	if (ret == LZMADEC_OK)
 		return (TRANSFORM_OK);
@@ -816,7 +816,7 @@ lzma_filter_read(struct transform *transform, void *_state,
 	/* Try to fill the output buffer. */
 	while (state->stream.avail_out > 0 && !state->eof) {
 		state->stream.next_in = (unsigned char *)(uintptr_t)
-		    __transform_read_filter_ahead(upstream, 1, &avail_in);
+		    transform_read_filter_ahead(upstream, 1, &avail_in);
 		if (state->stream.next_in == NULL && avail_in < 0)
 			return (TRANSFORM_FATAL);
 		state->stream.avail_in = avail_in;
@@ -828,7 +828,7 @@ lzma_filter_read(struct transform *transform, void *_state,
 			state->eof = 1;
 			/* FALL THROUGH */
 		case LZMADEC_OK: /* Decompressor made some progress. */
-			__transform_read_filter_consume(upstream,
+			transform_read_filter_consume(upstream,
 			    avail_in - state->stream.avail_in);
 			break;
 		case LZMADEC_BUF_ERROR: /* Insufficient input data? */

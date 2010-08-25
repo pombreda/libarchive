@@ -153,8 +153,5 @@ struct transform_read {
 
 };
 
-const void *__transform_read_filter_ahead(struct transform_read_filter *,
-    size_t, ssize_t *);
-int64_t	__transform_read_filter_consume(struct transform_read_filter *, int64_t);
 int __transform_read_program(struct transform *, const char *, const char *, int);
 #endif

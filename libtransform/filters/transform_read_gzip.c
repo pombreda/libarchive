@@ -115,7 +115,7 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
 	/* Start by looking at the first ten bytes of the header, which
 	 * is all fixed layout. */
 	len = 10;
-	p = __transform_read_filter_ahead(filter, len, &avail);
+	p = transform_read_filter_ahead(filter, len, &avail);
 	if (p == NULL || avail == 0)
 		return (0);
 	if (p[0] != 037)
@@ -139,7 +139,7 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
 
 	/* Optional extra data:  2 byte length plus variable body. */
 	if (header_flags & 4) {
-		p = __transform_read_filter_ahead(filter, len + 2, &avail);
+		p = transform_read_filter_ahead(filter, len + 2, &avail);
 		if (p == NULL)
 			return (0);
 		len += ((int)p[len + 1] << 8) | (int)p[len];
@@ -151,7 +151,7 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
 		do {
 			++len;
 			if (avail < len)
-				p = __transform_read_filter_ahead(filter,
+				p = transform_read_filter_ahead(filter,
 				    len, &avail);
 			if (p == NULL)
 				return (0);
@@ -163,7 +163,7 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
 		do {
 			++len;
 			if (avail < len)
-				p = __transform_read_filter_ahead(filter,
+				p = transform_read_filter_ahead(filter,
 				    len, &avail);
 			if (p == NULL)
 				return (0);
@@ -172,7 +172,7 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
 
 	/* Optional header CRC */
 	if ((header_flags & 2)) {
-		p = __transform_read_filter_ahead(filter, len + 2, &avail);
+		p = transform_read_filter_ahead(filter, len + 2, &avail);
 		if (p == NULL)
 			return (0);
 #if 0
@@ -266,14 +266,14 @@ consume_header(struct transform *transform, struct private_data *state,
 	len = peek_at_header(upstream, NULL);
 	if (len == 0)
 		return (TRANSFORM_EOF);
-	__transform_read_filter_consume(upstream, len);
+	transform_read_filter_consume(upstream, len);
 
 	/* Initialize CRC accumulator. */
 	state->crc = crc32(0L, NULL, 0);
 
 	/* Initialize compression library. */
 	state->stream.next_in = (unsigned char *)(uintptr_t)
-	    __transform_read_filter_ahead(upstream, 1, &avail);
+	    transform_read_filter_ahead(upstream, 1, &avail);
 	state->stream.avail_in = avail;
 	ret = inflateInit2(&(state->stream),
 	    -15 /* Don't check for zlib header */);
@@ -329,14 +329,14 @@ consume_trailer(struct transform *transform, struct private_data *state,
 	}
 
 	/* GZip trailer is a fixed 8 byte structure. */
-	p = __transform_read_filter_ahead(upstream, 8, &avail);
+	p = transform_read_filter_ahead(upstream, 8, &avail);
 	if (p == NULL || avail == 0)
 		return (TRANSFORM_FATAL);
 
 	/* XXX TODO: Verify the length and CRC. */
 
 	/* We've verified the trailer, so consume it now. */
-	__transform_read_filter_consume(upstream, 8);
+	transform_read_filter_consume(upstream, 8);
 
 	return (TRANSFORM_OK);
 }
@@ -372,7 +372,7 @@ gzip_filter_read(struct transform *transform, void *_state,
 		/* ZLib treats stream.next_in as const but doesn't declare
 		 * it so, hence this ugly cast. */
 		state->stream.next_in = (unsigned char *)(uintptr_t)
-		    __transform_read_filter_ahead(upstream, 1, &avail_in);
+		    transform_read_filter_ahead(upstream, 1, &avail_in);
 		if (state->stream.next_in == NULL)
 			return (TRANSFORM_FATAL);
 		state->stream.avail_in = avail_in;
@@ -381,11 +381,11 @@ gzip_filter_read(struct transform *transform, void *_state,
 		ret = inflate(&(state->stream), 0);
 		switch (ret) {
 		case Z_OK: /* Decompressor made some progress. */
-			__transform_read_filter_consume(upstream,
+			transform_read_filter_consume(upstream,
 			    avail_in - state->stream.avail_in);
 			break;
 		case Z_STREAM_END: /* Found end of stream. */
-			__transform_read_filter_consume(upstream,
+			transform_read_filter_consume(upstream,
 			    avail_in - state->stream.avail_in);
 			/* Consume the stream trailer; release the
 			 * decompression library. */

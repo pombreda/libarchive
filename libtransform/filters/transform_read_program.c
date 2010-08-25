@@ -190,7 +190,7 @@ program_bidder_bid(const void *_state, struct transform_read_filter *upstream)
 
 	/* If we have a signature, use that to match. */
 	if (state->signature_len > 0) {
-		p = __transform_read_filter_ahead(upstream,
+		p = transform_read_filter_ahead(upstream,
 		    state->signature_len, NULL);
 		if (p == NULL)
 			return (0);
@@ -310,7 +310,7 @@ child_read(struct transform *transform, struct program_filter *state,
 		}
 
 		/* Get some more data from upstream. */
-		p = __transform_read_filter_ahead(upstream, 1, &avail);
+		p = transform_read_filter_ahead(upstream, 1, &avail);
 		if (p == NULL) {
 			close(state->child_stdin);
 			state->child_stdin = -1;
@@ -326,7 +326,7 @@ child_read(struct transform *transform, struct program_filter *state,
 
 		if (ret > 0) {
 			/* Consume whatever we managed to write. */
-			__transform_read_filter_consume(upstream, ret);
+			transform_read_filter_consume(upstream, ret);
 		} else if (ret == -1 && errno == EAGAIN) {
 			/* Block until child has some I/O ready. */
 			__transform_check_child(state->child_stdin,

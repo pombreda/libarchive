@@ -163,7 +163,7 @@ compress_bidder_bid(const void *bidder_data, struct transform_read_filter *filte
 	ssize_t avail;
 	int bits_checked;
 
-	buffer = __transform_read_filter_ahead(filter, 2, &avail);
+	buffer = transform_read_filter_ahead(filter, 2, &avail);
 
 	if (buffer == NULL)
 		return (0);
@@ -412,13 +412,13 @@ getbits(struct private_data *state, struct transform_read_filter *upstream,
 	while (state->bits_avail < n) {
 		if (state->avail_in <= 0) {
 			state->next_in
-			    = __transform_read_filter_ahead(upstream, 1, &ret);
+			    = transform_read_filter_ahead(upstream, 1, &ret);
 			if (ret == 0)
 				return (-1);
 			if (ret < 0 || state->next_in == NULL)
 				return (TRANSFORM_FATAL);
 			state->avail_in = ret;
-			__transform_read_filter_consume(upstream, ret);
+			transform_read_filter_consume(upstream, ret);
 		}
 		state->bit_buffer |= *state->next_in++ << state->bits_avail;
 		state->avail_in--;

@@ -76,7 +76,7 @@ rpm_bidder_bid(const void *_data, struct transform_read_filter *upstream)
 	ssize_t avail;
 	int bits_checked;
 
-	b = __transform_read_filter_ahead(upstream, 8, &avail);
+	b = transform_read_filter_ahead(upstream, 8, &avail);
 	if (b == NULL)
 		return (0);
 
@@ -156,7 +156,7 @@ rpm_filter_read(struct transform *transform, void *_data,
 	used = 0;
 	do {
 		if (b == NULL) {
-			b = __transform_read_filter_ahead(upstream, 1,
+			b = transform_read_filter_ahead(upstream, 1,
 			    &avail_in);
 			if (b == NULL) {
 				if (avail_in < 0)
@@ -245,7 +245,7 @@ rpm_filter_read(struct transform *transform, void *_data,
 		}
 		if (used == (size_t)avail_in) {
 			rpm->total_in += used;
-			__transform_read_filter_consume(upstream, used);
+			transform_read_filter_consume(upstream, used);
 			b = NULL;
 			used = 0;
 		}
@@ -253,7 +253,7 @@ rpm_filter_read(struct transform *transform, void *_data,
 
 	if (used > 0 && b != NULL) {
 		rpm->total_in += used;
-		__transform_read_filter_consume(upstream, used);
+		transform_read_filter_consume(upstream, used);
 	}
 	return (total);
 }

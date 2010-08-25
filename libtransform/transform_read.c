@@ -252,7 +252,7 @@ build_stream(struct transform_read *a)
 		/* If no bidder, we're done. */
 		if (best_bidder == NULL) {
 			/* Verify the filter by asking it for some data. */
-			__transform_read_filter_ahead(a->filter, 1, &avail);
+			transform_read_filter_ahead(a->filter, 1, &avail);
 			if (avail < 0) {
 				close_filters(a);
 				free_filters(a);
@@ -589,11 +589,11 @@ transform_read_ahead(struct transform *_a, size_t min, ssize_t *avail)
 	if (TRANSFORM_OK != __transform_check_magic(_a, TRANSFORM_READ_MAGIC,
 		TRANSFORM_STATE_DATA, "transform_read_ahead"))
 		return (NULL);
-	return (__transform_read_filter_ahead(a->filter, min, avail));
+	return (transform_read_filter_ahead(a->filter, min, avail));
 }
 
 const void *
-__transform_read_filter_ahead(struct transform_read_filter *filter,
+transform_read_filter_ahead(struct transform_read_filter *filter,
     size_t min, ssize_t *avail)
 {
 	ssize_t bytes_read;
@@ -765,11 +765,11 @@ transform_read_consume(struct transform *_a, int64_t request)
 	transform_check_magic(_a, TRANSFORM_READ_MAGIC,
 		TRANSFORM_STATE_DATA, "transform_read_consume");
 
-	return (__transform_read_filter_consume(a->filter, request));
+	return (transform_read_filter_consume(a->filter, request));
 }
 
 int64_t
-__transform_read_filter_consume(struct transform_read_filter *filter,
+transform_read_filter_consume(struct transform_read_filter *filter,
     int64_t request)
 {
 	int64_t skipped = advance_file_pointer(filter, request);
