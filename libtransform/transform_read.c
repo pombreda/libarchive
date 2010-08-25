@@ -188,7 +188,7 @@ transform_read_open2(struct transform *_a, void *client_data,
 	/* Open data source. */
 	if (client_opener != NULL) {
 		e =(client_opener)(&a->transform, client_data);
-		if (e != 0) {
+		if (TRANSFORM_OK != e) {
 			/* If the open failed, call the closer to clean up. */
 			if (client_closer)
 				(client_closer)(&a->transform, client_data);
