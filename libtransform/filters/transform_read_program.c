@@ -85,8 +85,7 @@ transform_read_support_compression_program_signature(struct transform *_a,
 }
 
 int
-__transform_read_program(struct transform *transform, 
-	struct transform_read_bidder *bidder, const char *cmd,
+__transform_read_program(struct transform *transform, const char *cmd,
 	const char *name, int magic)
 {
 	(void)transform; /* UNUSED */
@@ -117,8 +116,7 @@ struct program_bidder {
 };
 
 static int program_bidder_bid(const void *_state, struct transform_read_filter *upstream);
-static int	program_bidder_init(struct transform *,
-	struct transform_read_bidder *, const void *);
+static int	program_bidder_init(struct transform *, const void *);
 static int	program_bidder_free(const void *);
 
 
@@ -160,7 +158,7 @@ transform_read_support_compression_program_signature(struct transform *_t,
 		memcpy(state->signature, signature, signature_len);
 	}
 
-    ret = transform_read_bidder_add(_t, state, program_bidder_bid,
+    ret = transform_read_bidder_add(_t, state, "compress", program_bidder_bid,
     	program_bidder_init, program_bidder_free, NULL);
     if (TRANSFORM_FATAL == ret) {
 		program_bidder_free(state);
@@ -349,7 +347,7 @@ child_read(struct transform *transform, struct program_filter *state,
 
 int
 __transform_read_program(struct transform *transform, 
-	struct transform_read_bidder *bidder, const char *cmd,
+	const char *cmd,
 	const char *name, int magic)
 {
 	struct program_filter	*state;
@@ -389,7 +387,7 @@ __transform_read_program(struct transform *transform,
 		return (TRANSFORM_FATAL);
 	}
 
-	ret = transform_read_filter_add(transform, bidder, (void *)state,
+	ret = transform_read_filter_add(transform, (void *)state,
 		name, magic,
 		program_filter_read, NULL, program_filter_close, NULL);
 
@@ -401,11 +399,10 @@ __transform_read_program(struct transform *transform,
 }
 
 static int
-program_bidder_init(struct transform *transform,
-	struct transform_read_bidder *bidder, const void *bidder_state)
+program_bidder_init(struct transform *transform, const void *bidder_state)
 {
 	struct program_bidder *state = (struct program_bidder *)bidder_state;
-	return (__transform_read_program(transform, bidder, state->cmd,
+	return (__transform_read_program(transform, state->cmd,
 		NULL, TRANSFORM_FILTER_PROGRAM));
 }
 

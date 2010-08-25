@@ -132,7 +132,7 @@ struct private_data {
 };
 
 static int	compress_bidder_bid(const void *, struct transform_read_filter *);
-static int	compress_bidder_init(struct transform *, struct transform_read_bidder *, const void *);
+static int	compress_bidder_init(struct transform *, const void *);
 
 static ssize_t	compress_filter_read(struct transform *, void *,
 	struct transform_read_filter *, const void **);
@@ -145,7 +145,7 @@ static int next_code(struct transform *, struct private_data *,
 int
 transform_read_support_compression_compress(struct transform *_t)
 {
-	return transform_read_bidder_add(_t, NULL, compress_bidder_bid, 
+	return transform_read_bidder_add(_t, NULL, "compress", compress_bidder_bid, 
 		compress_bidder_init, NULL, NULL);
 }
 
@@ -188,8 +188,7 @@ compress_bidder_bid(const void *bidder_data, struct transform_read_filter *filte
  * Setup the callbacks.
  */
 static int
-compress_bidder_init(struct transform *transform,
-	struct transform_read_bidder *bidder, const void *bidder_data)
+compress_bidder_init(struct transform *transform, const void *bidder_data)
 {
 	struct private_data *state;
 	static const size_t out_block_size = 64 * 1024;
@@ -209,7 +208,7 @@ compress_bidder_init(struct transform *transform,
 	state->out_block_size = out_block_size;
 	state->out_block = out_block;
 
-    ret = transform_read_filter_add(transform, bidder, (void *)state,
+    ret = transform_read_filter_add(transform, (void *)state,
     	"compress (.Z)", TRANSFORM_FILTER_COMPRESS,
 		compress_filter_read, NULL, compress_filter_close, NULL);
 

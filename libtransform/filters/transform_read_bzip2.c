@@ -70,14 +70,13 @@ static int	bzip2_filter_close(struct transform *, void *);
  * if bzlib is unavailable.
  */
 static int	bzip2_reader_bid(const void *, struct transform_read_filter *);
-static int	bzip2_reader_init(struct transform *, struct transform_read_bidder *,
-	const void *);
+static int	bzip2_reader_init(struct transform *, const void *);
 
 int
 transform_read_support_compression_bzip2(struct transform *_t)
 {
-	int ret = transform_read_bidder_add(_t, NULL, bzip2_reader_bid,
-		bzip2_reader_init, NULL, NULL);
+	int ret = transform_read_bidder_add(_t, NULL, "bzip2",
+		bzip2_reader_bid, bzip2_reader_init, NULL, NULL);
 
 	if (TRANSFORM_OK != ret)
 		return (ret);
@@ -142,10 +141,9 @@ bzip2_reader_bid(const void *bidder_data, struct transform_read_filter *filter)
  * and emit a useful message.
  */
 static int
-bzip2_reader_init(struct transform *transform, struct transform_read_bidder *bidder
-	const void *bidder_data)
+bzip2_reader_init(struct transform *transform, const void *bidder_data)
 {
-	return (__transform_read_program(transform, bidder, "bunzip2",
+	return (__transform_read_program(transform, "bunzip2",
 		"bzip2", TRANSFORM_FILTER_BZIP2));
 }
 
@@ -156,8 +154,7 @@ bzip2_reader_init(struct transform *transform, struct transform_read_bidder *bid
  * Setup the callbacks.
  */
 static int
-bzip2_reader_init(struct transform *transform,
-	struct transform_read_bidder *bidder, const void *bidder_data)
+bzip2_reader_init(struct transform *transform, const void *bidder_data)
 {
 	int ret;
 	static const size_t out_block_size = 64 * 1024;
@@ -177,7 +174,7 @@ bzip2_reader_init(struct transform *transform,
 	state->out_block_size = out_block_size;
 	state->out_block = out_block;
 	
-	ret = transform_read_filter_add(transform, bidder, (void *)state, "bzip2",
+	ret = transform_read_filter_add(transform, (void *)state, "bzip2",
 		TRANSFORM_FILTER_BZIP2,
 		bzip2_filter_read, NULL,
 		bzip2_filter_close, NULL);

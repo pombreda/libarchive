@@ -76,13 +76,12 @@ static int	gzip_filter_close(struct transform *, void *);
  * gunzip program.
  */
 static int	gzip_bidder_bid(const void *, struct transform_read_filter *);
-static int	gzip_bidder_init(struct transform *, struct transform_read_bidder *,
-	const void *);
+static int	gzip_bidder_init(struct transform *, const void *);
 
 int
 transform_read_support_compression_gzip(struct transform *_t)
 {
-	int ret = transform_read_bidder_add(_t, NULL, gzip_bidder_bid,
+	int ret = transform_read_bidder_add(_t, NULL, "gzip", gzip_bidder_bid,
 		gzip_bidder_init, NULL, NULL);
 
 	if (TRANSFORM_OK != ret)
@@ -213,10 +212,9 @@ gzip_bidder_bid(const void *_data, struct transform_read_filter *filter)
  * in case that's available.
  */
 static int
-gzip_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
-	const void *bidder_data)
+gzip_bidder_init(struct transform *transform, const void *bidder_data)
 {
-	return (__transform_read_program(transform, bidder, "gunzip",
+	return (__transform_read_program(transform, "gunzip",
 		"gzip", TRANSFORM_FILTER_GZIP));
 }
 
@@ -226,8 +224,7 @@ gzip_bidder_init(struct transform *transform, struct transform_read_bidder *bidd
  * Initialize the filter object.
  */
 static int
-gzip_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
-	const void *bidder_data)
+gzip_bidder_init(struct transform *transform, const void *bidder_data)
 {
 	struct private_data *state;
 	static const size_t out_block_size = 64 * 1024;
@@ -247,7 +244,7 @@ gzip_bidder_init(struct transform *transform, struct transform_read_bidder *bidd
 	state->out_block = out_block;
 	state->in_stream = 0; /* We're not actually within a stream yet. */
 
-	ret = transform_read_filter_add(transform, bidder, (void *)state,
+	ret = transform_read_filter_add(transform, (void *)state,
 		"gzip", TRANSFORM_FILTER_GZIP,
 		gzip_filter_read, NULL, gzip_filter_close, NULL);
 

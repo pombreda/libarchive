@@ -113,7 +113,6 @@ int
 transform_read_set_filter_options(struct transform *_a, const char *s)
 {
 	struct transform_read *a;
-	struct transform_read_filter *filter;
 	struct transform_read_bidder *bidder;
 	char key[64], val[64];
 	int len, r;
@@ -125,14 +124,13 @@ transform_read_set_filter_options(struct transform *_a, const char *s)
 		return (TRANSFORM_OK);
 	a = (struct transform_read *)_a;
 	len = 0;
-	for (filter = a->filter; filter != NULL; filter = filter->upstream) {
-		bidder = filter->bidder;
+	for(bidder = a->bidders; bidder != NULL; bidder = bidder->next) {
 		if (bidder == NULL)
 			continue;
 		if (bidder->set_option == NULL)
 			/* This bidder does not support option */
 			continue;
-		while ((len = __transform_parse_options(s, filter->name,
+		while ((len = __transform_parse_options(s, bidder->name,
 		    sizeof(key), key, sizeof(val), val)) > 0) {
 			if (val[0] == '\0')
 				r = bidder->set_option(bidder->data, key, NULL);
@@ -205,7 +203,6 @@ transform_read_open2(struct transform *_a, void *client_data,
 	filter = calloc(1, sizeof(struct transform_read_filter));
 	if (filter == NULL)
 		return (TRANSFORM_FATAL);
-	filter->bidder = NULL;
 	filter->upstream = NULL;
 	filter->transform = a;
 	filter->data = client_data;
@@ -264,8 +261,7 @@ build_stream(struct transform_read *a)
 			return (TRANSFORM_OK);
 		}
 
-		ret = (best_bidder->create_filter)((struct transform *)a, best_bidder,
-			best_bidder->data);
+		ret = (best_bidder->create_filter)((struct transform *)a, best_bidder->data);
 
 		/* cleanup and deallocation... */
 		if (TRANSFORM_FATAL == ret) {
@@ -460,7 +456,7 @@ _transform_filter_bytes(struct transform *_a, int n)
  * create a new bidder, adding it to this transform
  */
 int transform_read_bidder_add(struct transform *_t,
-	const void *bidder_data,
+	const void *bidder_data, const char *bidder_name,
 	transform_read_bidder_bid_method *bid,
 	transform_read_bidder_create_filter *create_filter,
 	transform_read_bidder_free *dealloc,
@@ -478,6 +474,7 @@ int transform_read_bidder_add(struct transform *_t,
 			"bidder allocation failed");
 		return (TRANSFORM_FATAL);
 	}
+	bidder->name = bidder_name;
 	bidder->data = (void *)bidder_data;
 	bidder->bid = bid;
 	bidder->create_filter = create_filter;
@@ -493,7 +490,6 @@ int transform_read_bidder_add(struct transform *_t,
  */
 
 int transform_read_filter_add(struct transform *_t,
-	struct transform_read_bidder *bidder,
 	const void *data, const char *name, int code,
 	transform_read_filter_read_callback *reader,
 	transform_read_filter_skip_callback *skipper,
@@ -512,7 +508,6 @@ int transform_read_filter_add(struct transform *_t,
 		return (TRANSFORM_FATAL);
 	}
 
-	f->bidder = bidder;
 	f->code = code;
 	f->name = name;
 	f->transform = t;

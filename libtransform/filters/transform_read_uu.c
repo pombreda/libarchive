@@ -56,8 +56,7 @@ struct uudecode {
 };
 
 static int	uudecode_bidder_bid(const void *, struct transform_read_filter *);
-static int	uudecode_bidder_init(struct transform *, struct transform_read_bidder *,
-	const void *);
+static int	uudecode_bidder_init(struct transform *, const void *);
 
 static ssize_t	uudecode_filter_read(struct transform *, void *,
 	struct transform_read_filter *upstream, const void **);
@@ -66,7 +65,7 @@ static int	uudecode_filter_close(struct transform *, void *);
 int
 transform_read_support_compression_uu(struct transform *_t)
 {
-	return transform_read_bidder_add(_t, NULL, uudecode_bidder_bid,
+	return transform_read_bidder_add(_t, NULL, "uu", uudecode_bidder_bid,
 		uudecode_bidder_init, NULL, NULL);
 }
 
@@ -324,8 +323,7 @@ uudecode_bidder_bid(const void *_bidder_data,
 }
 
 static int
-uudecode_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
-	const void *bidder_data)
+uudecode_bidder_init(struct transform *transform, const void *bidder_data)
 {
 	struct uudecode   *uudecode;
 	void *out_buff;
@@ -350,7 +348,7 @@ uudecode_bidder_init(struct transform *transform, struct transform_read_bidder *
 	uudecode->out_buff = out_buff;
 	uudecode->state = ST_FIND_HEAD;
 
-	ret = transform_read_filter_add(transform, bidder, (void *)uudecode,
+	ret = transform_read_filter_add(transform, (void *)uudecode,
 		"uu", TRANSFORM_FILTER_UU,
 		uudecode_filter_read, NULL, uudecode_filter_close, NULL);
 

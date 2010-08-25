@@ -471,11 +471,11 @@ typedef int transform_read_bidder_bid_method(const void *bidder_data,
 typedef int transform_read_bidder_set_option(const void *bidder_data,
 	const char *key, const char *value);
 typedef int	transform_read_bidder_create_filter(struct transform *,
-	struct transform_read_bidder *,	const void *bidder_data);
+	const void *bidder_data);
 typedef int transform_read_bidder_free(const void *bidder_data);
 
 __LA_DECL int transform_read_bidder_add(struct transform *,
-	const void *data,
+	const void *data, const char *,
 	transform_read_bidder_bid_method *,
 	transform_read_bidder_create_filter *,
 	transform_read_bidder_free *,
@@ -493,7 +493,6 @@ typedef int transform_visit_fds_callback(struct transform *,
 
                         
 __LA_DECL int transform_read_filter_add(struct transform *,
-	struct transform_read_bidder *,
 	const void *data, const char *filter_name, int code,
 	transform_read_filter_read_callback *,
 	transform_read_filter_skip_callback *,

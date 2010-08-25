@@ -66,6 +66,10 @@ struct transform_read_bidder {
 	/* Configuration data for the bidder. */
 	void *data;
 
+	const char *name;
+
+	void *bidder;
+
 	/* Taste the upstream filter to see if we handle this. */
 	transform_read_bidder_bid_method *bid;
 	/* create a new filter. */
@@ -105,8 +109,6 @@ struct transform_read_filter {
 	/* everything following is managed by libtransform */
 
 	struct transform_read *transform; /* Associated transform. */
-
-	struct transform_read_bidder *bidder; /* XXX this should be killable */
 
 	int64_t bytes_consumed;
 
@@ -154,6 +156,5 @@ struct transform_read {
 const void *__transform_read_filter_ahead(struct transform_read_filter *,
     size_t, ssize_t *);
 int64_t	__transform_read_filter_consume(struct transform_read_filter *, int64_t);
-int __transform_read_program(struct transform *, struct transform_read_bidder *,
-	const char *, const char *, int);
+int __transform_read_program(struct transform *, const char *, const char *, int);
 #endif

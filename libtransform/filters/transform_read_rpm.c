@@ -56,8 +56,7 @@ struct rpm {
 #define RPM_LEAD_SIZE	96	/* Size of 'Lead' section. */
 
 static int	rpm_bidder_bid(const void *, struct transform_read_filter *upstream);
-static int	rpm_bidder_init(struct transform *, struct transform_read_bidder *,
-	const void *);
+static int	rpm_bidder_init(struct transform *, const void *);
 
 static ssize_t	rpm_filter_read(struct transform *, void *,
 	struct transform_read_filter *upstream, const void **);
@@ -66,7 +65,7 @@ static int	rpm_filter_close(struct transform *, void *);
 int
 transform_read_support_compression_rpm(struct transform *_t)
 {
-	return transform_read_bidder_add(_t, NULL, rpm_bidder_bid,
+	return transform_read_bidder_add(_t, NULL, "rpm", rpm_bidder_bid,
 		rpm_bidder_init, NULL, NULL);
 }
 
@@ -117,8 +116,7 @@ rpm_bidder_bid(const void *_data, struct transform_read_filter *upstream)
 }
 
 static int
-rpm_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
-	const void *bidder_data)
+rpm_bidder_init(struct transform *transform, const void *bidder_data)
 {
 	struct rpm *rpm;
 	int ret;
@@ -131,7 +129,7 @@ rpm_bidder_init(struct transform *transform, struct transform_read_bidder *bidde
 	}
 	rpm->state = ST_LEAD;
 
-	ret = transform_read_filter_add(transform, bidder, (void *)rpm,
+	ret = transform_read_filter_add(transform, (void *)rpm,
 		"rpm", TRANSFORM_FILTER_RPM,
 		rpm_filter_read, NULL, rpm_filter_close, NULL);
 	if (TRANSFORM_OK != ret) {

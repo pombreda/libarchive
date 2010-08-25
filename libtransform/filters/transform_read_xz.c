@@ -74,11 +74,8 @@ struct private_data {
 static ssize_t	xz_filter_read(struct transform *, void *, 
 	struct transform_read_filter *, const void **);
 static int	xz_filter_close(struct transform *, void *);
-//static int	xz_lzma_bidder_init(struct transform *, struct transform_read_bidder *,
-//	const void *);
 
-static int  common_bidder_init(struct transform *, 
-	struct transform_read_bidder *, const void *,
+static int  common_bidder_init(struct transform *, const void *,
 	const char *, int);
 
 
@@ -106,20 +103,17 @@ static int	lzma_filter_close(struct transform *, void *);
  * compiled even if no lzma library is available.
  */
 static int	xz_bidder_bid(const void *, struct transform_read_filter *);
-static int	xz_bidder_init(struct transform *, struct transform_read_bidder *,
-	const void *);
+static int	xz_bidder_init(struct transform *, const void *);
 static int	lzma_bidder_bid(const void *, struct transform_read_filter *);
-static int	lzma_bidder_init(struct transform *, struct transform_read_bidder *,
-	const  void *);
+static int	lzma_bidder_init(struct transform *, const  void *);
 static int	lzip_bidder_bid(const void *, struct transform_read_filter *);
-static int	lzip_bidder_init(struct transform *, struct transform_read_bidder *,
-	const void *);
+static int	lzip_bidder_init(struct transform *, const void *);
 static int	lzip_has_member(struct transform_read_filter *);
 
 int
 transform_read_support_compression_xz(struct transform *_t)
 {
-	int ret = transform_read_bidder_add(_t, NULL, xz_bidder_bid,
+	int ret = transform_read_bidder_add(_t, NULL, "xz", xz_bidder_bid,
 		xz_bidder_init, NULL, NULL);
 
 	if (TRANSFORM_OK != ret)
@@ -137,7 +131,7 @@ transform_read_support_compression_xz(struct transform *_t)
 int
 transform_read_support_compression_lzma(struct transform *_t)
 {
-	int ret = transform_read_bidder_add(_t, NULL, lzma_bidder_bid,
+	int ret = transform_read_bidder_add(_t, NULL, "lzma", lzma_bidder_bid,
 		lzma_bidder_init, NULL, NULL);
 
 	if (TRANSFORM_OK != ret)
@@ -157,7 +151,7 @@ transform_read_support_compression_lzma(struct transform *_t)
 int
 transform_read_support_compression_lzip(struct transform *_t)
 {
-	int ret = transform_read_bidder_add(_t, NULL, lzip_bidder_bid,
+	int ret = transform_read_bidder_add(_t, NULL, "lzip", lzip_bidder_bid,
 		lzip_bidder_init, NULL, NULL);
 
 	if (TRANSFORM_OK != ret)
@@ -383,26 +377,23 @@ lzip_bidder_bid(const void *_data, struct transform_read_filter *filter)
  * liblzma 4.999.7 and later support both lzma and xz streams.
  */
 static int
-xz_bidder_init(struct transform *transform,
-	struct transform_read_bidder *bidder, const void *bidder_data)
+xz_bidder_init(struct transform *transform, const void *bidder_data)
 {
-	return common_bidder_init(transform, bidder, bidder_data,
+	return common_bidder_init(transform, bidder_data,
 		"xz", TRANSFORM_FILTER_XZ);
 }
 
 static int
-lzma_bidder_init(struct transform *transform,
-	struct transform_read_bidder *bidder, const void *bidder_data)
+lzma_bidder_init(struct transform *transform, const void *bidder_data)
 {
-	return common_bidder_init(transform, bidder, bidder_data,
+	return common_bidder_init(transform, bidder_data,
 		"lzma", TRANSFORM_FILTER_LZMA);
 }
 
 static int
-lzip_bidder_init(struct transform *transform,
-	struct transform_read_bidder *bidder, const void *bidder_data)
+lzip_bidder_init(struct transform *transform, const void *bidder_data)
 {
-	return common_bidder_init(transform, bidder, bidder_data,
+	return common_bidder_init(transform, bidder_data,
 		"lzip", TRANSFORM_FILTER_LZIP);
 }
 
@@ -460,8 +451,7 @@ set_error(struct transform *transform, int ret)
 
 static int
 common_bidder_init(struct transform *transform,
-	struct transform_read_bidder *bidder, const void *bidder_data,
-	const char *name, int code)
+	const void *bidder_data, const char *name, int code)
 {
 	static const size_t out_block_size = 64 * 1024;
 	void *out_block;
@@ -516,7 +506,7 @@ common_bidder_init(struct transform *transform,
 		}
 	}
 
-	ret = transform_read_filter_add(transform, bidder, (void *)state,
+	ret = transform_read_filter_add(transform, (void *)state,
 		name, code,
 		xz_filter_read, NULL, xz_filter_close, NULL);
 
