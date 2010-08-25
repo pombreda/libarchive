@@ -56,6 +56,7 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read.c 201157 2009-12-29 05:
 
 static int	build_stream(struct transform_read *);
 static void	free_filters(struct transform_read *);
+static void	free_bidders(struct transform_read *);
 static int	close_filters(struct transform_read *);
 static struct transform_vtable *transform_read_vtable(void);
 static int64_t	_transform_filter_bytes(struct transform *, int);
@@ -216,8 +217,10 @@ transform_read_open2(struct transform *_a, void *client_data,
 
 	/* Build out the input pipeline. */
 	e = build_stream(a);
-	if (e == TRANSFORM_OK)
+	if (e == TRANSFORM_OK) {
 		a->transform.state = TRANSFORM_STATE_DATA;
+		free_bidders(a);
+	}
 
 	return (e);
 }
@@ -305,6 +308,17 @@ free_filters(struct transform_read *a)
 	}
 }
 
+static void
+free_bidders(struct transform_read *transform)
+{
+	struct transform_read_bidder *tmp;
+	while (transform->bidders) {
+		tmp = transform->bidders->next;
+		free(transform->bidders);
+		transform->bidders = tmp;
+	}
+}		
+
 /*
  * return the count of # of filters in use
  */
@@ -387,8 +401,11 @@ _transform_read_free(struct transform *_a)
 	    && a->transform.state != TRANSFORM_STATE_FATAL)
 		r = transform_read_close(&a->transform);
 
-	/* Free the filters */
+	/* Free the filters.  Note this is safe to invoke multiple times. */
 	free_filters(a);
+
+	/* Free the bidders.  Note this is safe to invoke multiple times. */
+	free_bidders(a);
 
 	/* Release the bidder objects. */
 	n = sizeof(a->bidders)/sizeof(a->bidders[0]);
