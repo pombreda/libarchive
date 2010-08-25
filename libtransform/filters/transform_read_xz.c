@@ -47,10 +47,16 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_support_compression_xz.
 #include <lzmadec.h>
 #endif
 
+#if defined(__BORLANDC__) || (defined(_MSC_VER) &&  _MSC_VER <= 1300)
+# define    TRANSFORM_LITERAL_LL(x) x##i64
+# define    TRANSFORM_LITERAL_ULL(x)    x##ui64
+#else
+# define    TRANSFORM_LITERAL_LL(x) x##ll
+# define    TRANSFORM_LITERAL_ULL(x)    x##ull
+#endif
+
 #include "transform.h"
 #include "transform_endian.h"
-#include "transform_private.h"
-#include "transform_read_private.h"
 
 #if HAVE_LZMA_H && HAVE_LIBLZMA
 

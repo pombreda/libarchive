@@ -111,12 +111,4 @@ int	__transform_mktemp(const char *tmpdir);
 
 #define	err_combine(a,b)	((a) < (b) ? (a) : (b))
 
-#if defined(__BORLANDC__) || (defined(_MSC_VER) &&  _MSC_VER <= 1300)
-# define	TRANSFORM_LITERAL_LL(x)	x##i64
-# define	TRANSFORM_LITERAL_ULL(x)	x##ui64
-#else
-# define	TRANSFORM_LITERAL_LL(x)	x##ll
-# define	TRANSFORM_LITERAL_ULL(x)	x##ull
-#endif
-
 #endif

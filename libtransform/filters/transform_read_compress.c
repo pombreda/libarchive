@@ -80,8 +80,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_support_compression_com
 #endif
 
 #include "transform.h"
-#include "transform_private.h"
-#include "transform_read_private.h"
 
 /*
  * Because LZW decompression is pretty simple, I've just implemented

@@ -45,8 +45,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_support_compression_bzi
 #endif
 
 #include "transform.h"
-#include "transform_private.h"
-#include "transform_read_private.h"
 
 #if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 struct private_data {

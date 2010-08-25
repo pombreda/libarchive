@@ -32,10 +32,10 @@
 #include <stdlib.h>
 #endif
 
+#include <string.h>
+
 #include "transform.h"
 #include "transform_endian.h"
-#include "transform_private.h"
-#include "transform_read_private.h"
 
 struct rpm {
 	int64_t		 total_in;
