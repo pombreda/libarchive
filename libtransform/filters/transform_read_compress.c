@@ -126,7 +126,7 @@ struct private_data {
 	 */
 	unsigned char		*stackp;
 	unsigned char		 stack[65300];
-	int 				dead_init_invoked;
+	int 				stream_init_invoked;
 };
 
 static int	compress_bidder_bid(const void *, struct transform_read_filter *);
@@ -217,7 +217,7 @@ compress_bidder_init(struct transform *transform, const void *bidder_data)
 }
 
 static int
-dead_init(struct transform *transform, struct private_data *state, 
+stream_init(struct transform *transform, struct private_data *state, 
 	struct transform_read_filter *upstream)
 {
 	int code;
@@ -260,9 +260,9 @@ compress_filter_read(struct transform *transform, void *_state,
 	unsigned char *p, *start, *end;
 	int ret;
 
-	if(!state->dead_init_invoked) {
-		dead_init(transform, state, upstream);
-		state->dead_init_invoked = 1;
+	if(!state->stream_init_invoked) {
+		stream_init(transform, state, upstream);
+		state->stream_init_invoked = 1;
 	}
 
 	if (state->end_of_stream) {
