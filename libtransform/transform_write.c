@@ -106,10 +106,9 @@ transform_write_new(void)
 {
 	struct transform_write *a;
 
-	a = (struct transform_write *)malloc(sizeof(*a));
+	a = (struct transform_write *)calloc(1, sizeof(struct transform_write));
 	if (a == NULL)
 		return (NULL);
-	memset(a, 0, sizeof(*a));
 	a->transform.magic = TRANSFORM_WRITE_MAGIC;
 	a->transform.state = TRANSFORM_STATE_NEW;
 	a->transform.vtable = transform_write_vtable();
