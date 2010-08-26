@@ -92,7 +92,7 @@
 #  endif
 # else
 #  ifdef __GNUC__
-#   define __LA_DECL	__attribute__((dllimport)) extern
+#   define __LA_DECL
 #  else
 #   define __LA_DECL	__declspec(dllimport)
 #  endif
@@ -141,13 +141,13 @@ extern "C" {
  * #endif
  */
 /* Note: Compiler will complain if this does not match archive_entry.h! */
-#define	ARCHIVE_VERSION_NUMBER 2008900
+#define	ARCHIVE_VERSION_NUMBER 3000000
 __LA_DECL int		archive_version_number(void);
 
 /*
  * Textual name/version of the library, useful for version displays.
  */
-#define	ARCHIVE_VERSION_STRING "libarchive 2.8.900a"
+#define	ARCHIVE_VERSION_STRING "libarchive 3.0.0a"
 __LA_DECL const char *	archive_version_string(void);
 
 #if ARCHIVE_VERSION_NUMBER < 3000000
@@ -496,6 +496,9 @@ __LA_DECL int archive_read_set_options(struct archive *_a,
 #define	ARCHIVE_EXTRACT_NO_OVERWRITE_NEWER	(0x0800)
 /* Detect blocks of 0 and write holes instead. */
 #define	ARCHIVE_EXTRACT_SPARSE			(0x1000)
+/* Default: Do not restore Mac extended metadata. */
+/* This has no effect except on Mac OS. */
+#define	ARCHIVE_EXTRACT_MAC_METADATA		(0x2000)
 
 __LA_DECL int archive_read_extract(struct archive *, struct archive_entry *,
 		     int flags);
@@ -598,6 +601,7 @@ __LA_DECL int archive_write_set_format_pax_restricted(struct archive *);
 __LA_DECL int archive_write_set_format_shar(struct archive *);
 __LA_DECL int archive_write_set_format_shar_dump(struct archive *);
 __LA_DECL int archive_write_set_format_ustar(struct archive *);
+__LA_DECL int archive_write_set_format_xar(struct archive *);
 __LA_DECL int archive_write_set_format_zip(struct archive *);
 __LA_DECL int archive_write_open(struct archive *, void *,
 		     archive_open_callback *, archive_write_callback *,
@@ -786,6 +790,19 @@ __LA_DECL int	archive_read_disk_set_uname_lookup(struct archive *,
     const char *(* /* lookup_fn */)(void *, __LA_INT64_T),
     void (* /* cleanup_fn */)(void *));
 #endif
+/* Start traversal. */
+__LA_DECL int	archive_read_disk_open(struct archive *, const char *);
+/*
+ * Request that current entry be visited.  If you invoke it on every
+ * directory, you'll get a physical traversal.  This is ignored if the
+ * current entry isn't a directory or a link to a directory.  So, if
+ * you invoke this on every returned path, you'll get a full logical
+ * traversal.
+ */
+__LA_DECL int	archive_read_disk_descend(struct archive *);
+__LA_DECL int	archive_read_disk_current_filesystem(struct archive *);
+__LA_DECL int	archive_read_disk_current_filesystem_is_synthetic(struct archive *);
+__LA_DECL int	archive_read_disk_current_filesystem_is_remote(struct archive *);
 
 /*
  * Accessor functions to read/set various information in

@@ -301,8 +301,7 @@ archive_write_open_preopened_transform(struct archive *_a)
 	}
 
 	a->archive.state = ARCHIVE_STATE_HEADER;
-
-	if (a->format_init && ret == ARCHIVE_OK)
+	if (a->format_init)
 		ret = (a->format_init)(a);
 	return (ret);
 }

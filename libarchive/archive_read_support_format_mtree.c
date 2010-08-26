@@ -86,7 +86,7 @@ struct mtree {
 	struct archive_string	 line;
 	size_t			 buffsize;
 	char			*buff;
-	off_t			 offset;
+	int64_t			 offset;
 	int			 fd;
 	int			 filetype;
 	int			 archive_format;
@@ -98,7 +98,7 @@ struct mtree {
 
 	struct archive_entry_linkresolver *resolver;
 
-	off_t			 cur_size, cur_offset;
+	int64_t			 cur_size, cur_offset;
 };
 
 static int	cleanup(struct archive_read *);
@@ -110,13 +110,8 @@ static int	parse_line(struct archive_read *, struct archive_entry *,
 		    struct mtree *, struct mtree_entry *, int *);
 static int	parse_keyword(struct archive_read *, struct mtree *,
 		    struct archive_entry *, struct mtree_option *, int *);
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int	read_data(struct archive_read *a,
-		    const void **buff, size_t *size, off_t *offset);
-#else
 static int	read_data(struct archive_read *a,
 		    const void **buff, size_t *size, int64_t *offset);
-#endif
 static ssize_t	readline(struct archive_read *, struct mtree *, char **, ssize_t);
 static int	skip(struct archive_read *a);
 static int	read_header(struct archive_read *,
@@ -378,7 +373,7 @@ process_add_entry(struct archive_read *a, struct mtree *mtree,
 		line = next;
 		next = line + strcspn(line, " \t\r\n");
 		eq = strchr(line, '=');
-		if (eq > next)
+		if (eq == NULL || eq > next)
 			len = next - line;
 		else
 			len = eq - line;
@@ -976,13 +971,8 @@ parse_keyword(struct archive_read *a, struct mtree *mtree,
 	return (ARCHIVE_OK);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int
-read_data(struct archive_read *a, const void **buff, size_t *size, off_t *offset)
-#else
 static int
 read_data(struct archive_read *a, const void **buff, size_t *size, int64_t *offset)
-#endif
 {
 	size_t bytes_to_read;
 	ssize_t bytes_read;
@@ -1007,7 +997,7 @@ read_data(struct archive_read *a, const void **buff, size_t *size, int64_t *offs
 
 	*buff = mtree->buff;
 	*offset = mtree->offset;
-	if ((off_t)mtree->buffsize > mtree->cur_size - mtree->offset)
+	if ((int64_t)mtree->buffsize > mtree->cur_size - mtree->offset)
 		bytes_to_read = mtree->cur_size - mtree->offset;
 	else
 		bytes_to_read = mtree->buffsize;

@@ -38,9 +38,6 @@ __FBSDID("$FreeBSD: src/usr.bin/tar/write.c,v 1.79 2008/11/27 05:49:52 kientzle 
 #ifdef HAVE_ATTR_XATTR_H
 #include <attr/xattr.h>
 #endif
-#ifdef HAVE_COPYFILE_H
-#include <copyfile.h>
-#endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
@@ -98,9 +95,6 @@ __FBSDID("$FreeBSD: src/usr.bin/tar/write.c,v 1.79 2008/11/27 05:49:52 kientzle 
 #include "line_reader.h"
 #include "tree.h"
 
-/* Size of buffer for holding file data prior to writing. */
-#define	FILEDATABUFLEN	65536
-
 /* Fixed size of uname/gname caches. */
 #define	name_cache_size 101
 
@@ -150,7 +144,7 @@ static void		 write_entry(struct bsdtar *, struct archive *,
 static void		 write_file(struct bsdtar *, struct archive *,
 			     struct archive_entry *);
 static int		 write_file_data(struct bsdtar *, struct archive *,
-			     struct archive_entry *, int fd);
+			     struct archive_entry *, int fd, size_t align);
 static void		 write_hierarchy(struct bsdtar *, struct archive *,
 			     const char *);
 
@@ -196,18 +190,8 @@ tar_mode_c(struct bsdtar *bsdtar)
 		usage();
 	}
 
-	/*
-	 * If user explicitly set the block size, then assume they
-	 * want the last block padded as well.  Otherwise, use the
-	 * default block size and accept archive_write_open_file()'s
-	 * default padding decisions.
-	 */
-	if (bsdtar->bytes_per_block != 0) {
-		archive_write_set_bytes_per_block(a, bsdtar->bytes_per_block);
-		archive_write_set_bytes_in_last_block(a,
-		    bsdtar->bytes_per_block);
-	} else
-		archive_write_set_bytes_per_block(a, DEFAULT_BYTES_PER_BLOCK);
+	archive_write_set_bytes_per_block(a, bsdtar->bytes_per_block);
+	archive_write_set_bytes_in_last_block(a, bsdtar->bytes_in_last_block);
 
 	if (bsdtar->compress_program) {
 		archive_write_set_compression_program(a, bsdtar->compress_program);
@@ -377,9 +361,8 @@ tar_mode_u(struct bsdtar *bsdtar)
 	archive_read_support_compression_all(a);
 	archive_read_support_format_tar(a);
 	archive_read_support_format_gnutar(a);
-	if (archive_read_open_fd(a, bsdtar->fd,
-	    bsdtar->bytes_per_block != 0 ? bsdtar->bytes_per_block :
-		DEFAULT_BYTES_PER_BLOCK) != ARCHIVE_OK) {
+	if (archive_read_open_fd(a, bsdtar->fd, bsdtar->bytes_per_block)
+	    != ARCHIVE_OK) {
 		lafe_errc(1, 0,
 		    "Can't open %s: %s", bsdtar->filename,
 		    archive_error_string(a));
@@ -413,12 +396,9 @@ tar_mode_u(struct bsdtar *bsdtar)
 	if (format == ARCHIVE_FORMAT_TAR_GNUTAR)
 		format = ARCHIVE_FORMAT_TAR_USTAR;
 	archive_write_set_format(a, format);
-	if (bsdtar->bytes_per_block != 0) {
-		archive_write_set_bytes_per_block(a, bsdtar->bytes_per_block);
-		archive_write_set_bytes_in_last_block(a,
-		    bsdtar->bytes_per_block);
-	} else
-		archive_write_set_bytes_per_block(a, DEFAULT_BYTES_PER_BLOCK);
+	archive_write_set_bytes_per_block(a, bsdtar->bytes_per_block);
+	archive_write_set_bytes_in_last_block(a, bsdtar->bytes_in_last_block);
+
 	if (lseek(bsdtar->fd, end_offset, SEEK_SET) < 0)
 		lafe_errc(1, errno, "Could not seek to archive end");
 	if (ARCHIVE_OK != archive_write_set_options(a, bsdtar->option_options))
@@ -450,8 +430,15 @@ write_archive(struct archive *a, struct bsdtar *bsdtar)
 	const char *arg;
 	struct archive_entry *entry, *sparse_entry;
 
+	/* Choose a suitable copy buffer size */
+	bsdtar->buff_size = 64 * 1024;
+	while (bsdtar->buff_size < bsdtar->bytes_per_block)
+	  bsdtar->buff_size *= 2;
+	/* Try to compensate for space we'll lose to alignment. */
+	bsdtar->buff_size += 16 * 1024;
+
 	/* Allocate a buffer for file data. */
-	if ((bsdtar->buff = malloc(FILEDATABUFLEN)) == NULL)
+	if ((bsdtar->buff = malloc(bsdtar->buff_size)) == NULL)
 		lafe_errc(1, 0, "cannot allocate memory");
 
 	if ((bsdtar->resolver = archive_entry_linkresolver_new()) == NULL)
@@ -578,7 +565,7 @@ append_archive_filename(struct bsdtar *bsdtar, struct archive *a,
 	ina = archive_read_new();
 	archive_read_support_format_all(ina);
 	archive_read_support_compression_all(ina);
-	if (archive_read_open_file(ina, filename, 10240)) {
+	if (archive_read_open_file(ina, filename, bsdtar->bytes_per_block)) {
 		lafe_warnc(0, "%s", archive_error_string(ina));
 		bsdtar->return_value = 1;
 		return (0);
@@ -653,7 +640,7 @@ copy_file_data(struct bsdtar *bsdtar, struct archive *a,
 	ssize_t	bytes_written;
 	int64_t	progress = 0;
 
-	bytes_read = archive_read_data(ina, bsdtar->buff, FILEDATABUFLEN);
+	bytes_read = archive_read_data(ina, bsdtar->buff, bsdtar->buff_size);
 	while (bytes_read > 0) {
 		if (need_report())
 			report_write(bsdtar, a, entry, progress);
@@ -665,8 +652,7 @@ copy_file_data(struct bsdtar *bsdtar, struct archive *a,
 			return (-1);
 		}
 		progress += bytes_written;
-		bytes_read = archive_read_data(ina, bsdtar->buff,
-		    FILEDATABUFLEN);
+		bytes_read = archive_read_data(ina, bsdtar->buff, bsdtar->buff_size);
 	}
 
 	return (0);
@@ -887,8 +873,8 @@ write_hierarchy(struct bsdtar *bsdtar, struct archive *a, const char *path)
 #endif
 
 #ifdef __APPLE__
-		/* On Mac, ignore "._XXX" files if we're using copyfile(). */
 		if (bsdtar->enable_copyfile) {
+			/* If we're using copyfile(), ignore "._XXX" files. */
 			const char *bname = strrchr(name, '/');
 			if (bname == NULL)
 				bname = name;
@@ -896,6 +882,9 @@ write_hierarchy(struct bsdtar *bsdtar, struct archive *a, const char *path)
 				++bname;
 			if (bname[0] == '.' && bname[1] == '_')
 				continue;
+		} else {
+			/* If not, drop the copyfile() data. */
+			archive_entry_copy_mac_metadata(entry, NULL, 0);
 		}
 #endif
 
@@ -954,80 +943,6 @@ static void
 write_file(struct bsdtar *bsdtar, struct archive *a,
     struct archive_entry *entry)
 {
-#ifdef __APPLE__
-	/*
-	 * Mac OS "copyfile()" API copies the extended metadata for a
-	 * file into a separate file in AppleDouble format (see RFC 1740).
-	 * Mac OS tar and cpio implementations store this extended
-	 * metadata as a separate entry just before the regular entry
-	 * with a "._" prefix added to the filename.
-	 *
-	 * XXX: Should this be suppressed for formats other than tar and cpio?
-	 * XXX: Consider how we might push this down into libarchive.
-	 */
-	if (bsdtar->enable_copyfile) {
-		const char *name = archive_entry_pathname(entry);
-		int copyfile_flags
-		    = COPYFILE_NOFOLLOW | COPYFILE_ACL | COPYFILE_XATTR;
-		int have_attrs = copyfile(archive_entry_sourcepath(entry),
-		    NULL, 0, copyfile_flags | COPYFILE_CHECK);
-		if (have_attrs) {
-			const char *tempdir = NULL;
-			char *md_p = NULL;
-
-			if (issetugid() == 0)
-				tempdir = getenv("TMPDIR");
-			if (tempdir == NULL)
-				tempdir = _PATH_TMP;
-			md_p = tempnam(tempdir, "tar.md.");
-
-			if (md_p != NULL) {
-				char *copyfile_name = malloc(strlen(name) + 3);
-				const char *bname;
-				struct stat copyfile_stat;
-				struct archive_entry *extra
-				    = archive_entry_new();
-
-				archive_entry_copy_sourcepath(extra, md_p);
-				bname = strrchr(name, '/');
-				if (bname == NULL) {
-					strcpy(copyfile_name, "._");
-					strcpy(copyfile_name + 2, name);
-				} else {
-					bname += 1;
-					strcpy(copyfile_name, name);
-					strcpy(copyfile_name + (bname - name),
-					    "._");
-					strcpy(copyfile_name + (bname - name) + 2,
-					    bname);
-				}
-				archive_entry_copy_pathname(extra,
-				    copyfile_name);
-				free(copyfile_name);
-
-				// XXX It would be nice if copyfile() supported
-				// filename src and fd dest; then we could
-				// use mkstemp() and still support symlinks.
-				copyfile(archive_entry_sourcepath(entry), md_p,
-				    0, COPYFILE_PACK | copyfile_flags);
-				// XXX Should any other metadata be set here?
-				stat(md_p, &copyfile_stat);
-				archive_entry_set_size(extra,
-				    copyfile_stat.st_size);
-				archive_entry_set_filetype(extra, AE_IFREG);
-				archive_entry_set_perm(extra,
-				    archive_entry_perm(entry));
-				archive_entry_set_mtime(extra,
-				    archive_entry_mtime(entry),
-				    archive_entry_mtime_nsec(entry));
-				write_entry(bsdtar, a, extra);
-				unlink(md_p);
-			}
-			free(md_p);
-		}
-	}
-#endif
-
 	write_entry(bsdtar, a, entry);
 }
 
@@ -1040,10 +955,17 @@ write_entry(struct bsdtar *bsdtar, struct archive *a,
 {
 	int fd = -1;
 	int e;
+	size_t align = 4096;
 
 	if (archive_entry_size(entry) > 0) {
 		const char *pathname = archive_entry_sourcepath(entry);
+		/* TODO: Use O_DIRECT here and set 'align' to the
+		 * actual filesystem block size.  As of July 2010, new
+		 * directory-traversal code is going in that will make
+		 * it much easier to track filesystem properties like
+		 * this during the traversal. */
 		fd = open(pathname, O_RDONLY | O_BINARY);
+		align = 4096;
 		if (fd == -1) {
 			if (!bsdtar->verbose)
 				lafe_warnc(errno,
@@ -1074,7 +996,7 @@ write_entry(struct bsdtar *bsdtar, struct archive *a,
 	 * that case, just skip the write.
 	 */
 	if (e >= ARCHIVE_WARN && fd >= 0 && archive_entry_size(entry) > 0) {
-		if (write_file_data(bsdtar, a, entry, fd))
+		if (write_file_data(bsdtar, a, entry, fd, align))
 			exit(1);
 	}
 
@@ -1091,15 +1013,21 @@ report_write(struct bsdtar *bsdtar, struct archive *a,
     struct archive_entry *entry, int64_t progress)
 {
 	uint64_t comp, uncomp;
+	int compression;
+
 	if (bsdtar->verbose)
 		fprintf(stderr, "\n");
 	comp = archive_position_compressed(a);
 	uncomp = archive_position_uncompressed(a);
 	fprintf(stderr, "In: %d files, %s bytes;",
 	    archive_file_count(a), tar_i64toa(uncomp));
+	if (comp > uncomp)
+		compression = 0;
+	else
+		compression = (int)((uncomp - comp) * 100 / uncomp);
 	fprintf(stderr,
 	    " Out: %s bytes, compression %d%%\n",
-	    tar_i64toa(comp), (int)((uncomp - comp) * 100 / uncomp));
+	    tar_i64toa(comp), compression);
 	/* Can't have two calls to tar_i64toa() pending, so split the output. */
 	safe_fprintf(stderr, "Current: %s (%s",
 	    archive_entry_pathname(entry),
@@ -1112,19 +1040,26 @@ report_write(struct bsdtar *bsdtar, struct archive *a,
 /* Helper function to copy file to archive. */
 static int
 write_file_data(struct bsdtar *bsdtar, struct archive *a,
-    struct archive_entry *entry, int fd)
+    struct archive_entry *entry, int fd, size_t align)
 {
 	ssize_t	bytes_read;
 	ssize_t	bytes_written;
 	int64_t	progress = 0;
+	size_t  buff_size;
+	char   *buff = bsdtar->buff;
 
-	bytes_read = read(fd, bsdtar->buff, FILEDATABUFLEN);
+	/* Round 'buff' up to the next multiple of 'align' and reduce
+	 * 'buff_size' accordingly. */
+	buff = (char *)((((uintptr_t)buff + align - 1) / align) * align);
+	buff_size = bsdtar->buff + bsdtar->buff_size - buff;
+	buff_size = (buff_size / align) * align;
+	
+	bytes_read = read(fd, buff, buff_size);
 	while (bytes_read > 0) {
 		if (need_report())
 			report_write(bsdtar, a, entry, progress);
 
-		bytes_written = archive_write_data(a, bsdtar->buff,
-		    bytes_read);
+		bytes_written = archive_write_data(a, buff, bytes_read);
 		if (bytes_written < 0) {
 			/* Write failed; this is bad */
 			lafe_warnc(0, "%s", archive_error_string(a));
@@ -1138,7 +1073,7 @@ write_file_data(struct bsdtar *bsdtar, struct archive *a,
 			return (0);
 		}
 		progress += bytes_written;
-		bytes_read = read(fd, bsdtar->buff, FILEDATABUFLEN);
+		bytes_read = read(fd, buff, buff_size);
 	}
 	return 0;
 }

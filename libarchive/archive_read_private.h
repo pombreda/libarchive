@@ -51,16 +51,12 @@ struct archive_read {
 	 * data to client buffers, filling gaps with zero bytes.
 	 */
 	const char	 *read_data_block;
-#if ARCHIVE_VERSION_NUMBER < 3000000
-	off_t		  read_data_offset;
-#else
 	int64_t		  read_data_offset;
-#endif
-	off_t		  read_data_output_offset;
+	int64_t		  read_data_output_offset;
 	size_t		  read_data_remaining;
 
 	/* File offset of beginning of most recently-read header. */
-	off_t		  header_position;
+	int64_t		  header_position;
 
 	/*
 	 * Format detection is mostly the same as compression
@@ -77,11 +73,7 @@ struct archive_read {
 		int	(*options)(struct archive_read *, const char *key,
 		    const char *value);
 		int	(*read_header)(struct archive_read *, struct archive_entry *);
-#if ARCHIVE_VERSION_NUMBER < 3000000
-		int	(*read_data)(struct archive_read *, const void **, size_t *, off_t *);
-#else
 		int	(*read_data)(struct archive_read *, const void **, size_t *, int64_t *);
-#endif
 		int	(*read_data_skip)(struct archive_read *);
 		int	(*cleanup)(struct archive_read *);
 	}	formats[9];
@@ -100,11 +92,7 @@ int	__archive_read_register_format(struct archive_read *a,
 	    int (*bid)(struct archive_read *),
 	    int (*options)(struct archive_read *, const char *, const char *),
 	    int (*read_header)(struct archive_read *, struct archive_entry *),
-#if ARCHIVE_VERSION_NUMBER < 3000000
-	    int (*read_data)(struct archive_read *, const void **, size_t *, off_t *),
-#else
 	    int (*read_data)(struct archive_read *, const void **, size_t *, int64_t *),
-#endif
 	    int (*read_data_skip)(struct archive_read *),
 	    int (*cleanup)(struct archive_read *));
 
