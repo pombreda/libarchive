@@ -131,7 +131,7 @@ transform_write_set_bytes_per_block(struct transform *_a, int bytes_per_block)
 {
 	struct transform_write *a = (struct transform_write *)_a;
 	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_NEW, "transform_write_set_bytes_per_block");
+		TRANSFORM_STATE_NEW, "transform_write_set_bytes_per_block");
 	a->bytes_per_block = bytes_per_block;
 	return (TRANSFORM_OK);
 }
@@ -144,7 +144,7 @@ transform_write_get_bytes_per_block(struct transform *_a)
 {
 	struct transform_write *a = (struct transform_write *)_a;
 	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_ANY, "transform_write_get_bytes_per_block");
+		TRANSFORM_STATE_ANY, "transform_write_get_bytes_per_block");
 	return (a->bytes_per_block);
 }
 
@@ -157,7 +157,7 @@ transform_write_set_bytes_in_last_block(struct transform *_a, int bytes)
 {
 	struct transform_write *a = (struct transform_write *)_a;
 	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_ANY, "transform_write_set_bytes_in_last_block");
+		TRANSFORM_STATE_ANY, "transform_write_set_bytes_in_last_block");
 	a->bytes_in_last_block = bytes;
 	return (TRANSFORM_OK);
 }
@@ -170,7 +170,7 @@ transform_write_get_bytes_in_last_block(struct transform *_a)
 {
 	struct transform_write *a = (struct transform_write *)_a;
 	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_ANY, "transform_write_get_bytes_in_last_block");
+		TRANSFORM_STATE_ANY, "transform_write_get_bytes_in_last_block");
 	return (a->bytes_in_last_block);
 }
 
@@ -198,7 +198,7 @@ __transform_write_allocate_filter(struct transform *_a)
  */
 int
 __transform_write_filter(struct transform_write_filter *f,
-    const void *buff, size_t length)
+	const void *buff, size_t length)
 {
 	int r;
 	if (length == 0)
@@ -251,7 +251,7 @@ transform_write_client_open(struct transform_write_filter *f)
 
 	f->bytes_per_block = transform_write_get_bytes_per_block(f->transform);
 	f->bytes_in_last_block =
-	    transform_write_get_bytes_in_last_block(f->transform);
+		transform_write_get_bytes_in_last_block(f->transform);
 	buffer_size = f->bytes_per_block;
 
 	state = (struct transform_none *)calloc(1, sizeof(*state));
@@ -260,7 +260,7 @@ transform_write_client_open(struct transform_write_filter *f)
 		free(state);
 		free(buffer);
 		transform_set_error(f->transform, ENOMEM,
-		    "Can't allocate data for output buffering");
+			"Can't allocate data for output buffering");
 		return (TRANSFORM_FATAL);
 	}
 
@@ -296,7 +296,7 @@ transform_write_client_write(struct transform_write_filter *f,
 	if (state->buffer_size == 0) {
 		while (remaining > 0) {
 			bytes_written = (a->client_writer)(&a->transform,
-			    a->client_data, buff, remaining);
+				a->client_data, buff, remaining);
 			if (bytes_written <= 0)
 				return (TRANSFORM_FATAL);
 			remaining -= bytes_written;
@@ -322,12 +322,12 @@ transform_write_client_write(struct transform_write_filter *f,
 			size_t to_write = state->buffer_size;
 			while (to_write > 0) {
 				bytes_written = (a->client_writer)(&a->transform,
-				    a->client_data, p, to_write);
+					a->client_data, p, to_write);
 				if (bytes_written <= 0)
 					return (TRANSFORM_FATAL);
 				if ((size_t)bytes_written > to_write) {
 					transform_set_error(&(a->transform),
-					    -1, "write overrun");
+						-1, "write overrun");
 					return (TRANSFORM_FATAL);
 				}
 				p += bytes_written;
@@ -341,7 +341,7 @@ transform_write_client_write(struct transform_write_filter *f,
 	while ((size_t)remaining > state->buffer_size) {
 		/* Write out full blocks directly to client. */
 		bytes_written = (a->client_writer)(&a->transform,
-		    a->client_data, buff, state->buffer_size);
+			a->client_data, buff, state->buffer_size);
 		if (bytes_written <= 0)
 			return (TRANSFORM_FATAL);
 		buff += bytes_written;
@@ -378,17 +378,17 @@ transform_write_client_close(struct transform_write_filter *f)
 		else
 			/* Round to next multiple of bytes_in_last_block. */
 			target_block_length = a->bytes_in_last_block *
-			    ( (block_length + a->bytes_in_last_block - 1) /
+				( (block_length + a->bytes_in_last_block - 1) /
 				a->bytes_in_last_block);
 		if (target_block_length > a->bytes_per_block)
 			target_block_length = a->bytes_per_block;
 		if (block_length < target_block_length) {
 			memset(state->next, 0,
-			    target_block_length - block_length);
+				target_block_length - block_length);
 			block_length = target_block_length;
 		}
 		bytes_written = (a->client_writer)(&a->transform,
-		    a->client_data, state->buffer, block_length);
+			a->client_data, state->buffer, block_length);
 		ret = bytes_written <= 0 ? TRANSFORM_FATAL : TRANSFORM_OK;
 	}
 	if (a->client_closer)
@@ -404,8 +404,8 @@ transform_write_client_close(struct transform_write_filter *f)
  */
 int
 transform_write_open(struct transform *_a, void *client_data,
-    transform_open_callback *opener, transform_write_callback *writer,
-    transform_close_callback *closer)
+	transform_open_callback *opener, transform_write_callback *writer,
+	transform_close_callback *closer)
 {
 	return transform_write_open2(_a, client_data, opener, writer,
 		closer, NULL);
@@ -413,15 +413,15 @@ transform_write_open(struct transform *_a, void *client_data,
 
 int
 transform_write_open2(struct transform *_a, void *client_data,
-    transform_open_callback *opener, transform_write_callback *writer,
-    transform_close_callback *closer, transform_visit_fds_callback *visit_fds)
+	transform_open_callback *opener, transform_write_callback *writer,
+	transform_close_callback *closer, transform_visit_fds_callback *visit_fds)
 {
 	struct transform_write *a = (struct transform_write *)_a;
 	struct transform_write_filter *client_filter;
 	int ret, r1;
 
 	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_NEW, "transform_write_open");
+		TRANSFORM_STATE_NEW, "transform_write_open");
 	transform_clear_error(&a->transform);
 
 	a->client_writer = writer;
@@ -456,10 +456,10 @@ _transform_write_close(struct transform *_a)
 	int r = TRANSFORM_OK, r1 = TRANSFORM_OK;
 
 	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL,
-	    "transform_write_close");
+		TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL,
+		"transform_write_close");
 	if (a->transform.state == TRANSFORM_STATE_NEW
-	    || a->transform.state == TRANSFORM_STATE_CLOSED)
+		|| a->transform.state == TRANSFORM_STATE_CLOSED)
 		return (TRANSFORM_OK); // Okay to close() when not open.
 
 	transform_clear_error(&a->transform);
@@ -523,7 +523,7 @@ __transform_write_filters_free(struct transform_write *a)
 
 	while (a->filter_first != NULL) {
 		struct transform_write_filter *next
-		    = a->filter_first->next_filter;
+			= a->filter_first->next_filter;
 		if (a->filter_first->free != NULL) {
 			r1 = (*a->filter_first->free)(a->filter_first);
 			if (r > r1)
@@ -552,7 +552,7 @@ _transform_write_free(struct transform *_a)
 		return (TRANSFORM_OK);
 	/* It is okay to call free() in state FATAL. */
 	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL, "transform_write_free");
+		TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL, "transform_write_free");
 	if (a->transform.state != TRANSFORM_STATE_FATAL)
 		r = transform_write_close(&a->transform);
 
@@ -574,7 +574,7 @@ _transform_write_data(struct transform *_a, const void *buff, size_t s)
 {
 	struct transform_write *a = (struct transform_write *)_a;
 	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_DATA, "transform_write_data");
+		TRANSFORM_STATE_DATA, "transform_write_data");
 	transform_clear_error(&a->transform);
 	return ((a->format_write_data)(a, buff, s));
 }
