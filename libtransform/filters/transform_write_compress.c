@@ -110,7 +110,7 @@ struct private_data {
 
 static int transform_compressor_compress_open(struct transform_write_filter *);
 static int transform_compressor_compress_write(struct transform_write_filter *,
-		    const void *, size_t);
+	const void *filter_data, const void *, size_t);
 static int transform_compressor_compress_close(struct transform_write_filter *);
 static int transform_compressor_compress_free(struct transform_write_filter *);
 
@@ -317,9 +317,9 @@ output_flush(struct transform_write_filter *f)
  */
 static int
 transform_compressor_compress_write(struct transform_write_filter *f,
-    const void *buff, size_t length)
+	const void *filter_data, const void *buff, size_t length)
 {
-	struct private_data *state = (struct private_data *)f->data;
+	struct private_data *state = (struct private_data *)filter_data;
 	int i;
 	int ratio;
 	int c, disp, ret;

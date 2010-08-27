@@ -77,7 +77,7 @@ static int transform_compressor_bzip2_open(struct transform_write_filter *);
 static int transform_compressor_bzip2_options(struct transform_write_filter *,
 		    const char *, const char *);
 static int transform_compressor_bzip2_write(struct transform_write_filter *,
-		    const void *, size_t);
+	const void *, const void *, size_t);
 static int drive_compressor(struct transform_write_filter *,
 		    struct private_data *, int finishing);
 
@@ -209,9 +209,9 @@ transform_compressor_bzip2_options(struct transform_write_filter *f,
  */
 static int
 transform_compressor_bzip2_write(struct transform_write_filter *f,
-    const void *buff, size_t length)
+	const void *filter_data, const void *buff, size_t length)
 {
-	struct private_data *data = (struct private_data *)f->data;
+	struct private_data *data = (struct private_data *)filter_data;
 
 	/* Update statistics */
 	data->total_in += length;

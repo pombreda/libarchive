@@ -78,7 +78,7 @@ struct private_data {
 
 static int transform_compressor_program_open(struct transform_write_filter *);
 static int transform_compressor_program_write(struct transform_write_filter *,
-		    const void *, size_t);
+	const void *, const void *, size_t);
 static int transform_compressor_program_close(struct transform_write_filter *);
 static int transform_compressor_program_free(struct transform_write_filter *);
 
@@ -151,9 +151,9 @@ transform_compressor_program_open(struct transform_write_filter *f)
 }
 
 static ssize_t
-child_write(struct transform_write_filter *f, const char *buf, size_t buf_len)
+child_write(struct transform_write_filter *f, struct private_data *data,
+	const char *buf, size_t buf_len)
 {
-	struct private_data *data = f->data;
 	ssize_t ret;
 
 	if (data->child_stdin == -1)
@@ -223,14 +223,14 @@ restart_write:
  */
 static int
 transform_compressor_program_write(struct transform_write_filter *f,
-    const void *buff, size_t length)
+	const void *filter_data, const void *buff, size_t length)
 {
 	ssize_t ret;
 	const char *buf;
 
 	buf = buff;
 	while (length > 0) {
-		ret = child_write(f, buf, length);
+		ret = child_write(f, (struct private_data *)filter_data, buf, length);
 		if (ret == -1 || ret == 0) {
 			transform_set_error(f->transform, EIO,
 			    "Can't write to filter");

@@ -50,7 +50,8 @@ struct transform_write_filter {
 	int	(*options)(struct transform_write_filter *,
 	    const char *key, const char *value);
 	int	(*open)(struct transform_write_filter *);
-	int	(*write)(struct transform_write_filter *, const void *, size_t);
+	int	(*write)(struct transform_write_filter *, const void *,
+		const void *, size_t);
 	int	(*close)(struct transform_write_filter *);
 	int	(*free)(struct transform_write_filter *);
 	transform_visit_fds_callback *visit_fds;

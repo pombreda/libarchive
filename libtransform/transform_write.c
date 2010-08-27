@@ -203,7 +203,7 @@ __transform_write_filter(struct transform_write_filter *f,
 	int r;
 	if (length == 0)
 		return(TRANSFORM_OK);
-	r = (f->write)(f, buff, length);
+	r = (f->write)(f, f->data, buff, length);
 	f->bytes_written += length;
 	return (r);
 }
@@ -277,10 +277,10 @@ transform_write_client_open(struct transform_write_filter *f)
 
 static int
 transform_write_client_write(struct transform_write_filter *f,
-    const void *_buff, size_t length)
+	const void *filter_data, const void *_buff, size_t length)
 {
 	struct transform_write *a = (struct transform_write *)f->transform;
-        struct transform_none *state = (struct transform_none *)f->data;
+	struct transform_none *state = (struct transform_none *)filter_data;
         const char *buff = (const char *)_buff;
         ssize_t remaining, to_copy;
         ssize_t bytes_written;
