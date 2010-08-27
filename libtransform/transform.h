@@ -369,10 +369,7 @@ __LA_DECL int 		 transform_write_reset_filters(struct transform *);
  *   3) Call transform_write_open to open the file (most people
  *       will use transform_write_open_file or transform_write_open_fd,
  *       which provide convenient canned I/O callbacks for you).
- *   4) For each entry:
- *      - construct an appropriate struct transform_entry structure
- *      - transform_write_header to write the header
- *      - transform_write_data to write the entry data
+ *   4) write data to it via transform_write_output
  *   5) transform_write_close to close the output
  *   6) transform_write_free to cleanup the writer and release resources
  */
@@ -411,16 +408,6 @@ __LA_DECL int transform_write_open_FILE(struct transform *, FILE *);
 __LA_DECL int transform_write_open_memory(struct transform *,
 			void *_buffer, size_t _buffSize, size_t *_used);
 
-/*
- * Note that the library will truncate writes beyond the size provided
- * to transform_write_header or pad if the provided data is short.
- */
-__LA_DECL __LA_SSIZE_T	transform_write_data(struct transform *,
-			    const void *, size_t);
-
-/* Libtransform 3.0 uses explicit int64_t to ensure consistent 64-bit support. */
-__LA_DECL __LA_SSIZE_T	 transform_write_data_block(struct transform *,
-				    const void *, size_t, __LA_INT64_T);
 __LA_DECL int		 transform_write_close(struct transform *);
 /* This can fail if the transform wasn't already closed, in which case
  * transform_write_free() will implicitly call transform_write_close(). */

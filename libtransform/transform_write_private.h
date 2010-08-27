@@ -92,12 +92,6 @@ struct transform_write {
 	struct transform_write_filter *filter_first;
 	struct transform_write_filter *filter_last;
 
-	/*
-	 * Pointers to format-specific functions for writing.  They're
-	 * initialized by transform_write_set_format_XXX() calls.
-	 */
-	ssize_t	(*format_write_data)(struct transform_write *,
-		    const void *buff, size_t);
 };
 
 #endif

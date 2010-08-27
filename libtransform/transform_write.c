@@ -69,7 +69,6 @@ static int  _transform_visit_fds(struct transform *,
 	transform_fd_visitor *, const void *);
 static int	_transform_write_close(struct transform *);
 static int	_transform_write_free(struct transform *);
-static ssize_t	_transform_write_data(struct transform *, const void *, size_t);
 static void __transform_write_filters_free(struct transform_write *);
 
 struct transform_none {
@@ -92,7 +91,6 @@ transform_write_vtable(void)
 		av.transform_filter_name = _transform_filter_name;
 		av.transform_filter_count = _transform_write_filter_count;
 		av.transform_free = _transform_write_free;
-		av.transform_write_data = _transform_write_data;
 		av.transform_visit_fds = _transform_visit_fds;
 	}
 	return (&av);
@@ -563,20 +561,6 @@ _transform_write_free(struct transform *_a)
 	a->transform.magic = 0;
 	free(a);
 	return (r);
-}
-
-
-/*
- * Note that the compressor is responsible for blocking.
- */
-static ssize_t
-_transform_write_data(struct transform *_a, const void *buff, size_t s)
-{
-	struct transform_write *a = (struct transform_write *)_a;
-	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
-		TRANSFORM_STATE_DATA, "transform_write_data");
-	transform_clear_error(&a->transform);
-	return ((a->format_write_data)(a, buff, s));
 }
 
 static struct transform_write_filter *

@@ -56,8 +56,6 @@
 struct transform_vtable {
 	int	(*transform_close)(struct transform *);
 	int	(*transform_free)(struct transform *);
-	ssize_t	(*transform_write_data)(struct transform *,
-	    const void *, size_t);
 	ssize_t	(*transform_write_data_block)(struct transform *,
 	    const void *, size_t, int64_t);
 

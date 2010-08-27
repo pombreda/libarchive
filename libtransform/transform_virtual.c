@@ -114,15 +114,3 @@ transform_read_free(struct transform *a)
 {
 	return ((a->vtable->transform_free)(a));
 }
-
-ssize_t
-transform_write_data(struct transform *a, const void *buff, size_t s)
-{
-	return ((a->vtable->transform_write_data)(a, buff, s));
-}
-
-ssize_t
-transform_write_data_block(struct transform *a, const void *buff, size_t s, int64_t o)
-{
-	return ((a->vtable->transform_write_data_block)(a, buff, s, o));
-}
