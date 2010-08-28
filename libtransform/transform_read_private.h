@@ -68,8 +68,6 @@ struct transform_read_bidder {
 
 	const char *name;
 
-	void *bidder;
-
 	/* Taste the upstream filter to see if we handle this. */
 	transform_read_bidder_bid_method *bid;
 	/* create a new filter. */
