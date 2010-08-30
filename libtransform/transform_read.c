@@ -472,7 +472,8 @@ _transform_filter_bytes(struct transform *_a, int n)
 /*
  * create a new bidder, adding it to this transform
  */
-int transform_read_bidder_add(struct transform *_t,
+struct transform_read_bidder *
+transform_read_bidder_add(struct transform *_t,
 	const void *bidder_data, const char *bidder_name,
 	transform_read_bidder_bid_method *bid,
 	transform_read_bidder_create_filter *create_filter,
@@ -482,14 +483,16 @@ int transform_read_bidder_add(struct transform *_t,
 	struct transform_read *t = (struct transform_read *)_t;
 	struct transform_read_bidder *bidder;
 
-	transform_check_magic(_t, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
-		"transform_read_bidder_add");
+	if(TRANSFORM_OK != __transform_check_magic(_t, TRANSFORM_READ_MAGIC,
+		TRANSFORM_STATE_NEW, "transform_read_bidder_add")) {
+		return (NULL);
+	}
 
 	bidder = calloc(1, sizeof(struct transform_read_bidder));
 	if (!bidder) {
 		transform_set_error(_t, ENOMEM,
 			"bidder allocation failed");
-		return (TRANSFORM_FATAL);
+		return (NULL);
 	}
 	bidder->name = bidder_name;
 	bidder->data = (void *)bidder_data;
@@ -499,7 +502,7 @@ int transform_read_bidder_add(struct transform *_t,
 	bidder->set_option = set_option;
 	bidder->next = t->bidders;
 	t->bidders = bidder;
-	return (TRANSFORM_OK);
+	return (bidder);
 }
 
 /*

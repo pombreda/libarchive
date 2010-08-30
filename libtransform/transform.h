@@ -466,7 +466,8 @@ typedef int	transform_read_bidder_create_filter(struct transform *,
 	const void *bidder_data);
 typedef int transform_read_bidder_free(const void *bidder_data);
 
-__LA_DECL int transform_read_bidder_add(struct transform *,
+__LA_DECL struct transform_read_bidder *
+	transform_read_bidder_add(struct transform *,
 	const void *data, const char *,
 	transform_read_bidder_bid_method *,
 	transform_read_bidder_create_filter *,

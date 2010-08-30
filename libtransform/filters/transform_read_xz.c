@@ -119,11 +119,10 @@ static int	lzip_has_member(struct transform_read_filter *);
 int
 transform_read_support_compression_xz(struct transform *_t)
 {
-	int ret = transform_read_bidder_add(_t, NULL, "xz", xz_bidder_bid,
-		xz_bidder_init, NULL, NULL);
-
-	if (TRANSFORM_OK != ret)
-		return (ret);
+	if (NULL == transform_read_bidder_add(_t, NULL, "xz", xz_bidder_bid,
+		xz_bidder_init, NULL, NULL)) {
+		return (TRANSFORM_FATAL);
+	}
 
 #if HAVE_LZMA_H && HAVE_LIBLZMA
 	return (TRANSFORM_OK);
@@ -137,11 +136,10 @@ transform_read_support_compression_xz(struct transform *_t)
 int
 transform_read_support_compression_lzma(struct transform *_t)
 {
-	int ret = transform_read_bidder_add(_t, NULL, "lzma", lzma_bidder_bid,
-		lzma_bidder_init, NULL, NULL);
-
-	if (TRANSFORM_OK != ret)
-		return (ret);
+	if (NULL == transform_read_bidder_add(_t, NULL, "lzma", lzma_bidder_bid,
+		lzma_bidder_init, NULL, NULL)) {
+		return (TRANSFORM_FATAL);
+	}
 
 #if HAVE_LZMA_H && HAVE_LIBLZMA
 	return (TRANSFORM_OK);
@@ -157,11 +155,10 @@ transform_read_support_compression_lzma(struct transform *_t)
 int
 transform_read_support_compression_lzip(struct transform *_t)
 {
-	int ret = transform_read_bidder_add(_t, NULL, "lzip", lzip_bidder_bid,
-		lzip_bidder_init, NULL, NULL);
-
-	if (TRANSFORM_OK != ret)
-		return (ret);
+	if (NULL == transform_read_bidder_add(_t, NULL, "lzip", lzip_bidder_bid,
+		lzip_bidder_init, NULL, NULL)) {
+		return (TRANSFORM_FATAL);
+	}
 
 #if HAVE_LZMA_H && HAVE_LIBLZMA
 	return (TRANSFORM_OK);

@@ -65,8 +65,8 @@ static int	rpm_filter_close(struct transform *, void *);
 int
 transform_read_support_compression_rpm(struct transform *_t)
 {
-	return transform_read_bidder_add(_t, NULL, "rpm", rpm_bidder_bid,
-		rpm_bidder_init, NULL, NULL);
+	return (transform_read_bidder_add(_t, NULL, "rpm", rpm_bidder_bid,
+		rpm_bidder_init, NULL, NULL) == NULL ? TRANSFORM_FATAL : TRANSFORM_OK);
 }
 
 static int

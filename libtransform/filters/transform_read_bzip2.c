@@ -73,11 +73,9 @@ static int	bzip2_reader_init(struct transform *, const void *);
 int
 transform_read_support_compression_bzip2(struct transform *_t)
 {
-	int ret = transform_read_bidder_add(_t, NULL, "bzip2",
-		bzip2_reader_bid, bzip2_reader_init, NULL, NULL);
-
-	if (TRANSFORM_OK != ret)
-		return (ret);
+	if (!transform_read_bidder_add(_t, NULL, "bzip2",
+		bzip2_reader_bid, bzip2_reader_init, NULL, NULL))
+		return (TRANSFORM_FATAL);
 	
 #if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 	return (TRANSFORM_OK);

@@ -79,11 +79,10 @@ static int	gzip_bidder_init(struct transform *, const void *);
 int
 transform_read_support_compression_gzip(struct transform *_t)
 {
-	int ret = transform_read_bidder_add(_t, NULL, "gzip", gzip_bidder_bid,
-		gzip_bidder_init, NULL, NULL);
-
-	if (TRANSFORM_OK != ret)
-		return (ret);
+	if (NULL == transform_read_bidder_add(_t, NULL, "gzip", gzip_bidder_bid,
+		gzip_bidder_init, NULL, NULL)) {
+		return (TRANSFORM_FATAL);
+	}
 
 	/* Signal the extent of gzip support with the return value here. */
 #if HAVE_ZLIB_H

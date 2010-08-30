@@ -63,8 +63,8 @@ static int	uudecode_filter_close(struct transform *, void *);
 int
 transform_read_support_compression_uu(struct transform *_t)
 {
-	return transform_read_bidder_add(_t, NULL, "uu", uudecode_bidder_bid,
-		uudecode_bidder_init, NULL, NULL);
+	return (transform_read_bidder_add(_t, NULL, "uu", uudecode_bidder_bid,
+		uudecode_bidder_init, NULL, NULL) == NULL ? TRANSFORM_FATAL : TRANSFORM_OK);
 }
 
 static const unsigned char ascii[256] = {

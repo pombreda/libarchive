@@ -141,7 +141,6 @@ transform_read_support_compression_program_signature(struct transform *_t,
     const char *cmd, const void *signature, size_t signature_len)
 {
 	struct program_bidder *state;
-	int ret;
 
 	/*
 	 * Allocate our private state.
@@ -156,12 +155,11 @@ transform_read_support_compression_program_signature(struct transform *_t,
 		memcpy(state->signature, signature, signature_len);
 	}
 
-    ret = transform_read_bidder_add(_t, state, "compress", program_bidder_bid,
-    	program_bidder_init, program_bidder_free, NULL);
-    if (TRANSFORM_FATAL == ret) {
+	if (NULL == transform_read_bidder_add(_t, state, "compress", program_bidder_bid,
+    	program_bidder_init, program_bidder_free, NULL)) {
 		program_bidder_free(state);
 	}
-	return (ret);
+	return (TRANSFORM_OK);
 }
 
 static int

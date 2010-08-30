@@ -143,8 +143,8 @@ static int next_code(struct transform *, struct private_data *,
 int
 transform_read_support_compression_compress(struct transform *_t)
 {
-	return transform_read_bidder_add(_t, NULL, "compress", compress_bidder_bid, 
-		compress_bidder_init, NULL, NULL);
+	return (transform_read_bidder_add(_t, NULL, "compress", compress_bidder_bid, 
+		compress_bidder_init, NULL, NULL) == NULL ? TRANSFORM_FATAL : TRANSFORM_OK);
 }
 
 /*
