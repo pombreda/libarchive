@@ -112,32 +112,45 @@ write_all_states(char *buff, unsigned int states)
  * the libtransform API.
  */
 int
-__transform_check_magic(struct transform *a, unsigned int magic,
+__transform_check_state(struct marker *m, unsigned int magic,
     unsigned int state, const char *function)
 {
-	char states1[64];
-	char states2[64];
-
-	if (a->magic != magic) {
+	if (m->magic != magic) {
 		errmsg("PROGRAMMER ERROR: Function ");
 		errmsg(function);
 		errmsg(" invoked with invalid transform handle.\n");
 		diediedie();
 	}
 
-	if ((a->state & state) == 0) {
-		/* If we're already FATAL, don't overwrite the error. */
-		if (a->state != TRANSFORM_STATE_FATAL)
-			transform_set_error(a, -1,
-			    "INTERNAL ERROR: Function '%s' invoked with"
-			    " transform structure in state '%s',"
-			    " should be in state '%s'",
-			    function,
-			    write_all_states(states1, a->state),
-			    write_all_states(states2, state));
-		a->state = TRANSFORM_STATE_FATAL;
-		// XXXX This is the proposed new behavior.
-		return (TRANSFORM_FATAL);
+	if ((m->state & state) == 0) {
+		return (TRANSFORM_OK);
 	}
-	return TRANSFORM_OK;
+	m->state = TRANSFORM_STATE_FATAL;
+	return (TRANSFORM_FATAL);
+}
+
+int
+__transform_check_magic(struct transform *t, unsigned int magic,
+	unsigned int state, const char *function)
+{
+	struct marker *m = &(t->marker);
+	char states1[64];
+	char states2[64];
+	int raw_state = m->state;
+	
+	if(TRANSFORM_OK == __transform_check_state(m, magic, state, function)) {
+		return (TRANSFORM_OK);
+	}
+
+	/* If we're already FATAL, don't overwrite the error. */
+	if (raw_state == TRANSFORM_STATE_FATAL) {
+		transform_set_error(t, -1,
+		    "INTERNAL ERROR: Function '%s' invoked with"
+	    	" transform structure in state '%s',"
+		    " should be in state '%s'",
+		    function,
+	    	write_all_states(states1, raw_state),
+		    write_all_states(states2, state));
+	}
+	return (TRANSFORM_OK);
 }

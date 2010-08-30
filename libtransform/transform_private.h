@@ -67,7 +67,7 @@ struct transform_vtable {
 		transform_fd_visitor *, const void *);
 };
 
-struct transform {
+struct marker {
 	/*
 	 * The magic/state values are used to sanity-check the
 	 * client's usage.  If an API function is called at a
@@ -76,6 +76,11 @@ struct transform {
 	 */
 	unsigned int	magic;
 	unsigned int	state;
+};
+
+struct transform {
+
+	struct marker marker;
 
 	/*
 	 * Some public API functions depend on the "real" type of the
@@ -89,6 +94,10 @@ struct transform {
 };
 
 /* Check magic value and state; return(TRANSFORM_FATAL) if it isn't valid. */
+int
+__transform_check_state(struct marker *m, unsigned int magic,
+    unsigned int state, const char *function);
+    
 int	__transform_check_magic(struct transform *, unsigned int magic,
 	    unsigned int state, const char *func);
 #define	transform_check_magic(a, expected_magic, allowed_states, function_name) \

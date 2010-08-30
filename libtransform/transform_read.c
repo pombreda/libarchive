@@ -99,9 +99,9 @@ transform_read_new(void)
 	if (a == NULL)
 		return (NULL);
 	memset(a, 0, sizeof(*a));
-	a->transform.magic = TRANSFORM_READ_MAGIC;
+	a->transform.marker.magic = TRANSFORM_READ_MAGIC;
 
-	a->transform.state = TRANSFORM_STATE_NEW;
+	a->transform.marker.state = TRANSFORM_STATE_NEW;
 	a->transform.vtable = transform_read_vtable();
 
 	return (&a->transform);
@@ -218,7 +218,7 @@ transform_read_open2(struct transform *_a, void *client_data,
 	/* Build out the input pipeline. */
 	e = build_stream(a);
 	if (e == TRANSFORM_OK) {
-		a->transform.state = TRANSFORM_STATE_DATA;
+		a->transform.marker.state = TRANSFORM_STATE_DATA;
 		free_bidders(a);
 	}
 
@@ -370,8 +370,8 @@ _transform_read_close(struct transform *_a)
 	transform_check_magic(&a->transform, TRANSFORM_READ_MAGIC,
 	    TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL, "transform_read_close");
 	transform_clear_error(&a->transform);
-	if (a->transform.state != TRANSFORM_STATE_FATAL)
-		a->transform.state = TRANSFORM_STATE_CLOSED;
+	if (a->transform.marker.state != TRANSFORM_STATE_FATAL)
+		a->transform.marker.state = TRANSFORM_STATE_CLOSED;
 
 	/* TODO: Clean up the formatters. */
 
@@ -397,8 +397,8 @@ _transform_read_free(struct transform *_a)
 		return (TRANSFORM_OK);
 	transform_check_magic(_a, TRANSFORM_READ_MAGIC,
 	    TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL, "transform_read_free");
-	if (a->transform.state != TRANSFORM_STATE_CLOSED
-	    && a->transform.state != TRANSFORM_STATE_FATAL)
+	if (a->transform.marker.state != TRANSFORM_STATE_CLOSED
+	    && a->transform.marker.state != TRANSFORM_STATE_FATAL)
 		r = transform_read_close(&a->transform);
 
 	/* Free the filters.  Note this is safe to invoke multiple times. */
@@ -418,7 +418,7 @@ _transform_read_free(struct transform *_a)
 	}
 
 	transform_string_free(&a->transform.error_string);
-	a->transform.magic = 0;
+	a->transform.marker.magic = 0;
 	free(a);
 	return (r);
 }
@@ -902,5 +902,5 @@ transform_read_bytes_consumed(struct transform *_a)
 int
 transform_is_read(struct transform *t)
 {
-	return (t->magic == TRANSFORM_READ_MAGIC);
+	return (t->marker.magic == TRANSFORM_READ_MAGIC);
 }

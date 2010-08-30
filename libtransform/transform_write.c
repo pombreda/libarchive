@@ -107,8 +107,8 @@ transform_write_new(void)
 	a = (struct transform_write *)calloc(1, sizeof(struct transform_write));
 	if (a == NULL)
 		return (NULL);
-	a->transform.magic = TRANSFORM_WRITE_MAGIC;
-	a->transform.state = TRANSFORM_STATE_NEW;
+	a->transform.marker.magic = TRANSFORM_WRITE_MAGIC;
+	a->transform.marker.state = TRANSFORM_STATE_NEW;
 	a->transform.vtable = transform_write_vtable();
 	/*
 	 * The value 10240 here matches the traditional tar default,
@@ -440,7 +440,7 @@ transform_write_open2(struct transform *_a, void *client_data,
 		return (r1 < ret ? r1 : ret);
 	}
 
-	a->transform.state = TRANSFORM_STATE_DATA;
+	a->transform.marker.state = TRANSFORM_STATE_DATA;
 	return (ret);
 }
 
@@ -456,8 +456,8 @@ _transform_write_close(struct transform *_a)
 	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
 		TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL,
 		"transform_write_close");
-	if (a->transform.state == TRANSFORM_STATE_NEW
-		|| a->transform.state == TRANSFORM_STATE_CLOSED)
+	if (a->transform.marker.state == TRANSFORM_STATE_NEW
+		|| a->transform.marker.state == TRANSFORM_STATE_CLOSED)
 		return (TRANSFORM_OK); // Okay to close() when not open.
 
 	transform_clear_error(&a->transform);
@@ -467,8 +467,8 @@ _transform_write_close(struct transform *_a)
 	if (r1 < r)
 		r = r1;
 
-	if (a->transform.state != TRANSFORM_STATE_FATAL)
-		a->transform.state = TRANSFORM_STATE_CLOSED;
+	if (a->transform.marker.state != TRANSFORM_STATE_FATAL)
+		a->transform.marker.state = TRANSFORM_STATE_CLOSED;
 	return (r);
 }
 
@@ -551,14 +551,14 @@ _transform_write_free(struct transform *_a)
 	/* It is okay to call free() in state FATAL. */
 	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
 		TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL, "transform_write_free");
-	if (a->transform.state != TRANSFORM_STATE_FATAL)
+	if (a->transform.marker.state != TRANSFORM_STATE_FATAL)
 		r = transform_write_close(&a->transform);
 
 	__transform_write_filters_free(a);
 
 	/* Release various dynamic buffers. */
 	transform_string_free(&a->transform.error_string);
-	a->transform.magic = 0;
+	a->transform.marker.magic = 0;
 	free(a);
 	return (r);
 }
@@ -603,5 +603,5 @@ _transform_filter_bytes(struct transform *_a, int n)
 int
 transform_is_write(struct transform *t)
 {
-	return (t->magic == TRANSFORM_WRITE_MAGIC);
+	return (t->marker.magic == TRANSFORM_WRITE_MAGIC);
 }
