@@ -72,11 +72,85 @@ transform_read_open_fd(struct transform *a, int fd, size_t block_size)
 	struct read_fd_data *mine;
 	void *b;
 
+	int is_disk_like = 0;
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+	off_t mediasize = 0; // FreeBSD-specific, so off_t okay here.
+#elif defined(__NetBSD__) || defined(__OpenBSD__)
+	struct disklabel dl;
+#elif defined(__DragonFly__)
+	struct partinfo pi;
+#endif
+
 	transform_clear_error(a);
 	if (fstat(fd, &st) != 0) {
 		transform_set_error(a, errno, "Can't stat fd %d", fd);
 		return (TRANSFORM_FATAL);
 	}
+
+	/*
+	 * Determine whether the input looks like a disk device or a
+	 * tape device.  The results are used below to select an I/O
+	 * strategy:
+	 *  = "disk-like" devices support arbitrary lseek() and will
+	 *    support I/O requests of any size.  So we get easy skipping
+	 *    and can cheat on block sizes to get better performance.
+	 *  = "tape-like" devices require strict blocking and use
+	 *    specialized ioctls for seeking.
+	 *  = "socket-like" devices cannot seek at all but can improve
+	 *    performance by using nonblocking I/O to read "whatever is
+	 *    available right now".
+	 *
+	 * Right now, we only specially recognize disk-like devices,
+	 * but it should be straightforward to add probes and strategy
+	 * here for tape-like and socket-like devices.
+	 */
+	if (S_ISREG(st.st_mode)) {
+		/* Regular files act like disks. */
+		is_disk_like = 1;
+	}
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+	/* FreeBSD: if it supports DIOCGMEDIASIZE ioctl, it's disk-like. */
+	else if (S_ISCHR(st.st_mode) &&
+	    ioctl(fd, DIOCGMEDIASIZE, &mediasize) == 0 &&
+	    mediasize > 0) {
+		is_disk_like = 1;
+	}
+#elif defined(__NetBSD__) || defined(__OpenBSD__)
+	/* Net/OpenBSD: if it supports DIOCGDINFO ioctl, it's disk-like. */
+	else if ((S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode)) &&
+	    ioctl(fd, DIOCGDINFO, &dl) == 0 &&
+	    dl.d_partitions[DISKPART(st.st_rdev)].p_size > 0) {
+		is_disk_like = 1;
+	}
+#elif defined(__DragonFly__)
+	/* DragonFly BSD:  if it supports DIOCGPART ioctl, it's disk-like. */
+	else if (S_ISCHR(st.st_mode) &&
+	    ioctl(fd, DIOCGPART, &pi) == 0 &&
+	    pi.media_size > 0) {
+		is_disk_like = 1;
+	}
+#elif defined(__linux__)
+	/* Linux:  All block devices are disk-like. */
+	else if (S_ISBLK(st.st_mode) &&
+	    lseek(fd, 0, SEEK_CUR) == 0 &&
+	    lseek(fd, 0, SEEK_SET) == 0 &&
+	    lseek(fd, 0, SEEK_END) > 0 &&
+	    lseek(fd, 0, SEEK_SET) == 0) {
+		is_disk_like = 1;
+	}
+#endif
+	/* TODO: Add an "is_tape_like" variable and appropriate tests. */
+
+	/* Disk-like devices prefer power-of-two block sizes.  */
+	/* Use provided block_size as a guide so users have some control. */
+	if (is_disk_like) {
+		size_t new_block_size = 64 * 1024;
+		while (new_block_size < block_size
+		    && new_block_size < 64 * 1024 * 1024)
+			new_block_size *= 2;
+		block_size = new_block_size;
+	}
+
 
 	mine = (struct read_fd_data *)calloc(1, sizeof(*mine));
 	b = malloc(block_size);
@@ -96,7 +170,7 @@ transform_read_open_fd(struct transform *a, int fd, size_t block_size)
 	 * way to determine if a device is a raw disk device, so we
 	 * only enable this optimization for regular files.
 	 */
-	if (S_ISREG(st.st_mode)) {
+	if(is_disk_like) {
 		mine->use_lseek = 1;
 	}
 #if defined(__CYGWIN__) || defined(_WIN32)
