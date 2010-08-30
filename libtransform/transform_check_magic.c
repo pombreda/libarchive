@@ -122,7 +122,7 @@ __transform_check_state(struct marker *m, unsigned int magic,
 		diediedie();
 	}
 
-	if ((m->state & state) == 0) {
+	if ((m->state & state) != 0) {
 		return (TRANSFORM_OK);
 	}
 	m->state = TRANSFORM_STATE_FATAL;
@@ -143,7 +143,7 @@ __transform_check_magic(struct transform *t, unsigned int magic,
 	}
 
 	/* If we're already FATAL, don't overwrite the error. */
-	if (raw_state == TRANSFORM_STATE_FATAL) {
+	if (raw_state != TRANSFORM_STATE_FATAL) {
 		transform_set_error(t, -1,
 		    "INTERNAL ERROR: Function '%s' invoked with"
 	    	" transform structure in state '%s',"
@@ -152,5 +152,5 @@ __transform_check_magic(struct transform *t, unsigned int magic,
 	    	write_all_states(states1, raw_state),
 		    write_all_states(states2, state));
 	}
-	return (TRANSFORM_OK);
+	return (TRANSFORM_FATAL);
 }
