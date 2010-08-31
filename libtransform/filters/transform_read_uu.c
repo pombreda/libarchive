@@ -54,7 +54,8 @@ struct uudecode {
 };
 
 static int	uudecode_bidder_bid(const void *, struct transform_read_filter *);
-static int	uudecode_bidder_init(struct transform *, const void *);
+static struct transform_read_filter *
+	uudecode_bidder_init(struct transform *, const void *);
 
 static ssize_t	uudecode_filter_read(struct transform *, void *,
 	struct transform_read_filter *upstream, const void **);
@@ -320,13 +321,13 @@ uudecode_bidder_bid(const void *_bidder_data,
 	return (0);
 }
 
-static int
+static struct transform_read_filter *
 uudecode_bidder_init(struct transform *transform, const void *bidder_data)
 {
 	struct uudecode   *uudecode;
 	void *out_buff;
 	void *in_buff;
-	int ret;
+	struct transform_read_filter *f;
 
 	uudecode = (struct uudecode *)calloc(sizeof(*uudecode), 1);
 	out_buff = malloc(OUT_BUFF_SIZE);
@@ -337,7 +338,7 @@ uudecode_bidder_init(struct transform *transform, const void *bidder_data)
 		free(uudecode);
 		free(out_buff);
 		free(in_buff);
-		return (TRANSFORM_FATAL);
+		return (NULL);
 	}
 
 	uudecode->in_buff = in_buff;
@@ -346,14 +347,16 @@ uudecode_bidder_init(struct transform *transform, const void *bidder_data)
 	uudecode->out_buff = out_buff;
 	uudecode->state = ST_FIND_HEAD;
 
-	ret = transform_read_filter_add(transform, (void *)uudecode,
+	f = transform_read_filter_new((void *)uudecode,
 		"uu", TRANSFORM_FILTER_UU,
 		uudecode_filter_read, NULL, uudecode_filter_close, NULL);
 
-	if (TRANSFORM_OK != ret) {
+	if (!f) {
+		transform_set_error(transform, ENOMEM,
+			"failed to allocate transform_read_filter");
 		uudecode_filter_close(transform, (void *)uudecode);
 	}
-	return (ret);
+	return (f);
 }
 
 static int

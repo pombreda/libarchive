@@ -56,7 +56,8 @@ struct rpm {
 #define RPM_LEAD_SIZE	96	/* Size of 'Lead' section. */
 
 static int	rpm_bidder_bid(const void *, struct transform_read_filter *upstream);
-static int	rpm_bidder_init(struct transform *, const void *);
+static struct transform_read_filter *
+	rpm_bidder_init(struct transform *, const void *);
 
 static ssize_t	rpm_filter_read(struct transform *, void *,
 	struct transform_read_filter *upstream, const void **);
@@ -115,28 +116,30 @@ rpm_bidder_bid(const void *_data, struct transform_read_filter *upstream)
 	return (bits_checked);
 }
 
-static int
+static struct transform_read_filter *
 rpm_bidder_init(struct transform *transform, const void *bidder_data)
 {
 	struct rpm *rpm;
-	int ret;
+	struct transform_read_filter *f;
 
 	rpm = (struct rpm *)calloc(sizeof(*rpm), 1);
 	if (rpm == NULL) {
 		transform_set_error(transform, ENOMEM,
 		    "Can't allocate data for rpm");
-		return (TRANSFORM_FATAL);
+		return (NULL);
 	}
 	rpm->state = ST_LEAD;
 
-	ret = transform_read_filter_add(transform, (void *)rpm,
+	f = transform_read_filter_new((void *)rpm,
 		"rpm", TRANSFORM_FILTER_RPM,
 		rpm_filter_read, NULL, rpm_filter_close, NULL);
-	if (TRANSFORM_OK != ret) {
+	if (!f) {
+		transform_set_error(transform, ENOMEM,
+			"failed to allocate transform_read_filter");
 		rpm_filter_close(transform, rpm);
 	}
 
-	return (ret);
+	return (f);
 }
 
 static ssize_t

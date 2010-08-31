@@ -155,5 +155,6 @@ struct transform_read {
 
 };
 
-int __transform_read_program(struct transform *, const char *, const char *, int);
+struct transform_read_filter *
+	__transform_read_program(struct transform *, const char *, const char *, int);
 #endif

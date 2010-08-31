@@ -81,7 +81,8 @@ static ssize_t	xz_filter_read(struct transform *, void *,
 	struct transform_read_filter *, const void **);
 static int	xz_filter_close(struct transform *, void *);
 
-static int  common_bidder_init(struct transform *, const void *,
+static struct transform_read_filter *
+	common_bidder_init(struct transform *, const void *,
 	const char *, int);
 
 
@@ -109,11 +110,14 @@ static int	lzma_filter_close(struct transform *, void *);
  * compiled even if no lzma library is available.
  */
 static int	xz_bidder_bid(const void *, struct transform_read_filter *);
-static int	xz_bidder_init(struct transform *, const void *);
+static struct transform_read_filter *
+	xz_bidder_init(struct transform *, const void *);
 static int	lzma_bidder_bid(const void *, struct transform_read_filter *);
-static int	lzma_bidder_init(struct transform *, const  void *);
+static struct transform_read_filter *
+	lzma_bidder_init(struct transform *, const  void *);
 static int	lzip_bidder_bid(const void *, struct transform_read_filter *);
-static int	lzip_bidder_init(struct transform *, const void *);
+static struct transform_read_filter *
+	lzip_bidder_init(struct transform *, const void *);
 static int	lzip_has_member(struct transform_read_filter *);
 
 int
@@ -379,21 +383,21 @@ lzip_bidder_bid(const void *_data, struct transform_read_filter *filter)
 /*
  * liblzma 4.999.7 and later support both lzma and xz streams.
  */
-static int
+static struct transform_read_filter *
 xz_bidder_init(struct transform *transform, const void *bidder_data)
 {
 	return common_bidder_init(transform, bidder_data,
 		"xz", TRANSFORM_FILTER_XZ);
 }
 
-static int
+static struct transform_read_filter *
 lzma_bidder_init(struct transform *transform, const void *bidder_data)
 {
 	return common_bidder_init(transform, bidder_data,
 		"lzma", TRANSFORM_FILTER_LZMA);
 }
 
-static int
+static struct transform_read_filter *
 lzip_bidder_init(struct transform *transform, const void *bidder_data)
 {
 	return common_bidder_init(transform, bidder_data,
@@ -452,7 +456,7 @@ set_error(struct transform *transform, int ret)
  * Setup the callbacks.
  */
 
-static int
+static struct transform_read_filter *
 common_bidder_init(struct transform *transform,
 	const void *bidder_data, const char *name, int code)
 {
@@ -460,6 +464,7 @@ common_bidder_init(struct transform *transform,
 	void *out_block;
 	struct private_data *state;
 	int ret;
+	struct transform_read_filter *f;
 
 	state = (struct private_data *)calloc(1, sizeof(*state));
 	out_block = (unsigned char *)malloc(out_block_size);
@@ -468,7 +473,7 @@ common_bidder_init(struct transform *transform,
 		    "Can't allocate data for xz decompression");
 		free(out_block);
 		free(state);
-		return (TRANSFORM_FATAL);
+		return (NULL);
 	}
 	state->out_block_size = out_block_size;
 	state->out_block = out_block;
@@ -505,18 +510,20 @@ common_bidder_init(struct transform *transform,
 			/* Library setup failed: Choose an error message and clean up. */
 			set_error(transform, ret);
 			xz_filter_close(transform, state);
-			return (TRANSFORM_FATAL);
+			return (NULL);
 		}
 	}
 
-	ret = transform_read_filter_add(transform, (void *)state,
+	f = transform_read_filter_new((void *)state,
 		name, code,
 		xz_filter_read, NULL, xz_filter_close, NULL);
 
-	if (TRANSFORM_OK != ret) {
+	if (!f) {
+		transform_set_error(transform, ENOMEM,
+			"failed to allocate transform_read_filter");
 		xz_filter_close(transform, state);
 	}
-	return (ret);
+	return (f);
 }
 
 static int
