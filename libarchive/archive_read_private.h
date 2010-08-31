@@ -32,7 +32,6 @@
 #ifndef ARCHIVE_READ_PRIVATE_H_INCLUDED
 #define	ARCHIVE_READ_PRIVATE_H_INCLUDED
 
-#include <transform.h>
 #include "archive.h"
 #include "archive_string.h"
 #include "archive_private.h"
@@ -57,6 +56,8 @@ struct archive_read {
 
 	/* File offset of beginning of most recently-read header. */
 	int64_t		  header_position;
+
+	struct transform_read_bidder *autodetect_bidder;
 
 	/*
 	 * Format detection is mostly the same as compression
