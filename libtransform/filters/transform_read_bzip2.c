@@ -68,8 +68,7 @@ static int	bzip2_filter_close(struct transform *, void *);
  * if bzlib is unavailable.
  */
 static int	bzip2_reader_bid(const void *, struct transform_read_filter *);
-static struct transform_read_filter *
-	bzip2_reader_init(struct transform *, const void *);
+static int	bzip2_reader_init(struct transform *, const void *);
 
 int
 transform_read_support_compression_bzip2(struct transform *_t)
@@ -137,7 +136,7 @@ bzip2_reader_bid(const void *bidder_data, struct transform_read_filter *filter)
  * decompression.  We can, however, still detect compressed transforms
  * and emit a useful message.
  */
-static struct transform_read_filter *
+static int
 bzip2_reader_init(struct transform *transform, const void *bidder_data)
 {
 	return (__transform_read_program(transform, "bunzip2",
@@ -150,13 +149,13 @@ bzip2_reader_init(struct transform *transform, const void *bidder_data)
 /*
  * Setup the callbacks.
  */
-struct transform_read_filter *
+static int
 bzip2_reader_init(struct transform *transform, const void *bidder_data)
 {
+	int ret;
 	static const size_t out_block_size = 64 * 1024;
 	void *out_block;
 	struct private_data *state;
-	struct transform_read_filter *f;
 
 	state = (struct private_data *)calloc(sizeof(*state), 1);
 	out_block = (unsigned char *)malloc(out_block_size);
@@ -165,24 +164,22 @@ bzip2_reader_init(struct transform *transform, const void *bidder_data)
 		    "Can't allocate data for bzip2 decompression");
 		free(out_block);
 		free(state);
-		return (NULL);
+		return (TRANSFORM_FATAL);
 	}
 
 	state->out_block_size = out_block_size;
 	state->out_block = out_block;
-
-	f = transform_read_filter_new((void *)state, "bzip2",
+	
+	ret = transform_read_filter_add(transform, (void *)state, "bzip2",
 		TRANSFORM_FILTER_BZIP2,
 		bzip2_filter_read, NULL,
 		bzip2_filter_close, NULL);
 
-	if (!f) {
-		transform_set_error(transform, ENOMEM,
-			"failed to allocate transform_read_filter");
+	if (TRANSFORM_OK != ret) {
 		bzip2_filter_close(transform, state);
 	}
 
-	return (f);
+	return (ret);
 }
 
 /*

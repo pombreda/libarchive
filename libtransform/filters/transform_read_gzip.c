@@ -74,8 +74,7 @@ static int	gzip_filter_close(struct transform *, void *);
  * gunzip program.
  */
 static int	gzip_bidder_bid(const void *, struct transform_read_filter *);
-static struct transform_read_filter *
-	gzip_bidder_init(struct transform *, const void *);
+static int	gzip_bidder_init(struct transform *, const void *);
 
 int
 transform_read_support_compression_gzip(struct transform *_t)
@@ -209,7 +208,7 @@ gzip_bidder_bid(const void *_data, struct transform_read_filter *filter)
  * decompression directly.  We can, however, try to run gunzip
  * in case that's available.
  */
-static struct transform_read_filter *
+static int
 gzip_bidder_init(struct transform *transform, const void *bidder_data)
 {
 	return (__transform_read_program(transform, "gunzip",
@@ -221,13 +220,13 @@ gzip_bidder_init(struct transform *transform, const void *bidder_data)
 /*
  * Initialize the filter object.
  */
-static struct transform_read_filter *
+static int
 gzip_bidder_init(struct transform *transform, const void *bidder_data)
 {
 	struct private_data *state;
 	static const size_t out_block_size = 64 * 1024;
 	void *out_block;
-	struct transform_read_filter *f;
+	int ret;
 
 	state = (struct private_data *)calloc(sizeof(*state), 1);
 	out_block = (unsigned char *)malloc(out_block_size);
@@ -236,22 +235,20 @@ gzip_bidder_init(struct transform *transform, const void *bidder_data)
 		free(state);
 		transform_set_error(transform, ENOMEM,
 		    "Can't allocate data for gzip decompression");
-		return (NULL);
+		return (TRANSFORM_FATAL);
 	}
 	state->out_block_size = out_block_size;
 	state->out_block = out_block;
 	state->in_stream = 0; /* We're not actually within a stream yet. */
 
-	f = transform_read_filter_new((void *)state,
+	ret = transform_read_filter_add(transform, (void *)state,
 		"gzip", TRANSFORM_FILTER_GZIP,
 		gzip_filter_read, NULL, gzip_filter_close, NULL);
 
-	if (!f) {
-		transform_set_error(transform, ENOMEM,
-			"failed to allocate transform_read_filter");
+	if (TRANSFORM_OK != ret) {
 		gzip_filter_close(transform, state);
 	}
-	return (f);
+	return (ret);
 }
 
 static int

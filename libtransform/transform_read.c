@@ -210,10 +210,9 @@ transform_read_open2(struct transform *_a, void *client_data,
 		return (TRANSFORM_FATAL);
 	}
 
-	if (TRANSFORM_OK != transform_read_filter_add(_a, filter)) {
-		transform_read_filter_free(filter);
-		return (TRANSFORM_FATAL);
-	}
+	filter->upstream = NULL;
+	filter->transform = a;
+	a->filter = filter;
 
 	/* Build out the input pipeline. */
 	e = build_stream(a);
@@ -233,9 +232,8 @@ transform_read_open2(struct transform *_a, void *client_data,
 static int
 build_stream(struct transform_read *a)
 {
-	int bid, best_bid;
+	int bid, best_bid, ret;
 	struct transform_read_bidder *bidder, *best_bidder;
-	struct transform_read_filter *new_f;
 	ssize_t avail;
 
 	for (;;) {
@@ -265,17 +263,10 @@ build_stream(struct transform_read *a)
 			return (TRANSFORM_OK);
 		}
 
-		new_f = (best_bidder->create_filter)((struct transform *)a, best_bidder->data);
+		ret = (best_bidder->create_filter)((struct transform *)a, best_bidder->data);
 
 		/* cleanup and deallocation... */
-		if (new_f) {
-			if (TRANSFORM_OK != transform_read_filter_add(&(a->transform), new_f)) {
-				transform_read_filter_free(new_f);
-				new_f = NULL;
-			}
-		}
-
-		if (!new_f) {
+		if (TRANSFORM_FATAL == ret) {
 			close_filters(a);
 			free_filters(a);
 			return (TRANSFORM_FATAL);
@@ -306,25 +297,12 @@ close_filters(struct transform_read *a)
 	return r;
 }
 
-void
-transform_read_filter_free(struct transform_read_filter *f)
-{
-	/* 
-	 * note we don't care about the state- we just want it to go boom if
-	 * they are passing us the wrong type
-	 */
-	
-	__transform_filter_check_magic2(NULL, f, TRANSFORM_READ_FILTER_MAGIC,
-		TRANSFORM_STATE_ANY, "transform_read_filter_free");
-	free(f);
-}
-
 static void
 free_filters(struct transform_read *a)
 {
 	while (a->filter != NULL) {
 		struct transform_read_filter *t = a->filter->upstream;
-		transform_read_filter_free(a->filter);
+		free(a->filter);
 		a->filter = t;
 	}
 }
@@ -545,7 +523,7 @@ transform_read_filter_new(const void *data, const char *name,
 	}
 
 	f->marker.magic = TRANSFORM_READ_FILTER_MAGIC;
-	f->marker.state = TRANSFORM_STATE_NEW;
+	f->marker.state = TRANSFORM_STATE_DATA;
 
 	f->code = code;
 	f->name = name;
@@ -564,23 +542,30 @@ transform_read_filter_new(const void *data, const char *name,
  */
 
 int
-transform_read_filter_add(struct transform *_t, struct transform_read_filter *f)
+transform_read_filter_add(struct transform *_t,
+	const void *data, const char *name, int code,
+	transform_read_filter_read_callback *reader,
+	transform_read_filter_skip_callback *skipper,
+	transform_read_filter_close_callback *closer,
+	transform_read_filter_visit_fds_callback *visit_fds)
 {
 	struct transform_read *t = (struct transform_read *)_t;
+	struct transform_read_filter *f;
 
 	transform_check_magic(_t, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
 		"transform_read_filter_add");
 
-	if (TRANSFORM_OK != __transform_filter_check_magic2(_t, f,
-		TRANSFORM_READ_FILTER_MAGIC,
-		TRANSFORM_STATE_NEW, "transform_read_filter_add")) {
+	f = transform_read_filter_new(data, name, code, reader, skipper, closer,
+		visit_fds);
+
+	if (!f) {
+		transform_set_error(_t, ENOMEM,
+			"failed to allocate a read filter");
 		return (TRANSFORM_FATAL);
 	}
-
 	f->transform = t;
 	f->upstream = t->filter;
 	t->filter = f;
-	f->marker.state = TRANSFORM_STATE_DATA;
 
 	return (TRANSFORM_OK);
 }

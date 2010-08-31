@@ -130,8 +130,7 @@ struct private_data {
 };
 
 static int	compress_bidder_bid(const void *, struct transform_read_filter *);
-static struct transform_read_filter *
-	compress_bidder_init(struct transform *, const void *);
+static int	compress_bidder_init(struct transform *, const void *);
 
 static ssize_t	compress_filter_read(struct transform *, void *,
 	struct transform_read_filter *, const void **);
@@ -186,13 +185,13 @@ compress_bidder_bid(const void *bidder_data, struct transform_read_filter *filte
 /*
  * Setup the callbacks.
  */
-static struct transform_read_filter *
+static int
 compress_bidder_init(struct transform *transform, const void *bidder_data)
 {
 	struct private_data *state;
 	static const size_t out_block_size = 64 * 1024;
 	void *out_block;
-	struct transform_read_filter *f;
+	int ret;
 
 	state = (struct private_data *)calloc(sizeof(*state), 1);
 	out_block = malloc(out_block_size);
@@ -201,22 +200,20 @@ compress_bidder_init(struct transform *transform, const void *bidder_data)
 		free(state);
 		transform_set_error(transform, ENOMEM,
 		    "Can't allocate data for compress (.Z) decompression");
-		return (NULL);
+		return (TRANSFORM_FATAL);
 	}
 
 	state->out_block_size = out_block_size;
 	state->out_block = out_block;
 
-    f = transform_read_filter_new((void *)state,
+    ret = transform_read_filter_add(transform, (void *)state,
     	"compress (.Z)", TRANSFORM_FILTER_COMPRESS,
 		compress_filter_read, NULL, compress_filter_close, NULL);
 
-	if(!f) {
-		transform_set_error(transform, ENOMEM,
-			"failed to allocate transform_read_filter");
+	if (TRANSFORM_OK != ret) {
 		compress_filter_close(transform, state);
 	}
-	return (f);
+	return (ret);
 }
 
 static int
@@ -224,6 +221,7 @@ stream_init(struct transform *transform, struct private_data *state,
 	struct transform_read_filter *upstream)
 {
 	int code;
+	/* XXX MOVE THE FOLLOWING OUT OF INIT() XXX */
 
 	(void)getbits(state, upstream, 8); /* Skip first signature byte. */
 	(void)getbits(state, upstream, 8); /* Skip second signature byte. */

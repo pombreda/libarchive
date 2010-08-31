@@ -82,7 +82,7 @@ transform_read_support_compression_program_signature(struct transform *_a,
 	return (TRANSFORM_FATAL);
 }
 
-struct transform_read_filter *
+int
 __transform_read_program(struct transform *transform, const char *cmd,
 	const char *name, int magic)
 {
@@ -94,7 +94,7 @@ __transform_read_program(struct transform *transform, const char *cmd,
 
 	transform_set_error(transform, -1,
 	    "External compression programs not supported on this platform");
-	return (NULL);
+	return (TRANSFORM_FATAL);
 }
 
 #else
@@ -114,8 +114,7 @@ struct program_bidder {
 };
 
 static int program_bidder_bid(const void *_state, struct transform_read_filter *upstream);
-static struct transform_read_filter *
-	program_bidder_init(struct transform *, const void *);
+static int	program_bidder_init(struct transform *, const void *);
 static int	program_bidder_free(const void *);
 
 
@@ -342,7 +341,7 @@ child_read(struct transform *transform, struct program_filter *state,
 	}
 }
 
-struct transform_read_filter *
+int
 __transform_read_program(struct transform *transform, 
 	const char *cmd,
 	const char *name, int magic)
@@ -352,7 +351,7 @@ __transform_read_program(struct transform *transform,
 	char *out_buf;
 	char *description;
 	const char *prefix = "Program: ";
-	struct transform_read_filter *f;
+	int ret;
 
 	state = (struct program_filter *)calloc(1, sizeof(*state));
 	out_buf = (char *)malloc(out_buf_len);
@@ -363,7 +362,7 @@ __transform_read_program(struct transform *transform,
 		free(state);
 		free(out_buf);
 		free(description);
-		return (NULL);
+		return (TRANSFORM_FATAL);
 	}
 
 	if (!name)
@@ -381,24 +380,21 @@ __transform_read_program(struct transform *transform,
 		free(state);
 		transform_set_error(transform, EINVAL,
 		    "Can't initialise filter");
-		return (NULL);
+		return (TRANSFORM_FATAL);
 	}
 
-
-	f = transform_read_filter_new((void *)state,
+	ret = transform_read_filter_add(transform, (void *)state,
 		name, magic,
 		program_filter_read, NULL, program_filter_close, NULL);
 
-	if (!f) {
-		transform_set_error(transform, ENOMEM,
-			"failed to allocate transform_read_filter");
+	if (TRANSFORM_OK != ret) {
 		program_filter_close(transform, state);
 	}
 
-	return (f);
+	return (ret);
 }
 
-static struct transform_read_filter *
+static int
 program_bidder_init(struct transform *transform, const void *bidder_state)
 {
 	struct program_bidder *state = (struct program_bidder *)bidder_state;

@@ -171,7 +171,7 @@ struct transform_read_filter;
 int64_t transform_read_filter_consume(struct transform_read_filter *, int64_t);
 const void *transform_read_filter_ahead(struct transform_read_filter *,
 	size_t, ssize_t *);
-void transform_read_filter_free(struct transform_read_filter *);
+    
 
 /* Returns pointer and size of next block of data from transform. */
 typedef __LA_SSIZE_T	transform_read_callback(struct transform *,
@@ -462,8 +462,7 @@ typedef int transform_read_bidder_bid_method(const void *bidder_data,
 	struct transform_read_filter *source);
 typedef int transform_read_bidder_set_option(const void *bidder_data,
 	const char *key, const char *value);
-typedef struct transform_read_filter *
-	transform_read_bidder_create_filter(struct transform *,
+typedef int	transform_read_bidder_create_filter(struct transform *,
 	const void *bidder_data);
 typedef int transform_read_bidder_free(const void *bidder_data);
 
@@ -487,7 +486,11 @@ typedef int transform_visit_fds_callback(struct transform *,
 
                         
 __LA_DECL int transform_read_filter_add(struct transform *,
-	struct transform_read_filter *);
+	const void *data, const char *filter_name, int code,
+	transform_read_filter_read_callback *,
+	transform_read_filter_skip_callback *,
+	transform_read_filter_close_callback *,
+	transform_read_filter_visit_fds_callback *);
 
 __LA_DECL struct transform_read_filter *
 	transform_read_filter_new(

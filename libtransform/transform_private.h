@@ -103,11 +103,6 @@ __transform_check_state(struct marker *m, unsigned int magic,
 		&(((struct transform_read_filter *)(f))->transform->transform), 	\
 		&(((struct transform_read_filter *)(f))->marker), 		\
 		(magic), (state), "transform_read_filter", (function))
-
-#define __transform_filter_check_magic2(t, f, magic, state, function)	\
-	__transform_check_magic((t),								\
-		&(((struct transform_read_filter *)(f))->marker), 		\
-		(magic), (state), "transform_read_filter", (function))
     
 int	__transform_check_magic(struct transform *, struct marker *,
 	unsigned int magic, unsigned int state, const char *type, 
