@@ -46,6 +46,7 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_check_magic.c 201089 2009-12
 #endif
 
 #include "transform_private.h"
+#include "transform_read_private.h"
 
 static void
 errmsg(const char *m)
@@ -113,12 +114,14 @@ write_all_states(char *buff, unsigned int states)
  */
 int
 __transform_check_state(struct marker *m, unsigned int magic,
-    unsigned int state, const char *function)
+    unsigned int state, const char *type, const char *function)
 {
 	if (m->magic != magic) {
 		errmsg("PROGRAMMER ERROR: Function ");
 		errmsg(function);
-		errmsg(" invoked with invalid transform handle.\n");
+		errmsg(" invoked with invalid ");
+		errmsg(type);
+		errmsg(" handle.\n");
 		diediedie();
 	}
 
@@ -130,27 +133,32 @@ __transform_check_state(struct marker *m, unsigned int magic,
 }
 
 int
-__transform_check_magic(struct transform *t, unsigned int magic,
-	unsigned int state, const char *function)
+__transform_check_magic(struct transform *t, struct marker *m,
+	unsigned int magic, unsigned int state, const char *type,
+	const char *function)
 {
-	struct marker *m = &(t->marker);
 	char states1[64];
 	char states2[64];
+	int ret;
 	int raw_state = m->state;
-	
-	if(TRANSFORM_OK == __transform_check_state(m, magic, state, function)) {
+
+	ret = __transform_check_state(m, magic, state, type, function);
+	if(TRANSFORM_OK == ret) {
 		return (TRANSFORM_OK);
 	}
 
 	/* If we're already FATAL, don't overwrite the error. */
-	if (raw_state != TRANSFORM_STATE_FATAL) {
-		transform_set_error(t, -1,
-		    "INTERNAL ERROR: Function '%s' invoked with"
-	    	" transform structure in state '%s',"
-		    " should be in state '%s'",
-		    function,
-	    	write_all_states(states1, raw_state),
-		    write_all_states(states2, state));
+	if (t) {
+		if (t->marker.state != TRANSFORM_STATE_FATAL) {
+			transform_set_error(t, -1,
+			    "INTERNAL ERROR: Function '%s' invoked with"
+	    		" %s structure in state '%s',"
+		    	" should be in state '%s'",
+			    type,
+			    function,
+	    		write_all_states(states1, raw_state),
+		    	write_all_states(states2, state));
+		}
 	}
 	return (TRANSFORM_FATAL);
 }

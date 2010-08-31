@@ -90,6 +90,8 @@ struct transform_read_bidder {
  */
 struct transform_read_filter {
 
+	struct marker marker;
+
 	/* these are callback defined methods */
 	transform_read_filter_read_callback *read;
 	transform_read_filter_skip_callback *skip;

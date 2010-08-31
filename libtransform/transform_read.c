@@ -204,6 +204,9 @@ transform_read_open2(struct transform *_a, void *client_data,
 	filter = calloc(1, sizeof(struct transform_read_filter));
 	if (filter == NULL)
 		return (TRANSFORM_FATAL);
+
+	filter->marker.magic = TRANSFORM_READ_FILTER_MAGIC;
+	filter->marker.state = TRANSFORM_STATE_DATA;
 	filter->upstream = NULL;
 	filter->transform = a;
 	filter->data = client_data;
@@ -483,8 +486,9 @@ transform_read_bidder_add(struct transform *_t,
 	struct transform_read *t = (struct transform_read *)_t;
 	struct transform_read_bidder *bidder;
 
-	if(TRANSFORM_OK != __transform_check_magic(_t, TRANSFORM_READ_MAGIC,
-		TRANSFORM_STATE_NEW, "transform_read_bidder_add")) {
+	if(TRANSFORM_OK != __transform_check_magic(_t, &(_t->marker), 
+		TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW, "transform",
+		"transform_read_bidder_add")) {
 		return (NULL);
 	}
 
@@ -517,16 +521,19 @@ int transform_read_filter_add(struct transform *_t,
 	transform_read_filter_visit_fds_callback *visit_fds)
 {
 	struct transform_read *t = (struct transform_read *)_t;
-	struct transform_read_filter *f = calloc(1, sizeof(struct transform_read_filter));
+	struct transform_read_filter *f;
 
 	transform_check_magic(_t, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
 		"transform_read_filter_add");
 
-	if (NULL == f) {
+	if (NULL == (f = calloc(1, sizeof(struct transform_read_filter)))) {
 		transform_set_error(_t, ENOMEM,
 			"failed to allocate a read filter");
 		return (TRANSFORM_FATAL);
 	}
+
+	f->marker.magic = TRANSFORM_READ_FILTER_MAGIC;
+	f->marker.state = TRANSFORM_STATE_DATA;
 
 	f->code = code;
 	f->name = name;
@@ -606,8 +613,9 @@ const void *
 transform_read_ahead(struct transform *_a, size_t min, ssize_t *avail)
 {
 	struct transform_read *a = (struct transform_read *)_a;
-	if (TRANSFORM_OK != __transform_check_magic(_a, TRANSFORM_READ_MAGIC,
-		TRANSFORM_STATE_DATA, "transform_read_ahead"))
+	if (TRANSFORM_OK != __transform_check_magic(_a, &(_a->marker),
+		TRANSFORM_READ_MAGIC, TRANSFORM_STATE_DATA, 
+		"transform", "transform_read_ahead"))
 		return (NULL);
 	return (transform_read_filter_ahead(a->filter, min, avail));
 }
@@ -618,6 +626,12 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 {
 	ssize_t bytes_read;
 	size_t tocopy;
+
+	if (TRANSFORM_FATAL == __transform_filter_check_magic(filter,
+		TRANSFORM_READ_FILTER_MAGIC, TRANSFORM_STATE_DATA,
+		"transform_read_filter_ahead")) {
+		return (NULL);
+	}
 
 	if (filter->fatal) {
 		if (avail)
@@ -792,7 +806,16 @@ int64_t
 transform_read_filter_consume(struct transform_read_filter *filter,
     int64_t request)
 {
-	int64_t skipped = advance_file_pointer(filter, request);
+	int64_t skipped;
+
+	if (TRANSFORM_FATAL == __transform_filter_check_magic(filter,
+		TRANSFORM_READ_FILTER_MAGIC, TRANSFORM_STATE_DATA,
+		"transform_read_filter_consume")) {
+		return (TRANSFORM_FATAL);
+	}
+
+	skipped = advance_file_pointer(filter, request);
+
 	if (skipped == request)
 		return (skipped);
 	/* We hit EOF before we satisfied the skip request. */

@@ -42,8 +42,9 @@
 #define	__LA_DEAD
 #endif
 
-#define	TRANSFORM_WRITE_MAGIC	(0xb0c5c0deU)
-#define	TRANSFORM_READ_MAGIC	(0xdeb0c5U)
+#define	TRANSFORM_WRITE_MAGIC		(0xb0c5c0deU)
+#define	TRANSFORM_READ_MAGIC		(0xdeb0c5U)
+#define TRANSFORM_READ_FILTER_MAGIC	(0xf9da10cbU)
 
 #define	TRANSFORM_STATE_NEW	1U
 #define	TRANSFORM_STATE_DATA	4U
@@ -94,14 +95,22 @@ struct transform {
 /* Check magic value and state; return(TRANSFORM_FATAL) if it isn't valid. */
 int
 __transform_check_state(struct marker *m, unsigned int magic,
-    unsigned int state, const char *function);
+    unsigned int state, const char *type, const char *function);
+
+#define __transform_filter_check_magic(f, magic, state, function)	\
+	__transform_check_magic(								\
+		&(((struct transform_read_filter *)(f))->transform->transform), 	\
+		&(((struct transform_read_filter *)(f))->marker), 		\
+		(magic), (state), "transform_read_filter", (function))
     
-int	__transform_check_magic(struct transform *, unsigned int magic,
-	    unsigned int state, const char *func);
+int	__transform_check_magic(struct transform *, struct marker *,
+	unsigned int magic, unsigned int state, const char *type, 
+	const char *func);
 #define	transform_check_magic(a, expected_magic, allowed_states, function_name) \
 	do { \
-		int magic_test = __transform_check_magic((a), (expected_magic), \
-			(allowed_states), (function_name)); \
+		int magic_test = __transform_check_magic((a), &((a)->marker), \
+			(expected_magic), (allowed_states), "transform", \
+			(function_name)); \
 		if (magic_test == TRANSFORM_FATAL) \
 			return TRANSFORM_FATAL; \
 	} while (0)
