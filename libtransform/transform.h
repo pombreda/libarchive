@@ -492,6 +492,16 @@ __LA_DECL int transform_read_filter_add(struct transform *,
 	transform_read_filter_close_callback *,
 	transform_read_filter_visit_fds_callback *);
 
+__LA_DECL struct transform_read_filter *
+	transform_read_filter_new(
+	const void *data, const char *filter_name, int code,
+	transform_read_filter_read_callback *,
+	transform_read_filter_skip_callback *,
+	transform_read_filter_close_callback *,
+	transform_read_filter_visit_fds_callback *);
+
+                    
+
 #ifdef __cplusplus
 }
 #endif

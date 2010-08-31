@@ -201,21 +201,17 @@ transform_read_open2(struct transform *_a, void *client_data,
 	a->client.skipper = client_skipper;
 	a->client.closer = client_closer;
 
-	filter = calloc(1, sizeof(struct transform_read_filter));
-	if (filter == NULL)
-		return (TRANSFORM_FATAL);
+	filter = transform_read_filter_new(client_data, "none", TRANSFORM_FILTER_NONE,
+		client_reader, client_skipper, client_closer, visit_fds);
 
-	filter->marker.magic = TRANSFORM_READ_FILTER_MAGIC;
-	filter->marker.state = TRANSFORM_STATE_DATA;
+	if (!filter) {
+		transform_set_error(_a, ENOMEM,
+			"failed to alocate transform_read_filter");
+		return (TRANSFORM_FATAL);
+	}
+
 	filter->upstream = NULL;
 	filter->transform = a;
-	filter->data = client_data;
-	filter->read = client_reader;
-	filter->skip = client_skipper;
-	filter->close = client_closer;
-	filter->visit_fds = visit_fds;
-	filter->name = "none";
-	filter->code = TRANSFORM_FILTER_NONE;
 	a->filter = filter;
 
 	/* Build out the input pipeline. */
@@ -512,11 +508,41 @@ transform_read_bidder_add(struct transform *_t,
 	return (bidder);
 }
 
+
+struct transform_read_filter *
+transform_read_filter_new(const void *data, const char *name,
+	int code, 
+	transform_read_filter_read_callback *reader,
+	transform_read_filter_skip_callback *skipper,
+	transform_read_filter_close_callback *closer,
+	transform_read_filter_visit_fds_callback *visit_fds)
+{
+	struct transform_read_filter *f;
+	if (NULL == (f = calloc(1, sizeof(struct transform_read_filter)))) {
+		return (NULL);
+	}
+
+	f->marker.magic = TRANSFORM_READ_FILTER_MAGIC;
+	f->marker.state = TRANSFORM_STATE_DATA;
+
+	f->code = code;
+	f->name = name;
+	f->transform = NULL;
+	f->data = (void *)data;
+	f->read = reader;
+	f->skip = skipper;
+	f->close = closer;
+	f->visit_fds = visit_fds;
+	f->upstream = NULL;
+	return (f);
+}
+
 /*
  * add a new filter to the stack
  */
 
-int transform_read_filter_add(struct transform *_t,
+int
+transform_read_filter_add(struct transform *_t,
 	const void *data, const char *name, int code,
 	transform_read_filter_read_callback *reader,
 	transform_read_filter_skip_callback *skipper,
@@ -529,23 +555,15 @@ int transform_read_filter_add(struct transform *_t,
 	transform_check_magic(_t, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
 		"transform_read_filter_add");
 
-	if (NULL == (f = calloc(1, sizeof(struct transform_read_filter)))) {
+	f = transform_read_filter_new(data, name, code, reader, skipper, closer,
+		visit_fds);
+
+	if (!f) {
 		transform_set_error(_t, ENOMEM,
 			"failed to allocate a read filter");
 		return (TRANSFORM_FATAL);
 	}
-
-	f->marker.magic = TRANSFORM_READ_FILTER_MAGIC;
-	f->marker.state = TRANSFORM_STATE_DATA;
-
-	f->code = code;
-	f->name = name;
 	f->transform = t;
-	f->data = (void *)data;
-	f->read = reader;
-	f->skip = skipper;
-	f->close = closer;
-	f->visit_fds = visit_fds;
 	f->upstream = t->filter;
 	t->filter = f;
 
