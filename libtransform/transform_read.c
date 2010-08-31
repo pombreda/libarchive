@@ -317,6 +317,7 @@ free_bidders(struct transform_read *transform)
 	struct transform_read_bidder *tmp;
 	while (transform->bidders) {
 		tmp = transform->bidders->next;
+		transform->bidders->marker.magic = 0;
 		free(transform->bidders);
 		transform->bidders = tmp;
 	}
@@ -498,6 +499,8 @@ transform_read_bidder_add(struct transform *_t,
 			"bidder allocation failed");
 		return (NULL);
 	}
+	bidder->marker.magic = TRANSFORM_READ_BIDDER_MAGIC;
+	bidder->marker.state = TRANSFORM_STATE_NEW;
 	bidder->name = bidder_name;
 	bidder->data = (void *)bidder_data;
 	bidder->bid = bid;

@@ -63,6 +63,8 @@ int transform_read_open2(struct transform *_a, void *client_data,
  * we perform a similar dance with the registered format handlers.
  */
 struct transform_read_bidder {
+	struct marker marker;
+
 	/* Configuration data for the bidder. */
 	void *data;
 
