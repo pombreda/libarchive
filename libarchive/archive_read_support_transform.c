@@ -28,90 +28,119 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_all.c 2
 
 #include "archive.h"
 #include "archive_private.h"
+#include "archive_read_private.h"
+
+static int
+ensure_autodetect_bidder(struct archive_read *ar)
+{
+	if (NULL == ar->autodetect_bidder) {
+		ar->autodetect_bidder = transform_read_add_autodetect(ar->archive.transform);
+		if (NULL == ar->autodetect_bidder) {
+			__archive_set_error_from_transform(&(ar->archive), ar->archive.transform);
+			return (ARCHIVE_FATAL);
+		}
+	}
+	return (ARCHIVE_OK);
+}	
+
+static int
+common_support(struct archive *a, int adder(struct transform_read_bidder *))
+{
+	struct archive_read *ar = (struct archive_read *)a;
+
+	if (ARCHIVE_FATAL == ensure_autodetect_bidder(ar)) {
+		return (ARCHIVE_FATAL);
+	}
+
+	if (TRANSFORM_FATAL == (adder)(ar->autodetect_bidder))
+		return (ARCHIVE_FATAL);
+
+	return (ARCHIVE_OK);
+}
 
 int
 archive_read_support_compression_all(struct archive *a)
 {
-	transform_read_support_compression_all(a->transform);
-	return (ARCHIVE_OK);
+	return common_support(a, transform_autodetect_add_all);
 }
 
 int 
 archive_read_support_compression_bzip2(struct archive *a)
 {
-	return (__convert_transform_error_to_archive_error(a, a->transform,
-		transform_read_support_compression_bzip2(a->transform)));
+	return common_support(a, transform_autodetect_add_bzip2);
 }
 		
 int
 archive_read_support_compression_compress(struct archive *a)
 {
-	return (__convert_transform_error_to_archive_error(a, a->transform,
-		transform_read_support_compression_compress(a->transform)));
+	return common_support(a, transform_autodetect_add_compress);
 }
 
 int
 archive_read_support_compression_gzip(struct archive *a)
 {
-	return (__convert_transform_error_to_archive_error(a, a->transform,
-		transform_read_support_compression_gzip(a->transform)
-		));
+	return common_support(a, transform_autodetect_add_gzip);
 }
 int
 archive_read_support_compression_lzma(struct archive *a)
 {
-	return (__convert_transform_error_to_archive_error(a, a->transform,
-		transform_read_support_compression_lzma(a->transform)));
+	return common_support(a, transform_autodetect_add_lzma);
+}
+
+int
+archive_read_support_compression_lzip(struct archive *a)
+{
+	return common_support(a, transform_autodetect_add_lzip);
+}
+
+int
+archive_read_support_compression_rpm(struct archive *a)
+{
+	return common_support(a, transform_autodetect_add_rpm);
+}
+
+int
+archive_read_support_compression_uu(struct archive *a)
+{
+	return common_support(a, transform_autodetect_add_uu);
+}
+
+int
+archive_read_support_compression_xz(struct archive *a)
+{
+	return common_support(a, transform_autodetect_add_xz);
 }
 
 int
 archive_read_support_compression_none(struct archive *a)
 {
-	return (__convert_transform_error_to_archive_error(a, a->transform,
-		transform_read_support_compression_none(a->transform)));
+	/* this is a pointless noop */
+	return (ARCHIVE_OK);
 }
 
 int
 archive_read_support_compression_program(struct archive *a,
     const char *command)
 {
-	return (__convert_transform_error_to_archive_error(a, a->transform,
-		transform_read_support_compression_program(a->transform, command)));
+	return archive_read_support_compression_program_signature(a,
+		command, NULL, 0);
 }
 
 int
 archive_read_support_compression_program_signature(struct archive *a,
    const char *cmd, const void *signature, size_t signature_len)
 {
-	return (__convert_transform_error_to_archive_error(a, a->transform,
-		transform_read_support_compression_program_signature(a->transform,
-			cmd, signature, signature_len)));
+	struct archive_read *ar = (struct archive_read *)a;
+
+	if (ARCHIVE_FATAL == ensure_autodetect_bidder(ar)) {
+		return (ARCHIVE_FATAL);
+	}
+
+	if (TRANSFORM_FATAL == transform_autodetect_add_program_signature(
+		ar->autodetect_bidder, cmd, signature, signature_len)) {
+		__archive_set_error_from_transform(a, a->transform);
+		return (ARCHIVE_FATAL);
+	}
+	return (ARCHIVE_OK);
 }
 
-int
-archive_read_support_compression_rpm(struct archive *a)
-{
-	return (__convert_transform_error_to_archive_error(a, a->transform,
-		transform_read_support_compression_rpm(a->transform)));
-}
-
-int
-archive_read_support_compression_uu(struct archive *a)
-{
-	return (__convert_transform_error_to_archive_error(a, a->transform,
-		transform_read_support_compression_uu(a->transform)));
-}
-
-int
-archive_read_support_compression_xz(struct archive *a)
-{
-	return (__convert_transform_error_to_archive_error(a, a->transform,
-		transform_read_support_compression_xz(a->transform)));
-}
-
-int
-archive_read_support_compression_lzip(struct archive *a)
-{
-	return (__convert_transform_error_to_archive_error(a, a->transform,
-		transform_read_support_compression_lzip(a->transform)));
-}
