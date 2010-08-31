@@ -103,10 +103,16 @@ __transform_check_state(struct marker *m, unsigned int magic,
 		&(((struct transform_read_filter *)(f))->transform->transform), 	\
 		&(((struct transform_read_filter *)(f))->marker), 		\
 		(magic), (state), "transform_read_filter", (function))
-    
+
+#define __transform_read_bidder_check_magic(t, b, magic, state, function)	\
+	__transform_check_magic((t),											\
+		&(((struct transform_read_bidder *)(b))->marker),					\
+		(magic), (state), "transform_read_bidder", (function))
+
 int	__transform_check_magic(struct transform *, struct marker *,
 	unsigned int magic, unsigned int state, const char *type, 
 	const char *func);
+
 #define	transform_check_magic(a, expected_magic, allowed_states, function_name) \
 	do { \
 		int magic_test = __transform_check_magic((a), &((a)->marker), \

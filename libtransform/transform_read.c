@@ -230,48 +230,37 @@ transform_read_open2(struct transform *_a, void *client_data,
  * building the pipeline.
  */
 static int
-build_stream(struct transform_read *a)
+build_stream(struct transform_read *t)
 {
-	int bid, best_bid, ret;
-	struct transform_read_bidder *bidder, *best_bidder;
+	int ret;
+	struct transform_read_bidder *bidder;
 	ssize_t avail;
 
-	for (;;) {
-		best_bid = 0;
-		best_bidder = NULL;
+	bidder = t->bidders;
+	while (bidder) {
+		ret = (bidder->create_filter)((struct transform *)t, bidder->data);
 
-		bidder = a->bidders;
-		for (bidder = a->bidders; NULL != bidder; bidder = bidder->next) {
-			if (bidder->bid != NULL) {
-				bid = (bidder->bid)(bidder->data, a->filter);
-				if (bid > best_bid) {
-					best_bid = bid;
-					best_bidder = bidder;
-				}
+		if (TRANSFORM_FATAL != ret) {
+			/* do a single byte read to verify this filter transforms properly */
+			transform_read_filter_ahead(t->filter, 1, &avail);
+			if (TRANSFORM_FATAL == avail) {
+				/* 
+				 * this will ignore eof and warnings.
+				 * we do not view an EOF as an error here- if a later
+				 * opener requires a read and fails, than it's a failure
+				 */
+				ret = TRANSFORM_FATAL;
 			}
-		}
+		}			
 
-		/* If no bidder, we're done. */
-		if (best_bidder == NULL) {
-			/* Verify the filter by asking it for some data. */
-			transform_read_filter_ahead(a->filter, 1, &avail);
-			if (avail < 0) {
-				close_filters(a);
-				free_filters(a);
-				return (TRANSFORM_FATAL);
-			}
-			return (TRANSFORM_OK);
-		}
-
-		ret = (best_bidder->create_filter)((struct transform *)a, best_bidder->data);
-
-		/* cleanup and deallocation... */
 		if (TRANSFORM_FATAL == ret) {
-			close_filters(a);
-			free_filters(a);
+			close_filters(t);
+			free_filters(t);
 			return (TRANSFORM_FATAL);
 		}
+		bidder = bidder->next;
 	}
+	return (TRANSFORM_OK);
 }
 
 static int
@@ -307,17 +296,35 @@ free_filters(struct transform_read *a)
 	}
 }
 
+int
+transform_read_bidder_free(struct transform_read_bidder *bidder)
+{
+	int ret = TRANSFORM_OK;
+
+	bidder->marker.magic = 0;
+	bidder->marker.state = TRANSFORM_STATE_FATAL;
+
+	if (bidder->free) {
+		ret = (bidder->free)(bidder->data);
+	}
+
+	free(bidder);
+
+	return (ret);
+}
+
 static void
 free_bidders(struct transform_read *transform)
 {
 	struct transform_read_bidder *tmp;
+	int ret = TRANSFORM_OK;
 	while (transform->bidders) {
 		tmp = transform->bidders->next;
-		transform->bidders->marker.magic = 0;
-		if (transform->bidders->free) {
-			(transform->bidders->free)(transform->bidders->data);
+		int ret2 = transform_read_bidder_free(transform->bidders);
+		if (ret2 < ret) {
+			ret = ret2;
 		}
-		free(transform->bidders);
+
 		transform->bidders = tmp;
 	}
 }		
@@ -460,33 +467,21 @@ _transform_filter_bytes(struct transform *_a, int n)
 	return f == NULL ? -1 : f->bytes_consumed;
 }
 
-
-/*
- * create a new bidder, adding it to this transform
- */
 struct transform_read_bidder *
-transform_read_bidder_add(struct transform *_t,
+transform_read_bidder_create(
 	const void *bidder_data, const char *bidder_name,
-	transform_read_bidder_bid_method *bid,
-	transform_read_bidder_create_filter *create_filter,
-	transform_read_bidder_free *dealloc,
-	transform_read_bidder_set_option *set_option)
+	transform_read_bidder_bid_callback *bid,
+	transform_read_bidder_create_filter_callback *create_filter,
+	transform_read_bidder_free_callback *dealloc,
+	transform_read_bidder_set_option_callback *set_option)
 {
-	struct transform_read *t = (struct transform_read *)_t;
 	struct transform_read_bidder *bidder;
-
-	if(TRANSFORM_OK != __transform_check_magic(_t, &(_t->marker), 
-		TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW, "transform",
-		"transform_read_bidder_add")) {
-		return (NULL);
-	}
 
 	bidder = calloc(1, sizeof(struct transform_read_bidder));
 	if (!bidder) {
-		transform_set_error(_t, ENOMEM,
-			"bidder allocation failed");
 		return (NULL);
 	}
+
 	bidder->marker.magic = TRANSFORM_READ_BIDDER_MAGIC;
 	bidder->marker.state = TRANSFORM_STATE_NEW;
 	bidder->name = bidder_name;
@@ -495,8 +490,48 @@ transform_read_bidder_add(struct transform *_t,
 	bidder->create_filter = create_filter;
 	bidder->free = dealloc;
 	bidder->set_option = set_option;
-	bidder->next = t->bidders;
-	t->bidders = bidder;
+	bidder->next = NULL;
+	return (bidder);
+}
+/*
+ * create a new bidder, adding it to this transform
+ */
+struct transform_read_bidder *
+transform_read_bidder_add(struct transform *_t,
+	const void *bidder_data, const char *bidder_name,
+	transform_read_bidder_bid_callback *bid,
+	transform_read_bidder_create_filter_callback *create_filter,
+	transform_read_bidder_free_callback *dealloc,
+	transform_read_bidder_set_option_callback *set_option)
+{
+	struct transform_read *t = (struct transform_read *)_t;
+	struct transform_read_bidder *bidder, *ptr;
+
+	if(TRANSFORM_OK != __transform_check_magic(_t, &(_t->marker), 
+		TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW, "transform",
+		"transform_read_bidder_add")) {
+		return (NULL);
+	}
+
+	bidder = transform_read_bidder_create(bidder_data, bidder_name,
+		bid, create_filter, dealloc, set_option);
+
+	if (!bidder) {
+		transform_set_error(_t, ENOMEM,
+			"bidder allocation failed");
+		return (NULL);
+	}
+
+	if (t->bidders) {
+		ptr = t->bidders;
+		while (ptr->next) {
+			ptr = ptr->next;
+		}
+		ptr->next = bidder;
+	} else {
+		t->bidders = bidder;
+	}
+	bidder->next = NULL;
 	return (bidder);
 }
 

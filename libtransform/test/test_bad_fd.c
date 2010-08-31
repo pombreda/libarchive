@@ -30,7 +30,7 @@ DEFINE_TEST(test_bad_fd)
 {
 	struct transform *a;
 	assert((a = transform_read_new()) != NULL);
-	assertA(0 == transform_read_support_compression_all(a));
+	assertA(0 == transform_read_add_autodetect_all(a));
 	assertA(TRANSFORM_FATAL == transform_read_open_fd(a, -1, 1024));
 	assertEqualIntA(a, TRANSFORM_OK, transform_read_close(a));
 	assertEqualInt(TRANSFORM_OK, transform_read_free(a));

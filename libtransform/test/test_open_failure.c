@@ -121,7 +121,7 @@ DEFINE_TEST(test_open_failure)
 	a = transform_read_new();
 	assert(a != NULL);
 	assertEqualInt(TRANSFORM_OK,
-	    transform_read_support_compression_compress(a));
+	    transform_read_add_compress(a));
 
 	memset(&private, 0, sizeof(private));
 	private.magic = MAGIC;

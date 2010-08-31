@@ -54,9 +54,9 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_support_compression_pro
 #include "transform.h"
 
 int
-transform_read_support_compression_program(struct transform *a, const char *cmd)
+transform_read_add_program(struct transform *a, const char *cmd)
 {
-	return (transform_read_support_compression_program_signature(a, cmd, NULL, 0));
+	return (transform_read_add_program_signature(a, cmd, NULL, 0));
 }
 
 
@@ -69,7 +69,7 @@ transform_read_support_compression_program(struct transform *a, const char *cmd)
  * this function is actually invoked.
  */
 int
-transform_read_support_compression_program_signature(struct transform *_a,
+transform_read_add_program_signature(struct transform *_a,
     const char *cmd, void *signature, size_t signature_len)
 {
 	(void)_a; /* UNUSED */
@@ -79,6 +79,14 @@ transform_read_support_compression_program_signature(struct transform *_a,
 
 	transform_set_error(_a, -1,
 	    "External compression programs not supported on this platform");
+	return (TRANSFORM_FATAL);
+}
+
+int
+transform_autodetect_add_program_signature(struct transform_read_filter *trb,
+	const char *cmd, void *signature, size_t signature_len)
+{
+	/* yes the lack of error explanation here sucks */
 	return (TRANSFORM_FATAL);
 }
 
@@ -137,7 +145,7 @@ static ssize_t	program_filter_read(struct transform *, void *,
 static int	program_filter_close(struct transform *, void *);
 
 int
-transform_read_support_compression_program_signature(struct transform *_t,
+transform_read_add_program_signature(struct transform *_t,
     const char *cmd, const void *signature, size_t signature_len)
 {
 	struct program_bidder *state;
@@ -158,9 +166,39 @@ transform_read_support_compression_program_signature(struct transform *_t,
 	if (NULL == transform_read_bidder_add(_t, state, "compress", program_bidder_bid,
     	program_bidder_init, program_bidder_free, NULL)) {
 		program_bidder_free(state);
+		return (TRANSFORM_FATAL);
 	}
 	return (TRANSFORM_OK);
 }
+
+int
+transform_autodetect_add_program_signature(struct transform_read_bidder *trb,
+    const char *cmd, const void *signature, size_t signature_len)
+{
+	struct program_bidder *state;
+	int ret;
+
+	/*
+	 * Allocate our private state.
+	 */
+	state = (struct program_bidder *)calloc(1, sizeof (*state));
+	if (state == NULL)
+		return (TRANSFORM_FATAL);
+	state->cmd = strdup(cmd);
+	if (signature != NULL && signature_len > 0) {
+		state->signature_len = signature_len;
+		state->signature = malloc(signature_len);
+		memcpy(state->signature, signature, signature_len);
+	}
+
+	ret = transform_autodetect_add_bidder_create(trb, state, "compress",
+		program_bidder_bid, program_bidder_init, program_bidder_free, NULL);
+	if (TRANSFORM_FATAL == ret) {
+		program_bidder_free(state);
+	}
+	return (ret);
+}
+	
 
 static int
 program_bidder_free(const void *_data)

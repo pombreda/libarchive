@@ -77,7 +77,7 @@ static int	gzip_bidder_bid(const void *, struct transform_read_filter *);
 static int	gzip_bidder_init(struct transform *, const void *);
 
 int
-transform_read_support_compression_gzip(struct transform *_t)
+transform_read_add_gzip(struct transform *_t)
 {
 	if (NULL == transform_read_bidder_add(_t, NULL, "gzip", gzip_bidder_bid,
 		gzip_bidder_init, NULL, NULL)) {
@@ -93,6 +93,13 @@ transform_read_support_compression_gzip(struct transform *_t)
 	return (TRANSFORM_WARN);
 #endif
 }
+
+int
+transform_autodetect_add_gzip(struct transform_read_bidder *trb)
+{
+	return (transform_autodetect_add_bidder_create(trb, NULL, "gzip",
+		gzip_bidder_bid, gzip_bidder_init, NULL, NULL));
+}	
 
 /*
  * Read and verify the header.

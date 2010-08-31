@@ -63,10 +63,17 @@ static ssize_t	rpm_filter_read(struct transform *, void *,
 static int	rpm_filter_close(struct transform *, void *);
 
 int
-transform_read_support_compression_rpm(struct transform *_t)
+transform_read_add_rpm(struct transform *_t)
 {
 	return (transform_read_bidder_add(_t, NULL, "rpm", rpm_bidder_bid,
 		rpm_bidder_init, NULL, NULL) == NULL ? TRANSFORM_FATAL : TRANSFORM_OK);
+}
+
+int
+transform_autodetect_add_rpm(struct transform_read_bidder *trb)
+{
+	return (transform_autodetect_add_bidder_create(trb, NULL, "rpm", rpm_bidder_bid,
+		rpm_bidder_init, NULL, NULL));
 }
 
 static int

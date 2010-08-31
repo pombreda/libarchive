@@ -230,25 +230,6 @@ __LA_DECL struct transform	*transform_read_new(void);
  * support_compression_bzip2().  The "all" functions provide the
  * obvious shorthand.
  */
-/* TODO: Rename 'compression' here to 'filter' for libtransform 3.0, deprecate
- * the old names. */
-
-__LA_DECL int transform_read_support_compression_all(struct transform *);
-__LA_DECL int transform_read_support_compression_bzip2(struct transform *);
-__LA_DECL int transform_read_support_compression_compress(struct transform *);
-__LA_DECL int transform_read_support_compression_gzip(struct transform *);
-__LA_DECL int transform_read_support_compression_lzip(struct transform *);
-__LA_DECL int transform_read_support_compression_lzma(struct transform *);
-__LA_DECL int transform_read_support_compression_none(struct transform *);
-__LA_DECL int transform_read_support_compression_program(struct transform *,
-		     const char *command);
-__LA_DECL int transform_read_support_compression_program_signature
-		(struct transform *, const char *,
-				    const void * /* match */, size_t);
-
-__LA_DECL int transform_read_support_compression_rpm(struct transform *);
-__LA_DECL int transform_read_support_compression_uu(struct transform *);
-__LA_DECL int transform_read_support_compression_xz(struct transform *);
 
 
 /* Open the transform using callbacks for transform I/O. */
@@ -458,21 +439,32 @@ struct transform_read_filter;
  * read bidders
  */
 
-typedef int transform_read_bidder_bid_method(const void *bidder_data,
+typedef int transform_read_bidder_bid_callback(const void *bidder_data,
 	struct transform_read_filter *source);
-typedef int transform_read_bidder_set_option(const void *bidder_data,
+typedef int transform_read_bidder_set_option_callback(const void *bidder_data,
 	const char *key, const char *value);
-typedef int	transform_read_bidder_create_filter(struct transform *,
+typedef int	transform_read_bidder_create_filter_callback(struct transform *,
 	const void *bidder_data);
-typedef int transform_read_bidder_free(const void *bidder_data);
+typedef int transform_read_bidder_free_callback(const void *bidder_data);
+
+__LA_DECL struct transform_read_bidder *
+	transform_read_bidder_create(
+	const void *data, const char *,
+	transform_read_bidder_bid_callback *,
+	transform_read_bidder_create_filter_callback *,
+	transform_read_bidder_free_callback *,
+	transform_read_bidder_set_option_callback *);
 
 __LA_DECL struct transform_read_bidder *
 	transform_read_bidder_add(struct transform *,
 	const void *data, const char *,
-	transform_read_bidder_bid_method *,
-	transform_read_bidder_create_filter *,
-	transform_read_bidder_free *,
-	transform_read_bidder_set_option *);
+	transform_read_bidder_bid_callback *,
+	transform_read_bidder_create_filter_callback *,
+	transform_read_bidder_free_callback *,
+	transform_read_bidder_set_option_callback *);
+
+__LA_DECL int transform_read_bidder_free(
+	struct transform_read_bidder *);
 
 typedef int transform_visit_fds_callback(struct transform *,
 	const void *data, transform_fd_visitor *visitor, const void *visitor_data);
@@ -499,6 +491,56 @@ __LA_DECL struct transform_read_filter *
 	transform_read_filter_skip_callback *,
 	transform_read_filter_close_callback *,
 	transform_read_filter_visit_fds_callback *);
+
+__LA_DECL int transform_autodetect_add_bidder_create(struct transform_read_bidder *,
+	const void *, const char *, 
+	transform_read_bidder_bid_callback *,
+	transform_read_bidder_create_filter_callback *,
+	transform_read_bidder_free_callback *,
+	transform_read_bidder_set_option_callback *);
+
+__LA_DECL int transform_autodetect_add_bidder_add(struct transform_read_bidder *autodetecter,
+	struct transform_read_bidder *new_bidder);
+
+/* 
+ * special case; most bidder additions return an int, this returns the bidder
+ * which can then have specific detection bidders added
+ */
+struct transform_read_bidder *transform_read_add_autodetect(struct transform *);
+
+/* used to force a decompression filter directly. */
+__LA_DECL int transform_read_add_autodetect_all(struct transform *);
+__LA_DECL int transform_read_add_bzip2(struct transform *);
+__LA_DECL int transform_read_add_compress(struct transform *);
+__LA_DECL int transform_read_add_gzip(struct transform *);
+__LA_DECL int transform_read_add_lzip(struct transform *);
+__LA_DECL int transform_read_add_lzma(struct transform *);
+__LA_DECL int transform_read_add_program(struct transform *,
+	const char *command);
+__LA_DECL int transform_read_add_program_signature
+		(struct transform *, const char *,
+				    const void * /* match */, size_t);
+
+__LA_DECL int transform_read_add_rpm(struct transform *);
+__LA_DECL int transform_read_add_uu(struct transform *);
+__LA_DECL int transform_read_add_xz(struct transform *);
+
+/* add autodetection support */
+__LA_DECL int transform_autodetect_add_all(struct transform_read_bidder *);
+__LA_DECL int transform_autodetect_add_bzip2(struct transform_read_bidder *);
+__LA_DECL int transform_autodetect_add_compress(struct transform_read_bidder *);
+__LA_DECL int transform_autodetect_add_gzip(struct transform_read_bidder *);
+__LA_DECL int transform_autodetect_add_lzip(struct transform_read_bidder *);
+__LA_DECL int transform_autodetect_add_lzma(struct transform_read_bidder *);
+__LA_DECL int transform_autodetect_add_program(struct transform_read_bidder *);
+__LA_DECL int transform_autodetect_add_program_signature
+		(struct transform_read_bidder *, const char *,
+				    const void * /* match */, size_t);
+
+__LA_DECL int transform_autodetect_add_rpm(struct transform_read_bidder *);
+__LA_DECL int transform_autodetect_add_uu(struct transform_read_bidder *);
+__LA_DECL int transform_autodetect_add_xz(struct transform_read_bidder *);
+
 
                     
 

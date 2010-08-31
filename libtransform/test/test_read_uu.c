@@ -105,8 +105,11 @@ test_read_uu_sub(const char *uu_ref_file, const char *raw_ref_file)
 		size = extra * 1024 + uusize;
 
 		assert((a = transform_read_new()) != NULL);
-		assertEqualIntA(a, TRANSFORM_OK,
-		    transform_read_support_compression_uu(a));
+		struct transform_read_bidder *trb;
+		assert(NULL != (trb = transform_read_add_autodetect(a)));
+		assertEqualInt(TRANSFORM_OK, transform_autodetect_add_uu(trb));
+//		assertEqualIntA(a, TRANSFORM_OK,
+//		    transform_read_add_uu(a));
 		assertEqualIntA(a, TRANSFORM_OK,
 		    read_open_memory(a, buff, size, 2));
 

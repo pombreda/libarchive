@@ -141,10 +141,18 @@ static int next_code(struct transform *, struct private_data *,
 	struct transform_read_filter *);
 
 int
-transform_read_support_compression_compress(struct transform *_t)
+transform_read_add_compress(struct transform *_t)
 {
 	return (transform_read_bidder_add(_t, NULL, "compress", compress_bidder_bid, 
 		compress_bidder_init, NULL, NULL) == NULL ? TRANSFORM_FATAL : TRANSFORM_OK);
+}
+
+int
+transform_autodetect_add_compress(struct transform_read_bidder *trb)
+{
+	return (transform_autodetect_add_bidder_create(trb, NULL, "compress",
+		compress_bidder_bid, 
+		compress_bidder_init, NULL, NULL));
 }
 
 /*

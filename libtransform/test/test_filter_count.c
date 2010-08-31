@@ -29,7 +29,7 @@ void
 read_test(const char *name)
 {
 	struct transform* a = transform_read_new();
-	if(TRANSFORM_OK != transform_read_support_compression_bzip2(a)) {
+	if(TRANSFORM_OK != transform_read_add_bzip2(a)) {
 		skipping("bzip2 unsupported");
 		return;
 	}

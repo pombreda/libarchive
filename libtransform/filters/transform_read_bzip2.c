@@ -71,12 +71,13 @@ static int	bzip2_reader_bid(const void *, struct transform_read_filter *);
 static int	bzip2_reader_init(struct transform *, const void *);
 
 int
-transform_read_support_compression_bzip2(struct transform *_t)
+transform_read_add_bzip2(struct transform *_t)
 {
 	if (!transform_read_bidder_add(_t, NULL, "bzip2",
-		bzip2_reader_bid, bzip2_reader_init, NULL, NULL))
+		bzip2_reader_bid, bzip2_reader_init, NULL, NULL)) {
 		return (TRANSFORM_FATAL);
-	
+	}
+
 #if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 	return (TRANSFORM_OK);
 #else
@@ -84,6 +85,13 @@ transform_read_support_compression_bzip2(struct transform *_t)
 	    "Using external bunzip2 program");
 	return (TRANSFORM_WARN);
 #endif
+}
+
+int
+transform_autodetect_add_bzip2(struct transform_read_bidder *trb)
+{
+	return (transform_autodetect_add_bidder_create(trb, NULL, "bzip2",
+		bzip2_reader_bid, bzip2_reader_init, NULL, NULL));
 }
 
 /*

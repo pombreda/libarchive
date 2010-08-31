@@ -71,16 +71,15 @@ struct transform_read_bidder {
 	const char *name;
 
 	/* Taste the upstream filter to see if we handle this. */
-	transform_read_bidder_bid_method *bid;
+	transform_read_bidder_bid_callback *bid;
 	/* create a new filter. */
-	transform_read_bidder_create_filter *create_filter;
+	transform_read_bidder_create_filter_callback *create_filter;
 
 	/* Set an option for the filter bidder. */
-	transform_read_bidder_set_option *set_option;
-
+	transform_read_bidder_set_option_callback *set_option;
 
 	/* Release the bidder's configuration data. */
-	transform_read_bidder_free *free;
+	transform_read_bidder_free_callback *free;
 
 	struct transform_read_bidder *next;
 };

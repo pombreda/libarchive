@@ -45,7 +45,7 @@ read_test(char *filename)
 	extract_reference_file(filename);
 	fd = open(filename, O_RDONLY);
 	assert(fd >= 0);
-	transform_read_support_compression_all(t);
+	transform_read_add_autodetect_all(t);
 	assertEqualIntA(t, TRANSFORM_OK, transform_read_open_fd(t, fd, 0));
 	assertEqualIntA(t, TRANSFORM_OK, transform_visit_fds(t, callback, (void *)fds));
 	assertEqualInt(fds[0], fd);
