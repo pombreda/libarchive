@@ -314,6 +314,9 @@ free_bidders(struct transform_read *transform)
 	while (transform->bidders) {
 		tmp = transform->bidders->next;
 		transform->bidders->marker.magic = 0;
+		if (transform->bidders->free) {
+			(transform->bidders->free)(transform->bidders->data);
+		}
 		free(transform->bidders);
 		transform->bidders = tmp;
 	}
@@ -390,7 +393,6 @@ static int
 _transform_read_free(struct transform *_a)
 {
 	struct transform_read *a = (struct transform_read *)_a;
-	int i, n;
 	int r = TRANSFORM_OK;
 
 	if (_a == NULL)
@@ -406,16 +408,6 @@ _transform_read_free(struct transform *_a)
 
 	/* Free the bidders.  Note this is safe to invoke multiple times. */
 	free_bidders(a);
-
-	/* Release the bidder objects. */
-	n = sizeof(a->bidders)/sizeof(a->bidders[0]);
-	for (i = 0; i < n; i++) {
-		if (a->bidders[i].free != NULL) {
-			int r1 = (a->bidders[i].free)(&a->bidders[i]);
-			if (r1 < r)
-				r = r1;
-		}
-	}
 
 	transform_string_free(&a->transform.error_string);
 	a->transform.marker.magic = 0;
