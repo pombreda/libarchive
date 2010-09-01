@@ -70,12 +70,12 @@ transform_read_open_memory2(struct transform *a, void *buff,
 {
 	struct read_memory_data *mine;
 
-	mine = (struct read_memory_data *)malloc(sizeof(*mine));
+	mine = (struct read_memory_data *)calloc(1, sizeof(*mine));
 	if (mine == NULL) {
 		transform_set_error(a, ENOMEM, "No memory");
 		return (TRANSFORM_FATAL);
 	}
-	memset(mine, 0, sizeof(*mine));
+
 	mine->buffer = (unsigned char *)buff;
 	mine->end = mine->buffer + size;
 	mine->read_size = read_size;
