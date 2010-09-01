@@ -118,10 +118,20 @@ struct transform_read_filter {
 	size_t		 buffer_size;
 	char		*next;		/* Current read location. */
 	size_t		 avail;		/* Bytes in my buffer. */
-	const void	*client_buff;	/* Client buffer information. */
+
+
+	/* 
+	 * client side buffering
+	 * for example, if the client requests a lookahead 2x the
+	 * blocking, the resultant char * that the data is accrued in
+	 * is in within the client_buff.
+	 */
+	const void	*client_buff;
 	size_t		 client_total;
 	const char	*client_next;
 	size_t		 client_avail;
+
+	/* filter state info */
 	char		 end_of_file;
 	char		 fatal;
 };

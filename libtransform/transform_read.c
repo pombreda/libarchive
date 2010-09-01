@@ -709,12 +709,15 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 		 */
 		if (filter->client_total >= filter->client_avail + filter->avail
 		    && filter->client_avail + filter->avail >= min) {
+
 			/* "Roll back" to client buffer. */
 			filter->client_avail += filter->avail;
 			filter->client_next -= filter->avail;
+
 			/* Copy buffer is now empty. */
 			filter->avail = 0;
 			filter->next = filter->buffer;
+
 			/* Return data from client buffer. */
 			if (avail != NULL)
 				*avail = filter->client_avail;
@@ -736,8 +739,10 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 					*avail = 0;
 				return (NULL);
 			}
+
 			bytes_read = (filter->read)((struct transform *)filter->transform, filter->data,
 			    filter->upstream, &filter->client_buff);
+
 			if (bytes_read < 0) {		/* Read error. */
 				filter->client_total = filter->client_avail = 0;
 				filter->client_next = filter->client_buff = NULL;
@@ -746,6 +751,7 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 					*avail = TRANSFORM_FATAL;
 				return (NULL);
 			}
+
 			if (bytes_read == 0) {	/* Premature end-of-file. */
 				filter->client_total = filter->client_avail = 0;
 				filter->client_next = filter->client_buff = NULL;
@@ -792,7 +798,7 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 					s = t;
 				}
 				/* Now s >= min, so allocate a new buffer. */
-				p = (char *)malloc(s);
+				p = (char *)realloc(filter->buffer, s);
 				if (p == NULL) {
 					transform_set_error(
 						&filter->transform->transform,
@@ -803,10 +809,9 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 						*avail = TRANSFORM_FATAL;
 					return (NULL);
 				}
-				/* Move data into newly-enlarged buffer. */
-				if (filter->avail > 0)
+				/* we only need to move data if there wasn't a buffer already */
+				if (filter->avail > 0 && !filter->buffer)
 					memmove(p, filter->next, filter->avail);
-				free(filter->buffer);
 				filter->next = filter->buffer = p;
 				filter->buffer_size = s;
 			}
