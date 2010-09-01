@@ -95,12 +95,11 @@ transform_read_new(void)
 {
 	struct transform_read *a;
 
-	a = (struct transform_read *)malloc(sizeof(*a));
+	a = (struct transform_read *)calloc(1, sizeof(*a));
 	if (a == NULL)
 		return (NULL);
-	memset(a, 0, sizeof(*a));
-	a->transform.marker.magic = TRANSFORM_READ_MAGIC;
 
+	a->transform.marker.magic = TRANSFORM_READ_MAGIC;
 	a->transform.marker.state = TRANSFORM_STATE_NEW;
 	a->transform.vtable = transform_read_vtable();
 
