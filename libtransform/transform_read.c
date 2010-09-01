@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2010 Brian Harring
  * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
@@ -67,7 +68,6 @@ static const char *_transform_filter_name(struct transform *, int);
 static int  _transform_filter_count(struct transform *);
 static int	_transform_read_close(struct transform *);
 static int	_transform_read_free(struct transform *);
-static int64_t  advance_file_pointer(struct transform_read_filter *, int64_t);
 
 static struct transform_vtable *
 transform_read_vtable(void)
@@ -862,7 +862,7 @@ transform_read_filter_consume(struct transform_read_filter *filter,
 		return (TRANSFORM_FATAL);
 	}
 
-	skipped = advance_file_pointer(filter, request);
+	skipped = transform_read_filter_skip(filter, request);
 
 	if (skipped == request)
 		return (skipped);
@@ -882,12 +882,18 @@ transform_read_filter_consume(struct transform_read_filter *filter,
  * request if EOF is encountered first.
  * Returns a negative value if there's an I/O error.
  */
-static int64_t
-advance_file_pointer(struct transform_read_filter *filter, int64_t request)
+int64_t
+transform_read_filter_skip(struct transform_read_filter *filter, int64_t request)
 {
 	int64_t bytes_skipped, total_bytes_skipped = 0;
 	ssize_t bytes_read;
 	size_t min;
+
+	if (TRANSFORM_FATAL == __transform_filter_check_magic(filter,
+		TRANSFORM_READ_FILTER_MAGIC, TRANSFORM_STATE_DATA,
+		"transform_read_filter_skip")) {
+		return (TRANSFORM_FATAL);
+	}
 
 	if (filter->fatal)
 		return (-1);
