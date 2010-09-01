@@ -168,10 +168,10 @@ struct transform;
 
 struct transform_read_filter;
 
-int64_t transform_read_filter_consume(struct transform_read_filter *, int64_t);
-const void *transform_read_filter_ahead(struct transform_read_filter *,
+__LA_INT64_T transform_read_filter_consume(struct transform_read_filter *, int64_t);
+__LA_DECL const void *transform_read_filter_ahead(struct transform_read_filter *,
 	size_t, ssize_t *);
-    
+
 
 /* Returns pointer and size of next block of data from transform. */
 typedef __LA_SSIZE_T	transform_read_callback(struct transform *,
