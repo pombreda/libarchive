@@ -113,18 +113,19 @@ struct transform_read_filter {
 
 	int64_t bytes_consumed;
 
-	/* Used by reblocking logic. */
+	/* Used by reblocking logic.
+	 * for example, if the invoking code requests a lookahead 2x the
+	 * blocking, the resultant char * that the data is accrued in
+	 * is buffer.
+	 */
+
 	char		*buffer;
 	size_t		 buffer_size;
 	char		*next;		/* Current read location. */
 	size_t		 avail;		/* Bytes in my buffer. */
 
-
 	/* 
-	 * client side buffering
-	 * for example, if the client requests a lookahead 2x the
-	 * blocking, the resultant char * that the data is accrued in
-	 * is in within the client_buff.
+	 * this is our upstream exposed buffers.
 	 */
 	const void	*client_buff;
 	size_t		 client_total;

@@ -827,6 +827,9 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 			if (tocopy > filter->client_avail)
 				tocopy = filter->client_avail;
 
+			/* really feels like we could struct it to avoid this, returning
+			 * the buffer directly (or reading into the appropriately sized buffer
+			 */
 			memcpy(filter->next + filter->avail, filter->client_next,
 			    tocopy);
 			/* Remove this data from client buffer. */
