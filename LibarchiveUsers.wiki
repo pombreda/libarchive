@@ -14,6 +14,7 @@
   * [http://www.netbsd.org/ NetBSD]'s pkg_install package manager uses libarchive.
   * [http://cmake.org/ CMake] uses libarchive
   * [http://crux.nu/gitweb/?p=tools/pkgutils.git pkgutils] from the [http://crux.nu/ CRUX distribution] use libarchive
+  * The [http://paludis.pioto.org/ Paludis] multi-format package manager for [http://www.gentoo.org/ Gentoo] and [http://www.exherbo.org/ Exherbo] uses libarchive
 
  * Archiving tools and File Browsers
   * The [http://www.tarsnap.com/ tarsnap] service uses libarchive in its client software.
