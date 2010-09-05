@@ -930,7 +930,7 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 	/* If there's an optimized skip function, use it. */
 	if (filter->skip != NULL) {
 		bytes_skipped = (filter->skip)((struct transform *)filter->transform, 
-			filter->data, request);
+			filter->data, filter->upstream, request);
 		if (bytes_skipped < 0) {	/* error */
 			filter->fatal = 1;
 			return (bytes_skipped);

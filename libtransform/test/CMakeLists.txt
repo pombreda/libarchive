@@ -39,6 +39,7 @@ IF(ENABLE_TEST)
     test_open_filename.c
     test_pax_filename_encoding.c
     test_read_compress_program.c
+    test_read_window.c
     test_read_data_large.c
     test_read_disk.c
     test_read_disk_entry_from_file.c

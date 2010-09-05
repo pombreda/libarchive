@@ -90,6 +90,7 @@ libtransform_la_SOURCES = 									\
 	libtransform/filters/transform_read_rpm.c	\
 	libtransform/filters/transform_read_uu.c	\
 	libtransform/filters/transform_read_xz.c	\
+	libtransform/filters/transform_read_window.c	\
 	libtransform/transform_write.c							\
 	libtransform/transform_write_set_options.c		\
 	libtransform/transform_write_open_fd.c			\
@@ -160,7 +161,8 @@ libtransform_test_SOURCES=					\
 	libtransform/test/test_open_failure.c				\
 	libtransform/test/test_transform_type.c					\
 	libtransform/test/test_visit_fds.c			\
-	libtransform/test/test_read_file_nonexistent.c	
+	libtransform/test/test_read_file_nonexistent.c		\	
+	libtransform/test/test_read_window.c	
 #	libtransform/test/test_open_fd.c				\
 #	libtransform/test/test_open_file.c			\
 #	libtransform/test/test_open_filename.c			

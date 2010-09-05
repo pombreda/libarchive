@@ -182,7 +182,7 @@ typedef __LA_SSIZE_T	transform_read_callback(struct transform *,
 /* Libtransform 3.0 uses int64_t here, which is actually guaranteed to be
  * 64 bits on every platform. */
 typedef __LA_INT64_T	transform_skip_callback(struct transform *,
-			    void *_client_data, __LA_INT64_T request);
+	void *_client_data, struct transform_read_filter *, __LA_INT64_T request);
 
 /* Returns size actually written, zero on EOF, -1 on error. */
 typedef __LA_SSIZE_T	transform_write_callback(struct transform *,
@@ -209,6 +209,7 @@ typedef int transform_fd_visitor(struct transform *,
 #define	TRANSFORM_FILTER_UU	7
 #define	TRANSFORM_FILTER_RPM	8
 #define	TRANSFORM_FILTER_LZIP	9
+#define TRANSFORM_FILTER_WINDOW	10
 
 /*-
  * Basic outline for reading an transform:
@@ -525,6 +526,8 @@ __LA_DECL int transform_read_add_program_signature
 __LA_DECL int transform_read_add_rpm(struct transform *);
 __LA_DECL int transform_read_add_uu(struct transform *);
 __LA_DECL int transform_read_add_xz(struct transform *);
+__LA_DECL int transform_read_add_window(struct transform *,
+	int64_t start_offset, int64_t length);
 
 /* add autodetection support */
 __LA_DECL int transform_autodetect_add_all(struct transform_read_bidder *);

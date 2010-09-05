@@ -49,7 +49,8 @@ struct read_memory_data {
 
 static int	memory_read_close(struct transform *, void *);
 static int	memory_read_open(struct transform *, void *);
-static int64_t	memory_read_skip(struct transform *, void *, int64_t request);
+static int64_t	memory_read_skip(struct transform *, void *,
+	struct transform_read_filter *upstream, int64_t request);
 static ssize_t	memory_read(struct transform *, void *, struct transform_read_filter *,
 	const void **buff);
 
@@ -123,11 +124,14 @@ memory_read(struct transform *t, void *client_data,
  * as a test harness.
  */
 static int64_t
-memory_read_skip(struct transform *t, void *client_data, int64_t skip)
+memory_read_skip(struct transform *t, void *client_data,
+	struct transform_read_filter *upstream, int64_t skip)
 {
 	struct read_memory_data *mine = (struct read_memory_data *)client_data;
 
 	(void)t; /* UNUSED */
+	(void)upstream;
+	
 	if ((int64_t)skip > (int64_t)(mine->end - mine->buffer))
 		skip = mine->end - mine->buffer;
 	/* Round down to block size. */

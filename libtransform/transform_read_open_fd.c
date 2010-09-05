@@ -61,7 +61,8 @@ struct read_fd_data {
 static int	file_close(struct transform *, void *);
 static ssize_t	file_read(struct transform *, void *, struct transform_read_filter *,
 	const void **buff);
-static int64_t	file_skip(struct transform *, void *, int64_t request);
+static int64_t	file_skip(struct transform *, void *, struct transform_read_filter *,
+	int64_t request);
 static int      file_visit_fds(struct transform *, const void *,
 	transform_fd_visitor *visitor, const void *visitor_data);
 
@@ -201,10 +202,13 @@ file_read(struct transform *t, void *client_data, struct transform_read_filter *
 }
 
 static int64_t
-file_skip(struct transform *t, void *client_data, int64_t request)
+file_skip(struct transform *t, void *client_data, struct transform_read_filter *upstream,
+	int64_t request)
 {
 	struct read_fd_data *mine = (struct read_fd_data *)client_data;
 	off_t old_offset, new_offset;
+
+	(void)upstream;
 
 	if (!mine->use_lseek)
 		return (0);
