@@ -50,9 +50,11 @@ struct read_memory_data {
 static int	memory_read_close(struct transform *, void *);
 static int	memory_read_open(struct transform *, void *);
 #if ARCHIVE_VERSION_NUMBER < 3000000
-static off_t	memory_read_skip(struct transform *, void *, off_t request);
+static off_t	memory_read_skip(struct transform *, void *, 
+	struct transform_read_filter *, off_t request);
 #else
-static int64_t	memory_read_skip(struct transform *, void *, int64_t request);
+static int64_t	memory_read_skip(struct transform *, void *,
+	struct transform_read_filter *, int64_t request);
 #endif
 static ssize_t	memory_read(struct transform *, void *, 
 	struct transform_read_filter *, const void **buff);
@@ -145,15 +147,18 @@ memory_read(struct transform *t, void *client_data,
  */
 #if ARCHIVE_VERSION_NUMBER < 3000000
 static off_t
-memory_read_skip(struct transform *t, void *client_data, off_t skip)
+memory_read_skip(struct transform *t, void *client_data, 
+	struct transform_read_filter *upstream, off_t skip)
 #else
 static int64_t
-memory_read_skip(struct transform *t, void *client_data, int64_t skip)
+memory_read_skip(struct transform *t, void *client_data,
+	struct transform_read_filter *upstream, int64_t skip)
 #endif
 {
 	struct read_memory_data *mine = (struct read_memory_data *)client_data;
 
 	(void)t; /* UNUSED */
+	(void)upstream;
 	/* We can't skip by more than is available. */
 	if ((off_t)skip > (off_t)(mine->end - mine->buffer))
 		skip = mine->end - mine->buffer;

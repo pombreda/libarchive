@@ -141,9 +141,11 @@ int __archive_shim_open(struct transform *, void *);
 int __archive_shim_close(struct transform *, void *);
 
 #if ARCHIVE_VERSION_NUMBER < 3000000
-off_t __archive_shim_skip(struct transform *, void *, off_t);
+off_t __archive_shim_skip(struct transform *, void *,
+	struct transform_read_filter *, off_t);
 #else
-int64_t __archive_shim_skip(struct transform *, void *, int64_t);
+int64_t __archive_shim_skip(struct transform *, void *, 
+	struct transform_read_filter *, int64_t);
 #endif
 
 ssize_t __archive_shim_write(struct transform *, void *, const void *, size_t);

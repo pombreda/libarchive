@@ -134,10 +134,12 @@ __archive_shim_close(struct transform *t, void *data)
 /* Libarchive 2.0 used off_t here, but that is a bad idea on Linux and a
  * few other platforms where off_t varies with build settings. */
 off_t
-__archive_shim_skip(struct transform *t, void *data, off_t request)
+__archive_shim_skip(struct transform *t, void *data,
+	struct transform_read_filter *upstream, off_t request)
 #else
 int64_t
-__archive_shim_skip(struct transform *t, void *data, int64_t request)
+__archive_shim_skip(struct transform *t, void *data, 
+	struct transform_read_filter *upstream, int64_t request)
 #endif
 {
 	struct archive_shim *mine = (struct archive_shim *)data;
