@@ -113,7 +113,7 @@ window_bidder_init(struct transform *t, const void *w_bid_data)
 
 	if (TRANSFORM_FATAL == transform_read_filter_add(t, (void *)w_data,
 		"window", TRANSFORM_FILTER_WINDOW, window_read, window_skip,
-		window_free, NULL))
+		window_free, NULL, TRANSFORM_FILTER_NOTIFY_ALL_CONSUME_FLAG))
 		{
 
 		/* note no close is needed- refcount wasn't increased after all. */
@@ -165,15 +165,12 @@ window_read(struct transform *t, void *_data,
 		return (available);
 
 	if (-1 != w_data->allowed) {
-		if (w_data->allowed > available) {
-			w_data->allowed -= available;
-		} else {
+		if (w_data->allowed < available) {
 			available = w_data->allowed;
-			w_data->allowed = 0;
 		}
 	}
 
-	transform_read_filter_consume(upstream, available);
+	// transform_read_filter_consume(upstream, available);
 
 	return (available);
 }
@@ -185,14 +182,12 @@ window_skip(struct transform *t, void *_data,
 {
 	struct window_data *w_data = (struct window_data *)_data;
 	int64_t skipped;
-	if (-1 == w_data->allowed) {
-		return (transform_read_filter_skip(upstream, request));
-	}
-	if (request > w_data->allowed) {
+
+	if (-1 != w_data->allowed && request > w_data->allowed) {
 		return (-1);
 	}
 	skipped = transform_read_filter_skip(upstream, request);
-	if (skipped > 0)
+	if (-1 != w_data->allowed && skipped > 0)
 		w_data->allowed -= skipped;
 	return (skipped);
 }

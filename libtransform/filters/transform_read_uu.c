@@ -355,7 +355,7 @@ uudecode_bidder_init(struct transform *transform, const void *bidder_data)
 
 	ret = transform_read_filter_add(transform, (void *)uudecode,
 		"uu", TRANSFORM_FILTER_UU,
-		uudecode_filter_read, NULL, uudecode_filter_close, NULL);
+		uudecode_filter_read, NULL, uudecode_filter_close, NULL, 0);
 
 	if (TRANSFORM_OK != ret) {
 		uudecode_filter_close(transform, (void *)uudecode);

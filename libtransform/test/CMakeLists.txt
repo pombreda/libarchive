@@ -42,6 +42,7 @@ IF(ENABLE_TEST)
     test_read_window.c
     test_read_data_large.c
     test_read_disk.c
+    test_read_transform.c
     test_read_disk_entry_from_file.c
     test_read_extract.c
     test_read_file_nonexistent.c

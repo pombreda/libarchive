@@ -423,7 +423,7 @@ __transform_read_program(struct transform *transform,
 
 	ret = transform_read_filter_add(transform, (void *)state,
 		name, magic,
-		program_filter_read, NULL, program_filter_close, NULL);
+		program_filter_read, NULL, program_filter_close, NULL, 0);
 
 	if (TRANSFORM_OK != ret) {
 		program_filter_close(transform, state);

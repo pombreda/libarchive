@@ -59,7 +59,6 @@ read_test(char *filename)
 	assert(trg == NULL);
 	assertEqualInt(avail, 0);
 	assertEqualIntA(t, TRANSFORM_FATAL, transform_read_consume(t, 1));
-
 	transform_read_free(t);
 
 	/* verify behaviour when the start is larger than the source */
@@ -78,12 +77,13 @@ read_test(char *filename)
 	trg = (void *)transform_read_ahead(t, 1, &avail);
 	assert(NULL != trg);
 	assertEqualInt(avail, 1);
-	assertEqualInt(*((char *)trg), *((char *)src + st.st_size -1));
+	assertEqualMem(trg, src + st.st_size -1, 1);
 	assertEqualInt(1, transform_read_consume(t, 1));
 
 	trg = (void *)transform_read_ahead(t, 1, &avail);
 	assert(NULL == trg);
 	assertEqualInt(avail, 0);
+	transform_read_free(t);
 
 	/* verify pass thru.  stupid usage, but it simplifies client usage in
 	 * allowing it. */
@@ -107,7 +107,7 @@ read_test(char *filename)
 	trg = (void *)transform_read_ahead(t, st.st_size, &avail);
 	assert(NULL != trg);
 	assertEqualInt(avail, st.st_size);
-	assertEqualInt(0, memcmp(trg, src, st.st_size));
+	assertEqualMem(trg, src, st.st_size);
 	assertEqualInt(st.st_size, transform_read_consume(t, st.st_size));
 
 	trg = (void *)transform_read_ahead(t, 1, &avail);
@@ -115,8 +115,6 @@ read_test(char *filename)
 	assertEqualInt(avail, 0);
 
 	transform_read_free(t);
-	
-
 }
 
 /* Verify that attempting to open an invalid fd returns correct error. */

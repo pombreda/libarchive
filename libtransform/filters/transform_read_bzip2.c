@@ -181,7 +181,7 @@ bzip2_reader_init(struct transform *transform, const void *bidder_data)
 	ret = transform_read_filter_add(transform, (void *)state, "bzip2",
 		TRANSFORM_FILTER_BZIP2,
 		bzip2_filter_read, NULL,
-		bzip2_filter_close, NULL);
+		bzip2_filter_close, NULL, 0);
 
 	if (TRANSFORM_OK != ret) {
 		bzip2_filter_close(transform, state);

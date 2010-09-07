@@ -211,6 +211,12 @@ typedef int transform_fd_visitor(struct transform *,
 #define	TRANSFORM_FILTER_LZIP	9
 #define TRANSFORM_FILTER_WINDOW	10
 
+/*
+ * flags related to filter creation
+ */
+#define TRANSFORM_FILTER_NO_FLAGS 0
+#define TRANSFORM_FILTER_NOTIFY_ALL_CONSUME_FLAG 0x1
+
 /*-
  * Basic outline for reading an transform:
  *   1) Ask transform_read_new for an transform reader object.
@@ -264,6 +270,8 @@ __LA_DECL int transform_read_open_fd(struct transform *, int _fd,
 /* Read an transform that's already open, using a FILE *. */
 /* Note: DO NOT use this with tape drives. */
 __LA_DECL int transform_read_open_FILE(struct transform *, FILE *_file);
+__LA_DECL int transform_read_open_transform(struct transform *new, struct transform *src,
+	int64_t start, int64_t offset);
 
 __LA_DECL const void *transform_read_ahead(struct transform *, size_t, ssize_t *);
 __LA_DECL int64_t transform_read_consume(struct transform *, int64_t);
@@ -484,7 +492,8 @@ __LA_DECL int transform_read_filter_add(struct transform *,
 	transform_read_filter_read_callback *,
 	transform_read_filter_skip_callback *,
 	transform_read_filter_close_callback *,
-	transform_read_filter_visit_fds_callback *);
+	transform_read_filter_visit_fds_callback *,
+	int64_t flags);
 
 __LA_DECL struct transform_read_filter *
 	transform_read_filter_new(
@@ -492,7 +501,8 @@ __LA_DECL struct transform_read_filter *
 	transform_read_filter_read_callback *,
 	transform_read_filter_skip_callback *,
 	transform_read_filter_close_callback *,
-	transform_read_filter_visit_fds_callback *);
+	transform_read_filter_visit_fds_callback *,
+	int64_t flags);
 
 __LA_DECL int transform_autodetect_add_bidder_create(struct transform_read_bidder *,
 	const void *, const char *, 

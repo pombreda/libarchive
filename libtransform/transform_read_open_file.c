@@ -102,7 +102,7 @@ transform_read_open_FILE(struct transform *a, FILE *f)
 #endif
 
 	return (transform_read_open2(a, mine, NULL, file_read,
-		    file_skip, file_close, file_visit_fds));
+		    file_skip, file_close, file_visit_fds, 0));
 }
 
 static ssize_t

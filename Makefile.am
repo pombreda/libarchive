@@ -81,6 +81,7 @@ libtransform_la_SOURCES = 									\
 	libtransform/transform_read_open_file.c			\
 	libtransform/transform_read_open_filename.c			\
 	libtransform/transform_read_open_memory.c			\
+	libtransform/transform_read_open_transform.c			\
 	libtransform/filters/transform_read_all.c	\
 	libtransform/filters/transform_read_bzip2.c	\
 	libtransform/filters/transform_read_compress.c	\
@@ -162,7 +163,8 @@ libtransform_test_SOURCES=					\
 	libtransform/test/test_transform_type.c					\
 	libtransform/test/test_visit_fds.c			\
 	libtransform/test/test_read_file_nonexistent.c		\	
-	libtransform/test/test_read_window.c	
+	libtransform/test/test_read_window.c		\
+	libtransform/test/test_read_transform.c	
 #	libtransform/test/test_open_fd.c				\
 #	libtransform/test/test_open_file.c			\
 #	libtransform/test/test_open_filename.c			

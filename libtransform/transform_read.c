@@ -160,7 +160,7 @@ transform_read_open(struct transform *_a, void *client_data,
     transform_close_callback *client_closer)
 {
 	return transform_read_open2(_a, client_data, client_opener,
-		client_reader, client_skipper, client_closer, NULL);
+		client_reader, client_skipper, client_closer, NULL, 0);
 }
 
 int
@@ -169,7 +169,8 @@ transform_read_open2(struct transform *_a, void *client_data,
     transform_read_callback *client_reader,
     transform_skip_callback *client_skipper,
     transform_close_callback *client_closer,
-	transform_read_filter_visit_fds_callback *visit_fds)
+	transform_read_filter_visit_fds_callback *visit_fds,
+	int64_t flags)
 {
 
 	struct transform_read *a = (struct transform_read *)_a;
@@ -201,7 +202,7 @@ transform_read_open2(struct transform *_a, void *client_data,
 	a->client.closer = client_closer;
 
 	filter = transform_read_filter_new(client_data, "none", TRANSFORM_FILTER_NONE,
-		client_reader, client_skipper, client_closer, visit_fds);
+		client_reader, client_skipper, client_closer, visit_fds, flags);
 
 	if (!filter) {
 		transform_set_error(_a, ENOMEM,
@@ -541,7 +542,8 @@ transform_read_filter_new(const void *data, const char *name,
 	transform_read_filter_read_callback *reader,
 	transform_read_filter_skip_callback *skipper,
 	transform_read_filter_close_callback *closer,
-	transform_read_filter_visit_fds_callback *visit_fds)
+	transform_read_filter_visit_fds_callback *visit_fds,
+	int64_t flags)
 {
 	struct transform_read_filter *f;
 	if (NULL == (f = calloc(1, sizeof(struct transform_read_filter)))) {
@@ -560,6 +562,7 @@ transform_read_filter_new(const void *data, const char *name,
 	f->close = closer;
 	f->visit_fds = visit_fds;
 	f->upstream = NULL;
+	f->flags = flags;
 	return (f);
 }
 
@@ -573,7 +576,8 @@ transform_read_filter_add(struct transform *_t,
 	transform_read_filter_read_callback *reader,
 	transform_read_filter_skip_callback *skipper,
 	transform_read_filter_close_callback *closer,
-	transform_read_filter_visit_fds_callback *visit_fds)
+	transform_read_filter_visit_fds_callback *visit_fds,
+	int64_t flags)
 {
 	struct transform_read *t = (struct transform_read *)_t;
 	struct transform_read_filter *f;
@@ -582,7 +586,7 @@ transform_read_filter_add(struct transform *_t,
 		"transform_read_filter_add");
 
 	f = transform_read_filter_new(data, name, code, reader, skipper, closer,
-		visit_fds);
+		visit_fds, flags);
 
 	if (!f) {
 		transform_set_error(_t, ENOMEM,
@@ -924,8 +928,17 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 		filter->bytes_consumed += min;
 		total_bytes_skipped += min;
 	}
-	if (request == 0)
+
+	if (filter->flags & TRANSFORM_FILTER_NOTIFY_ALL_CONSUME_FLAG) {
+		if (total_bytes_skipped && filter->skip) {
+			(filter->skip)((struct transform *)filter->transform,
+				filter->data, filter->upstream, total_bytes_skipped);
+		}
+	}
+
+	if (request == 0) {
 		return (total_bytes_skipped);
+	}
 
 	/* If there's an optimized skip function, use it. */
 	if (filter->skip != NULL) {

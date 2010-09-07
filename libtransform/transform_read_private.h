@@ -45,7 +45,8 @@ int transform_read_open2(struct transform *_a, void *client_data,
     transform_read_callback *client_reader,
     transform_skip_callback *client_skipper,
     transform_close_callback *client_closer,
-    transform_read_filter_visit_fds_callback *);
+    transform_read_filter_visit_fds_callback *,
+    int64_t flags);
 
 /*
  * How bidding works for filters:
@@ -106,6 +107,8 @@ struct transform_read_filter {
 
 	/* My private data. */
 	void *data;
+
+	int64_t flags;
 
 	/* everything following is managed by libtransform */
 

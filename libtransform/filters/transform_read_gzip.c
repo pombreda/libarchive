@@ -250,7 +250,7 @@ gzip_bidder_init(struct transform *transform, const void *bidder_data)
 
 	ret = transform_read_filter_add(transform, (void *)state,
 		"gzip", TRANSFORM_FILTER_GZIP,
-		gzip_filter_read, NULL, gzip_filter_close, NULL);
+		gzip_filter_read, NULL, gzip_filter_close, NULL, 0);
 
 	if (TRANSFORM_OK != ret) {
 		gzip_filter_close(transform, state);
