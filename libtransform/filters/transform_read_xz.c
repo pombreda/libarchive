@@ -914,10 +914,9 @@ lzma_filter_close(struct transform *transform, void *_state)
  *
  */
 static int
-lzma_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
-	const void *bidder_data)
+lzma_bidder_init(struct transform *transform, const void *bidder_data)
 {
-	return (__transform_read_program(transform, bidder, "unlzma",
+	return (__transform_read_program(transform, "unlzma",
 		"lzma",	TRANSFORM_FILTER_LZMA));
 }
 
@@ -925,18 +924,16 @@ lzma_bidder_init(struct transform *transform, struct transform_read_bidder *bidd
 
 
 static int
-xz_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
-	const void *bidder_data)
+xz_bidder_init(struct transform *transform, const void *bidder_data)
 {
-	return (__transform_read_program(transform, bidder, "unxz",
+	return (__transform_read_program(transform, "unxz",
 		"xz", TRANSFORM_FILTER_XZ));
 }
 
 static int
-lzip_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
-	const void *bidder_data)
+lzip_bidder_init(struct transform *transform, const void *bidder_data)
 {
-	return (__transform_read_program(transform, bidder, "unlzip",
+	return (__transform_read_program(transform, "unlzip",
 		"lzip", TRANSFORM_FILTER_LZIP));
 }
 
