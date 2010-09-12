@@ -260,6 +260,57 @@ PyTransform_read(PyTransform *self, PyObject *args)
 	return new_string;
 }
 
+static PyObject *
+PyTransform_iternext(PyTransform *self)
+{
+	ssize_t avail = 0, seen = 0;
+	Py_ssize_t length;
+	PyObject *str;
+	void *buff, *end = NULL;
+
+	if (!_transform_sanity_check(self, T_STATE_DATA, 1))
+		Py_RETURN_NULL;
+
+
+	do {
+		seen += avail;
+		buff = (void *)transform_read_ahead(self->transform, seen + 1, &avail);
+		if (!buff) {
+			if (avail < 0) {
+				/* error... */
+				_convert_and_set_transform_error(NULL, self->transform);
+				Py_RETURN_NULL;
+			}
+			/* EOF */
+			if (avail == 0) {
+				/* no more to return */
+				Py_RETURN_NULL;
+			}
+			break;
+		}
+
+	} while (NULL == (end = memchr(buff + seen, '\n', avail)));
+
+	if (end) {
+		/* increment to consume the newline. */
+		end++;
+	} else {
+		/* else consume all */
+		end = buff + avail;
+	}
+
+	if (end) {
+		str = PyString_FromStringAndSize(buff, end - buff);
+		if (str) {
+			/* error checking. */
+			transform_read_consume(self->transform, end - buff);
+		}
+		return str;
+	}
+	Py_RETURN_NULL;
+}
+		
+
 static PyMethodDef PyTransform_methods[] = {
 	{"open_from_filename", (PyCFunction)PyTransform_open_filename, METH_O},
 	{"read", (PyCFunction)PyTransform_read, METH_VARARGS},
@@ -270,6 +321,7 @@ static PyMemberDef PyTransform_members[] = {
 	{"is_read", T_INT, offsetof(PyTransform, is_read), READONLY},
 	{NULL}
 };
+
 
 static PyTypeObject PyTransformType = {
 	PyObject_HEAD_INIT(NULL)
@@ -299,8 +351,7 @@ static PyTypeObject PyTransformType = {
 	0,                                /* tp_richcompare */
 	0,                                /* tp_weaklistoffset */
 	(getiterfunc)PyObject_SelfIter,   /* tp_iter */
-//	(iternextfunc)PyTransform_iternext, /* tp_iternext */
-	0,
+	(iternextfunc)PyTransform_iternext, /* tp_iternext */
 	PyTransform_methods,          /* tp_methods */
 	PyTransform_members,          /* tp_members */
 	0,                                /* tp_getset */
