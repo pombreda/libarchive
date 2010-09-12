@@ -309,11 +309,42 @@ PyTransform_iternext(PyTransform *self)
 	}
 	Py_RETURN_NULL;
 }
-		
+
+static PyObject *
+PyTransform_write(PyTransform *self, PyObject *data)
+{
+	const void *buf;
+	Py_ssize_t len;
+	int ret;
+
+	if (!_transform_sanity_check(self, T_STATE_DATA, 0))
+		Py_RETURN_NULL;
+
+	if (PyObject_CheckReadBuffer(data)) {
+		if (-1 == PyObject_AsReadBuffer(data, &buf, &len)) {
+			Py_RETURN_NULL;
+		}
+	} else {
+		if (!PyString_Check(data)) {
+			PyErr_SetString(PyExc_TypeError, "write arguement must be a string");
+			Py_RETURN_NULL;
+		}
+		buf = PyString_AS_STRING(data);
+		len = PyString_GET_SIZE(data);
+	}
+
+	if (_transform_int_call(self->transform,
+		transform_write_output(self->transform, buf, len))) {
+		Py_RETURN_NONE;
+	}
+	Py_RETURN_NULL;
+}
+
 
 static PyMethodDef PyTransform_methods[] = {
-	{"open_from_filename", (PyCFunction)PyTransform_open_filename, METH_O},
+	{"open_filename", (PyCFunction)PyTransform_open_filename, METH_O},
 	{"read", (PyCFunction)PyTransform_read, METH_VARARGS},
+	{"write", (PyCFunction)PyTransform_write, METH_O},
 	{NULL}
 };
 
