@@ -310,6 +310,20 @@ PyTransform_iternext(PyTransform *self)
 	Py_RETURN_NULL;
 }
 
+
+static PyObject *
+PyTransform_tell(PyTransform *self)
+{
+	Py_ssize_t count;
+	if (!_transform_sanity_check(self, T_STATE_DATA, -1))
+		Py_RETURN_NULL;
+
+	count = transform_filter_bytes(self->transform, 0);
+	if (count == -1)
+		count = 0;
+	return PyLong_FromSsize_t(count);
+}
+
 static PyObject *
 PyTransform_write(PyTransform *self, PyObject *data)
 {
@@ -345,6 +359,7 @@ static PyMethodDef PyTransform_methods[] = {
 	{"open_filename", (PyCFunction)PyTransform_open_filename, METH_O},
 	{"read", (PyCFunction)PyTransform_read, METH_VARARGS},
 	{"write", (PyCFunction)PyTransform_write, METH_O},
+	{"tell", (PyCFunction)PyTransform_tell, METH_NOARGS},
 	{NULL}
 };
 
