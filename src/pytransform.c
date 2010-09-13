@@ -147,6 +147,56 @@ _transform_sanity_check(PyTransform *self, int allowed_state, int is_read)
 	return 1;
 }
 
+
+
+/* add filters */
+static PyObject *
+PyTransform_add_simple_read_filter(PyTransform *self, PyObject *int_code)
+{
+	unsigned long code = 0;
+	int ret = TRANSFORM_FATAL;
+	if (!_transform_sanity_check(self, T_STATE_NEW, -1)) {
+		Py_RETURN_NULL;
+	}
+
+	if (PyLong_CheckExact(int_code)) {
+		code = PyLong_AsUnsignedLong(int_code);
+	} else {
+		if (!PyInt_CheckExact(int_code)) {
+			PyErr_SetString(PyExc_TypeError, "add_simple_read_filter takes one arg- an integer");
+			Py_RETURN_NULL;
+		}
+		code = PyInt_AsUnsignedLongMask(int_code);
+	}
+
+	if (code == (unsigned long)-1) {
+		Py_RETURN_NULL;
+	}
+
+	switch(code) {
+
+#define f(type, func)	case (type): ret = (func)(self->transform); break;
+
+	f(TRANSFORM_FILTER_GZIP, transform_read_add_gzip);
+	f(TRANSFORM_FILTER_BZIP2, transform_read_add_bzip2);
+	f(TRANSFORM_FILTER_COMPRESS, transform_read_add_compress);
+	f(TRANSFORM_FILTER_LZMA, transform_read_add_lzma);
+	f(TRANSFORM_FILTER_XZ, transform_read_add_xz);
+	f(TRANSFORM_FILTER_UU, transform_read_add_uu);
+	f(TRANSFORM_FILTER_RPM, transform_read_add_rpm);
+	f(TRANSFORM_FILTER_LZIP, transform_read_add_lzip);
+
+	default:
+		PyErr_Format(PyExc_ValueError, "unknown read transform code: %lu", code);
+		Py_RETURN_NULL;
+	}
+
+	if (!_transform_int_call(self->transform, ret))
+		Py_RETURN_NULL;
+	Py_RETURN_NONE;
+}
+
+
 static PyObject *
 PyTransform_open_filename(PyTransform *self, PyObject *filename)
 {
@@ -360,6 +410,8 @@ static PyMethodDef PyTransform_methods[] = {
 	{"read", (PyCFunction)PyTransform_read, METH_VARARGS},
 	{"write", (PyCFunction)PyTransform_write, METH_O},
 	{"tell", (PyCFunction)PyTransform_tell, METH_NOARGS},
+	{"_add_simple_read_filter",
+		(PyCFunction)PyTransform_add_simple_read_filter, METH_O},
 	{NULL}
 };
 
