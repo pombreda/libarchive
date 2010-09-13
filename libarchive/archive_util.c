@@ -457,8 +457,6 @@ __convert_transform_error_to_archive_error(struct archive *a,
 		return (ARCHIVE_WARN);
 	} else if (TRANSFORM_FATAL == error) {
 		return (ARCHIVE_FATAL);
-	} else if (TRANSFORM_FAILED == error) {
-		return (ARCHIVE_FAILED);
 	} else {
 		archive_set_error(a, ARCHIVE_ERRNO_PROGRAMMER,
 			"unknown transform return(%d), errno(%d), error(%s)",

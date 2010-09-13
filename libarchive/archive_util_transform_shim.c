@@ -94,7 +94,7 @@ __archive_error_to_transform(struct archive *a, struct transform *t, int ret)
 	case ARCHIVE_EOF:
 		return TRANSFORM_EOF;
     case ARCHIVE_FAILED:
-    	return TRANSFORM_FAILED;
+    	return TRANSFORM_FATAL;
     case ARCHIVE_WARN:
         return TRANSFORM_WARN;
     default:

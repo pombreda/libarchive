@@ -99,7 +99,7 @@ DEFINE_TEST(test_open_failure)
 	private.open_return = ARCHIVE_FAILED;
 	a = archive_read_new();
 	assert(a != NULL);
-	assertEqualInt(ARCHIVE_FAILED,
+	assertEqualInt(ARCHIVE_FATAL,
 	    archive_read_open(a, &private, my_open, my_read, my_close));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.read_called);
