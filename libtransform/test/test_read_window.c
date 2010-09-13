@@ -64,10 +64,8 @@ read_test(char *filename)
 	/* verify behaviour when the start is larger than the source */
 	assert((t = transform_read_new()) != NULL);
 	assertEqualIntA(t, TRANSFORM_OK, transform_read_add_window(t, st.st_size, 1000));
-	assertEqualIntA(t, TRANSFORM_OK, transform_read_open_filename(t, filename, (10 * 1024)));
-	trg = (void *)transform_read_ahead(t, 1, &avail);
-	assert(NULL == trg);
-	assertEqualInt(avail, 0);
+	/* should blow up immediately, since the window preceedes even accessing the data */
+	assertEqualIntA(t, TRANSFORM_FATAL, transform_read_open_filename(t, filename, (10 * 1024)));
 	transform_read_free(t);
 
 	/* verify behaviour the boundary for EOF */

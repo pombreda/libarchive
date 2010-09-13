@@ -272,6 +272,8 @@ consume_header(struct transform *transform, struct private_data *state,
 	if (len == 0) {
 		return (TRANSFORM_EOF);
 	} else if (len == -1) {
+		transform_set_error(transform, TRANSFORM_ERRNO_MISC,
+			"premature end of file was encountered- data remains, but isn't a gzip stream");
 		return (TRANSFORM_PREMATURE_EOF);
 	}
 	transform_read_filter_consume(upstream, len);

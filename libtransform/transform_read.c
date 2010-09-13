@@ -254,6 +254,8 @@ build_stream(struct transform_read *t)
 				 * opener requires a read and fails, than it's a failure
 				 */
 				ret = TRANSFORM_FATAL;
+			} else if (0 == avail && TRANSFORM_PREMATURE_EOF == t->filter->end_of_file) {
+				ret = TRANSFORM_FATAL;
 			}
 		}			
 

@@ -165,7 +165,14 @@ window_read(struct transform *t, void *_data,
 		return (available);
 	} else if (0 == available) {
 		*bytes_read = 0;
-		return (-1 == w_data->allowed ? TRANSFORM_EOF : TRANSFORM_PREMATURE_EOF);
+		if (-1 == w_data->allowed) {
+			return (TRANSFORM_EOF);
+		}
+		/* probably should be upcopying the error from our transform source here */
+		transform_set_error(t, TRANSFORM_ERRNO_MISC,
+			"premature EOF encountered- still had %lu bytes left",
+			w_data->allowed);
+		return (TRANSFORM_PREMATURE_EOF);
 	}
 
 	if (-1 != w_data->allowed) {
