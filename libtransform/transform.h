@@ -29,7 +29,7 @@
 #define	TRANSFORM_H_INCLUDED
 
 /*
- * Note: transform.h is for use outside of libtransform; the configuration
+ * Note: transform.h is for use by clients of libtransform; the configuration
  * headers (config.h, transform_platform.h, etc.) are purely internal.
  * Do NOT use HAVE_XXX configuration macros to control the behavior of
  * this header!  If you must conditionalize, use predefined compiler and/or
@@ -58,19 +58,10 @@
 # else
 #  define	__LA_SSIZE_T	long
 # endif
-# if defined(__BORLANDC__)
-#  define	__LA_UID_T	uid_t
-#  define	__LA_GID_T	gid_t
-# else
-#  define	__LA_UID_T	short
-#  define	__LA_GID_T	short
-# endif
 #else
-#include <unistd.h>  /* ssize_t, uid_t, and gid_t */
+#include <unistd.h>  /* ssize_t */
 #define	__LA_INT64_T	int64_t
 #define	__LA_SSIZE_T	ssize_t
-#define	__LA_UID_T	uid_t
-#define	__LA_GID_T	gid_t
 #endif
 
 /*
@@ -140,8 +131,6 @@ struct transform;
 #define	TRANSFORM_EOF	  (-1)	/* Found end of transform. */
 #define	TRANSFORM_OK	  0	/* Operation was successful. */
 #define	TRANSFORM_WARN	(-200)	/* Partial success. */
-/* for example, if data can't be pushed for some reason- buffer is full.  retry. */
-#define TRANSFORM_FAILED (-250) /* Current operation cannot complete. */
 /* fatal cannot be continued however; network buffering, the network connection was lost for example */
 #define	TRANSFORM_FATAL	(-300)	/* No more operations are possible. */
 
@@ -277,12 +266,6 @@ __LA_DECL const void *transform_read_ahead(struct transform *, size_t, ssize_t *
 __LA_DECL int64_t transform_read_consume(struct transform *, int64_t);
 __LA_DECL int64_t transform_read_bytes_consumed(struct transform *);
 
-/*
- * Retrieve the byte offset in UNCOMPRESSED data where last-read
- * header started.
- */
-__LA_DECL __LA_INT64_T		 transform_read_header_position(struct transform *);
-
 /* Read data from the body of an entry.  Similar to read(2). */
 __LA_DECL __LA_SSIZE_T		 transform_read_data(struct transform *,
 				    void *, size_t);
@@ -303,46 +286,6 @@ __LA_DECL int transform_read_set_filter_options(struct transform *,
 			    const char *);
 __LA_DECL int transform_write_set_filter_option(struct transform *, const char *,
     const char *, const char *);
-
-/*-
- * Convenience function to recreate the current entry (whose header
- * has just been read) on disk.
- *
- * This does quite a bit more than just copy data to disk. It also:
- *  - Creates intermediate directories as required.
- *  - Manages directory permissions:  non-writable directories will
- *    be initially created with write permission enabled; when the
- *    transform is closed, dir permissions are edited to the values specified
- *    in the transform.
- *  - Checks hardlinks:  hardlinks will not be extracted unless the
- *    linked-to file was also extracted within the same session. (TODO)
- */
-
-/* The "flags" argument selects optional behavior, 'OR' the flags you want. */
-
-/* Default: Do not try to set owner/group. */
-#define	TRANSFORM_EXTRACT_OWNER			(0x0001)
-/* Default: Do obey umask, do not restore SUID/SGID/SVTX bits. */
-#define	TRANSFORM_EXTRACT_PERM			(0x0002)
-/* Default: Do not restore mtime/atime. */
-#define	TRANSFORM_EXTRACT_TIME			(0x0004)
-/* Default: Replace existing files. */
-#define	TRANSFORM_EXTRACT_NO_OVERWRITE 		(0x0008)
-/* Default: Try create first, unlink only if create fails with EEXIST. */
-#define	TRANSFORM_EXTRACT_UNLINK			(0x0010)
-/* Default: Do not restore fflags. */
-#define	TRANSFORM_EXTRACT_FFLAGS			(0x0040)
-/* Default: Do not try to guard against extracts redirected by symlinks. */
-/* Note: With TRANSFORM_EXTRACT_UNLINK, will remove any intermediate symlink. */
-#define	TRANSFORM_EXTRACT_SECURE_SYMLINKS		(0x0100)
-/* Default: Do not reject entries with '..' as path elements. */
-#define	TRANSFORM_EXTRACT_SECURE_NODOTDOT		(0x0200)
-/* Default: Create parent directories as needed. */
-#define	TRANSFORM_EXTRACT_NO_AUTODIR		(0x0400)
-/* Default: Overwrite files, even if one on disk is newer. */
-#define	TRANSFORM_EXTRACT_NO_OVERWRITE_NEWER	(0x0800)
-/* Detect blocks of 0 and write holes instead. */
-#define	TRANSFORM_EXTRACT_SPARSE			(0x1000)
 
 /* Close the file and release most resources. */
 __LA_DECL int		 transform_read_close(struct transform *);
@@ -555,17 +498,12 @@ __LA_DECL int transform_autodetect_add_rpm(struct transform_read_bidder *);
 __LA_DECL int transform_autodetect_add_uu(struct transform_read_bidder *);
 __LA_DECL int transform_autodetect_add_xz(struct transform_read_bidder *);
 
-
-                    
-
 #ifdef __cplusplus
 }
 #endif
 
 /* These are meaningless outside of this header. */
 #undef __LA_DECL
-#undef __LA_GID_T
-#undef __LA_UID_T
 
 /* These need to remain defined because they're used in the
  * callback type definitions.  XXX Fix this.  This is ugly. XXX */
