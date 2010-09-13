@@ -1,8 +1,8 @@
-More complete build documentation is available on the libtransform
-Wiki:  http://libtransform.googlecode.com/
+More complete build documentation is available on the libarchive
+Wiki:  http://libarchive.googlecode.com/
 
-On most Unix-like systems, you should be able to install libtransform,
-bsdtar, and bsdcpio using the following common steps:
+On most Unix-like systems, you should be able to install libtransform
+using the following common steps:
     ./configure
     make
     make install
@@ -27,4 +27,3 @@ build with Xcode on Mac OS, you can use the following command:
     cmake -G "Xcode" ~/libtransform-download-dir/
 The result will be appropriate makefiles, solution files, or project
 files that can be used with the corresponding development tool.
-See the libtransform Wiki or the cmake site for further documentation.

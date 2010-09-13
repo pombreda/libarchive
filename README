@@ -1,20 +1,13 @@
 README for libtransform bundle.
 
 Questions?  Issues?
-   * http://libtransform.googlecode.com/ is the home for ongoing
-     libtransform development, including issue tracker, additional
-     documentation, and links to the libtransform mailing lists.
+   * http://libarchive.googlecode.com/ is the home for ongoing
+     development, including issue tracker, additional
+     documentation, and links to the appropriate mailing lists.
 
 This distribution bundle includes the following components:
    * libtransform: a library for reading and writing streaming transforms
-   * tar: the 'bsdtar' program is a full-featured 'tar'
-          replacement built on libtransform
-   * cpio: the 'bsdcpio' program is a different interface to
-          essentially the same functionality
    * examples: Some small example programs that you may find useful.
-   * examples/minitar: a compact sample demonstrating use of libtransform.
-          I use this for testing link pollution; it should produce a very
-          small executable file on most systems.
    * contrib:  Various items sent to me by third parties;
           please contact the authors with any questions.
 
@@ -34,19 +27,9 @@ The following files in the top-level directory are used by the
 	- templates used by configure script
 
 Guide to Documentation installed by this system:
- * bsdtar.1 explains the use of the bsdtar program
- * bsdcpio.1 explains the use of the bsdcpio program
  * libtransform.3 gives an overview of the library as a whole
- * transform_read.3, transform_write.3, transform_write_disk.3, and
-   transform_read_disk.3 provide detailed calling sequences for the read
-   and write APIs
- * transform_entry.3 details the "struct transform_entry" utility class
- * transform_internals.3 provides some insight into libtransform's
-   internal structure and operation.
- * libtransform-formats.5 documents the file formats supported by the library
- * cpio.5, mtree.5, and tar.5 provide detailed information about these
-   popular transform formats, including hard-to-find details about
-   modern cpio and tar variants.
+ * transform_read.3, transform_write.3 provide detailed calling
+   sequences for the read and write APIs
 The manual pages above are provided in the 'doc' directory in
 a number of different formats.
 
@@ -59,53 +42,21 @@ Currently, the library automatically detects and reads the following:
   * bzip2 compression
   * compress/LZW compression
   * lzma and xz compression
-  * GNU tar format (including GNU long filenames, long link names, and
-    sparse files)
-  * Solaris 9 extended tar format (including ACLs)
-  * Old V7 tar transforms
-  * POSIX ustar
-  * POSIX pax interchange format
-  * POSIX octet-oriented cpio
-  * SVR4 ASCII cpio
-  * POSIX octet-oriented cpio
-  * Binary cpio (big-endian or little-endian)
-  * ISO9660 CD-ROM images (with optional Rockridge or Joliet extensions)
-  * ZIP transforms (with uncompressed or "deflate" compressed entries)
-  * GNU and BSD 'ar' transforms
-  * 'mtree' format
 
 The library can write:
   * gzip compression
   * bzip2 compression
   * compress/LZW compression
   * lzma and xz compression
-  * POSIX ustar
-  * POSIX pax interchange format
-  * "restricted" pax format, which will create ustar transforms except for
-    entries that require pax extensions (for long filenames, ACLs, etc).
-  * POSIX octet-oriented cpio
-  * SVR4 "newc" cpio
-  * shar transforms
-  * ZIP transforms (with uncompressed or "deflate" compressed entries)
-  * GNU and BSD 'ar' transforms
-  * 'mtree' format
 
 Notes about the library architecture:
 
  * This is a heavily stream-oriented system.  There is no direct
    support for in-place modification or random access.
 
- * The library is designed to be extended with new compression and
-   transform formats.  The only requirement is that the format be
-   readable or writable as a stream and that each transform entry be
-   independent.  There are articles on the libtransform Wiki explaining
-   how to extend libtransform.
-
- * On read, compression and format are always detected automatically.
-
  * I've attempted to minimize static link pollution.  If you don't
    explicitly invoke a particular feature (such as support for a
-   particular compression or format), it won't get pulled in.
+   particular compression), it won't get pulled in.
    In particular, if you don't explicitly enable a particular
    compression or decompression support, you won't need to link
    against the corresponding compression or decompression libraries.
@@ -115,10 +66,9 @@ Notes about the library architecture:
  * On read, the library accepts whatever blocks you hand it.
    Your read callback is free to pass the library a byte at a time
    or mmap the entire transform and give it to the library at once.
-   On write, the library always produces correctly-blocked output.
 
  * The object-style approach allows you to have multiple transform streams
-   open at once.  bsdtar uses this in its "@transform" extension.
+   open at once.
 
  * The transform itself is read/written using callback functions.
    You can read an transform directly from an in-memory buffer or
@@ -132,6 +82,3 @@ Notes about the library architecture:
    an transform and write the data directly to a socket.  If you want
    to read/write entries to disk, there are convenience functions to
    make this especially easy.
-
- * Note: "pax interchange format" is really an extended tar format,
-   despite what the name says.
