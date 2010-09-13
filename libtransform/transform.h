@@ -129,6 +129,7 @@ struct transform;
  help catch any issues where conversion from transform to archive
  doesn't occur */
 #define	TRANSFORM_EOF	  (-1)	/* Found end of transform. */
+#define	TRANSFORM_PREMATURE_EOF	  (-2)	/* Found end of transform, although there was trailing data unconsumed */
 #define	TRANSFORM_OK	  0	/* Operation was successful. */
 #define	TRANSFORM_WARN	(-200)	/* Partial success. */
 /* fatal cannot be continued however; network buffering, the network connection was lost for example */

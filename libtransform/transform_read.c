@@ -759,8 +759,8 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 				if (avail != NULL)
 					*avail = TRANSFORM_FATAL;
 				return (NULL);
-			} else if (TRANSFORM_EOF == ret) {
-				filter->end_of_file = 1;
+			} else if (TRANSFORM_EOF == ret || TRANSFORM_PREMATURE_EOF == ret) {
+				filter->end_of_file = ret;
 			}
 
 			if (bytes_read == 0) {
@@ -976,12 +976,11 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 			filter->client_buff = NULL;
 			filter->fatal = 1;
 			return (bytes_read);
-		} else if (TRANSFORM_EOF == ret) {
-			filter->end_of_file = 1;
+		} else if (TRANSFORM_EOF == ret || TRANSFORM_PREMATURE_EOF == ret) {
+			filter->end_of_file = ret;
 		}
 		if (!bytes_read) {
 			filter->client_buff = NULL;
-			filter->end_of_file = 1;
 			return (total_bytes_skipped);
 		}
 
