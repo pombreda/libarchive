@@ -644,8 +644,9 @@ lzip_tail(struct transform *transform, struct private_data *state,
 		state->crc32 = 0;
 		state->member_out = 0;
 		state->member_in = 0;
+		return (TRANSFORM_OK);
 	}
-	return (TRANSFORM_OK);
+	return (TRANSFORM_EOF);
 }
 
 /*
@@ -715,8 +716,11 @@ xz_filter_read(struct transform *transform, void *_state,
 			    decompressed, state->crc32);
 			if (eof_encountered) {
 				ret = lzip_tail(transform, state, upstream);
-				if (ret != TRANSFORM_OK && ret != TRANSFORM_EOF)
+				if (ret == TRANSFORM_OK) {
+					return (TRANSFORM_OK);
+				} else {
 					return (ret);
+				}
 			}
 		}
 	}
