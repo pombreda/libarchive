@@ -80,8 +80,8 @@ static off_t	memory_read_skip(struct transform *, void *,
 static int64_t	memory_read_skip(struct transform *, void *, 
 	struct transform_read_filter *, int64_t request);
 #endif
-static ssize_t	memory_read(struct transform *, void *,
-	struct transform_read_filter *upstream, const void **buff);
+static int	memory_read(struct transform *, void *,
+	struct transform_read_filter *upstream, const void **buff, size_t *);
 static ssize_t	memory_write(struct transform *, void *, const void *, size_t);
 
 
@@ -123,9 +123,10 @@ memory_write(struct transform *t, void *_private, const void *buff, size_t size)
 	return ((long)size);
 }
 
-static ssize_t
+static int
 memory_read(struct transform *t, void *_private,
-	struct transform_read_filter *upstream, const void **buff)
+	struct transform_read_filter *upstream, const void **buff,
+	size_t *bytes_read)
 {
 	struct memdata *private = _private;
 	struct memblock *block;
@@ -137,7 +138,7 @@ memory_read(struct transform *t, void *_private,
 	private->buff = NULL;
 	if (private->first == NULL) {
 		private->last = NULL;
-		return (ARCHIVE_EOF);
+		return (TRANSFORM_EOF);
 	}
 	if (private->filebytes > 0) {
 		/*
@@ -167,7 +168,8 @@ memory_read(struct transform *t, void *_private,
 		private->filebytes = block->filebytes;
 		free(block);
 	}
-	return (size);
+	*bytes_read = size;
+	return (size == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
 }
 
 

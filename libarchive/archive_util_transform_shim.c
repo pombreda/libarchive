@@ -161,16 +161,25 @@ __archive_shim_write(struct transform *t, void *data, const void *buff,
 	return (-1);
 }
 
-ssize_t
+int
 __archive_shim_read(struct transform *t, void *data, struct transform_read_filter *upstream,
-	const void **buff)
+	const void **buff, size_t *bytes_read)
 {
 	struct archive_shim *mine = (struct archive_shim *)data;
+	ssize_t ret;
 
 	if (mine->reader) {
-		return ((mine->reader)(mine->archive, mine->client_data, buff));
+		ret = ((mine->reader)(mine->archive, mine->client_data, buff));
+		if (ARCHIVE_EOF == ret || 0 == ret) {
+			*bytes_read = 0;
+			return (TRANSFORM_EOF);
+		} else if (ret < 0) {
+			return __archive_error_to_transform(mine->archive, t, ret);
+		}
+		*bytes_read = ret;
+		return (TRANSFORM_OK);
 	}
 
 	transform_set_error(t, ARCHIVE_ERRNO_PROGRAMMER, "unset reader");
-	return (0);
+	return (TRANSFORM_FATAL);
 }

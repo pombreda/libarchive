@@ -80,8 +80,7 @@ echo -e "\nbest time of $n repetitions,\n"\
 echo -e "program\toperation\treal\tuser\tsystem\t%CPU\t     speed"
 > /tmp/tcp
 let op_num=0
-for op in "cf $dst $pax -C $src ." "tf $dst" "xf $dst -C $dst_path" \
-        "f $dst -C $dst_path --diff"; do
+for op in "cf $dst $pax -C $src ." "tf $dst" "xf $dst -C $dst_path"; do
         let tar_num=0
         for tar in $TAR; do
                 echo -en "$tar\t${OPN[op_num]}\t"

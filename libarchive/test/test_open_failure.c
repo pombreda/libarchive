@@ -74,7 +74,6 @@ my_close(struct archive *a, void *_private)
 	return (private->close_return);
 }
 
-
 DEFINE_TEST(test_open_failure)
 {
 	struct archive *a;
@@ -129,6 +128,7 @@ DEFINE_TEST(test_open_failure)
 	private.magic = MAGIC;
 	private.open_return = ARCHIVE_OK;
 	private.read_return = ARCHIVE_FATAL;
+
 	a = archive_read_new();
 	assert(a != NULL);
 	assertEqualInt(ARCHIVE_OK,
