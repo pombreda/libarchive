@@ -228,7 +228,7 @@ bzip2_filter_read(struct transform *transform, void *_state,
 				decompressed = state->stream.next_out
 				    - state->out_block;
 				*bytes_read = decompressed;
-				if (ret == 0) {
+				if (ret == -1) {
 					/* remaining data isn't bzip2 */
 					transform_set_error(transform, TRANSFORM_ERRNO_MISC,
 						"premature EOF encountered- remaining data isn't a bzip2 stream");
