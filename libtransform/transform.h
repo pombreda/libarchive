@@ -164,8 +164,9 @@ __LA_INT64_T transform_read_filter_skip(struct transform_read_filter *, int64_t)
 
 
 /* Returns pointer and size of next block of data from transform. */
-typedef __LA_SSIZE_T	transform_read_callback(struct transform *,
-	void *_client_data, struct transform_read_filter *, const void **_buffer);
+typedef int	transform_read_callback(struct transform *,
+	void *_client_data, struct transform_read_filter *, const void **_buffer,
+	size_t *avail);
 
 /* Skips at most request bytes from transform and returns the skipped amount */
 /* Libtransform 3.0 uses int64_t here, which is actually guaranteed to be

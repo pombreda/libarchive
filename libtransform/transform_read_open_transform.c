@@ -55,8 +55,8 @@ struct private_data {
 	struct transform *src;
 };
 
-static ssize_t _transform_read(struct transform *, void *,
-	struct transform_read_filter *, const void **);
+static int _transform_read(struct transform *, void *,
+	struct transform_read_filter *, const void **, size_t *);
 static int64_t _transform_skip(struct transform *, void *,
 	struct transform_read_filter *, int64_t);
 static int _transform_close(struct transform *, void *);
@@ -91,9 +91,9 @@ transform_read_open_transform(struct transform *t, struct transform *src,
 		NULL, TRANSFORM_FILTER_NOTIFY_ALL_CONSUME_FLAG));
 }
 
-static ssize_t
+static int
 _transform_read(struct transform *t, void *_data,
-	struct transform_read_filter *upstream, const void **buff)
+	struct transform_read_filter *upstream, const void **buff, size_t *bytes_read)
 {
 	struct private_data *data = (struct private_data *)_data;
 	ssize_t avail;
@@ -105,7 +105,8 @@ _transform_read(struct transform *t, void *_data,
 			"%s",
 			transform_error_string(data->src));
 	}
-	return (avail);
+	*bytes_read = avail;
+	return (avail == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
 }
 
 static int64_t _transform_skip(struct transform *t, void *_data,

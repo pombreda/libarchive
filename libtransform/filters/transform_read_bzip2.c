@@ -56,8 +56,8 @@ struct private_data {
 };
 
 /* Bzip2 filter */
-static ssize_t	bzip2_filter_read(struct transform *, void *,
-	struct transform_read_filter *, const void **);
+static int	bzip2_filter_read(struct transform *, void *,
+	struct transform_read_filter *, const void **, size_t *);
 static int	bzip2_filter_close(struct transform *, void *);
 #endif
 
@@ -193,9 +193,9 @@ bzip2_reader_init(struct transform *transform, const void *bidder_data)
 /*
  * Return the next block of decompressed data.
  */
-static ssize_t
+static int
 bzip2_filter_read(struct transform *transform, void *_state,
-	struct transform_read_filter *upstream, const void **p)
+	struct transform_read_filter *upstream, const void **p, size_t *bytes_read)
 {
 	struct private_data *state = (struct private_data *)_state;
 	size_t decompressed;
@@ -204,7 +204,8 @@ bzip2_filter_read(struct transform *transform, void *_state,
 
 	if (state->eof) {
 		*p = NULL;
-		return (0);
+		*bytes_read = 0;
+		return (TRANSFORM_EOF);
 	}
 
 	/* Empty our output buffer. */
@@ -223,7 +224,8 @@ bzip2_filter_read(struct transform *transform, void *_state,
 				*p = state->out_block;
 				decompressed = state->stream.next_out
 				    - state->out_block;
-				return (decompressed);
+				*bytes_read = decompressed;
+				return (TRANSFORM_EOF);
 			}
 			/* Initialize compression library. */
 			ret = BZ2_bzDecompressInit(&(state->stream),
@@ -274,7 +276,8 @@ bzip2_filter_read(struct transform *transform, void *_state,
 			*p = state->out_block;
 			decompressed = state->stream.next_out
 			    - state->out_block;
-			return (decompressed);
+			*bytes_read = decompressed;
+			return (TRANSFORM_EOF);
 		}
 
 		/* Decompress as much as we can in one pass. */
@@ -301,7 +304,8 @@ bzip2_filter_read(struct transform *transform, void *_state,
 				*p = state->out_block;
 				decompressed = state->stream.next_out
 				    - state->out_block;
-				return (decompressed);
+				*bytes_read = decompressed;
+				return (TRANSFORM_OK);
 			}
 			break;
 		default: /* Return an error. */

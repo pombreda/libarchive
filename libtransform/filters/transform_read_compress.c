@@ -132,8 +132,8 @@ struct private_data {
 static int	compress_bidder_bid(const void *, struct transform_read_filter *);
 static int	compress_bidder_init(struct transform *, const void *);
 
-static ssize_t	compress_filter_read(struct transform *, void *,
-	struct transform_read_filter *, const void **);
+static int	compress_filter_read(struct transform *, void *,
+	struct transform_read_filter *, const void **, size_t *);
 static int	compress_filter_close(struct transform *, void *);
 
 static int getbits(struct private_data *, struct transform_read_filter *, int n);
@@ -260,9 +260,10 @@ stream_init(struct transform *transform, struct private_data *state,
  * Return a block of data from the decompression buffer.  Decompress more
  * as necessary.
  */
-static ssize_t
+static int
 compress_filter_read(struct transform *transform, void *_state,
-	struct transform_read_filter *upstream, const void **pblock)
+	struct transform_read_filter *upstream, const void **pblock,
+		size_t *bytes_read)
 {
 	struct private_data *state = (struct private_data *)_state;
 	unsigned char *p, *start, *end;
@@ -275,7 +276,8 @@ compress_filter_read(struct transform *transform, void *_state,
 
 	if (state->end_of_stream) {
 		*pblock = NULL;
-		return (0);
+		*bytes_read = 0;
+		return (TRANSFORM_EOF);
 	}
 	p = start = (unsigned char *)state->out_block;
 	end = start + state->out_block_size;
@@ -293,7 +295,8 @@ compress_filter_read(struct transform *transform, void *_state,
 	}
 
 	*pblock = start;
-	return (p - start);
+	*bytes_read = (p - start);
+	return (*bytes_read == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
 }
 
 /*

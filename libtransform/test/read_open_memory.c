@@ -51,7 +51,8 @@ static int	memory_read_close(struct transform *, void *);
 static int	memory_read_open(struct transform *, void *);
 static int64_t	memory_read_skip(struct transform *, void *, struct transform_read_filter *,
 	int64_t request);
-static ssize_t	memory_read(struct transform *, void *, struct transform_read_filter *, const void **buff);
+static int	memory_read(struct transform *, void *, struct transform_read_filter *, const void **buff,
+	size_t *);
 static int	read_open_memory_internal(struct transform *a, void *buff,
     size_t size, size_t read_size, int fullapi);
 
@@ -116,9 +117,10 @@ memory_read_open(struct transform *a, void *client_data)
  * That way, code that runs off the end of the provided data
  * will screw up.
  */
-static ssize_t
+static int
 memory_read(struct transform *a, void *client_data, 
-	struct transform_read_filter *upstream, const void **buff)
+	struct transform_read_filter *upstream, const void **buff,
+		size_t *bytes_read)
 {
 	struct read_memory_data *mine = (struct read_memory_data *)client_data;
 	size_t size;
@@ -132,8 +134,9 @@ memory_read(struct transform *a, void *client_data,
 	memcpy(mine->copy_buff + mine->copy_buff_offset, mine->buffer, size);
 	*buff = mine->copy_buff + mine->copy_buff_offset;
 
-        mine->buffer += size;
-	return ((ssize_t)size);
+	mine->buffer += size;
+	*bytes_read = size;
+	return (size == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
 }
 
 /*

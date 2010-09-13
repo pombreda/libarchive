@@ -51,8 +51,8 @@ static int	memory_read_close(struct transform *, void *);
 static int	memory_read_open(struct transform *, void *);
 static int64_t	memory_read_skip(struct transform *, void *,
 	struct transform_read_filter *upstream, int64_t request);
-static ssize_t	memory_read(struct transform *, void *, struct transform_read_filter *,
-	const void **buff);
+static int	memory_read(struct transform *, void *, struct transform_read_filter *,
+	const void **buff, size_t *bytes_read);
 
 int
 transform_read_open_memory(struct transform *a, void *buff, size_t size)
@@ -102,20 +102,21 @@ memory_read_open(struct transform *t, void *client_data)
  * in a test harness.  Production use should not specify a block
  * size; then this is much faster.
  */
-static ssize_t
+static int
 memory_read(struct transform *t, void *client_data,
-	struct transform_read_filter *f, const void **buff)
+	struct transform_read_filter *f, const void **buff, size_t *bytes_read)
 {
 	struct read_memory_data *mine = (struct read_memory_data *)client_data;
-	ssize_t size;
 
 	(void)t; /* UNUSED */
 	*buff = mine->buffer;
-	size = mine->end - mine->buffer;
-	if (size > mine->read_size)
-		size = mine->read_size;
-        mine->buffer += size;
-	return (size);
+	*bytes_read = mine->end - mine->buffer;
+	if (*bytes_read > mine->read_size) {
+		*bytes_read = mine->read_size;
+	}
+	mine->buffer += *bytes_read;
+
+	return (mine->buffer == mine->end ? TRANSFORM_EOF : TRANSFORM_OK);
 }
 
 /*

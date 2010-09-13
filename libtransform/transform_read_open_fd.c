@@ -59,8 +59,8 @@ struct read_fd_data {
 };
 
 static int	file_close(struct transform *, void *);
-static ssize_t	file_read(struct transform *, void *, struct transform_read_filter *,
-	const void **buff);
+static int	file_read(struct transform *, void *, struct transform_read_filter *,
+	const void **buff, size_t *avail);
 static int64_t	file_skip(struct transform *, void *, struct transform_read_filter *,
 	int64_t request);
 static int      file_visit_fds(struct transform *, const void *,
@@ -182,22 +182,22 @@ transform_read_open_fd(struct transform *a, int fd, size_t block_size)
 		NULL, file_read, file_skip, file_close, file_visit_fds, 0));
 }
 
-static ssize_t
+static int
 file_read(struct transform *t, void *client_data, struct transform_read_filter *upstream,
-	const void **buff)
+	const void **buff, size_t *bytes_read)
 {
 	struct read_fd_data *mine = (struct read_fd_data *)client_data;
-	ssize_t bytes_read;
 
 	*buff = mine->buffer;
 	for (;;) {
-		bytes_read = read(mine->fd, mine->buffer, mine->block_size);
-		if (bytes_read < 0) {
+		*bytes_read = read(mine->fd, mine->buffer, mine->block_size);
+		if (*bytes_read < 0) {
 			if (errno == EINTR)
 				continue;
 			transform_set_error(t, errno, "Error reading fd %d", mine->fd);
+			return (TRANSFORM_FATAL);
 		}
-		return (bytes_read);
+		return (*bytes_read == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
 	}
 }
 

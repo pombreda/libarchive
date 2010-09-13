@@ -77,8 +77,8 @@ struct private_data {
 };
 
 /* Combined lzip/lzma/xz filter */
-static ssize_t	xz_filter_read(struct transform *, void *, 
-	struct transform_read_filter *, const void **);
+static int	xz_filter_read(struct transform *, void *, 
+	struct transform_read_filter *, const void **, size_t *);
 static int	xz_filter_close(struct transform *, void *);
 
 static int  common_bidder_init(struct transform *, const void *,
@@ -97,8 +97,8 @@ struct private_data {
 };
 
 /* Lzma-only filter */
-static ssize_t	lzma_filter_read(struct transform *, void *, 
-	struct transform_read_filter *, const void **);
+static int	lzma_filter_read(struct transform *, void *, 
+	struct transform_read_filter *, const void **, size_t *);
 static int	lzma_filter_close(struct transform *, void *);
 #endif
 
@@ -654,9 +654,10 @@ lzip_tail(struct transform *transform, struct private_data *state,
 /*
  * Return the next block of decompressed data.
  */
-static ssize_t
+static int
 xz_filter_read(struct transform *transform, void *_state, 
-	struct transform_read_filter *upstream, const void **p)
+	struct transform_read_filter *upstream, const void **p,
+	size_t *bytes_read)
 {
 	struct private_data *state = (struct private_data *)_state;
 	size_t decompressed;
@@ -704,6 +705,7 @@ xz_filter_read(struct transform *transform, void *_state,
 	}
 
 	decompressed = state->stream.next_out - state->out_block;
+	*bytes_read = decompressed;
 	state->total_out += decompressed;
 	state->member_out += decompressed;
 	if (decompressed == 0)
@@ -720,7 +722,7 @@ xz_filter_read(struct transform *transform, void *_state,
 			}
 		}
 	}
-	return (decompressed);
+	return (decompressed == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
 }
 
 /*
@@ -825,9 +827,10 @@ lzma_bidder_init(struct transform *transform, struct transform_read_bidder *bidd
 /*
  * Return the next block of decompressed data.
  */
-static ssize_t
+static int
 lzma_filter_read(struct transform *transform, void *_state,
-	struct transform_read_filter *filter, const void **p)
+	struct transform_read_filter *filter, const void **p,
+	size_t *bytes_read)
 {
 	struct private_data *state = (struct private_date *)_state;
 	size_t decompressed;
@@ -875,7 +878,8 @@ lzma_filter_read(struct transform *transform, void *_state,
 		*p = NULL;
 	else
 		*p = state->out_block;
-	return (decompressed);
+	*bytes_read = decompressed;
+	return (decompressed == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
 }
 
 /*

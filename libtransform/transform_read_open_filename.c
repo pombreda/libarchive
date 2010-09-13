@@ -76,8 +76,8 @@ struct read_file_data {
 };
 
 static int	file_close(struct transform *, void *);
-static ssize_t	file_read(struct transform *, void *,
-	struct transform_read_filter *, const void **buff);
+static int	file_read(struct transform *, void *,
+	struct transform_read_filter *, const void **buff, size_t *bytes_read);
 static int64_t	file_skip(struct transform *, void *,
 	struct transform_read_filter *upstream, int64_t request);
 static off_t	file_skip_lseek(struct transform *, void *, off_t request);
@@ -262,12 +262,11 @@ transform_read_open_filename_fd(struct transform *a, const char *filename,
 		NULL, file_read, file_skip, file_close, file_visit_fds, 0));
 }
 
-static ssize_t
+static int
 file_read(struct transform *t, void *client_data,
-	struct transform_read_filter *f, const void **buff)
+	struct transform_read_filter *f, const void **buff, size_t *bytes_read)
 {
 	struct read_file_data *mine = (struct read_file_data *)client_data;
-	ssize_t bytes_read;
 
 	/* TODO: If a recent lseek() operation has left us
 	 * mis-aligned, read and return a short block to try to get
@@ -284,8 +283,8 @@ file_read(struct transform *t, void *client_data,
 
 	*buff = mine->buffer;
 	for (;;) {
-		bytes_read = read(mine->fd, mine->buffer, mine->block_size);
-		if (bytes_read < 0) {
+		*bytes_read = read(mine->fd, mine->buffer, mine->block_size);
+		if (*bytes_read < 0) {
 			if (errno == EINTR)
 				continue;
 			else if (mine->filename[0] == '\0')
@@ -293,8 +292,9 @@ file_read(struct transform *t, void *client_data,
 			else
 				transform_set_error(t, errno, "Error reading '%s'",
 				    mine->filename);
+			return (TRANSFORM_FATAL);
 		}
-		return (bytes_read);
+		return (*bytes_read == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
 	}
 }
 

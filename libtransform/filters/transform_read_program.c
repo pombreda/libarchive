@@ -140,8 +140,8 @@ struct program_filter {
 	size_t		 out_buf_len;
 };
 
-static ssize_t	program_filter_read(struct transform *, void *,
-	struct transform_read_filter *, const void **);
+static int	program_filter_read(struct transform *, void *,
+	struct transform_read_filter *, const void **, size_t *);
 static int	program_filter_close(struct transform *, void *);
 
 int
@@ -440,9 +440,9 @@ program_bidder_init(struct transform *transform, const void *bidder_state)
 		NULL, TRANSFORM_FILTER_PROGRAM));
 }
 
-static ssize_t
+static int
 program_filter_read(struct transform *transform, void *_state,
-	struct transform_read_filter *upstream, const void **buff)
+	struct transform_read_filter *upstream, const void **buff, size_t *bytes_read)
 {
 	struct program_filter *state = (struct program_filter *)_state;
 	ssize_t bytes;
@@ -465,7 +465,8 @@ program_filter_read(struct transform *transform, void *_state,
 	}
 
 	*buff = state->out_buf;
-	return (total);
+	*bytes_read = total;
+	return (total == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
 }
 
 static int

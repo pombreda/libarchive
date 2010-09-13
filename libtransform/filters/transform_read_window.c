@@ -53,8 +53,8 @@ struct window_data {
 
 static int window_bidder_init(struct transform *, const void *);
 static int window_bidder_free(const void *);
-static ssize_t window_read(struct transform *, void *,
-	struct transform_read_filter *, const void **);
+static int window_read(struct transform *, void *,
+	struct transform_read_filter *, const void **, size_t *);
 static int64_t window_skip(struct transform *, void *, struct transform_read_filter *,
 	int64_t request);
 static int window_free(struct transform *t, void *_data);
@@ -136,16 +136,18 @@ window_free(struct transform *t, void *_data)
 	return (TRANSFORM_OK);
 }
 
-static ssize_t
+static int
 window_read(struct transform *t, void *_data,
-	struct transform_read_filter *upstream, const void **buff)
+	struct transform_read_filter *upstream, const void **buff,
+	size_t *bytes_read)
 {
 	struct window_data *w_data = (struct window_data *)_data;
 	ssize_t available;
 	int64_t consumed;
 	
 	if (0 == w_data->allowed) {
-		return 0;
+		*bytes_read = 0;
+		return (TRANSFORM_EOF);
 	}
 
 	if (w_data->start) {
@@ -155,14 +157,18 @@ window_read(struct transform *t, void *_data,
 			w_data->start -= consumed;
 		}
 
-		/* retry statuses? */
-		if (w_data->start)
+		/* retry statuses? either way, pass back the error */
+		if (w_data->start) 
 			return (consumed);	
 	}
 
 	*buff = transform_read_filter_ahead(upstream, 1, &available);
-	if (available <= 0)
+	if (available < 0) {
 		return (available);
+	} else if (0 == available) {
+		*bytes_read = 0;
+		return (TRANSFORM_EOF);
+	}
 
 	if (-1 != w_data->allowed) {
 		if (w_data->allowed < available) {
@@ -170,9 +176,8 @@ window_read(struct transform *t, void *_data,
 		}
 	}
 
-	// transform_read_filter_consume(upstream, available);
-
-	return (available);
+	*bytes_read = available;
+	return (TRANSFORM_OK);
 }
 
 

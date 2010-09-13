@@ -55,6 +55,10 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read.c 201157 2009-12-29 05:
 
 #define minimum(a, b) (a < b ? a : b)
 
+#ifndef assert
+#define assert(x) (void)0
+#endif
+
 static int	build_stream(struct transform_read *);
 static void	free_filters(struct transform_read *);
 static void	free_bidders(struct transform_read *);
@@ -675,8 +679,9 @@ const void *
 transform_read_filter_ahead(struct transform_read_filter *filter,
     size_t min, ssize_t *avail)
 {
-	ssize_t bytes_read;
+	size_t bytes_read;
 	size_t tocopy;
+	int ret;
 
 	if (TRANSFORM_FATAL == __transform_filter_check_magic(filter,
 		TRANSFORM_READ_FILTER_MAGIC, TRANSFORM_STATE_DATA,
@@ -744,10 +749,10 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 				return (NULL);
 			}
 
-			bytes_read = (filter->read)((struct transform *)filter->transform, filter->data,
-			    filter->upstream, &filter->client_buff);
+			ret = (filter->read)((struct transform *)filter->transform, filter->data,
+			    filter->upstream, &filter->client_buff, &bytes_read);
 
-			if (bytes_read < 0) {		/* Read error. */
+			if (TRANSFORM_FATAL == ret) {
 				filter->client_total = filter->client_avail = 0;
 				filter->client_next = filter->client_buff = NULL;
 				filter->fatal = 1;
@@ -756,7 +761,7 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 				return (NULL);
 			}
 
-			if (bytes_read == 0) {	/* Premature end-of-file. */
+			if (bytes_read == 0) {
 				filter->client_total = filter->client_avail = 0;
 				filter->client_next = filter->client_buff = NULL;
 				filter->end_of_file = 1;
@@ -765,6 +770,7 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 					*avail = filter->avail;
 				return (NULL);
 			}
+
 			filter->client_total = bytes_read;
 			filter->client_avail = filter->client_total;
 			filter->client_next = filter->client_buff;
@@ -897,8 +903,9 @@ int64_t
 transform_read_filter_skip(struct transform_read_filter *filter, int64_t request)
 {
 	int64_t bytes_skipped, total_bytes_skipped = 0;
-	ssize_t bytes_read;
+	size_t bytes_read;
 	size_t min;
+	int ret;
 
 	if (TRANSFORM_FATAL == __transform_filter_check_magic(filter,
 		TRANSFORM_READ_FILTER_MAGIC, TRANSFORM_STATE_DATA,
@@ -957,20 +964,20 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 
 	/* Use ordinary reads as necessary to complete the request. */
 	for (;;) {
-		bytes_read = (filter->read)((struct transform *)filter->transform,
-			filter->data, filter->upstream, &filter->client_buff);
+		ret = (filter->read)((struct transform *)filter->transform,
+			filter->data, filter->upstream, &filter->client_buff, &bytes_read);
 
-		if (bytes_read < 0) {
+		if (TRANSFORM_FATAL == ret) {
 			filter->client_buff = NULL;
 			filter->fatal = 1;
 			return (bytes_read);
-		}
-
-		if (bytes_read == 0) {
+		} else if (TRANSFORM_EOF == ret && !bytes_read) {
 			filter->client_buff = NULL;
 			filter->end_of_file = 1;
 			return (total_bytes_skipped);
 		}
+
+		assert(bytes_read > 0);
 
 		if (bytes_read >= request) {
 			filter->client_next =

@@ -58,8 +58,8 @@ struct rpm {
 static int	rpm_bidder_bid(const void *, struct transform_read_filter *upstream);
 static int	rpm_bidder_init(struct transform *, const void *);
 
-static ssize_t	rpm_filter_read(struct transform *, void *,
-	struct transform_read_filter *upstream, const void **);
+static int	rpm_filter_read(struct transform *, void *,
+	struct transform_read_filter *upstream, const void **, size_t *);
 static int	rpm_filter_close(struct transform *, void *);
 
 int
@@ -146,9 +146,10 @@ rpm_bidder_init(struct transform *transform, const void *bidder_data)
 	return (ret);
 }
 
-static ssize_t
+static int
 rpm_filter_read(struct transform *transform, void *_data,
-	struct transform_read_filter *upstream, const void **buff)
+	struct transform_read_filter *upstream, const void **buff,
+	size_t *bytes_read)
 {
 	struct rpm *rpm = (struct rpm *)_data;
 	const unsigned char *b;
@@ -262,7 +263,8 @@ rpm_filter_read(struct transform *transform, void *_data,
 		rpm->total_in += used;
 		transform_read_filter_consume(upstream, used);
 	}
-	return (total);
+	*bytes_read = total;
+	return (total == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
 }
 
 static int
