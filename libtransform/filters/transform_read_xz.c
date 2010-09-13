@@ -612,7 +612,7 @@ lzip_tail(struct transform *transform, struct private_data *state,
 	if (avail_in < tail) {
 		transform_set_error(transform, TRANSFORM_ERRNO_MISC,
 		    "Lzip: Remaining data is less bytes");
-		return (TRANSFORM_FAILED);
+		return (TRANSFORM_FATAL);
 	}
 
 	/* Check the crc32 value of the uncompressed data of the current
@@ -620,14 +620,14 @@ lzip_tail(struct transform *transform, struct private_data *state,
 	if (state->crc32 != transform_le32dec(f)) {
 		transform_set_error(transform, TRANSFORM_ERRNO_MISC,
 		    "Lzip: CRC32 error");
-		return (TRANSFORM_FAILED);
+		return (TRANSFORM_FATAL);
 	}
 
 	/* Check the uncompressed size of the current member */
 	if ((uint64_t)state->member_out != transform_le64dec(f + 4)) {
 		transform_set_error(transform, TRANSFORM_ERRNO_MISC,
 		    "Lzip: Uncompressed size error");
-		return (TRANSFORM_FAILED);
+		return (TRANSFORM_FATAL);
 	}
 
 	/* Check the total size of the current member */
@@ -635,7 +635,7 @@ lzip_tail(struct transform *transform, struct private_data *state,
 	    (uint64_t)state->member_in + tail != transform_le64dec(f + 12)) {
 		transform_set_error(transform, TRANSFORM_ERRNO_MISC,
 		    "Lzip: Member size error");
-		return (TRANSFORM_FAILED);
+		return (TRANSFORM_FATAL);
 	}
 	transform_read_filter_consume(upstream, tail);
 
