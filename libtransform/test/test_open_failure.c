@@ -94,10 +94,10 @@ DEFINE_TEST(test_open_failure)
 
 	memset(&private, 0, sizeof(private));
 	private.magic = MAGIC;
-	private.open_return = TRANSFORM_FAILED;
+	private.open_return = -77;
 	a = transform_read_new();
 	assert(a != NULL);
-	assertEqualInt(TRANSFORM_FAILED,
+	assertEqualInt(-77,
 	    transform_read_open(a, &private, my_open, my_read, NULL, my_close));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.read_called);
