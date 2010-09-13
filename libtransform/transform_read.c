@@ -759,12 +759,13 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 				if (avail != NULL)
 					*avail = TRANSFORM_FATAL;
 				return (NULL);
+			} else if (TRANSFORM_EOF == ret) {
+				filter->end_of_file = 1;
 			}
 
 			if (bytes_read == 0) {
 				filter->client_total = filter->client_avail = 0;
 				filter->client_next = filter->client_buff = NULL;
-				filter->end_of_file = 1;
 				/* Return whatever we do have. */
 				if (avail != NULL)
 					*avail = filter->avail;
