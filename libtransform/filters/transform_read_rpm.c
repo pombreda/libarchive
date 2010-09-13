@@ -157,6 +157,7 @@ rpm_filter_read(struct transform *transform, void *_data,
 	size_t used, n;
 	uint32_t section;
 	uint32_t bytes;
+	int eof_encountered = 0;
 
 	*buff = NULL;
 	total = avail_in = 0;
@@ -167,10 +168,12 @@ rpm_filter_read(struct transform *transform, void *_data,
 			b = transform_read_filter_ahead(upstream, 1,
 			    &avail_in);
 			if (b == NULL) {
-				if (avail_in < 0)
+				if (avail_in < 0) {
 					return (TRANSFORM_FATAL);
-				else
+				} else {
+					eof_encountered =1;
 					break;
+				}
 			}
 		}
 
@@ -264,7 +267,7 @@ rpm_filter_read(struct transform *transform, void *_data,
 		transform_read_filter_consume(upstream, used);
 	}
 	*bytes_read = total;
-	return (total == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
+	return (eof_encountered ? TRANSFORM_EOF : TRANSFORM_OK);
 }
 
 static int

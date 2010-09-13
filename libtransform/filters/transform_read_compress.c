@@ -103,7 +103,6 @@ struct private_data {
 
 	/* Decompression status variables. */
 	int			 use_reset_code;
-	int			 end_of_stream;	/* EOF status. */
 	int			 maxcode;	/* Largest code. */
 	int			 maxcode_bits;	/* Length of largest code. */
 	int			 section_end_code; /* When to increase bits. */
@@ -267,36 +266,32 @@ compress_filter_read(struct transform *transform, void *_state,
 {
 	struct private_data *state = (struct private_data *)_state;
 	unsigned char *p, *start, *end;
-	int ret;
+	int ret = TRANSFORM_EOF;
 
 	if(!state->stream_init_invoked) {
 		stream_init(transform, state, upstream);
 		state->stream_init_invoked = 1;
 	}
 
-	if (state->end_of_stream) {
-		*pblock = NULL;
-		*bytes_read = 0;
-		return (TRANSFORM_EOF);
-	}
 	p = start = (unsigned char *)state->out_block;
 	end = start + state->out_block_size;
 
-	while (p < end && !state->end_of_stream) {
+	while (p < end) {
 		if (state->stackp > state->stack) {
 			*p++ = *--state->stackp;
 		} else {
 			ret = next_code(transform, state, upstream);
-			if (ret == -1)
-				state->end_of_stream = ret;
-			else if (ret != TRANSFORM_OK)
+			if (ret == TRANSFORM_EOF) {
+				break;
+			} else if (ret != TRANSFORM_OK) {
 				return (ret);
+			}
 		}
 	}
 
 	*pblock = start;
 	*bytes_read = (p - start);
-	return (*bytes_read == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
+	return (ret);
 }
 
 /*
@@ -423,7 +418,7 @@ getbits(struct private_data *state, struct transform_read_filter *upstream,
 			state->next_in
 			    = transform_read_filter_ahead(upstream, 1, &ret);
 			if (ret == 0)
-				return (-1);
+				return (TRANSFORM_EOF);
 			if (ret < 0 || state->next_in == NULL)
 				return (TRANSFORM_FATAL);
 			state->avail_in = ret;

@@ -448,6 +448,7 @@ program_filter_read(struct transform *transform, void *_state,
 	ssize_t bytes;
 	size_t total;
 	char *p;
+	int ret = TRANSFORM_OK;
 
 	total = 0;
 	p = state->out_buf;
@@ -457,16 +458,18 @@ program_filter_read(struct transform *transform, void *_state,
 			/* No recovery is possible if we can no longer
 			 * read from the child. */
 			return (TRANSFORM_FATAL);
-		if (bytes == 0)
+		if (bytes == 0) {
 			/* We got EOF from the child. */
+			ret = TRANSFORM_EOF;
 			break;
+		}
 		total += bytes;
 		p += bytes;
 	}
 
 	*buff = state->out_buf;
 	*bytes_read = total;
-	return (total == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
+	return (ret);
 }
 
 static int

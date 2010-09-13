@@ -150,16 +150,14 @@ window_read(struct transform *t, void *_data,
 		return (TRANSFORM_EOF);
 	}
 
-	if (w_data->start) {
+	while (w_data->start) {
 		consumed = transform_read_filter_consume(upstream, w_data->start);
 
-		if (consumed > 0) {
-			w_data->start -= consumed;
+		if (consumed < 0) {
+			/* retry statuses? either way, pass back the error */
+			return (consumed);
 		}
-
-		/* retry statuses? either way, pass back the error */
-		if (w_data->start) 
-			return (consumed);	
+		w_data->start -= consumed;
 	}
 
 	*buff = transform_read_filter_ahead(upstream, 1, &available);
@@ -172,10 +170,10 @@ window_read(struct transform *t, void *_data,
 
 	if (-1 != w_data->allowed) {
 		if (w_data->allowed < available) {
-			available = w_data->allowed;
+			*bytes_read = w_data->allowed;
+			return (TRANSFORM_EOF);
 		}
 	}
-
 	*bytes_read = available;
 	return (TRANSFORM_OK);
 }

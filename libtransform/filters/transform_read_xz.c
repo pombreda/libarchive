@@ -65,7 +65,6 @@ struct private_data {
 	unsigned char	*out_block;
 	size_t		 out_block_size;
 	int64_t		 total_out;
-	char		 eof; /* True = found end of compressed data. */
 	char		 in_stream;
 
 	/* Following variables are used for lzip only. */
@@ -92,7 +91,6 @@ struct private_data {
 	unsigned char	*out_block;
 	size_t		 out_block_size;
 	int64_t		 total_out;
-	char		 eof; /* True = found end of compressed data. */
 	int code;
 };
 
@@ -646,7 +644,6 @@ lzip_tail(struct transform *transform, struct private_data *state,
 		state->crc32 = 0;
 		state->member_out = 0;
 		state->member_in = 0;
-		state->eof = 0;
 	}
 	return (TRANSFORM_OK);
 }
@@ -663,13 +660,14 @@ xz_filter_read(struct transform *transform, void *_state,
 	size_t decompressed;
 	ssize_t avail_in;
 	int ret;
+	int eof_encountered = 0;
 
 	/* Empty our output buffer. */
 	state->stream.next_out = state->out_block;
 	state->stream.avail_out = state->out_block_size;
 
 	/* Try to fill the output buffer. */
-	while (state->stream.avail_out > 0 && !state->eof) {
+	while (state->stream.avail_out && !eof_encountered) {
 		if (!state->in_stream) {
 			/*
 			 * Initialize liblzma for lzip
@@ -690,7 +688,7 @@ xz_filter_read(struct transform *transform, void *_state,
 		    (state->stream.avail_in == 0)? LZMA_FINISH: LZMA_RUN);
 		switch (ret) {
 		case LZMA_STREAM_END: /* Found end of stream. */
-			state->eof = 1;
+			eof_encountered = 1;
 			/* FALL THROUGH */
 		case LZMA_OK: /* Decompressor made some progress. */
 			transform_read_filter_consume(upstream,
@@ -715,14 +713,14 @@ xz_filter_read(struct transform *transform, void *_state,
 		if (state->code == TRANSFORM_FILTER_LZIP) {
 			state->crc32 = lzma_crc32(state->out_block,
 			    decompressed, state->crc32);
-			if (state->eof) {
+			if (eof_encountered) {
 				ret = lzip_tail(transform, state, upstream);
-				if (ret != TRANSFORM_OK)
+				if (ret != TRANSFORM_OK && ret != TRANSFORM_EOF)
 					return (ret);
 			}
 		}
 	}
-	return (decompressed == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
+	return (eof_encountered ? TRANSFORM_EOF : TRANSFORM_OK);
 }
 
 /*
@@ -835,13 +833,14 @@ lzma_filter_read(struct transform *transform, void *_state,
 	struct private_data *state = (struct private_date *)_state;
 	size_t decompressed;
 	ssize_t avail_in, ret;
+	int eof_encountered = 0;
 
 	/* Empty our output buffer. */
 	state->stream.next_out = state->out_block;
 	state->stream.avail_out = state->out_block_size;
 
 	/* Try to fill the output buffer. */
-	while (state->stream.avail_out > 0 && !state->eof) {
+	while (state->stream.avail_out > 0 && !eof_encountered) {
 		state->stream.next_in = (unsigned char *)(uintptr_t)
 		    transform_read_filter_ahead(upstream, 1, &avail_in);
 		if (state->stream.next_in == NULL && avail_in < 0)
@@ -852,7 +851,7 @@ lzma_filter_read(struct transform *transform, void *_state,
 		ret = lzmadec_decode(&(state->stream), avail_in == 0);
 		switch (ret) {
 		case LZMADEC_STREAM_END: /* Found end of stream. */
-			state->eof = 1;
+			eof_encountered = 1;
 			/* FALL THROUGH */
 		case LZMADEC_OK: /* Decompressor made some progress. */
 			transform_read_filter_consume(upstream,
@@ -879,7 +878,7 @@ lzma_filter_read(struct transform *transform, void *_state,
 	else
 		*p = state->out_block;
 	*bytes_read = decompressed;
-	return (decompressed == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
+	return (eof_encountered ? TRANSFORM_EOF : TRANSFORM_OK);
 }
 
 /*

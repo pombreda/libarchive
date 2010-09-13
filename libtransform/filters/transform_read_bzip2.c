@@ -52,7 +52,6 @@ struct private_data {
 	char		*out_block;
 	size_t		 out_block_size;
 	char		 valid; /* True = decompressor is initialized */
-	char		 eof; /* True = found end of compressed data. */
 };
 
 /* Bzip2 filter */
@@ -202,12 +201,6 @@ bzip2_filter_read(struct transform *transform, void *_state,
 	const char *read_buf;
 	ssize_t ret;
 
-	if (state->eof) {
-		*p = NULL;
-		*bytes_read = 0;
-		return (TRANSFORM_EOF);
-	}
-
 	/* Empty our output buffer. */
 	state->stream.next_out = state->out_block;
 	state->stream.avail_out = state->out_block_size;
@@ -220,7 +213,6 @@ bzip2_filter_read(struct transform *transform, void *_state,
 			 * long term, should restructure to remove the need.
 			 */
 			if (bzip2_reader_bid(NULL, upstream) == 0) {
-				state->eof = 1;
 				*p = state->out_block;
 				decompressed = state->stream.next_out
 				    - state->out_block;
@@ -272,7 +264,6 @@ bzip2_filter_read(struct transform *transform, void *_state,
 		state->stream.avail_in = ret;
 		/* There is no more data, return whatever we have. */
 		if (ret == 0) {
-			state->eof = 1;
 			*p = state->out_block;
 			decompressed = state->stream.next_out
 			    - state->out_block;

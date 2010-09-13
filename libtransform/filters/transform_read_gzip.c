@@ -54,7 +54,6 @@ struct private_data {
 	size_t		 out_block_size;
 	int64_t		 total_out;
 	unsigned long	 crc;
-	char		 eof; /* True = found end of compressed data. */
 };
 
 /* Gzip Filter. */
@@ -353,19 +352,20 @@ gzip_filter_read(struct transform *transform, void *_state,
 	size_t decompressed;
 	ssize_t avail_in;
 	int ret;
+	int eof_encountered = 0;
 
 	/* Empty our output buffer. */
 	state->stream.next_out = state->out_block;
 	state->stream.avail_out = state->out_block_size;
 
 	/* Try to fill the output buffer. */
-	while (state->stream.avail_out > 0 && !state->eof) {
+	while (state->stream.avail_out > 0) {
 		/* If we're not in a stream, read a header
 		 * and initialize the decompression library. */
 		if (!state->in_stream) {
 			ret = consume_header(transform, state, upstream);
 			if (ret == TRANSFORM_EOF) {
-				state->eof = 1;
+				eof_encountered = 1;
 				break;
 			}
 			if (ret < TRANSFORM_OK)
@@ -414,7 +414,7 @@ gzip_filter_read(struct transform *transform, void *_state,
 	else
 		*p = state->out_block;
 	*bytes_read = decompressed;
-	return (decompressed == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
+	return (eof_encountered ? TRANSFORM_EOF : TRANSFORM_OK);
 }
 
 /*
