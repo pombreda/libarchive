@@ -36,6 +36,8 @@ struct my_data {
 	int open_called;
 	int close_return;
 	int close_called;
+	size_t bytes_read;
+	char *buff;
 };
 
 static int
@@ -45,6 +47,8 @@ my_read(struct transform *a, void *_private, struct transform_read_filter *upstr
 	struct my_data *private = (struct my_data *)_private;
 	assertEqualInt(MAGIC, private->magic);
 	++private->read_called;
+	*bytes_read = private->bytes_read;
+	*buff = private->buff;
 	return (private->read_return);
 }
 
@@ -74,7 +78,6 @@ my_close(struct transform *a, void *_private)
 	++private->close_called;
 	return (private->close_return);
 }
-
 
 DEFINE_TEST(test_open_failure)
 {
@@ -113,6 +116,25 @@ DEFINE_TEST(test_open_failure)
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.read_called);
 	assertEqualInt(1, private.close_called);
+
+	memset(&private, 0, sizeof(private));
+	private.magic = MAGIC;
+	private.open_return = TRANSFORM_OK;
+	private.read_return = TRANSFORM_EOF;
+	private.bytes_read = 5;
+	private.buff = "asdf";
+	a = transform_read_new();
+	assert(a != NULL);
+	assertEqualInt(TRANSFORM_OK,
+	    transform_read_open(a, &private, my_open, my_read, NULL, my_close));
+	transform_read_consume(a, 2);
+	transform_read_consume(a, 2);
+	assertEqualInt(TRANSFORM_FATAL,
+		transform_read_consume(a, 2));
+	assertEqualInt(1, private.open_called);
+	assertEqualInt(1, private.read_called);
+	assertEqualInt(0, private.close_called);
+
 
 	memset(&private, 0, sizeof(private));
 	private.magic = MAGIC;

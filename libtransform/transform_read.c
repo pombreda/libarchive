@@ -962,6 +962,10 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 			return (total_bytes_skipped);
 	}
 
+	if (filter->end_of_file || filter->fatal) {
+		return (total_bytes_skipped);
+	}
+
 	/* Use ordinary reads as necessary to complete the request. */
 	for (;;) {
 		ret = (filter->read)((struct transform *)filter->transform,
@@ -971,7 +975,10 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 			filter->client_buff = NULL;
 			filter->fatal = 1;
 			return (bytes_read);
-		} else if (TRANSFORM_EOF == ret && !bytes_read) {
+		} else if (TRANSFORM_EOF == ret) {
+			filter->end_of_file = 1;
+		}
+		if (!bytes_read) {
 			filter->client_buff = NULL;
 			filter->end_of_file = 1;
 			return (total_bytes_skipped);
