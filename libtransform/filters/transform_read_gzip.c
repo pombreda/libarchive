@@ -103,8 +103,9 @@ transform_autodetect_add_gzip(struct transform_read_bidder *trb)
 /*
  * Read and verify the header.
  *
- * Returns zero if the header couldn't be validated, else returns
- * number of bytes in header.  If pbits is non-NULL, it receives a
+ * Returns zero if there isn't enough data for a stream.
+ * Returns -1 if the header couldn't be validated (meaning it's likely not gzip)
+ * else returns number of bytes in header.  If pbits is non-NULL, it receives a
  * count of bits verified, suitable for use by bidder.
  */
 static int
@@ -122,16 +123,16 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
 	if (p == NULL || avail == 0)
 		return (0);
 	if (p[0] != 037)
-		return (0);
+		return (-1);
 	bits += 8;
 	if (p[1] != 0213)
-		return (0);
+		return (-1);
 	bits += 8;
 	if (p[2] != 8) /* We only support deflation. */
-		return (0);
+		return (-1);
 	bits += 8;
 	if ((p[3] & 0xE0)!= 0)	/* No reserved flags set. */
-		return (0);
+		return (-1);
 	bits += 3;
 	header_flags = p[3];
 	/* Bytes 4-7 are mod time. */
@@ -144,7 +145,7 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
 	if (header_flags & 4) {
 		p = transform_read_filter_ahead(filter, len + 2, &avail);
 		if (p == NULL)
-			return (0);
+			return (-1);
 		len += ((int)p[len + 1] << 8) | (int)p[len];
 		len += 2;
 	}
@@ -157,7 +158,7 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
 				p = transform_read_filter_ahead(filter,
 				    len, &avail);
 			if (p == NULL)
-				return (0);
+				return (-1);
 		} while (p[len - 1] != 0);
 	}
 
@@ -169,7 +170,7 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
 				p = transform_read_filter_ahead(filter,
 				    len, &avail);
 			if (p == NULL)
-				return (0);
+				return (-1);
 		} while (p[len - 1] != 0);
 	}
 
@@ -177,12 +178,12 @@ peek_at_header(struct transform_read_filter *filter, int *pbits)
 	if ((header_flags & 2)) {
 		p = transform_read_filter_ahead(filter, len + 2, &avail);
 		if (p == NULL)
-			return (0);
+			return (-1);
 #if 0
 	int hcrc = ((int)p[len + 1] << 8) | (int)p[len];
 	int crc = /* XXX TODO: Compute header CRC. */;
 	if (crc != hcrc)
-		return (0);
+		return (-1);
 	bits += 16;
 #endif
 		len += 2;
@@ -201,7 +202,8 @@ gzip_bidder_bid(const void *_data, struct transform_read_filter *filter)
 {
 	int bits_checked;
 
-	if (peek_at_header(filter, &bits_checked))
+	/* -1 means "it's most definitely not gzip" */
+	if (peek_at_header(filter, &bits_checked) != -1)
 		return (bits_checked);
 	return (0);
 }
@@ -267,8 +269,11 @@ consume_header(struct transform *transform, struct private_data *state,
 
 	/* If this is a real header, consume it. */
 	len = peek_at_header(upstream, NULL);
-	if (len == 0)
+	if (len == 0) {
 		return (TRANSFORM_EOF);
+	} else if (len == -1) {
+		return (TRANSFORM_PREMATURE_EOF);
+	}
 	transform_read_filter_consume(upstream, len);
 
 	/* Initialize CRC accumulator. */
@@ -364,8 +369,8 @@ gzip_filter_read(struct transform *transform, void *_state,
 		 * and initialize the decompression library. */
 		if (!state->in_stream) {
 			ret = consume_header(transform, state, upstream);
-			if (ret == TRANSFORM_EOF) {
-				eof_encountered = 1;
+			if (TRANSFORM_EOF == ret || TRANSFORM_PREMATURE_EOF == ret) {
+				eof_encountered = ret;
 				break;
 			}
 			if (ret < TRANSFORM_OK)
@@ -414,7 +419,7 @@ gzip_filter_read(struct transform *transform, void *_state,
 	else
 		*p = state->out_block;
 	*bytes_read = decompressed;
-	return (eof_encountered ? TRANSFORM_EOF : TRANSFORM_OK);
+	return (eof_encountered ? eof_encountered : TRANSFORM_OK);
 }
 
 /*

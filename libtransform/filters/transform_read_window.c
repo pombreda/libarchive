@@ -165,7 +165,7 @@ window_read(struct transform *t, void *_data,
 		return (available);
 	} else if (0 == available) {
 		*bytes_read = 0;
-		return (TRANSFORM_EOF);
+		return (-1 == w_data->allowed ? TRANSFORM_EOF : TRANSFORM_PREMATURE_EOF);
 	}
 
 	if (-1 != w_data->allowed) {

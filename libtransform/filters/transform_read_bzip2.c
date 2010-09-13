@@ -66,6 +66,7 @@ static int	bzip2_filter_close(struct transform *, void *);
  * error messages.)  So the bid framework here gets compiled even
  * if bzlib is unavailable.
  */
+static int	check_header(struct transform_read_filter *);
 static int	bzip2_reader_bid(const void *, struct transform_read_filter *);
 static int	bzip2_reader_init(struct transform *, const void *);
 
@@ -93,15 +94,24 @@ transform_autodetect_add_bzip2(struct transform_read_bidder *trb)
 		bzip2_reader_bid, bzip2_reader_init, NULL, NULL));
 }
 
+static int
+bzip2_reader_bid(const void *bidder_data, struct transform_read_filter *filter)
+{
+	int ret = check_header(filter);
+	if (ret < 0)
+		ret = 0;
+	return (ret);
+}
 /*
  * Test whether we can handle this data.
  *
- * This logic returns zero if any part of the signature fails.  It
+ * This logic return 0 if EOF precludes even a signature
+ * -1 is returned if any part of the signature fails.  It
  * also tries to Do The Right Thing if a very short buffer prevents us
  * from verifying as much as we would like.
  */
 static int
-bzip2_reader_bid(const void *bidder_data, struct transform_read_filter *filter)
+check_header(struct transform_read_filter *filter)
 {
 	const unsigned char *buffer;
 	ssize_t avail;
@@ -115,12 +125,12 @@ bzip2_reader_bid(const void *bidder_data, struct transform_read_filter *filter)
 	/* First three bytes must be "BZh" */
 	bits_checked = 0;
 	if (buffer[0] != 'B' || buffer[1] != 'Z' || buffer[2] != 'h')
-		return (0);
+		return (-1);
 	bits_checked += 24;
 
 	/* Next follows a compression flag which must be an ASCII digit. */
 	if (buffer[3] < '1' || buffer[3] > '9')
-		return (0);
+		return (-1);
 	bits_checked += 5;
 
 	/* After BZh[1-9], there must be either a data block
@@ -131,7 +141,7 @@ bzip2_reader_bid(const void *bidder_data, struct transform_read_filter *filter)
 	else if (memcmp(buffer + 4, "\x17\x72\x45\x38\x50\x90", 6) == 0)
 		bits_checked += 48;
 	else
-		return (0);
+		return (-1);
 
 	return (bits_checked);
 }
@@ -212,12 +222,13 @@ bzip2_filter_read(struct transform *transform, void *_state,
 			 * might seem special, but the bidder doesn't need bidder data
 			 * long term, should restructure to remove the need.
 			 */
-			if (bzip2_reader_bid(NULL, upstream) == 0) {
+			ret = check_header(upstream);
+			if (ret <= 0) {
 				*p = state->out_block;
 				decompressed = state->stream.next_out
 				    - state->out_block;
 				*bytes_read = decompressed;
-				return (TRANSFORM_EOF);
+				return (ret == -1 ? TRANSFORM_EOF : TRANSFORM_PREMATURE_EOF);
 			}
 			/* Initialize compression library. */
 			ret = BZ2_bzDecompressInit(&(state->stream),
