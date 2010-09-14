@@ -283,10 +283,10 @@ close_filters(struct transform_read *a)
 				r = r1;
 			f->data = NULL;
 		}
-		if(f->buffer) {
-			free(f->buffer);
+		if(f->resizing.buffer) {
+			free(f->resizing.buffer);
 		}
-		f->buffer = NULL;
+		f->resizing.buffer = NULL;
 		f = t;
 	}
 	return r;
@@ -708,43 +708,43 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 		 * note that min == 0 is a perfectly well-defined
 		 * request.
 		 */
-		if (filter->avail >= min && filter->avail > 0) {
+		if (filter->resizing.avail >= min && filter->resizing.avail > 0) {
 			if (avail != NULL)
-				*avail = filter->avail;
-			return (filter->next);
+				*avail = filter->resizing.avail;
+			return (filter->resizing.next);
 		}
 
 		/*
 		 * We can satisfy directly from client buffer if everything
 		 * currently in the copy buffer is still in the client buffer.
 		 */
-		if (filter->client_total >= filter->client_avail + filter->avail
-		    && filter->client_avail + filter->avail >= min) {
+		if (filter->client.size >= filter->client.avail + filter->resizing.avail
+		    && filter->client.avail + filter->resizing.avail >= min) {
 
 			/* "Roll back" to client buffer. */
-			filter->client_avail += filter->avail;
-			filter->client_next -= filter->avail;
+			filter->client.avail += filter->resizing.avail;
+			filter->client.next -= filter->resizing.avail;
 
 			/* Copy buffer is now empty. */
-			filter->avail = 0;
-			filter->next = filter->buffer;
+			filter->resizing.avail = 0;
+			filter->resizing.next = filter->resizing.buffer;
 
 			/* Return data from client buffer. */
 			if (avail != NULL)
-				*avail = filter->client_avail;
-			return (filter->client_next);
+				*avail = filter->client.avail;
+			return (filter->client.next);
 		}
 
 		/* Move data forward in copy buffer if necessary. */
-		if (filter->next > filter->buffer &&
-		    filter->next + min > filter->buffer + filter->buffer_size) {
-			if (filter->avail > 0)
-				memmove(filter->buffer, filter->next, filter->avail);
-			filter->next = filter->buffer;
+		if (filter->resizing.next > filter->resizing.buffer &&
+		    filter->resizing.next + min > filter->resizing.buffer + filter->resizing.size) {
+			if (filter->resizing.avail > 0)
+				memmove(filter->resizing.buffer, filter->resizing.next, filter->resizing.avail);
+			filter->resizing.next = filter->resizing.buffer;
 		}
 
 		/* If we've used up the client data, get more. */
-		if (filter->client_avail <= 0) {
+		if (filter->client.avail <= 0) {
 			if (filter->end_of_file) {
 				if (avail != NULL)
 					*avail = 0;
@@ -752,11 +752,11 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 			}
 
 			ret = (filter->read)((struct transform *)filter->transform, filter->data,
-			    filter->upstream, &filter->client_buff, &bytes_read);
+			    filter->upstream, &filter->client.buffer, &bytes_read);
 
 			if (TRANSFORM_FATAL == ret) {
-				filter->client_total = filter->client_avail = 0;
-				filter->client_next = filter->client_buff = NULL;
+				filter->client.size = filter->client.avail = 0;
+				filter->client.next = filter->client.buffer = NULL;
 				filter->fatal = 1;
 				if (avail != NULL)
 					*avail = TRANSFORM_FATAL;
@@ -766,17 +766,17 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 			}
 
 			if (bytes_read == 0) {
-				filter->client_total = filter->client_avail = 0;
-				filter->client_next = filter->client_buff = NULL;
+				filter->client.size = filter->client.avail = 0;
+				filter->client.next = filter->client.buffer = NULL;
 				/* Return whatever we do have. */
 				if (avail != NULL)
-					*avail = filter->avail;
+					*avail = filter->resizing.avail;
 				return (NULL);
 			}
 
-			filter->client_total = bytes_read;
-			filter->client_avail = filter->client_total;
-			filter->client_next = filter->client_buff;
+			filter->client.size = bytes_read;
+			filter->client.avail = filter->client.size;
+			filter->client.next = filter->client.buffer;
 		}
 		else
 		{
@@ -788,12 +788,12 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 			 */
 
 			/* Ensure the buffer is big enough. */
-			if (min > filter->buffer_size) {
+			if (min > filter->resizing.size) {
 				size_t s, t;
 				char *p;
 
 				/* Double the buffer; watch for overflow. */
-				s = t = filter->buffer_size;
+				s = t = filter->resizing.size;
 				if (s == 0)
 					s = min;
 				while (s < min) {
@@ -811,7 +811,7 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 					s = t;
 				}
 				/* Now s >= min, so allocate a new buffer. */
-				p = (char *)realloc(filter->buffer, s);
+				p = (char *)realloc(filter->resizing.buffer, s);
 				if (p == NULL) {
 					transform_set_error(
 						&filter->transform->transform,
@@ -823,33 +823,33 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 					return (NULL);
 				}
 				/* we only need to move data if there wasn't a buffer already */
-				if (filter->avail > 0 && !filter->buffer)
-					memmove(p, filter->next, filter->avail);
-				filter->next = filter->buffer = p;
-				filter->buffer_size = s;
+				if (filter->resizing.avail > 0 && !filter->resizing.buffer)
+					memmove(p, filter->resizing.next, filter->resizing.avail);
+				filter->resizing.next = filter->resizing.buffer = p;
+				filter->resizing.size = s;
 			}
 
 			/* We can add client data to copy buffer. */
 			/* First estimate: copy to fill rest of buffer. */
-			tocopy = (filter->buffer + filter->buffer_size)
-			    - (filter->next + filter->avail);
+			tocopy = (filter->resizing.buffer + filter->resizing.size)
+			    - (filter->resizing.next + filter->resizing.avail);
 			/* Don't waste time buffering more than we need to. */
-			if (tocopy + filter->avail > min)
-				tocopy = min - filter->avail;
+			if (tocopy + filter->resizing.avail > min)
+				tocopy = min - filter->resizing.avail;
 			/* Don't copy more than is available. */
-			if (tocopy > filter->client_avail)
-				tocopy = filter->client_avail;
+			if (tocopy > filter->client.avail)
+				tocopy = filter->client.avail;
 
 			/* really feels like we could struct it to avoid this, returning
 			 * the buffer directly (or reading into the appropriately sized buffer
 			 */
-			memcpy(filter->next + filter->avail, filter->client_next,
+			memcpy(filter->resizing.next + filter->resizing.avail, filter->client.next,
 			    tocopy);
 			/* Remove this data from client buffer. */
-			filter->client_next += tocopy;
-			filter->client_avail -= tocopy;
+			filter->client.next += tocopy;
+			filter->client.avail -= tocopy;
 			/* add it to copy buffer. */
-			filter->avail += tocopy;
+			filter->resizing.avail += tocopy;
 		}
 	}
 }
@@ -920,20 +920,20 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 		return (-1);
 
 	/* Use up the copy buffer first. */
-	if (filter->avail > 0) {
-		min = minimum(request, (int64_t)filter->avail);
-		filter->next += min;
-		filter->avail -= min;
+	if (filter->resizing.avail > 0) {
+		min = minimum(request, (int64_t)filter->resizing.avail);
+		filter->resizing.next += min;
+		filter->resizing.avail -= min;
 		request -= min;
 		filter->bytes_consumed += min;
 		total_bytes_skipped += min;
 	}
 
 	/* Then use up the client buffer. */
-	if (filter->client_avail > 0) {
-		min = minimum(request, (int64_t)filter->client_avail);
-		filter->client_next += min;
-		filter->client_avail -= min;
+	if (filter->client.avail > 0) {
+		min = minimum(request, (int64_t)filter->client.avail);
+		filter->client.next += min;
+		filter->client.avail -= min;
 		request -= min;
 		filter->bytes_consumed += min;
 		total_bytes_skipped += min;
@@ -972,27 +972,27 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 	/* Use ordinary reads as necessary to complete the request. */
 	for (;;) {
 		ret = (filter->read)((struct transform *)filter->transform,
-			filter->data, filter->upstream, &filter->client_buff, &bytes_read);
+			filter->data, filter->upstream, &filter->client.buffer, &bytes_read);
 
 		if (TRANSFORM_FATAL == ret) {
-			filter->client_buff = NULL;
+			filter->client.buffer = NULL;
 			filter->fatal = 1;
 			return (bytes_read);
 		} else if (TRANSFORM_EOF == ret || TRANSFORM_PREMATURE_EOF == ret) {
 			filter->end_of_file = ret;
 		}
 		if (!bytes_read) {
-			filter->client_buff = NULL;
+			filter->client.buffer = NULL;
 			return (total_bytes_skipped);
 		}
 
 		assert(bytes_read > 0);
 
 		if (bytes_read >= request) {
-			filter->client_next =
-			    ((const char *)filter->client_buff) + request;
-			filter->client_avail = bytes_read - request;
-			filter->client_total = bytes_read;
+			filter->client.next =
+			    ((const char *)filter->client.buffer) + request;
+			filter->client.avail = bytes_read - request;
+			filter->client.size = bytes_read;
 			total_bytes_skipped += request;
 			return (total_bytes_skipped);
 		}

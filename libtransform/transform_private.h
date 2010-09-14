@@ -129,6 +129,26 @@ int	__transform_parse_options(const char *p, const char *fn,
 
 int	__transform_mktemp(const char *tmpdir);
 
+/* buffer we own, and can modify. */
+struct transform_buffer {
+	/* raw buffer itself- literal allocation */
+	void        *buffer;
+	size_t      size;
+	/* unconsumed data, and how much remains */
+	void        *next;
+	size_t      avail;
+};
+
+/* buffer we borrowed from upstream */
+struct transform_buffer_borrowed {
+	/* raw buffer itself- literal allocation */
+	const void  *buffer;
+	size_t      size;
+	/* unconsumed data, and how much remains */
+	const void  *next;
+	size_t      avail;
+};
+                            
 
 #define	err_combine(a,b)	((a) < (b) ? (a) : (b))
 

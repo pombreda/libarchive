@@ -122,18 +122,12 @@ struct transform_read_filter {
 	 * is buffer.
 	 */
 
-	char		*buffer;
-	size_t		 buffer_size;
-	char		*next;		/* Current read location. */
-	size_t		 avail;		/* Bytes in my buffer. */
+	struct transform_buffer resizing;
 
 	/* 
 	 * this is our upstream exposed buffers.
 	 */
-	const void	*client_buff;
-	size_t		 client_total;
-	const char	*client_next;
-	size_t		 client_avail;
+	struct transform_buffer_borrowed client;
 
 	/* filter state info */
 	char		 end_of_file;
