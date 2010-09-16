@@ -135,9 +135,6 @@ struct program_filter {
 	int		 exit_status;
 	int		 waitpid_return;
 	int		 child_stdin, child_stdout;
-
-	char		*out_buf;
-	size_t		 out_buf_len;
 };
 
 static int	program_filter_read(struct transform *, void *,
@@ -385,20 +382,16 @@ __transform_read_program(struct transform *transform,
 	const char *name, int magic)
 {
 	struct program_filter	*state;
-	static const size_t out_buf_len = 65536;
-	char *out_buf;
 	char *description;
 	const char *prefix = "Program: ";
 	int ret;
 
 	state = (struct program_filter *)calloc(1, sizeof(*state));
-	out_buf = (char *)malloc(out_buf_len);
 	description = (char *)malloc(strlen(prefix) + strlen(cmd) + 1);
-	if (state == NULL || out_buf == NULL || description == NULL) {
+	if (state == NULL || description == NULL) {
 		transform_set_error(transform, ENOMEM,
 		    "Can't allocate input data");
 		free(state);
-		free(out_buf);
 		free(description);
 		return (TRANSFORM_FATAL);
 	}
@@ -409,12 +402,9 @@ __transform_read_program(struct transform *transform,
 	state->description = description;
 	strcpy(state->description, prefix);
 	strcat(state->description, cmd);
-	state->out_buf = out_buf;
-	state->out_buf_len = out_buf_len;
 
 	if ((state->child = __transform_create_child(cmd,
 		 &state->child_stdin, &state->child_stdout)) == -1) {
-		free(state->out_buf);
 		free(state);
 		transform_set_error(transform, EINVAL,
 		    "Can't initialise filter");
@@ -451,9 +441,9 @@ program_filter_read(struct transform *transform, void *_state,
 	int ret = TRANSFORM_OK;
 
 	total = 0;
-	p = state->out_buf;
-	while (state->child_stdout != -1 && total < state->out_buf_len) {
-		bytes = child_read(transform, state, upstream, p, state->out_buf_len - total);
+	p = (char *)*buff;
+	while (state->child_stdout != -1 && total < *bytes_read) {
+		bytes = child_read(transform, state, upstream, p, *bytes_read - total);
 		if (bytes < 0)
 			/* No recovery is possible if we can no longer
 			 * read from the child. */
@@ -467,7 +457,6 @@ program_filter_read(struct transform *transform, void *_state,
 		p += bytes;
 	}
 
-	*buff = state->out_buf;
 	*bytes_read = total;
 	return (ret);
 }
@@ -481,7 +470,6 @@ program_filter_close(struct transform *transform, void *_state)
 	e = child_stop(transform, state);
 
 	/* Release our private data. */
-	free(state->out_buf);
 	free(state->description);
 	free(state);
 
