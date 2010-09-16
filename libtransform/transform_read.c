@@ -204,7 +204,7 @@ transform_read_open2(struct transform *_a, void *client_data,
 	a->client.skipper = client_skipper;
 	a->client.closer = client_closer;
 
-	e = transform_read_filter_add(_a,
+	e = transform_read_add_new_filter(_a,
 		client_data, "none", TRANSFORM_FILTER_NONE,
 		client_reader, client_skipper, client_closer, visit_fds, flags);
 
@@ -635,8 +635,9 @@ transform_read_filter_set_buffering(struct transform_read_filter *filter, size_t
  * add a new filter to the stack
  */
 
+
 int
-transform_read_filter_add(struct transform *_t,
+transform_read_add_new_filter(struct transform *_t,
 	const void *data, const char *name, int code,
 	transform_read_filter_read_callback *reader,
 	transform_read_filter_skip_callback *skipper,
@@ -644,11 +645,10 @@ transform_read_filter_add(struct transform *_t,
 	transform_read_filter_visit_fds_callback *visit_fds,
 	int64_t flags)
 {
-	struct transform_read *t = (struct transform_read *)_t;
 	struct transform_read_filter *f;
 
 	transform_check_magic(_t, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
-		"transform_read_filter_add");
+		"transform_read_add_new_filter");
 
 	f = transform_read_filter_new(data, name, code, reader, skipper, closer,
 		visit_fds, flags);
@@ -659,13 +659,40 @@ transform_read_filter_add(struct transform *_t,
 		return (TRANSFORM_FATAL);
 	}
 
-	f->transform = t;
-	if (TRANSFORM_OK != transform_read_filter_finalize(f)) {
-		free(f);
+	if (TRANSFORM_OK == transform_read_add_filter(_t, f)) {
+		return (TRANSFORM_OK);
+	}
+	free(f);
+	return (TRANSFORM_FATAL);
+}
+
+int
+transform_read_add_filter(struct transform *_t,
+	struct transform_read_filter *filter)
+{
+	struct transform_read *t = (struct transform_read *)_t;
+	transform_check_magic(_t, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
+		"transform_read_add_new_filter");
+
+	if (TRANSFORM_FATAL == __transform_filter_check_magic2(_t, filter,
+		TRANSFORM_READ_FILTER_MAGIC, TRANSFORM_STATE_NEW,
+		"transform_read_add_filter")) {
 		return (TRANSFORM_FATAL);
 	}
-	f->upstream = t->filter;
-	t->filter = f;
+
+	if ((filter->flags & TRANSFORM_FILTER_SOURCE) && t->filter) {
+		transform_set_error(_t, TRANSFORM_ERRNO_PROGRAMMER,
+			"filter %s is a source filter, but this transform already has filters added",
+			filter->name);
+		return (TRANSFORM_FATAL);
+	}
+
+	filter->transform = t;
+	if (TRANSFORM_OK != transform_read_filter_finalize(filter)) {
+		return (TRANSFORM_FATAL);
+	}
+	filter->upstream = t->filter;
+	t->filter = filter;
 
 	return (TRANSFORM_OK);
 }

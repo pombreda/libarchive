@@ -516,7 +516,7 @@ common_bidder_init(struct transform *transform,
 		}
 	}
 
-	ret = transform_read_filter_add(transform, (void *)state,
+	ret = transform_read_add_new_filter(transform, (void *)state,
 		name, code,
 		xz_filter_read, NULL, xz_filter_close, NULL, 0);
 

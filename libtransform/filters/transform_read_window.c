@@ -111,7 +111,7 @@ window_bidder_init(struct transform *t, const void *w_bid_data)
 		return (TRANSFORM_OK);
 	}
 
-	if (TRANSFORM_FATAL == transform_read_filter_add(t, (void *)w_data,
+	if (TRANSFORM_FATAL == transform_read_add_new_filter(t, (void *)w_data,
 		"window", TRANSFORM_FILTER_WINDOW, window_read, window_skip,
 		window_free, NULL, TRANSFORM_FILTER_NOTIFY_ALL_CONSUME_FLAG |
 			TRANSFORM_FILTER_SELF_BUFFERING))

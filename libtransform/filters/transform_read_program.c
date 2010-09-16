@@ -411,7 +411,7 @@ __transform_read_program(struct transform *transform,
 		return (TRANSFORM_FATAL);
 	}
 
-	ret = transform_read_filter_add(transform, (void *)state,
+	ret = transform_read_add_new_filter(transform, (void *)state,
 		name, magic,
 		program_filter_read, NULL, program_filter_close, NULL, 0);
 

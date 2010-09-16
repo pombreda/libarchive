@@ -104,6 +104,12 @@ __transform_check_state(struct marker *m, unsigned int magic,
 		&(((struct transform_read_filter *)(f))->marker), 		\
 		(magic), (state), "transform_read_filter", (function))
 
+#define __transform_filter_check_magic2(t, f, magic, state, function)	\
+	__transform_check_magic(								\
+		(t), 	\
+		&(((struct transform_read_filter *)(f))->marker), 		\
+		(magic), (state), "transform_read_filter", (function))
+
 #define __transform_read_bidder_check_magic(t, b, magic, state, function)	\
 	__transform_check_magic((t),											\
 		&(((struct transform_read_bidder *)(b))->marker),					\

@@ -136,7 +136,7 @@ rpm_bidder_init(struct transform *transform, const void *bidder_data)
 	}
 	rpm->state = ST_LEAD;
 
-	ret = transform_read_filter_add(transform, (void *)rpm,
+	ret = transform_read_add_new_filter(transform, (void *)rpm,
 		"rpm", TRANSFORM_FILTER_RPM,
 		rpm_filter_read, NULL, rpm_filter_close, NULL,
 		TRANSFORM_FILTER_SELF_BUFFERING);

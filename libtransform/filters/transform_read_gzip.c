@@ -241,7 +241,7 @@ gzip_bidder_init(struct transform *transform, const void *bidder_data)
 	}
 	state->in_stream = 0; /* We're not actually within a stream yet. */
 
-	ret = transform_read_filter_add(transform, (void *)state,
+	ret = transform_read_add_new_filter(transform, (void *)state,
 		"gzip", TRANSFORM_FILTER_GZIP,
 		gzip_filter_read, NULL, gzip_filter_close, NULL, 0);
 

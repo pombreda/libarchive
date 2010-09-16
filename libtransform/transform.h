@@ -208,6 +208,7 @@ typedef int transform_fd_visitor(struct transform *,
 #define TRANSFORM_FILTER_NO_FLAGS 0
 #define TRANSFORM_FILTER_NOTIFY_ALL_CONSUME_FLAG 0x1
 #define TRANSFORM_FILTER_SELF_BUFFERING	0x2
+#define TRANSFORM_FILTER_SOURCE	0x4 /* takes no upstream */
 
 /*-
  * Basic outline for reading an transform:
@@ -433,13 +434,16 @@ typedef int transform_visit_fds_callback(struct transform *,
 /* Returns size actually written, zero on EOF, -1 on error. */
 
                         
-__LA_DECL int transform_read_filter_add(struct transform *,
+__LA_DECL int transform_read_add_new_filter(struct transform *,
 	const void *data, const char *filter_name, int code,
 	transform_read_filter_read_callback *,
 	transform_read_filter_skip_callback *,
 	transform_read_filter_close_callback *,
 	transform_read_filter_visit_fds_callback *,
 	int64_t flags);
+
+__LA_DECL int transform_read_add_filter(struct transform *,
+	struct transform_read_filter *);
 
 __LA_DECL struct transform_read_filter *
 	transform_read_filter_new(

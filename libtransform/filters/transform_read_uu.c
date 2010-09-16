@@ -347,7 +347,7 @@ uudecode_bidder_init(struct transform *transform, const void *bidder_data)
 	uudecode->in_allocated = IN_BUFF_SIZE;
 	uudecode->state = ST_FIND_HEAD;
 
-	ret = transform_read_filter_add(transform, (void *)uudecode,
+	ret = transform_read_add_new_filter(transform, (void *)uudecode,
 		"uu", TRANSFORM_FILTER_UU,
 		uudecode_filter_read, NULL, uudecode_filter_close, NULL, 0);
 
