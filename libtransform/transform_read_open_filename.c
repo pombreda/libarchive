@@ -68,8 +68,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_open_filename.c 201093 
 
 struct read_file_data {
 	int	 fd;
-	size_t	 block_size;
-	void	*buffer;
 	mode_t	 st_mode;  /* Mode bits for opened file. */
 	char	 use_lseek;
 	char	 filename[1]; /* Must be last! */
@@ -137,7 +135,8 @@ transform_read_open_filename_fd(struct transform *a, const char *filename,
 {
 	struct stat st;
 	struct read_file_data *mine;
-	void *buffer;
+	struct transform_read_filter *source;
+
 	int is_disk_like = 0;
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 	off_t mediasize = 0; // FreeBSD-specific, so off_t okay here.
@@ -240,16 +239,12 @@ transform_read_open_filename_fd(struct transform *a, const char *filename,
 			new_block_size *= 2;
 		block_size = new_block_size;
 	}
-	buffer = malloc(block_size);
-	if (mine == NULL || buffer == NULL) {
+	if (mine == NULL) {
 		transform_set_error(a, ENOMEM, "No memory");
 		free(mine);
-		free(buffer);
 		return (TRANSFORM_FATAL);
 	}
 	strcpy(mine->filename, filename);
-	mine->block_size = block_size;
-	mine->buffer = buffer;
 	mine->fd = fd;
 	/* Remember mode so close can decide whether to flush. */
 	mine->st_mode = st.st_mode;
@@ -258,8 +253,18 @@ transform_read_open_filename_fd(struct transform *a, const char *filename,
 	if (is_disk_like)
 		mine->use_lseek = 1;
 
-	return (transform_read_open2(a, mine,
-		file_read, file_skip, file_close, file_visit_fds, 0));
+	source = transform_read_filter_new(mine, "filename-souce",
+		TRANSFORM_FILTER_NONE, file_read, mine->use_lseek ? file_skip : NULL,
+		file_close, file_visit_fds, TRANSFORM_FILTER_SOURCE);
+
+	if (!source) {
+		transform_set_error(a, ENOMEM, "failed allocating filter");
+		return TRANSFORM_FATAL;
+	}
+
+	transform_read_filter_set_buffering(source, block_size);
+
+	return transform_read_open_source(a, source);
 }
 
 static int
@@ -281,9 +286,8 @@ file_read(struct transform *t, void *client_data,
 	 * whatever we get here instead of waiting for a full block
 	 * worth of data. */
 
-	*buff = mine->buffer;
 	for (;;) {
-		*bytes_read = read(mine->fd, mine->buffer, mine->block_size);
+		*bytes_read = read(mine->fd, (void *)*buff, *bytes_read);
 		if (*bytes_read < 0) {
 			if (errno == EINTR)
 				continue;
@@ -387,20 +391,23 @@ file_close(struct transform *t, void *client_data)
 		 * Here, I flush everything except for regular files and
 		 * device nodes.
 		 */
+		 /* XXX this seems a little too smart for libtransform... */
 		if (!S_ISREG(mine->st_mode)
 		    && !S_ISCHR(mine->st_mode)
 		    && !S_ISBLK(mine->st_mode)) {
 			ssize_t bytesRead;
-			do {
-				bytesRead = read(mine->fd, mine->buffer,
-				    mine->block_size);
-			} while (bytesRead > 0);
+			void *p = malloc(64 * 1024);
+			if (p) {
+				do {
+					bytesRead = read(mine->fd, p, 64 * 1024);
+				} while (bytesRead > 0);
+				free(p);
+			}
 		}
 		/* If a named file was opened, then it needs to be closed. */
 		if (mine->filename[0] != '\0')
 			close(mine->fd);
 	}
-	free(mine->buffer);
 	free(mine);
 	return (TRANSFORM_OK);
 }
