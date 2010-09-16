@@ -62,8 +62,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_support_compression_xz.
 
 struct private_data {
 	lzma_stream	 stream;
-	unsigned char	*out_block;
-	size_t		 out_block_size;
 	int64_t		 total_out;
 	char		 in_stream;
 
@@ -88,8 +86,6 @@ static int  common_bidder_init(struct transform *, const void *,
 
 struct private_data {
 	lzmadec_stream	 stream;
-	unsigned char	*out_block;
-	size_t		 out_block_size;
 	int64_t		 total_out;
 	int code;
 };
@@ -475,25 +471,17 @@ static int
 common_bidder_init(struct transform *transform,
 	const void *bidder_data, const char *name, int code)
 {
-	static const size_t out_block_size = 64 * 1024;
-	void *out_block;
 	struct private_data *state;
 	int ret;
 
 	state = (struct private_data *)calloc(1, sizeof(*state));
-	out_block = (unsigned char *)malloc(out_block_size);
-	if (state == NULL || out_block == NULL) {
+	if (state == NULL) {
 		transform_set_error(transform, ENOMEM,
 		    "Can't allocate data for xz decompression");
-		free(out_block);
 		free(state);
 		return (TRANSFORM_FATAL);
 	}
-	state->out_block_size = out_block_size;
-	state->out_block = out_block;
 	state->stream.avail_in = 0;
-	state->stream.next_out = state->out_block;
-	state->stream.avail_out = state->out_block_size;
 	state->crc32 = 0;
 	state->code = code;
 
@@ -664,8 +652,8 @@ xz_filter_read(struct transform *transform, void *_state,
 	int eof_encountered = 0;
 
 	/* Empty our output buffer. */
-	state->stream.next_out = state->out_block;
-	state->stream.avail_out = state->out_block_size;
+	state->stream.next_out = (void *)*p;
+	state->stream.avail_out = *bytes_read;
 
 	/* Try to fill the output buffer. */
 	while (state->stream.avail_out && !eof_encountered) {
@@ -703,15 +691,14 @@ xz_filter_read(struct transform *transform, void *_state,
 		}
 	}
 
-	decompressed = state->stream.next_out - state->out_block;
+	decompressed = (void *)state->stream.next_out - (void *)*p;
 	*bytes_read = decompressed;
 	state->total_out += decompressed;
 	state->member_out += decompressed;
 
-	*p = state->out_block;
 	if (TRANSFORM_FILTER_LZIP == state->code) {
 		if (decompressed) {
-			state->crc32 = lzma_crc32(state->out_block,
+			state->crc32 = lzma_crc32(*p,
 				decompressed, state->crc32);
 		}
 		if (eof_encountered) {
@@ -735,9 +722,6 @@ xz_filter_close(struct transform *transform, void *_state)
 	struct private_data *state = (struct private_data *)_state;
 
 	lzma_end(&(state->stream));
-	if(state->out_block)
-		free(state->out_block);
-	state->out_block = NULL;
 	if (state)
 		free(state);
 	return (TRANSFORM_OK);
@@ -759,8 +743,6 @@ static int
 lzma_bidder_init(struct transform *transform, struct transform_read_bidder *bidder,
 	const void *bidder_data)
 {
-	static const size_t out_block_size = 64 * 1024;
-	void *out_block;
 	struct private_data *state;
 	ssize_t ret, avail_in;
 
@@ -768,18 +750,14 @@ lzma_bidder_init(struct transform *transform, struct transform_read_bidder *bidd
 	self->name = "lzma";
 
 	state = (struct private_data *)calloc(1, sizeof(*state));
-	out_block = (unsigned char *)malloc(out_block_size);
-	if (state == NULL || out_block == NULL) {
+	if (state == NULL) {
 		transform_set_error(&self->transform->transform, ENOMEM,
 		    "Can't allocate data for lzma decompression");
-		free(out_block);
 		free(state);
 		return (TRANSFORM_FATAL);
 	}
 
 	self->data = state;
-	state->out_block_size = out_block_size;
-	state->out_block = out_block;
 	self->read = lzma_filter_read;
 	self->skip = NULL; /* not supported */
 	self->close = lzma_filter_close;
@@ -790,8 +768,6 @@ lzma_bidder_init(struct transform *transform, struct transform_read_bidder *bidd
 	if (state->stream.next_in == NULL)
 		return (TRANSFORM_FATAL);
 	state->stream.avail_in = avail_in;
-	state->stream.next_out = state->out_block;
-	state->stream.avail_out = state->out_block_size;
 
 	/* Initialize compression library. */
 	ret = lzmadec_init(&(state->stream));
@@ -819,7 +795,6 @@ lzma_bidder_init(struct transform *transform, struct transform_read_bidder *bidd
 		break;
 	}
 
-	free(state->out_block);
 	free(state);
 	self->data = NULL;
 	return (TRANSFORM_FATAL);
@@ -839,8 +814,8 @@ lzma_filter_read(struct transform *transform, void *_state,
 	int eof_encountered = 0;
 
 	/* Empty our output buffer. */
-	state->stream.next_out = state->out_block;
-	state->stream.avail_out = state->out_block_size;
+	state->stream.next_out = (void *)*p;
+	state->stream.avail_out = *bytes_read;
 
 	/* Try to fill the output buffer. */
 	while (state->stream.avail_out > 0 && !eof_encountered) {
@@ -874,13 +849,8 @@ lzma_filter_read(struct transform *transform, void *_state,
 		}
 	}
 
-	decompressed = state->stream.next_out - state->out_block;
-	state->total_out += decompressed;
-	if (decompressed == 0)
-		*p = NULL;
-	else
-		*p = state->out_block;
-	*bytes_read = decompressed;
+	*bytes_read = (void *)state->stream.next_out - (void *)*p;
+	state->total_out += *bytes_read;
 	return (eof_encountered ? TRANSFORM_EOF : TRANSFORM_OK);
 }
 
@@ -905,7 +875,6 @@ lzma_filter_close(struct transform *transform, void *_state)
 		ret = TRANSFORM_FATAL;
 	}
 
-	free(state->out_block);
 	free(state);
 	return (ret);
 }
