@@ -53,9 +53,8 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_open_fd.c 201103 2009-1
 
 struct read_fd_data {
 	int	 fd;
-	size_t	 block_size;
-	char	 use_lseek;
-	void	*buffer;
+	char use_lseek;
+	size_t block_size;
 };
 
 static int	file_close(struct transform *, void *);
@@ -67,11 +66,11 @@ static int      file_visit_fds(struct transform *, const void *,
 	transform_fd_visitor *visitor, const void *visitor_data);
 
 int
-transform_read_open_fd(struct transform *a, int fd, size_t block_size)
+transform_read_open_fd(struct transform *t, int fd, size_t block_size)
 {
+	struct transform_read_filter *source;
 	struct stat st;
 	struct read_fd_data *mine;
-	void *b;
 
 	int is_disk_like = 0;
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
@@ -82,9 +81,9 @@ transform_read_open_fd(struct transform *a, int fd, size_t block_size)
 	struct partinfo pi;
 #endif
 
-	transform_clear_error(a);
+	transform_clear_error(t);
 	if (fstat(fd, &st) != 0) {
-		transform_set_error(a, errno, "Can't stat fd %d", fd);
+		transform_set_error(t, errno, "Can't stat fd %d", fd);
 		return (TRANSFORM_FATAL);
 	}
 
@@ -154,32 +153,39 @@ transform_read_open_fd(struct transform *a, int fd, size_t block_size)
 
 
 	mine = (struct read_fd_data *)calloc(1, sizeof(*mine));
-	b = malloc(block_size);
-	if (mine == NULL || b == NULL) {
-		transform_set_error(a, ENOMEM, "No memory");
+	if (mine == NULL) {
+		transform_set_error(t, ENOMEM, "No memory");
 		free(mine);
-		free(b);
 		return (TRANSFORM_FATAL);
 	}
-	mine->block_size = block_size;
-	mine->buffer = b;
 	mine->fd = fd;
-	/*
-	 * Skip support is a performance optimization for anything
-	 * that supports lseek().  On FreeBSD, only regular files and
-	 * raw disk devices support lseek() and there's no portable
-	 * way to determine if a device is a raw disk device, so we
-	 * only enable this optimization for regular files.
-	 */
-	if(is_disk_like) {
-		mine->use_lseek = 1;
-	}
 #if defined(__CYGWIN__) || defined(_WIN32)
 	setmode(mine->fd, O_BINARY);
 #endif
 
-	return (transform_read_open2(a, mine,
-		file_read, file_skip, file_close, file_visit_fds, 0));
+	mine->use_lseek = is_disk_like ? 1 : 0;
+	mine->block_size = block_size;
+
+	source = transform_read_filter_new(mine, "fd-source",
+		TRANSFORM_FILTER_NONE,
+		file_read,
+		file_skip, file_close, file_visit_fds,
+		TRANSFORM_FILTER_SOURCE);
+
+	if (!source) {
+		transform_set_error(t, ENOMEM,
+			"failed allocating filter");
+		free(mine);
+		return (TRANSFORM_FATAL);
+	}
+
+	if (TRANSFORM_OK != transform_read_filter_set_buffering(source,
+		mine->block_size)) {
+		free(mine);
+		free(source);
+	}
+
+	return transform_read_open_source(t, source);
 }
 
 static int
@@ -188,9 +194,8 @@ file_read(struct transform *t, void *client_data, struct transform_read_filter *
 {
 	struct read_fd_data *mine = (struct read_fd_data *)client_data;
 
-	*buff = mine->buffer;
 	for (;;) {
-		*bytes_read = read(mine->fd, mine->buffer, mine->block_size);
+		*bytes_read = read(mine->fd, (void *)*buff, *bytes_read);
 		if (*bytes_read < 0) {
 			if (errno == EINTR)
 				continue;
@@ -211,7 +216,7 @@ file_skip(struct transform *t, void *client_data, struct transform_read_filter *
 	(void)upstream;
 
 	if (!mine->use_lseek)
-		return (0);
+		return 0;
 
 	/* Reduce request to the next smallest multiple of block_size */
 	request = (request / mine->block_size) * mine->block_size;
@@ -244,7 +249,6 @@ file_close(struct transform *t, void *client_data)
 	struct read_fd_data *mine = (struct read_fd_data *)client_data;
 
 	(void)t; /* UNUSED */
-	free(mine->buffer);
 	free(mine);
 	return (TRANSFORM_OK);
 }
