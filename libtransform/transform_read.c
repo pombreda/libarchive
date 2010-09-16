@@ -977,7 +977,7 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 		if (TRANSFORM_FATAL == ret) {
 			filter->client.buffer = NULL;
 			filter->fatal = 1;
-			return (bytes_read);
+			return (ret);
 		} else if (TRANSFORM_EOF == ret || TRANSFORM_PREMATURE_EOF == ret) {
 			filter->end_of_file = ret;
 		}
