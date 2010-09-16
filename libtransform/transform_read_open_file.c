@@ -53,8 +53,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_open_file.c 201093 2009
 
 struct read_FILE_data {
 	FILE    *f;
-	size_t	 block_size;
-	void	*buffer;
 	char	 can_skip;
 };
 
@@ -67,24 +65,19 @@ static int      file_visit_fds(struct transform *, const void *,
     transform_fd_visitor *visitor, const void *visitor_data);
 
 int
-transform_read_open_FILE(struct transform *a, FILE *f)
+transform_read_open_FILE(struct transform *t, FILE *f)
 {
 	struct stat st;
+	struct transform_read_filter *source;
 	struct read_FILE_data *mine;
-	size_t block_size = 128 * 1024;
-	void *b;
 
-	transform_clear_error(a);
+	transform_clear_error(t);
 	mine = (struct read_FILE_data *)malloc(sizeof(*mine));
-	b = malloc(block_size);
-	if (mine == NULL || b == NULL) {
-		transform_set_error(a, ENOMEM, "No memory");
+	if (mine == NULL) {
+		transform_set_error(t, ENOMEM, "No memory");
 		free(mine);
-		free(b);
 		return (TRANSFORM_FATAL);
 	}
-	mine->block_size = block_size;
-	mine->buffer = b;
 	mine->f = f;
 	/*
 	 * If we can't fstat() the file, it may just be that it's not
@@ -101,8 +94,21 @@ transform_read_open_FILE(struct transform *a, FILE *f)
 	setmode(fileno(mine->f), O_BINARY);
 #endif
 
-	return (transform_read_open2(a, mine, file_read,
-		    file_skip, file_close, file_visit_fds, 0));
+	source = transform_read_filter_new(mine, "FILE-source",
+		TRANSFORM_FILTER_NONE, file_read, mine->can_skip ? file_skip : NULL,
+		file_close, file_visit_fds, TRANSFORM_FILTER_SOURCE);
+
+	if (!source) {
+		transform_set_error(t, ENOMEM, "failed allocating filter");
+		return (TRANSFORM_FATAL);
+	}
+
+	/* we ignore error output here; filter isn't initialized (meaning no alloc),
+	 * no error possible */
+	transform_read_filter_set_buffering(source,
+		128 * 1024);
+
+	return transform_read_open_source(t, source);
 }
 
 static int
@@ -111,8 +117,7 @@ file_read(struct transform *t, void *client_data,
 {
 	struct read_FILE_data *mine = (struct read_FILE_data *)client_data;
 
-	*buff = mine->buffer;
-	*bytes_read = fread(mine->buffer, 1, mine->block_size, mine->f);
+	*bytes_read = fread((void *)*buff, 1, *bytes_read, mine->f);
 	if (*bytes_read < 0) {
 		transform_set_error(t, errno, "Error reading file");
 		return (TRANSFORM_FATAL);
@@ -156,8 +161,6 @@ file_close(struct transform *t, void *client_data)
 	struct read_FILE_data *mine = (struct read_FILE_data *)client_data;
 
 	(void)t; /* UNUSED */
-	if (mine->buffer != NULL)
-		free(mine->buffer);
 	free(mine);
 	return (TRANSFORM_OK);
 }
