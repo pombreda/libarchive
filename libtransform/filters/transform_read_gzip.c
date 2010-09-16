@@ -50,8 +50,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_support_compression_gzi
 struct private_data {
 	z_stream	 stream;
 	char		 in_stream;
-	unsigned char	*out_block;
-	size_t		 out_block_size;
 	int64_t		 total_out;
 	unsigned long	 crc;
 };
@@ -232,21 +230,15 @@ static int
 gzip_bidder_init(struct transform *transform, const void *bidder_data)
 {
 	struct private_data *state;
-	static const size_t out_block_size = 64 * 1024;
-	void *out_block;
 	int ret;
 
 	state = (struct private_data *)calloc(sizeof(*state), 1);
-	out_block = (unsigned char *)malloc(out_block_size);
-	if (state == NULL || out_block == NULL) {
-		free(out_block);
+	if (state == NULL) {
 		free(state);
 		transform_set_error(transform, ENOMEM,
 		    "Can't allocate data for gzip decompression");
 		return (TRANSFORM_FATAL);
 	}
-	state->out_block_size = out_block_size;
-	state->out_block = out_block;
 	state->in_stream = 0; /* We're not actually within a stream yet. */
 
 	ret = transform_read_filter_add(transform, (void *)state,
@@ -361,9 +353,13 @@ gzip_filter_read(struct transform *transform, void *_state,
 	int ret;
 	int eof_encountered = 0;
 
+	if (*bytes_read == 0 || *p == NULL){
+		abort();
+	}
+
 	/* Empty our output buffer. */
-	state->stream.next_out = state->out_block;
-	state->stream.avail_out = state->out_block_size;
+	state->stream.next_out = (void *)*p;
+	state->stream.avail_out = *bytes_read;
 
 	/* Try to fill the output buffer. */
 	while (state->stream.avail_out > 0) {
@@ -414,12 +410,11 @@ gzip_filter_read(struct transform *transform, void *_state,
 	}
 
 	/* We've read as much as we can. */
-	decompressed = state->stream.next_out - state->out_block;
+	decompressed = (void *)state->stream.next_out - (void *)*p;
+	if (*bytes_read < decompressed) {
+		abort();
+	}
 	state->total_out += decompressed;
-	if (decompressed == 0)
-		*p = NULL;
-	else
-		*p = state->out_block;
 	*bytes_read = decompressed;
 	return (eof_encountered ? eof_encountered : TRANSFORM_OK);
 }
@@ -447,7 +442,6 @@ gzip_filter_close(struct transform *transform, void *_state)
 		}
 	}
 
-	free(state->out_block);
 	free(state);
 	return (ret);
 }
