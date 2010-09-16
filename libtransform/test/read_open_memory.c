@@ -48,7 +48,6 @@ struct read_memory_data {
 };
 
 static int	memory_read_close(struct transform *, void *);
-static int	memory_read_open(struct transform *, void *);
 static int64_t	memory_read_skip(struct transform *, void *, struct transform_read_filter *,
 	int64_t request);
 static int	memory_read(struct transform *, void *, struct transform_read_filter *, const void **buff,
@@ -93,22 +92,11 @@ read_open_memory_internal(struct transform *a, void *buff,
 	mine->copy_buff = malloc(mine->copy_buff_size);
 	memset(mine->copy_buff, 0xA5, mine->copy_buff_size);
 	if (fullapi)
-		return (transform_read_open(a, mine, memory_read_open,
+		return (transform_read_open(a, mine,
 			    memory_read, memory_read_skip, memory_read_close));
 	else
-		return (transform_read_open(a, mine, NULL,
+		return (transform_read_open(a, mine,
 			    memory_read, NULL, memory_read_close));
-}
-
-/*
- * There's nothing to open.
- */
-static int
-memory_read_open(struct transform *a, void *client_data)
-{
-	(void)a; /* UNUSED */
-	(void)client_data; /* UNUSED */
-	return (TRANSFORM_OK);
 }
 
 /*

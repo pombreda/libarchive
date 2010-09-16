@@ -179,7 +179,7 @@ transform_read_open_fd(struct transform *a, int fd, size_t block_size)
 #endif
 
 	return (transform_read_open2(a, mine,
-		NULL, file_read, file_skip, file_close, file_visit_fds, 0));
+		file_read, file_skip, file_close, file_visit_fds, 0));
 }
 
 static int

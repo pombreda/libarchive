@@ -86,7 +86,7 @@ transform_read_open_transform(struct transform *t, struct transform *src,
 		}
 	}
 
-	return (transform_read_open2(t, (void *)data, NULL,
+	return (transform_read_open2(t, (void *)data,
 		_transform_read, _transform_skip, _transform_close,
 		NULL, TRANSFORM_FILTER_NOTIFY_ALL_CONSUME_FLAG |
 			TRANSFORM_FILTER_SELF_BUFFERING));

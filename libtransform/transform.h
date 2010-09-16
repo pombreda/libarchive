@@ -235,8 +235,8 @@ __LA_DECL struct transform	*transform_read_new(void);
 
 /* Open the transform using callbacks for transform I/O. */
 __LA_DECL int transform_read_open(struct transform *, void *_client_data,
-		     transform_open_callback *, transform_read_callback *,
-		     transform_skip_callback *, transform_close_callback *);
+		     transform_read_callback *, transform_skip_callback *,
+		     transform_close_callback *);
 
 /*
  * A variety of shortcuts that invoke transform_read_open() with

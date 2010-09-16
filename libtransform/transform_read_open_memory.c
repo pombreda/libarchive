@@ -48,7 +48,6 @@ struct read_memory_data {
 };
 
 static int	memory_read_close(struct transform *, void *);
-static int	memory_read_open(struct transform *, void *);
 static int64_t	memory_read_skip(struct transform *, void *,
 	struct transform_read_filter *upstream, int64_t request);
 static int	memory_read(struct transform *, void *, struct transform_read_filter *,
@@ -80,19 +79,8 @@ transform_read_open_memory2(struct transform *a, void *buff,
 	mine->buffer = (unsigned char *)buff;
 	mine->end = mine->buffer + size;
 	mine->read_size = read_size;
-	return (transform_read_open(a, mine, memory_read_open,
+	return (transform_read_open(a, mine,
 		    memory_read, memory_read_skip, memory_read_close));
-}
-
-/*
- * There's nothing to open.
- */
-static int
-memory_read_open(struct transform *t, void *client_data)
-{
-	(void)t; /* UNUSED */
-	(void)client_data; /* UNUSED */
-	return (TRANSFORM_OK);
 }
 
 /*

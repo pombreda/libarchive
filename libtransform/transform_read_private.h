@@ -41,7 +41,6 @@ struct transform_read_bidder;
 struct transform_read_filter;
 
 int transform_read_open2(struct transform *_a, void *client_data,
-    transform_open_callback *client_opener,
     transform_read_callback *client_reader,
     transform_skip_callback *client_skipper,
     transform_close_callback *client_closer,

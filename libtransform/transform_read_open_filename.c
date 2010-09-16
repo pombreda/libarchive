@@ -259,7 +259,7 @@ transform_read_open_filename_fd(struct transform *a, const char *filename,
 		mine->use_lseek = 1;
 
 	return (transform_read_open2(a, mine,
-		NULL, file_read, file_skip, file_close, file_visit_fds, 0));
+		file_read, file_skip, file_close, file_visit_fds, 0));
 }
 
 static int

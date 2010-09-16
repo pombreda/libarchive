@@ -101,7 +101,7 @@ transform_read_open_FILE(struct transform *a, FILE *f)
 	setmode(fileno(mine->f), O_BINARY);
 #endif
 
-	return (transform_read_open2(a, mine, NULL, file_read,
+	return (transform_read_open2(a, mine, file_read,
 		    file_skip, file_close, file_visit_fds, 0));
 }
 

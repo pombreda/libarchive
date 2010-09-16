@@ -86,59 +86,33 @@ DEFINE_TEST(test_open_failure)
 
 	memset(&private, 0, sizeof(private));
 	private.magic = MAGIC;
-	private.open_return = TRANSFORM_FATAL;
-	a = transform_read_new();
-	assert(a != NULL);
-	assertEqualInt(TRANSFORM_FATAL,
-	    transform_read_open(a, &private, my_open, my_read, NULL, my_close));
-	assertEqualInt(1, private.open_called);
-	assertEqualInt(0, private.read_called);
-	assertEqualInt(1, private.close_called);
-
-	memset(&private, 0, sizeof(private));
-	private.magic = MAGIC;
-	private.open_return = -77;
-	a = transform_read_new();
-	assert(a != NULL);
-	assertEqualInt(-77,
-	    transform_read_open(a, &private, my_open, my_read, NULL, my_close));
-	assertEqualInt(1, private.open_called);
-	assertEqualInt(0, private.read_called);
-	assertEqualInt(1, private.close_called);
-
-	memset(&private, 0, sizeof(private));
-	private.magic = MAGIC;
-	private.open_return = TRANSFORM_WARN;
-	a = transform_read_new();
-	assert(a != NULL);
-	assertEqualInt(TRANSFORM_WARN,
-	    transform_read_open(a, &private, my_open, my_read, NULL, my_close));
-	assertEqualInt(1, private.open_called);
-	assertEqualInt(0, private.read_called);
-	assertEqualInt(1, private.close_called);
-
-	memset(&private, 0, sizeof(private));
-	private.magic = MAGIC;
 	private.open_return = TRANSFORM_OK;
+	a = transform_read_new();
+	assert(a != NULL);
+	assertEqualInt(TRANSFORM_OK,
+	    transform_read_open(a, &private, my_read, NULL, my_close));
+	assertEqualInt(0, private.read_called);
+	assertEqualInt(0, private.close_called);
+
+	memset(&private, 0, sizeof(private));
+	private.magic = MAGIC;
 	private.read_return = TRANSFORM_EOF;
 	private.bytes_read = 5;
 	private.buff = "asdf";
 	a = transform_read_new();
 	assert(a != NULL);
 	assertEqualInt(TRANSFORM_OK,
-	    transform_read_open(a, &private, my_open, my_read, NULL, my_close));
+	    transform_read_open(a, &private, my_read, NULL, my_close));
 	transform_read_consume(a, 2);
 	transform_read_consume(a, 2);
 	assertEqualInt(TRANSFORM_FATAL,
 		transform_read_consume(a, 2));
-	assertEqualInt(1, private.open_called);
 	assertEqualInt(1, private.read_called);
 	assertEqualInt(0, private.close_called);
 
 
 	memset(&private, 0, sizeof(private));
 	private.magic = MAGIC;
-	private.open_return = TRANSFORM_OK;
 	private.read_return = TRANSFORM_FATAL;
 	a = transform_read_new();
 	assert(a != NULL);

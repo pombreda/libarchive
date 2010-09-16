@@ -158,18 +158,16 @@ transform_read_set_filter_options(struct transform *_a, const char *s)
  */
 int
 transform_read_open(struct transform *_a, void *client_data,
-    transform_open_callback *client_opener,
     transform_read_callback *client_reader,
     transform_skip_callback *client_skipper,
     transform_close_callback *client_closer)
 {
-	return transform_read_open2(_a, client_data, client_opener,
+	return transform_read_open2(_a, client_data,
 		client_reader, client_skipper, client_closer, NULL, 0);
 }
 
 int
 transform_read_open2(struct transform *_a, void *client_data,
-    transform_open_callback *client_opener,
     transform_read_callback *client_reader,
     transform_skip_callback *client_skipper,
     transform_close_callback *client_closer,
@@ -187,17 +185,6 @@ transform_read_open2(struct transform *_a, void *client_data,
 	if (client_reader == NULL)
 		__transform_errx(1,
 		    "No reader function provided to transform_read_open");
-
-	/* Open data source. */
-	if (client_opener != NULL) {
-		e =(client_opener)(&a->transform, client_data);
-		if (TRANSFORM_OK != e) {
-			/* If the open failed, call the closer to clean up. */
-			if (client_closer)
-				(client_closer)(&a->transform, client_data);
-			return (e);
-		}
-	}
 
 	/* Save the client functions and mock up the initial source. */
 	a->client.reader = client_reader;
