@@ -245,16 +245,31 @@ archive_read_open2(struct archive *a, void *_client_data,
     archive_skip_callback *client_skipper,
     archive_close_callback *client_closer)
 {
-	void *client_data = __archive_shim_new(a, _client_data,
-		client_opener, client_closer, NULL, client_reader, client_skipper);
+	int ret = ARCHIVE_OK, ret2;
+	void *shim_data = __archive_shim_new(a, _client_data, NULL,
+		client_closer, NULL, client_reader, client_skipper);
 
-	if (NULL == client_data) {
-		archive_set_error(a, ENOMEM, "No memory");
+	if (!shim_data) {
+		archive_set_error(a, ENOMEM,
+			"shim allocation failed");
 		return (ARCHIVE_FATAL);
 	}
 
-	return archive_read_open_transform(a, client_data, __archive_shim_open,
+	if (client_opener) {
+		ret = (client_opener)(a, _client_data);
+//		if (ARCHIVE_FAILED == ret || ARCHIVE_FATAL == ret) {
+		if (ARCHIVE_OK != ret) {
+			free(shim_data);
+			if (client_closer) {
+				(client_closer)(a, _client_data);
+			}
+			return ARCHIVE_FAILED == ret ? ARCHIVE_FATAL : ret;
+		}
+	}
+
+	ret2 = archive_read_open_transform(a, shim_data,
 		__archive_shim_read, __archive_shim_skip, __archive_shim_close);
+	return ret2 < ret? ret2 : ret;
 }
 
 int
@@ -275,7 +290,6 @@ archive_read_open_preopened_transform(struct archive *a)
 
 int
 archive_read_open_transform(struct archive *a, void *client_data,
-    transform_open_callback *client_opener,
     transform_read_callback *client_reader,
     transform_skip_callback *client_skipper,
     transform_close_callback *client_closer)
@@ -288,7 +302,6 @@ archive_read_open_transform(struct archive *a, void *client_data,
 
 	e = transform_read_open(a->transform,
 		client_data,
-		client_opener,
 		client_reader,
 		client_skipper,
 		client_closer);

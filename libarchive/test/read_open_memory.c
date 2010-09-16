@@ -48,7 +48,6 @@ struct read_memory_data {
 };
 
 static int	memory_read_close(struct transform *, void *);
-static int	memory_read_open(struct transform *, void *);
 #if ARCHIVE_VERSION_NUMBER < 3000000
 static off_t	memory_read_skip(struct transform *, void *, 
 	struct transform_read_filter *, off_t request);
@@ -98,22 +97,11 @@ read_open_memory_internal(struct archive *a, void *buff,
 	mine->copy_buff = malloc(mine->copy_buff_size);
 	memset(mine->copy_buff, 0xA5, mine->copy_buff_size);
 	if (fullapi)
-		return (archive_read_open_transform(a, mine, memory_read_open,
+		return (archive_read_open_transform(a, mine,
 			    memory_read, memory_read_skip, memory_read_close));
 	else
-		return (archive_read_open_transform(a, mine, NULL,
+		return (archive_read_open_transform(a, mine,
 			    memory_read, NULL, memory_read_close));
-}
-
-/*
- * There's nothing to open.
- */
-static int
-memory_read_open(struct transform *t, void *client_data)
-{
-	(void)t; /* UNUSED */
-	(void)client_data; /* UNUSED */
-	return (TRANSFORM_OK);
 }
 
 /*

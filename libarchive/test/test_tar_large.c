@@ -281,7 +281,7 @@ DEFINE_TEST(test_tar_large)
 	 */
 	a = archive_read_new();
 	archive_read_support_format_tar(a);
-	archive_read_open_transform(a, &memdata, NULL,
+	archive_read_open_transform(a, &memdata,
 	    memory_read, memory_read_skip, NULL);
 
 	/*
