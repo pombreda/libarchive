@@ -44,8 +44,6 @@ struct uudecode {
 #define IN_BUFF_SIZE	(1024)
 	int		 in_cnt;
 	size_t		 in_allocated;
-	unsigned char	*out_buff;
-#define OUT_BUFF_SIZE	(64 * 1024)
 	int		 state;
 #define ST_FIND_HEAD	0
 #define ST_READ_UU	1
@@ -331,18 +329,15 @@ static int
 uudecode_bidder_init(struct transform *transform, const void *bidder_data)
 {
 	struct uudecode   *uudecode;
-	void *out_buff;
 	void *in_buff;
 	int ret;
 
 	uudecode = (struct uudecode *)calloc(sizeof(*uudecode), 1);
-	out_buff = malloc(OUT_BUFF_SIZE);
 	in_buff = malloc(IN_BUFF_SIZE);
-	if (uudecode == NULL || out_buff == NULL || in_buff == NULL) {
+	if (uudecode == NULL ||  in_buff == NULL) {
 		transform_set_error(transform, ENOMEM,
 		    "Can't allocate data for uudecode");
 		free(uudecode);
-		free(out_buff);
 		free(in_buff);
 		return (TRANSFORM_FATAL);
 	}
@@ -350,7 +345,6 @@ uudecode_bidder_init(struct transform *transform, const void *bidder_data)
 	uudecode->in_buff = in_buff;
 	uudecode->in_cnt = 0;
 	uudecode->in_allocated = IN_BUFF_SIZE;
-	uudecode->out_buff = out_buff;
 	uudecode->state = ST_FIND_HEAD;
 
 	ret = transform_read_filter_add(transform, (void *)uudecode,
@@ -415,7 +409,7 @@ read_more:
 		avail_in = 0;
 	used = 0;
 	total = 0;
-	out = uudecode->out_buff;
+	out = (void *)*buff;
 	ravail = avail_in;
 	if (uudecode->in_cnt) {
 		/*
@@ -464,7 +458,7 @@ read_more:
 			}
 			break;
 		}
-		if (total + len * 2 > OUT_BUFF_SIZE)
+		if (total + len * 2 > *bytes_read)
 			break;
 		switch (uudecode->state) {
 		default:
@@ -598,7 +592,6 @@ read_more:
 
 	transform_read_filter_consume(upstream, ravail);
 
-	*buff = uudecode->out_buff;
 	uudecode->total += total;
 	*bytes_read = total;
 	return (total == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
@@ -612,7 +605,6 @@ uudecode_filter_close(struct transform *transform, void *_data)
 	(void)transform; /* UNUSED */
 
 	free(uudecode->in_buff);
-	free(uudecode->out_buff);
 	free(uudecode);
 
 	return (TRANSFORM_OK);
