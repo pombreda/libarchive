@@ -134,6 +134,9 @@ archive_compression(struct archive *a)
 const char *
 archive_compression_name(struct archive *a)
 {
+	if (1 == archive_filter_count(a)) {
+		return "none";
+	}
 	return archive_filter_name(a, 0);
 }
 
