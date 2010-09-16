@@ -178,7 +178,6 @@ transform_read_open2(struct transform *_a, void *client_data,
 {
 
 	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter *filter;
 	int e;
 
 	transform_check_magic(_a, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
@@ -205,18 +204,13 @@ transform_read_open2(struct transform *_a, void *client_data,
 	a->client.skipper = client_skipper;
 	a->client.closer = client_closer;
 
-	filter = transform_read_filter_new(client_data, "none", TRANSFORM_FILTER_NONE,
+	e = transform_read_filter_add(_a,
+		client_data, "none", TRANSFORM_FILTER_NONE,
 		client_reader, client_skipper, client_closer, visit_fds, flags);
 
-	if (!filter) {
-		transform_set_error(_a, ENOMEM,
-			"failed to alocate transform_read_filter");
+	if (TRANSFORM_FATAL == e) {
 		return (TRANSFORM_FATAL);
 	}
-
-	filter->upstream = NULL;
-	filter->transform = a;
-	a->filter = filter;
 
 	/* Build out the input pipeline. */
 	e = build_stream(a);
