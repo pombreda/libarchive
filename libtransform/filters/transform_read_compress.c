@@ -97,10 +97,6 @@ struct private_data {
 	int			 bits_avail;
 	size_t			 bytes_in_section;
 
-	/* Output variables. */
-	size_t			 out_block_size;
-	void			*out_block;
-
 	/* Decompression status variables. */
 	int			 use_reset_code;
 	int			 maxcode;	/* Largest code. */
@@ -196,22 +192,15 @@ static int
 compress_bidder_init(struct transform *transform, const void *bidder_data)
 {
 	struct private_data *state;
-	static const size_t out_block_size = 64 * 1024;
-	void *out_block;
 	int ret;
 
 	state = (struct private_data *)calloc(sizeof(*state), 1);
-	out_block = malloc(out_block_size);
-	if (state == NULL || out_block == NULL) {
-		free(out_block);
+	if (state == NULL) {
 		free(state);
 		transform_set_error(transform, ENOMEM,
 		    "Can't allocate data for compress (.Z) decompression");
 		return (TRANSFORM_FATAL);
 	}
-
-	state->out_block_size = out_block_size;
-	state->out_block = out_block;
 
     ret = transform_read_filter_add(transform, (void *)state,
     	"compress (.Z)", TRANSFORM_FILTER_COMPRESS,
@@ -265,7 +254,7 @@ compress_filter_read(struct transform *transform, void *_state,
 		size_t *bytes_read)
 {
 	struct private_data *state = (struct private_data *)_state;
-	unsigned char *p, *start, *end;
+	unsigned char *p, *end;
 	int ret = TRANSFORM_EOF;
 
 	if(!state->stream_init_invoked) {
@@ -273,8 +262,8 @@ compress_filter_read(struct transform *transform, void *_state,
 		state->stream_init_invoked = 1;
 	}
 
-	p = start = (unsigned char *)state->out_block;
-	end = start + state->out_block_size;
+	p = (unsigned char *)*pblock;
+	end = p + *bytes_read;
 
 	while (p < end) {
 		if (state->stackp > state->stack) {
@@ -289,8 +278,7 @@ compress_filter_read(struct transform *transform, void *_state,
 		}
 	}
 
-	*pblock = start;
-	*bytes_read = (p - start);
+	*bytes_read = ((void *)p - (void *)*pblock);
 	return (ret);
 }
 
@@ -302,7 +290,6 @@ compress_filter_close(struct transform *self, void *_data)
 {
 	struct private_data *state = (struct private_data *)_data;
 
-	free(state->out_block);
 	free(state);
 	return (TRANSFORM_OK);
 }
