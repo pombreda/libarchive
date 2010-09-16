@@ -583,12 +583,17 @@ transform_read_filter_finalize(struct transform_read_filter *filter)
 		"transform_read_filter_skip")) {
 		return (TRANSFORM_FATAL);
 	}
+	/* mark it; buffering setting will not alloc if it's in a new state
+	 * we could alloc ourselves, but the redundancy is pointless.
+	 */
+	filter->marker.state = TRANSFORM_STATE_DATA;
 	if (!(filter->flags & TRANSFORM_FILTER_SELF_BUFFERING)) {
 		ret = transform_read_filter_set_buffering(filter,
 			filter->managed_size ? filter->managed_size : 64 * 1024);
 	}
-	if (TRANSFORM_OK == ret) {
-		filter->marker.state = TRANSFORM_STATE_DATA;
+	if (TRANSFORM_OK != ret) {
+		/* revert it back,  possibly go fatal instead? */
+		filter->marker.state = TRANSFORM_STATE_NEW;
 	}
 	return ret;
 }
@@ -611,13 +616,17 @@ transform_read_filter_set_buffering(struct transform_read_filter *filter, size_t
 	}
 
 	filter->managed_size = size;
-	if(NULL == (filter->managed_buffer = realloc(filter->managed_buffer, size))) {
-		if (filter->transform) {
-			transform_set_error((struct transform *)filter->transform, ENOMEM,
-				"memory allocation for filter buffer of size %lu failed",
-				(unsigned long)size);
+
+	/* only realloc the buffer if we're in a data state. */
+	if (filter->marker.state == TRANSFORM_STATE_DATA) {
+		if(NULL == (filter->managed_buffer = realloc(filter->managed_buffer, size))) {
+			if (filter->transform) {
+				transform_set_error((struct transform *)filter->transform, ENOMEM,
+					"memory allocation for filter buffer of size %lu failed",
+					(unsigned long)size);
+			}
+			return (TRANSFORM_FATAL);
 		}
-		return (TRANSFORM_FATAL);
 	}
 	return (TRANSFORM_OK);
 }	
