@@ -167,38 +167,70 @@ transform_read_open(struct transform *_a, void *client_data,
 }
 
 int
-transform_read_open2(struct transform *_a, void *client_data,
+transform_read_open2(struct transform *_t, void *client_data,
     transform_read_callback *client_reader,
     transform_skip_callback *client_skipper,
     transform_close_callback *client_closer,
 	transform_read_filter_visit_fds_callback *visit_fds,
 	int64_t flags)
 {
+	struct transform_read_filter *filter = NULL;
 
-	struct transform_read *a = (struct transform_read *)_a;
+	transform_check_magic(_t, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
+	    "transform_read_open");
+
+	filter = transform_read_filter_new(client_data, "none", TRANSFORM_FILTER_NONE,
+		client_reader, client_skipper, client_closer, visit_fds,
+		flags | TRANSFORM_FILTER_SOURCE);
+
+	if (!filter) {
+		return TRANSFORM_FATAL;
+	}
+
+	/* flaws here, and why this api needs to die.  we don't know
+	 * if build_stream failed, or if the filter addition did-
+	 * either way, we don't know if we need to do a freeing, thus
+	 * this is a leaky api in the error case
+	 */
+	return transform_read_open_source(_t, filter);
+}
+
+int
+transform_read_open_source(struct transform *_t,
+	struct transform_read_filter *source)
+{
+	struct transform_read *t = (struct transform_read *)_t;
 	int e;
 
-	transform_check_magic(_a, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
+	transform_check_magic(_t, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
 	    "transform_read_open");
-	transform_clear_error(&a->transform);
 
-	if (client_reader == NULL)
-		__transform_errx(1,
-		    "No reader function provided to transform_read_open");
+	if (TRANSFORM_FATAL == __transform_filter_check_magic2(_t, source,
+		TRANSFORM_READ_FILTER_MAGIC, TRANSFORM_STATE_NEW,
+			"transform_read_open_source")) {
+		return (TRANSFORM_FATAL);
+	}
 
-	e = transform_read_add_new_filter(_a,
-		client_data, "none", TRANSFORM_FILTER_NONE,
-		client_reader, client_skipper, client_closer, visit_fds, flags);
+	transform_clear_error(_t);
+
+	if (!(source->flags & TRANSFORM_FILTER_SOURCE)) {
+		transform_set_error(_t, TRANSFORM_ERRNO_PROGRAMMER,
+			"filter given to transform_read_open_source isn't marked as a "
+			"source filter");
+		return (TRANSFORM_FATAL);
+	}
+
+	e = transform_read_add_filter(_t, source);
 
 	if (TRANSFORM_FATAL == e) {
 		return (TRANSFORM_FATAL);
 	}
 
 	/* Build out the input pipeline. */
-	e = build_stream(a);
+	e = build_stream(t);
 	if (e == TRANSFORM_OK) {
-		a->transform.marker.state = TRANSFORM_STATE_DATA;
-		free_bidders(a);
+		t->transform.marker.state = TRANSFORM_STATE_DATA;
+		free_bidders(t);
 	}
 
 	return (e);
@@ -536,6 +568,11 @@ transform_read_filter_new(const void *data, const char *name,
 	int64_t flags)
 {
 	struct transform_read_filter *f;
+
+	if (!reader) {
+		return (NULL);
+	}
+	
 	if (NULL == (f = calloc(1, sizeof(struct transform_read_filter)))) {
 		return (NULL);
 	}

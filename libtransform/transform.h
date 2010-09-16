@@ -238,6 +238,9 @@ __LA_DECL int transform_read_open(struct transform *, void *_client_data,
 		     transform_read_callback *, transform_skip_callback *,
 		     transform_close_callback *);
 
+__LA_DECL int transform_read_open_source(struct transform *,
+	struct transform_read_filter *);
+
 /*
  * A variety of shortcuts that invoke transform_read_open() with
  * canned callbacks suitable for common situations.  The ones that
