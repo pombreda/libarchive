@@ -450,6 +450,12 @@ __LA_DECL struct transform_read_filter *
 	transform_read_filter_visit_fds_callback *,
 	int64_t flags);
 
+__LA_DECL int transform_read_filter_finalize(struct transform_read_filter *);
+__LA_DECL int transform_read_filter_set_buffering(struct transform_read_filter *,
+	size_t);
+
+
+
 __LA_DECL int transform_autodetect_add_bidder_create(struct transform_read_bidder *,
 	const void *, const char *, 
 	transform_read_bidder_bid_callback *,

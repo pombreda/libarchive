@@ -232,9 +232,7 @@ build_stream(struct transform_read *t)
 {
 	int ret;
 	struct transform_read_bidder *bidder;
-	struct transform_read_filter *f;
 	ssize_t avail;
-	size_t preferred_buffer = 0;
 
 	bidder = t->bidders;
 	while (bidder) {
@@ -244,25 +242,6 @@ build_stream(struct transform_read *t)
 			close_filters(t);
 			free_filters(t);
 			return (TRANSFORM_FATAL);
-		}
-
-		f = t->filter;
-
-		/* set up it's buffering if needed */
-		if (!(f->flags & TRANSFORM_FILTER_SELF_BUFFERING)) {
-			if (f->buff_size_preferred) {
-				/* realignment to the preceeding size is needed here */
-				f->managed_size = f->buff_size_preferred;
-			} else if (preferred_buffer) {
-				f->managed_size = preferred_buffer;
-			} else {
-				f->managed_size = (64 * 1024); /* tune this down long term to reduce client boundary memcpy */
-			}
-			if (!(f->managed_buffer = (void *)malloc(f->managed_size))) {
-				close_filters(t);
-				free_filters(t);
-				return (TRANSFORM_FATAL);
-			}
 		}
 
 		/* do a single byte read to verify this filter transforms properly */
@@ -580,7 +559,7 @@ transform_read_filter_new(const void *data, const char *name,
 	}
 
 	f->marker.magic = TRANSFORM_READ_FILTER_MAGIC;
-	f->marker.state = TRANSFORM_STATE_DATA;
+	f->marker.state = TRANSFORM_STATE_NEW;
 
 	f->code = code;
 	f->name = name;
@@ -594,6 +573,54 @@ transform_read_filter_new(const void *data, const char *name,
 	f->flags = flags;
 	return (f);
 }
+
+int
+transform_read_filter_finalize(struct transform_read_filter *filter)
+{
+	int ret = TRANSFORM_OK;
+	if (TRANSFORM_FATAL == __transform_filter_check_magic(filter,
+		TRANSFORM_READ_FILTER_MAGIC, TRANSFORM_STATE_NEW,
+		"transform_read_filter_skip")) {
+		return (TRANSFORM_FATAL);
+	}
+	if (!(filter->flags & TRANSFORM_FILTER_SELF_BUFFERING)) {
+		ret = transform_read_filter_set_buffering(filter,
+			filter->managed_size ? filter->managed_size : 64 * 1024);
+	}
+	if (TRANSFORM_OK == ret) {
+		filter->marker.state = TRANSFORM_STATE_DATA;
+	}
+	return ret;
+}
+
+int
+transform_read_filter_set_buffering(struct transform_read_filter *filter, size_t size)
+{
+	if (TRANSFORM_FATAL == __transform_filter_check_magic(filter,
+		TRANSFORM_READ_FILTER_MAGIC, TRANSFORM_STATE_DATA | TRANSFORM_STATE_NEW,
+		"transform_read_filter_skip")) {
+		return (TRANSFORM_FATAL);
+	}
+	if (filter->flags & TRANSFORM_FILTER_SELF_BUFFERING) {
+		if (filter->transform) {
+			transform_set_error((struct transform *)filter->transform,
+				TRANSFORM_ERRNO_PROGRAMMER,
+				"filter is self managing");
+		}
+		return (TRANSFORM_FATAL);
+	}
+
+	filter->managed_size = size;
+	if(NULL == (filter->managed_buffer = realloc(filter->managed_buffer, size))) {
+		if (filter->transform) {
+			transform_set_error((struct transform *)filter->transform, ENOMEM,
+				"memory allocation for filter buffer of size %lu failed",
+				(unsigned long)size);
+		}
+		return (TRANSFORM_FATAL);
+	}
+	return (TRANSFORM_OK);
+}	
 
 /*
  * add a new filter to the stack
@@ -622,7 +649,12 @@ transform_read_filter_add(struct transform *_t,
 			"failed to allocate a read filter");
 		return (TRANSFORM_FATAL);
 	}
+
 	f->transform = t;
+	if (TRANSFORM_OK != transform_read_filter_finalize(f)) {
+		free(f);
+		return (TRANSFORM_FATAL);
+	}
 	f->upstream = t->filter;
 	t->filter = f;
 
