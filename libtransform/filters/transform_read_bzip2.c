@@ -49,8 +49,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_support_compression_bzi
 #if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 struct private_data {
 	bz_stream	 stream;
-	char		*out_block;
-	size_t		 out_block_size;
 	char		 valid; /* True = decompressor is initialized */
 };
 
@@ -170,23 +168,16 @@ static int
 bzip2_reader_init(struct transform *transform, const void *bidder_data)
 {
 	int ret;
-	static const size_t out_block_size = 64 * 1024;
-	void *out_block;
 	struct private_data *state;
 
 	state = (struct private_data *)calloc(sizeof(*state), 1);
-	out_block = (unsigned char *)malloc(out_block_size);
-	if (state == NULL || out_block == NULL) {
+	if (state == NULL) {
 		transform_set_error(transform, ENOMEM,
 		    "Can't allocate data for bzip2 decompression");
-		free(out_block);
 		free(state);
 		return (TRANSFORM_FATAL);
 	}
 
-	state->out_block_size = out_block_size;
-	state->out_block = out_block;
-	
 	ret = transform_read_filter_add(transform, (void *)state, "bzip2",
 		TRANSFORM_FILTER_BZIP2,
 		bzip2_filter_read, NULL,
@@ -212,8 +203,8 @@ bzip2_filter_read(struct transform *transform, void *_state,
 	ssize_t ret;
 
 	/* Empty our output buffer. */
-	state->stream.next_out = state->out_block;
-	state->stream.avail_out = state->out_block_size;
+	state->stream.next_out = (void *)*p;
+	state->stream.avail_out = *bytes_read;
 
 	/* Try to fill the output buffer. */
 	for (;;) {
@@ -224,9 +215,8 @@ bzip2_filter_read(struct transform *transform, void *_state,
 			 */
 			ret = check_header(upstream);
 			if (ret <= 0) {
-				*p = state->out_block;
-				decompressed = state->stream.next_out
-				    - state->out_block;
+				decompressed = (void *)state->stream.next_out
+				    - (void *)*p;
 				*bytes_read = decompressed;
 				if (ret == -1) {
 					/* remaining data isn't bzip2 */
@@ -281,10 +271,8 @@ bzip2_filter_read(struct transform *transform, void *_state,
 		state->stream.avail_in = ret;
 		/* There is no more data, return whatever we have. */
 		if (ret == 0) {
-			*p = state->out_block;
-			decompressed = state->stream.next_out
-			    - state->out_block;
-			*bytes_read = decompressed;
+			*bytes_read = (void *)state->stream.next_out
+			    - (void *)*p;
 			return (TRANSFORM_EOF);
 		}
 
@@ -309,10 +297,8 @@ bzip2_filter_read(struct transform *transform, void *_state,
 		case BZ_OK: /* Decompressor made some progress. */
 			/* If we filled our buffer, update stats and return. */
 			if (state->stream.avail_out == 0) {
-				*p = state->out_block;
-				decompressed = state->stream.next_out
-				    - state->out_block;
-				*bytes_read = decompressed;
+				*bytes_read = (void *)state->stream.next_out
+				    - (void *)*p;
 				return (TRANSFORM_OK);
 			}
 			break;
@@ -346,7 +332,6 @@ bzip2_filter_close(struct transform *transform, void *_state)
 		state->valid = 0;
 	}
 
-	free(state->out_block);
 	free(state);
 	return (ret);
 }

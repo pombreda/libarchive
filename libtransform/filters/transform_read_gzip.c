@@ -353,10 +353,6 @@ gzip_filter_read(struct transform *transform, void *_state,
 	int ret;
 	int eof_encountered = 0;
 
-	if (*bytes_read == 0 || *p == NULL){
-		abort();
-	}
-
 	/* Empty our output buffer. */
 	state->stream.next_out = (void *)*p;
 	state->stream.avail_out = *bytes_read;
