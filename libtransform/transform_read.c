@@ -238,25 +238,50 @@ build_stream(struct transform_read *t)
 {
 	int ret;
 	struct transform_read_bidder *bidder;
+	struct transform_read_filter *f;
 	ssize_t avail;
+	size_t preferred_buffer = 0;
 
 	bidder = t->bidders;
 	while (bidder) {
 		ret = (bidder->create_filter)((struct transform *)t, bidder->data);
 
-		if (TRANSFORM_FATAL != ret) {
-			/* do a single byte read to verify this filter transforms properly */
-			transform_read_filter_ahead(t->filter, 1, &avail);
-			if (TRANSFORM_FATAL == avail) {
-				/* 
-				 * this will ignore eof and warnings.
-				 * we do not view an EOF as an error here- if a later
-				 * opener requires a read and fails, than it's a failure
-				 */
-				ret = TRANSFORM_FATAL;
-			} else if (0 == avail && TRANSFORM_PREMATURE_EOF == t->filter->end_of_file) {
-				ret = TRANSFORM_FATAL;
+		if (TRANSFORM_FATAL == ret) {
+			close_filters(t);
+			free_filters(t);
+			return (TRANSFORM_FATAL);
+		}
+
+		f = t->filter;
+
+		/* set up it's buffering if needed */
+		if (!(f->flags & TRANSFORM_FILTER_SELF_BUFFERING)) {
+			if (f->buff_size_preferred) {
+				/* realignment to the preceeding size is needed here */
+				f->managed_size = f->buff_size_preferred;
+			} else if (preferred_buffer) {
+				f->managed_size = preferred_buffer;
+			} else {
+				f->managed_size = (64 * 1024); /* tune this down long term to reduce client boundary memcpy */
 			}
+			if (!(f->managed_buffer = (void *)malloc(f->managed_size))) {
+				close_filters(t);
+				free_filters(t);
+				return (TRANSFORM_FATAL);
+			}
+		}
+
+		/* do a single byte read to verify this filter transforms properly */
+		transform_read_filter_ahead(t->filter, 1, &avail);
+		if (TRANSFORM_FATAL == avail) {
+			/* 
+			 * this will ignore eof and warnings.
+			 * we do not view an EOF as an error here- if a later
+			 * opener requires a read and fails, than it's a failure
+			 */
+			ret = TRANSFORM_FATAL;
+		} else if (0 == avail && TRANSFORM_PREMATURE_EOF == t->filter->end_of_file) {
+			ret = TRANSFORM_FATAL;
 		}			
 
 		if (TRANSFORM_FATAL == ret) {
@@ -287,6 +312,10 @@ close_filters(struct transform_read *a)
 			free(f->resizing.buffer);
 		}
 		f->resizing.buffer = NULL;
+		if(f->managed_buffer) {
+			free(f->managed_buffer);
+		}
+		f->managed_buffer = NULL;
 		f = t;
 	}
 	return r;
@@ -681,7 +710,6 @@ const void *
 transform_read_filter_ahead(struct transform_read_filter *filter,
     size_t min, ssize_t *avail)
 {
-	size_t bytes_read;
 	size_t tocopy;
 	int ret;
 
@@ -751,8 +779,11 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 				return (NULL);
 			}
 
+			filter->client.buffer = filter->managed_buffer;
+			filter->client.avail = filter->client.size = filter->managed_size;
+
 			ret = (filter->read)((struct transform *)filter->transform, filter->data,
-			    filter->upstream, &filter->client.buffer, &bytes_read);
+			    filter->upstream, &filter->client.buffer, &filter->client.avail);
 
 			if (TRANSFORM_FATAL == ret) {
 				filter->client.size = filter->client.avail = 0;
@@ -765,7 +796,12 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 				filter->end_of_file = ret;
 			}
 
-			if (bytes_read == 0) {
+			/* only dupe the size if we cannot know it's size due to it being an
+			 * unmanaged buffer */
+			if (filter->client.buffer != filter->managed_buffer)
+				filter->client.size = filter->client.avail;
+
+			if (! filter->client.avail) {
 				filter->client.size = filter->client.avail = 0;
 				filter->client.next = filter->client.buffer = NULL;
 				/* Return whatever we do have. */
@@ -774,8 +810,6 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 				return (NULL);
 			}
 
-			filter->client.size = bytes_read;
-			filter->client.avail = filter->client.size;
 			filter->client.next = filter->client.buffer;
 		}
 		else
@@ -906,7 +940,6 @@ int64_t
 transform_read_filter_skip(struct transform_read_filter *filter, int64_t request)
 {
 	int64_t bytes_skipped, total_bytes_skipped = 0;
-	size_t bytes_read;
 	size_t min;
 	int ret;
 
@@ -971,34 +1004,40 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 
 	/* Use ordinary reads as necessary to complete the request. */
 	for (;;) {
+
+		filter->client.buffer = filter->managed_buffer;
+		filter->client.size = filter->client.avail = filter->managed_size;
+
 		ret = (filter->read)((struct transform *)filter->transform,
-			filter->data, filter->upstream, &filter->client.buffer, &bytes_read);
+			filter->data, filter->upstream, &filter->client.buffer, &filter->client.avail);
 
 		if (TRANSFORM_FATAL == ret) {
 			filter->client.buffer = NULL;
+			filter->client.avail = filter->client.size = 0;
 			filter->fatal = 1;
 			return (ret);
 		} else if (TRANSFORM_EOF == ret || TRANSFORM_PREMATURE_EOF == ret) {
 			filter->end_of_file = ret;
 		}
-		if (!bytes_read) {
+		if (!filter->client.avail) {
 			filter->client.buffer = NULL;
 			return (total_bytes_skipped);
 		}
 
-		assert(bytes_read > 0);
+		assert(filter->client.avail > 0);
 
-		if (bytes_read >= request) {
+		if (filter->client.avail >= request) {
 			filter->client.next =
 			    ((const char *)filter->client.buffer) + request;
-			filter->client.avail = bytes_read - request;
-			filter->client.size = bytes_read;
+			filter->client.avail -= request;
+			if (filter->client.buffer != filter->managed_buffer)
+				filter->client.size = filter->client.avail;
 			total_bytes_skipped += request;
 			return (total_bytes_skipped);
 		}
 
-		total_bytes_skipped += bytes_read;
-		request -= bytes_read;
+		total_bytes_skipped += filter->client.avail;
+		request -= filter->client.avail;
 	}
 }
 

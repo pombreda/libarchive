@@ -124,6 +124,9 @@ struct transform_read_filter {
 
 	struct transform_buffer resizing;
 
+	size_t buff_size_preferred;
+	void   *managed_buffer;
+	size_t managed_size;
 	/* 
 	 * this is our upstream exposed buffers.
 	 */
