@@ -186,11 +186,6 @@ transform_read_open2(struct transform *_a, void *client_data,
 		__transform_errx(1,
 		    "No reader function provided to transform_read_open");
 
-	/* Save the client functions and mock up the initial source. */
-	a->client.reader = client_reader;
-	a->client.skipper = client_skipper;
-	a->client.closer = client_closer;
-
 	e = transform_read_add_new_filter(_a,
 		client_data, "none", TRANSFORM_FILTER_NONE,
 		client_reader, client_skipper, client_closer, visit_fds, flags);

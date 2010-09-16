@@ -136,25 +136,8 @@ struct transform_read_filter {
 	char		 fatal;
 };
 
-/*
- * The client looks a lot like a filter, so we just wrap it here.
- *
- * TODO: Make transform_read_filter and transform_read_client identical so
- * that users of the library can easily register their own
- * transformation filters.  This will probably break the API/ABI and
- * so should be deferred at least until libtransform 3.0.
- */
-struct transform_read_client {
-	transform_read_callback	*reader;
-	transform_skip_callback	*skipper;
-	transform_close_callback	*closer;
-};
-
 struct transform_read {
 	struct transform	transform;
-
-	/* Callbacks to open/read/write/close client transform stream. */
-	struct transform_read_client client;
 
 	/* Registered filter bidders. */
 	struct transform_read_bidder *bidders;
