@@ -707,20 +707,19 @@ xz_filter_read(struct transform *transform, void *_state,
 	*bytes_read = decompressed;
 	state->total_out += decompressed;
 	state->member_out += decompressed;
-	if (decompressed == 0)
-		*p = NULL;
-	else {
-		*p = state->out_block;
-		if (state->code == TRANSFORM_FILTER_LZIP) {
+
+	*p = state->out_block;
+	if (TRANSFORM_FILTER_LZIP == state->code) {
+		if (decompressed) {
 			state->crc32 = lzma_crc32(state->out_block,
-			    decompressed, state->crc32);
-			if (eof_encountered) {
-				ret = lzip_tail(transform, state, upstream);
-				if (ret == TRANSFORM_OK) {
-					return (TRANSFORM_OK);
-				} else {
-					return (ret);
-				}
+				decompressed, state->crc32);
+		}
+		if (eof_encountered) {
+			ret = lzip_tail(transform, state, upstream);
+			if (ret == TRANSFORM_OK) {
+				return (TRANSFORM_OK);
+			} else {
+				return (ret);
 			}
 		}
 	}
