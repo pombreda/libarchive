@@ -138,7 +138,8 @@ rpm_bidder_init(struct transform *transform, const void *bidder_data)
 
 	ret = transform_read_filter_add(transform, (void *)rpm,
 		"rpm", TRANSFORM_FILTER_RPM,
-		rpm_filter_read, NULL, rpm_filter_close, NULL, 0);
+		rpm_filter_read, NULL, rpm_filter_close, NULL,
+		TRANSFORM_FILTER_SELF_BUFFERING);
 	if (TRANSFORM_OK != ret) {
 		rpm_filter_close(transform, rpm);
 	}
