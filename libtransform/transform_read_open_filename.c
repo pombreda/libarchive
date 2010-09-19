@@ -253,7 +253,7 @@ transform_read_open_filename_fd(struct transform *a, const char *filename,
 	if (is_disk_like)
 		mine->use_lseek = 1;
 
-	source = transform_read_filter_new(mine, "filename-souce",
+	source = transform_read_filter_new(mine, "source:filename",
 		TRANSFORM_FILTER_NONE, file_read, mine->use_lseek ? file_skip : NULL,
 		file_close, file_visit_fds, TRANSFORM_FILTER_SOURCE);
 

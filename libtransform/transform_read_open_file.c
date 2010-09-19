@@ -94,7 +94,7 @@ transform_read_open_FILE(struct transform *t, FILE *f)
 	setmode(fileno(mine->f), O_BINARY);
 #endif
 
-	source = transform_read_filter_new(mine, "FILE-source",
+	source = transform_read_filter_new(mine, "source:FILE",
 		TRANSFORM_FILTER_NONE, file_read, mine->can_skip ? file_skip : NULL,
 		file_close, file_visit_fds, TRANSFORM_FILTER_SOURCE);
 

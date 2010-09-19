@@ -81,7 +81,7 @@ transform_read_open_memory2(struct transform *a, void *buff,
 	mine->end = mine->buffer + size;
 	mine->read_size = read_size;
 
-	source = transform_read_filter_new(mine, "memory-source",
+	source = transform_read_filter_new(mine, "source:memory",
 		TRANSFORM_FILTER_NONE, memory_read, memory_read_skip,
 		memory_read_close, NULL, TRANSFORM_FILTER_SOURCE | TRANSFORM_FILTER_SELF_BUFFERING);
 

@@ -166,7 +166,7 @@ transform_read_open_fd(struct transform *t, int fd, size_t block_size)
 	mine->use_lseek = is_disk_like ? 1 : 0;
 	mine->block_size = block_size;
 
-	source = transform_read_filter_new(mine, "fd-source",
+	source = transform_read_filter_new(mine, "source:fd",
 		TRANSFORM_FILTER_NONE,
 		file_read,
 		file_skip, file_close, file_visit_fds,
