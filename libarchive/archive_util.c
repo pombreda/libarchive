@@ -134,10 +134,11 @@ archive_compression(struct archive *a)
 const char *
 archive_compression_name(struct archive *a)
 {
-	if (1 == archive_filter_count(a)) {
-		return "none";
+	const char *s = archive_filter_name(a, 0);
+	if (s && 0 == strncmp(s, "source:", 7)) {
+		s = "none";
 	}
-	return archive_filter_name(a, 0);
+	return s;
 }
 
 
