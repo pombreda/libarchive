@@ -460,6 +460,8 @@ __LA_DECL struct transform_read_filter *
 __LA_DECL int transform_read_filter_finalize(struct transform_read_filter *);
 __LA_DECL int transform_read_filter_set_buffering(struct transform_read_filter *,
 	size_t);
+__LA_DECL int transform_read_filter_set_alignment(struct transform_read_filter *,
+	size_t);
 
 
 

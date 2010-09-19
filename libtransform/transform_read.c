@@ -590,6 +590,7 @@ transform_read_filter_new(const void *data, const char *name,
 	f->visit_fds = visit_fds;
 	f->upstream = NULL;
 	f->flags = flags;
+	f->alignment = 1;
 	return (f);
 }
 
@@ -634,6 +635,14 @@ transform_read_filter_set_buffering(struct transform_read_filter *filter, size_t
 		return (TRANSFORM_FATAL);
 	}
 
+	/* floor it to an aligned size */
+	size /= filter->alignment;
+	if (size <= 1) {
+		/* validate this heuristic- assumption is two windows of data is best, may not be */
+		size = 2;
+	}
+	size *= filter->alignment;
+	
 	filter->managed_size = size;
 
 	/* only realloc the buffer if we're in a data state. */
@@ -650,10 +659,23 @@ transform_read_filter_set_buffering(struct transform_read_filter *filter, size_t
 	return (TRANSFORM_OK);
 }	
 
+int
+transform_read_filter_set_alignment(struct transform_read_filter *filter, size_t size)
+{
+	if (TRANSFORM_FATAL == __transform_filter_check_magic(filter,
+		TRANSFORM_READ_FILTER_MAGIC, TRANSFORM_STATE_DATA | TRANSFORM_STATE_NEW,
+		"transform_read_filter_skip")) {
+		return (TRANSFORM_FATAL);
+	}
+	filter->alignment = size;
+	/* realign the buffering */
+	return transform_read_filter_set_buffering(filter, filter->managed_size);
+}
+
+
 /*
  * add a new filter to the stack
  */
-
 
 int
 transform_read_add_new_filter(struct transform *_t,
@@ -1066,17 +1088,20 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 
 	/* If there's an optimized skip function, use it. */
 	if (filter->skip != NULL) {
-		bytes_skipped = (filter->skip)((struct transform *)filter->transform, 
-			filter->data, filter->upstream, request);
-		if (bytes_skipped < 0) {	/* error */
-			filter->fatal = 1;
-			return (bytes_skipped);
+		int64_t aligned_request = (request / filter->alignment) * filter->alignment;
+		if (aligned_request) {
+			bytes_skipped = (filter->skip)((struct transform *)filter->transform, 
+				filter->data, filter->upstream, aligned_request);
+			if (bytes_skipped < 0) {	/* error */
+				filter->fatal = 1;
+				return (bytes_skipped);
+			}
+			filter->bytes_consumed += bytes_skipped;
+			total_bytes_skipped += bytes_skipped;
+			request -= bytes_skipped;
+			if (request == 0)
+				return (total_bytes_skipped);
 		}
-		filter->bytes_consumed += bytes_skipped;
-		total_bytes_skipped += bytes_skipped;
-		request -= bytes_skipped;
-		if (request == 0)
-			return (total_bytes_skipped);
 	}
 
 	if (filter->end_of_file || filter->fatal) {

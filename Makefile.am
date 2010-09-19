@@ -164,6 +164,7 @@ libtransform_test_SOURCES=					\
 	libtransform/test/test_visit_fds.c			\
 	libtransform/test/test_read_file_nonexistent.c		\
 	libtransform/test/test_read_window.c		\
+	libtransform/test/test_alignment.c		\
 	libtransform/test/test_read_transform.c	
 #	libtransform/test/test_open_fd.c				\
 #	libtransform/test/test_open_file.c			\
