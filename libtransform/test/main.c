@@ -253,8 +253,9 @@ failure_context(const char *fmt, ...)
     	return;
     }
 	va_start(ap, fmt);
-	failure(fmt, ap);
+	vsprintf(msgbuff, fmt, ap);
 	va_end(ap);
+	nextmsg = msgbuff;
 	is_context = 1;
 }
 
