@@ -622,7 +622,7 @@ transform_read_filter_set_buffering(struct transform_read_filter *filter, size_t
 {
 	if (TRANSFORM_FATAL == __transform_filter_check_magic(filter,
 		TRANSFORM_READ_FILTER_MAGIC, TRANSFORM_STATE_DATA | TRANSFORM_STATE_NEW,
-		"transform_read_filter_skip")) {
+		"transform_read_set_buffering")) {
 		return (TRANSFORM_FATAL);
 	}
 	if (filter->flags & TRANSFORM_FILTER_SELF_BUFFERING) {
