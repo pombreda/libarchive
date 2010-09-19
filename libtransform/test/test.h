@@ -230,6 +230,7 @@ extern void *test_extra;
 
 /* Function declarations.  These are defined in test_utility.c. */
 void failure(const char *fmt, ...);
+void failure_context(const char *fmt, ...);
 void assertion_count(const char *, int);
 void failure_start(const char *filename, int line, const char *fmt, ...);
 void failure_finish(void *);

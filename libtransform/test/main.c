@@ -232,6 +232,7 @@ logprintf(const char *fmt, ...)
 /* Set up a message to display only if next assertion fails. */
 static char msgbuff[4096];
 static const char *msg, *nextmsg;
+static int is_context = 0;
 void
 failure(const char *fmt, ...)
 {
@@ -240,6 +241,21 @@ failure(const char *fmt, ...)
 	vsprintf(msgbuff, fmt, ap);
 	va_end(ap);
 	nextmsg = msgbuff;
+}
+
+void
+failure_context(const char *fmt, ...)
+{
+	va_list ap;
+    if(fmt == NULL) {
+    	is_context = 0;
+    	nextmsg = NULL;
+    	return;
+    }
+	va_start(ap, fmt);
+	failure(fmt, ap);
+	va_end(ap);
+	is_context = 1;
 }
 
 /*
@@ -271,7 +287,9 @@ assertion_count(const char *file, int line)
 	++assertions;
 	/* Proper handling of "failure()" message. */
 	msg = nextmsg;
-	nextmsg = NULL;
+	if (!is_context) {
+		nextmsg = NULL;
+	}
 	/* Uncomment to print file:line after every assertion.
 	 * Verbose, but occasionally useful in tracking down crashes. */
 	/* printf("Checked %s:%d\n", file, line); */
