@@ -79,7 +79,6 @@ libtransform_la_SOURCES = 									\
 	libtransform/transform_read.c							\
 	libtransform/transform_read_open_fd.c			\
 	libtransform/transform_read_open_file.c			\
-	libtransform/transform_read_open_filename.c			\
 	libtransform/transform_read_open_memory.c			\
 	libtransform/transform_read_open_transform.c			\
 	libtransform/filters/transform_read_all.c	\

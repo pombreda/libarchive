@@ -19,7 +19,6 @@ SET(libtransform_SOURCES
   transform_read.c
   transform_read_open_fd.c
   transform_read_open_file.c
-  transform_read_open_filename.c
   transform_read_open_memory.c
   transform_read_private.h
   filters/transform_read_all.c

@@ -51,9 +51,17 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_open_fd.c 201103 2009-1
 #include "transform.h"
 #include "transform_read_private.h"
 
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+
 struct read_fd_data {
 	int	 fd;
 	char use_lseek;
+	/* used when we're dealing with a filename */
+	int close_fd;
+	mode_t st_mode;
+	char filename[1];
 };
 
 static int	file_close(struct transform *, void *);
@@ -63,9 +71,45 @@ static int64_t	file_skip(struct transform *, void *, struct transform_read_filte
 	int64_t request);
 static int      file_visit_fds(struct transform *, const void *,
 	transform_fd_visitor *visitor, const void *visitor_data);
+static int
+_common_open_fd(struct transform *, int, const char *, size_t, int);
+
+int
+transform_read_open_filename(struct transform *t, const char *filename,
+	size_t block_size)
+{
+	int fd;
+
+	if (!filename || filename[0] == '\0') {
+		transform_set_error(t, TRANSFORM_ERRNO_PROGRAMMER,
+			"null/empty filename passed in");
+		return (TRANSFORM_FATAL);
+	}
+	if(0 > (fd = open(filename, O_RDONLY | O_BINARY))) {
+		transform_set_error(t, errno,
+			"Failed to open '%s'", filename);
+		return (TRANSFORM_FATAL);
+	}
+
+	return (_common_open_fd(t, fd, filename, block_size, 1));
+}
+
+int
+transform_read_open_filename_fd(struct transform *t, const char *filename,
+	size_t block_size, int fd)
+{
+	return (_common_open_fd(t, fd, filename, block_size, 1));
+}
 
 int
 transform_read_open_fd(struct transform *t, int fd, size_t block_size)
+{
+	return (_common_open_fd(t, fd, NULL, block_size, 0));
+}
+
+static int
+_common_open_fd(struct transform *t, int fd, const char *filename,
+	size_t block_size, int close_fd)
 {
 	struct transform_read_filter *source;
 	struct stat st;
@@ -82,7 +126,13 @@ transform_read_open_fd(struct transform *t, int fd, size_t block_size)
 
 	transform_clear_error(t);
 	if (fstat(fd, &st) != 0) {
-		transform_set_error(t, errno, "Can't stat fd %d", fd);
+		if (filename) {
+			transform_set_error(t, errno, "can't stat '%s'", filename);
+		} else {
+			transform_set_error(t, errno, "Can't stat fd %d", fd);
+		}
+		if (close_fd)
+			close(fd);
 		return (TRANSFORM_FATAL);
 	}
 
@@ -150,21 +200,35 @@ transform_read_open_fd(struct transform *t, int fd, size_t block_size)
 		block_size = new_block_size;
 	}
 
-
-	mine = (struct read_fd_data *)calloc(1, sizeof(*mine));
-	if (mine == NULL) {
+	if (filename) {
+		size_t filename_len = strlen(filename);
+		mine = (struct read_fd_data *)calloc(1,
+			sizeof(*mine) + filename_len);
+		if (mine) {
+			memcpy(mine->filename, filename, filename_len);
+		}
+	} else {
+		mine = (struct read_fd_data *)calloc(1, sizeof(*mine));
+	}
+	if (!mine) {
 		transform_set_error(t, ENOMEM, "No memory");
 		free(mine);
+		if (close_fd)
+			close(fd);
 		return (TRANSFORM_FATAL);
 	}
+	mine->close_fd = close_fd;
 	mine->fd = fd;
+	mine->st_mode = st.st_mode;
+
 #if defined(__CYGWIN__) || defined(_WIN32)
 	setmode(mine->fd, O_BINARY);
 #endif
 
 	mine->use_lseek = is_disk_like ? 1 : 0;
 
-	source = transform_read_filter_new(mine, "source:fd",
+	source = transform_read_filter_new(mine,
+		close_fd ? "source:filename" : "source:fd",
 		TRANSFORM_FILTER_NONE,
 		file_read,
 		file_skip, file_close, file_visit_fds,
@@ -174,6 +238,8 @@ transform_read_open_fd(struct transform *t, int fd, size_t block_size)
 		transform_set_error(t, ENOMEM,
 			"failed allocating filter");
 		free(mine);
+		if (close_fd)
+			close(fd);
 		return (TRANSFORM_FATAL);
 	}
 
@@ -198,7 +264,12 @@ file_read(struct transform *t, void *client_data, struct transform_read_filter *
 		if (*bytes_read < 0) {
 			if (errno == EINTR)
 				continue;
-			transform_set_error(t, errno, "Error reading fd %d", mine->fd);
+			if (mine->filename) {
+				transform_set_error(t, errno, "Error reading filename %s, fd %d",
+					mine->filename, mine->fd);
+			} else {
+				transform_set_error(t, errno, "Error reading fd %d", mine->fd);
+			}
 			return (TRANSFORM_FATAL);
 		}
 		return (*bytes_read == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
@@ -233,7 +304,12 @@ file_skip(struct transform *t, void *client_data, struct transform_read_filter *
 	 * likely caused by a programmer error (too large request)
 	 * or a corrupted transform file.
 	 */
-	transform_set_error(t, errno, "Error seeking");
+	if (mine->filename) {
+		transform_set_error(t, errno, "Error seeking in file %s, fd %d",
+			mine->filename, mine->fd);
+	} else {
+		transform_set_error(t, errno, "Error seeking in fd %d", mine->fd);
+	}
 	return (-1);
 }
 
@@ -243,13 +319,44 @@ file_close(struct transform *t, void *client_data)
 	struct read_fd_data *mine = (struct read_fd_data *)client_data;
 
 	(void)t; /* UNUSED */
+
+	/* Only flush and close if open succeeded. */
+	if (mine->close_fd && mine->fd >= 0) {
+		/*
+		 * Sometimes, we should flush the input before closing.
+		 *   Regular files: faster to just close without flush.
+		 *   Disk-like devices:  Ditto.
+		 *   Tapes: must not flush (user might need to
+		 *      read the "next" item on a non-rewind device).
+		 *   Pipes and sockets:  must flush (otherwise, the
+		 *      program feeding the pipe or socket may complain).
+		 * Here, I flush everything except for regular files and
+		 * device nodes.
+		 */
+		 /* XXX this seems a little too smart for libtransform... */
+		if (!S_ISREG(mine->st_mode)
+		    && !S_ISCHR(mine->st_mode)
+		    && !S_ISBLK(mine->st_mode)) {
+			ssize_t bytesRead;
+			void *p = malloc(64 * 1024);
+			if (p) {
+				do {
+					bytesRead = read(mine->fd, p, 64 * 1024);
+				} while (bytesRead > 0);
+				free(p);
+			}
+		}
+		/* If a named file was opened, then it needs to be closed. */
+		if (mine->filename[0] != '\0')
+			close(mine->fd);
+	}
 	free(mine);
 	return (TRANSFORM_OK);
 }
 
 static int
 file_visit_fds(struct transform *transform, const void *_data,
-	transform_fd_visitor *visitor, const void *visitor_data)
+    transform_fd_visitor *visitor, const void *visitor_data)
 {
 	struct read_fd_data *mine = (struct read_fd_data *)_data;
 	return visitor(transform, mine->fd, (void *)visitor_data);
