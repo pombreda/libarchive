@@ -54,7 +54,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_open_fd.c 201103 2009-1
 struct read_fd_data {
 	int	 fd;
 	char use_lseek;
-	size_t block_size;
 };
 
 static int	file_close(struct transform *, void *);
@@ -164,7 +163,6 @@ transform_read_open_fd(struct transform *t, int fd, size_t block_size)
 #endif
 
 	mine->use_lseek = is_disk_like ? 1 : 0;
-	mine->block_size = block_size;
 
 	source = transform_read_filter_new(mine, "source:fd",
 		TRANSFORM_FILTER_NONE,
@@ -180,7 +178,8 @@ transform_read_open_fd(struct transform *t, int fd, size_t block_size)
 	}
 
 	if (TRANSFORM_OK != transform_read_filter_set_buffering(source,
-		mine->block_size)) {
+		block_size) ||
+		TRANSFORM_OK != transform_read_filter_set_alignment(source, 4096)) {
 		free(mine);
 		free(source);
 	}
@@ -217,11 +216,6 @@ file_skip(struct transform *t, void *client_data, struct transform_read_filter *
 
 	if (!mine->use_lseek)
 		return 0;
-
-	/* Reduce request to the next smallest multiple of block_size */
-	request = (request / mine->block_size) * mine->block_size;
-	if (request == 0)
-		return (0);
 
 	if (((old_offset = lseek(mine->fd, 0, SEEK_CUR)) >= 0) &&
 	    ((new_offset = lseek(mine->fd, request, SEEK_CUR)) >= 0))
