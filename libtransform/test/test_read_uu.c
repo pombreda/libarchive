@@ -116,6 +116,9 @@ test_read_uu_sub(const char *uu_ref_file, const char *raw_ref_file)
 		assertEqualIntA(a, TRANSFORM_OK,
 		    read_open_memory(a, buff, size, 2));
 
+		// ensure there is a uu filter in use.
+		assertEqualInt(2, transform_filter_count(a));
+
 		assertTransformContentsMem(a, (void *)decoded_expected, 
 			(int64_t)data_len);
 		
