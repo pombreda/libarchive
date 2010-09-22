@@ -72,6 +72,7 @@ static const char *_transform_filter_name(struct transform *, int);
 static int  _transform_filter_count(struct transform *);
 static int	_transform_read_close(struct transform *);
 static int	_transform_read_free(struct transform *);
+static int  _filter_read(struct transform_read_filter *filter, void **buff, size_t *buff_size);
 
 static struct transform_vtable *
 transform_read_vtable(void)
@@ -809,6 +810,28 @@ transform_read_ahead(struct transform *_a, size_t min, ssize_t *avail)
 	return (transform_read_filter_ahead(a->filter, min, avail));
 }
 
+static int
+_filter_read(struct transform_read_filter *filter, void **buff, size_t *buff_size)
+{
+	int ret;
+
+	if (filter->end_of_file) {
+		*buff_size = 0;
+		return (TRANSFORM_FATAL);
+	}
+
+	ret = (filter->read)((struct transform *)filter->transform, filter->data,
+		    filter->upstream, (const void **)buff, buff_size);
+
+	if (TRANSFORM_FATAL == ret) {
+		filter->fatal = 1;
+		return (TRANSFORM_FATAL);
+	} else if (TRANSFORM_EOF == ret || TRANSFORM_PREMATURE_EOF == ret) {
+		filter->end_of_file = ret;
+	}
+	return (TRANSFORM_OK);
+}
+
 const void *
 transform_read_filter_ahead(struct transform_read_filter *filter,
     size_t min, ssize_t *avail)
@@ -885,18 +908,15 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 			filter->client.buffer = filter->managed_buffer;
 			filter->client.avail = filter->client.size = filter->managed_size;
 
-			ret = (filter->read)((struct transform *)filter->transform, filter->data,
-			    filter->upstream, &filter->client.buffer, &filter->client.avail);
+			ret = _filter_read(filter, (void **)&filter->client.buffer,
+				&filter->client.avail);
 
 			if (TRANSFORM_FATAL == ret) {
 				filter->client.size = filter->client.avail = 0;
 				filter->client.next = filter->client.buffer = NULL;
-				filter->fatal = 1;
 				if (avail != NULL)
 					*avail = TRANSFORM_FATAL;
 				return (NULL);
-			} else if (TRANSFORM_EOF == ret || TRANSFORM_PREMATURE_EOF == ret) {
-				filter->end_of_file = ret;
 			}
 
 			/* only dupe the size if we cannot know it's size due to it being an
@@ -1114,16 +1134,13 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 		filter->client.buffer = filter->managed_buffer;
 		filter->client.size = filter->client.avail = filter->managed_size;
 
-		ret = (filter->read)((struct transform *)filter->transform,
-			filter->data, filter->upstream, &filter->client.buffer, &filter->client.avail);
+		ret = _filter_read(filter, (void **)&filter->client.buffer,
+			&filter->client.avail);
 
 		if (TRANSFORM_FATAL == ret) {
 			filter->client.buffer = NULL;
 			filter->client.avail = filter->client.size = 0;
-			filter->fatal = 1;
 			return (ret);
-		} else if (TRANSFORM_EOF == ret || TRANSFORM_PREMATURE_EOF == ret) {
-			filter->end_of_file = ret;
 		}
 		if (!filter->client.avail) {
 			filter->client.buffer = NULL;
