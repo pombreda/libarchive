@@ -72,8 +72,9 @@ assertion_transform_contents_mem(struct transform *t, const void *desired, int64
 		}
 			
 		failure_start(test_filename, test_line,
-			"transform results not identical in the range of %i %i starting at %i",
-			(position - desired), (position - desired + avail), (position - desired + x));
+			"transform results not identical in the range of %i %i starting at %i, absolute offset %i",
+			(position - desired), (position - desired + avail), (position - desired + x),
+			transform_read_bytes_consumed(t));
 		logtransforminfo(t);
 		logprintf("  dump of desired block\n");
 		loghexdump(position, NULL, avail, 0);
