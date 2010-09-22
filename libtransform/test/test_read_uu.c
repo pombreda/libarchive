@@ -86,6 +86,9 @@ test_read_uu_sub(const char *uu_ref_file, const char *raw_ref_file)
 		size_t size = extra * 1024;
 		char *p = buff;
 
+		failure_context("size(%d), extra(%d), uusize(%d)",
+			size, extra, uusize);
+
 		/* Add extra text size of which is from 1K bytes to
 		 * 64Kbytes before uuencoded data. */
 		while (size) {
@@ -133,6 +136,8 @@ test_read_uu_sub(const char *uu_ref_file, const char *raw_ref_file)
 	}
 
 cleanup:
+
+	failure_context(NULL);
 
 	if(buff)
 		free(buff);
