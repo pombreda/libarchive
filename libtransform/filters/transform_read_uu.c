@@ -51,6 +51,9 @@ struct uudecode {
 #define ST_READ_BASE64	3
 };
 
+
+#define DEFAULT_BID_LOOKAHEAD 64 * 1024
+
 static int	uudecode_bidder_bid(const void *, struct transform_read_filter *);
 static int	uudecode_bidder_init(struct transform *, const void *);
 
@@ -229,9 +232,14 @@ uudecode_bidder_bid(const void *_bidder_data,
 	int l;
 	int firstline;
 
-	b = transform_read_filter_ahead(filter, 1, &avail);
-	if (b == NULL)
-		return (0);
+	b = transform_read_filter_ahead(filter, DEFAULT_BID_LOOKAHEAD, &avail);
+	if (!b) {
+		/* EOF was hit; grab what's available and just check that */
+		b = transform_read_filter_ahead(filter, 1, &avail);
+		if (!b) {
+			return (0);
+		}
+	}
 
 	firstline = 20;
 	ravail = avail;
