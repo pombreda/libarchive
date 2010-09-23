@@ -1164,6 +1164,35 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 	}
 }
 
+ssize_t
+transform_read_consume_block(struct transform *_t, void *buff, size_t request)
+{
+	struct transform_read_filter *filter;
+	const void *data, *end = buff + request;
+	ssize_t avail;
+
+	transform_check_magic(_t, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_DATA,
+		"transform_read_consume_block");
+
+	filter = ((struct transform_read *)_t)->filter;
+
+	while (end != buff) {
+		data = transform_read_filter_ahead(filter, 1, &avail);
+		if (!data) {
+			if (0 != avail) {
+				/* error of some sort- pass the code down */
+				return avail;
+			}
+			/* else eof... return what we've got. */
+			break;
+		}
+		avail = minimum(avail, (end - buff));
+		memcpy(buff, data, avail);
+		buff += avail;
+	}
+	return (request - (end - buff));
+}
+
 int64_t
 transform_read_bytes_consumed(struct transform *_a)
 {

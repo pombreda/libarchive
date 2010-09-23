@@ -161,6 +161,7 @@ struct transform_read_filter;
 __LA_INT64_T transform_read_filter_consume(struct transform_read_filter *, int64_t);
 __LA_DECL const void *transform_read_filter_ahead(struct transform_read_filter *,
 	size_t, ssize_t *);
+__LA_SSIZE_T transform_read_consume_block(struct transform *_t, void *buff, size_t request);
 __LA_INT64_T transform_read_filter_skip(struct transform_read_filter *, int64_t);
 
 
