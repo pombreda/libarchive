@@ -99,5 +99,6 @@ int	__archive_read_register_format(struct archive_read *a,
 
 const void *__archive_read_ahead(struct archive_read *, size_t, ssize_t *);
 int64_t	__archive_read_consume(struct archive_read *, int64_t);
+ssize_t __archive_read_consume_block(struct archive_read *, const void *, size_t);
 
 #endif

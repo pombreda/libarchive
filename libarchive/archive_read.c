@@ -845,3 +845,16 @@ __archive_read_consume(struct archive_read *a, int64_t request)
 	}
 	return (ret);
 }
+
+ssize_t
+__archive_read_consume_block(struct archive_read *a, void *buff,
+	size_t request)
+{
+	int64_t ret;
+	ret = transform_read_consume_block(a->archive.transform, buff, request);
+	if (TRANSFORM_FATAL == ret) {
+		__archive_set_error_from_transform(&a->archive, a->archive.transform);
+		ret = ARCHIVE_FATAL;
+	}
+	return (ret);
+}
