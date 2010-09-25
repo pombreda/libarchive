@@ -25,21 +25,36 @@
 #include "test.h"
 __FBSDID("$FreeBSD: src/lib/libtransform/test/test_bad_fd.c,v 1.2 2008/09/01 05:38:33 kientzle Exp $");
 
+void *
+setup_file(const char *filename, struct stat *st)
+{
+	void *src;
+	int fd;
+	extract_reference_file(filename);
+	assertEqualInt(0, stat(filename, st));
+	assert(NULL != (src = malloc(st->st_size)));
+	if (src) {
+		fd = open(filename, O_RDONLY);
+		assert(fd >= 0);
+		assertEqualInt(st->st_size, read(fd, src, st->st_size));
+		close(0);
+	}
+	return src;
+}
+
+
 static void
-read_test(char *filename)
+read_test(const char *filename)
 {
 	struct transform *t;
 	struct stat st;
 	void *src, *trg;
-	int fd;
 	ssize_t avail = 0;
-	extract_reference_file(filename);
-	assertEqualInt(0, stat(filename, &st));
-	assert(NULL != (src = malloc(st.st_size)));
-	fd = open(filename, O_RDONLY);
-	assert(fd >= 0);
-	assertEqualInt(st.st_size, read(fd, src, st.st_size));
-	close(0);
+
+	src = setup_file(filename, &st);
+	assert(src != NULL);
+	if (!src)
+		return;
 
 	/* verify basic functionality */
 
@@ -112,6 +127,40 @@ read_test(char *filename)
 	assert(NULL == trg);
 	assertEqualInt(avail, 0);
 
+	free(src);
+	transform_read_free(t);
+}
+
+static void
+test_read_ahead(char *filename)
+{
+	struct transform *t;
+	struct stat st;
+	ssize_t avail = 0;
+	void *src, *trg;
+	
+	src = setup_file(filename, &st);
+	assert(src != NULL);
+	if (!src)
+		return;
+
+	/* verify pass thru read_ahead semantics. */
+	assert((t = transform_read_new()) != NULL);
+	assertEqualIntA(t, TRANSFORM_OK, transform_read_add_window(t, 0, -1));
+	assertEqualIntA(t, TRANSFORM_OK, transform_read_open_filename(t, filename, (10 * 1024)));
+	trg = (void *)transform_read_ahead(t, 1, &avail);
+	assert(NULL != trg);
+	if (trg) {
+		assert(avail < st.st_size);
+	}
+	trg = (void *)transform_read_ahead(t, st.st_size, &avail);
+	assert(NULL != trg);
+	if (trg) {
+		assertEqualInt(avail, st.st_size);
+		assertEqualInt(0, memcmp(trg, src, st.st_size));
+		assertEqualInt(st.st_size, transform_read_consume(t, st.st_size));
+	}
+	free(src);
 	transform_read_free(t);
 }
 
@@ -119,4 +168,5 @@ read_test(char *filename)
 DEFINE_TEST(test_read_window)
 {
 	read_test("test_compat_bzip2_1.tbz");
+	test_read_ahead("test_read_format_gtar_sparse_1_17_posix00.tar");
 }
