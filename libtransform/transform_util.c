@@ -75,19 +75,6 @@ transform_error_string(struct transform *a)
 		return ("(Empty error message)");
 }
 
-int
-transform_compression(struct transform *a)
-{
-	return transform_filter_code(a, 0);
-}
-
-const char *
-transform_compression_name(struct transform *a)
-{
-	return transform_filter_name(a, 0);
-}
-
-
 /*
  * Return a count of the number of compressed bytes processed.
  */
