@@ -214,7 +214,7 @@ transform_read_open_source(struct transform *_t,
 
 	transform_clear_error(_t);
 
-	if (!(source->flags & TRANSFORM_FILTER_SOURCE)) {
+	if (!(source->base.flags & TRANSFORM_FILTER_SOURCE)) {
 		transform_set_error(_t, TRANSFORM_ERRNO_PROGRAMMER,
 			"filter given to transform_read_open_source isn't marked as a "
 			"source filter");
@@ -289,12 +289,12 @@ close_filters(struct transform_read *a)
 	int r = TRANSFORM_OK;
 	/* Close each filter in the pipeline. */
 	while (f != NULL) {
-		struct transform_read_filter *t = f->upstream;
+		struct transform_read_filter *t = f->base.upstream.read;
 		if (f->close != NULL) {
-			int r1 = (f->close)((struct transform *)a, f->data);
+			int r1 = (f->close)((struct transform *)a, f->base.data);
 			if (r1 < r)
 				r = r1;
-			f->data = NULL;
+			f->base.data = NULL;
 		}
 		if(f->resizing.buffer) {
 			free(f->resizing.buffer);
@@ -313,7 +313,7 @@ static void
 free_filters(struct transform_read *a)
 {
 	while (a->filter != NULL) {
-		struct transform_read_filter *t = a->filter->upstream;
+		struct transform_read_filter *t = a->filter->base.upstream.read;
 		free(a->filter);
 		a->filter = t;
 	}
@@ -363,7 +363,7 @@ _transform_filter_count(struct transform *_a)
 	int count = 0;
 	while(p) {
 		count++;
-		p = p->upstream;
+		p = p->base.upstream.read;
 	}
 	return count;
 }
@@ -380,9 +380,9 @@ _transform_visit_fds(struct transform *_a, transform_fd_visitor *visitor,
 	struct transform_read_filter *p;
 	int position, ret = TRANSFORM_OK;
 	
-	for(p=a->filter, position=0; NULL != p; position++, p = p->upstream) {
+	for(p=a->filter, position=0; NULL != p; position++, p = p->base.upstream.read) {
 		if (p->visit_fds) {
-			if(TRANSFORM_OK != (ret = (p->visit_fds)(_a, p->data,
+			if(TRANSFORM_OK != (ret = (p->visit_fds)(_a, p->base.data,
 				visitor, visitor_data))) {
 				break;
 			}
@@ -457,8 +457,8 @@ transform_read_get_filter(struct transform *_t, int n)
 	}
 	/* We use n == -1 for 'the last filter', which is always the source filter */
 	f = t->filter;
-	while ((n > 0 && f) || (n <= -1 && f->upstream)) {
-		f = f->upstream;
+	while ((n > 0 && f) || (n <= -1 && f->base.upstream.read)) {
+		f = f->base.upstream.read;
 		n--;
 	}
 
@@ -469,21 +469,21 @@ static int
 _transform_filter_code(struct transform *_t, int n)
 {
 	struct transform_read_filter *f = transform_read_get_filter(_t, n);
-	return f ? f->code : -1;
+	return f ? f->base.code : -1;
 }
 
 static const char *
 _transform_filter_name(struct transform *_t, int n)
 {
 	struct transform_read_filter *f = transform_read_get_filter(_t, n);
-	return f == NULL ? NULL : f->name;
+	return f == NULL ? NULL : f->base.name;
 }
 
 static int64_t
 _transform_filter_bytes(struct transform *_t, int n)
 {
 	struct transform_read_filter *f = transform_read_get_filter(_t, n);
-	return f ? f->bytes_consumed : -1;
+	return f ? f->base.bytes_consumed : -1;
 }
 
 struct transform_read_bidder *
@@ -574,19 +574,19 @@ transform_read_filter_new(const void *data, const char *name,
 		return (NULL);
 	}
 
-	f->marker.magic = TRANSFORM_READ_FILTER_MAGIC;
-	f->marker.state = TRANSFORM_STATE_NEW;
+	f->base.marker.magic = TRANSFORM_READ_FILTER_MAGIC;
+	f->base.marker.state = TRANSFORM_STATE_NEW;
 
-	f->code = code;
-	f->name = name;
-	f->transform = NULL;
-	f->data = (void *)data;
+	f->base.code = code;
+	f->base.name = name;
+	f->base.transform = NULL;
+	f->base.data = (void *)data;
 	f->read = reader;
 	f->skip = skipper;
 	f->close = closer;
 	f->visit_fds = visit_fds;
-	f->upstream = NULL;
-	f->flags = flags;
+	f->base.upstream.read = NULL;
+	f->base.flags = flags;
 	f->alignment = 1;
 	return (f);
 }
@@ -603,14 +603,14 @@ transform_read_filter_finalize(struct transform_read_filter *filter)
 	/* mark it; buffering setting will not alloc if it's in a new state
 	 * we could alloc ourselves, but the redundancy is pointless.
 	 */
-	filter->marker.state = TRANSFORM_STATE_DATA;
-	if (!(filter->flags & TRANSFORM_FILTER_SELF_BUFFERING)) {
+	filter->base.marker.state = TRANSFORM_STATE_DATA;
+	if (!(filter->base.flags & TRANSFORM_FILTER_SELF_BUFFERING)) {
 		ret = transform_read_filter_set_buffering(filter,
 			filter->managed_size ? filter->managed_size : 64 * 1024);
 	}
 	if (TRANSFORM_OK != ret) {
 		/* revert it back,  possibly go fatal instead? */
-		filter->marker.state = TRANSFORM_STATE_NEW;
+		filter->base.marker.state = TRANSFORM_STATE_NEW;
 	}
 	return ret;
 }
@@ -623,9 +623,9 @@ transform_read_filter_set_buffering(struct transform_read_filter *filter, size_t
 		"transform_read_set_buffering")) {
 		return (TRANSFORM_FATAL);
 	}
-	if (filter->flags & TRANSFORM_FILTER_SELF_BUFFERING) {
-		if (filter->transform) {
-			transform_set_error((struct transform *)filter->transform,
+	if (filter->base.flags & TRANSFORM_FILTER_SELF_BUFFERING) {
+		if (filter->base.transform) {
+			transform_set_error((struct transform *)filter->base.transform,
 				TRANSFORM_ERRNO_PROGRAMMER,
 				"filter is self managing");
 		}
@@ -643,10 +643,10 @@ transform_read_filter_set_buffering(struct transform_read_filter *filter, size_t
 	filter->managed_size = size;
 
 	/* only realloc the buffer if we're in a data state. */
-	if (filter->marker.state == TRANSFORM_STATE_DATA) {
+	if (filter->base.marker.state == TRANSFORM_STATE_DATA) {
 		if(NULL == (filter->managed_buffer = realloc(filter->managed_buffer, size))) {
-			if (filter->transform) {
-				transform_set_error((struct transform *)filter->transform, ENOMEM,
+			if (filter->base.transform) {
+				transform_set_error((struct transform *)filter->base.transform, ENOMEM,
 					"memory allocation for filter buffer of size %lu failed",
 					(unsigned long)size);
 			}
@@ -718,18 +718,18 @@ transform_read_add_filter(struct transform *_t,
 		return (TRANSFORM_FATAL);
 	}
 
-	if ((filter->flags & TRANSFORM_FILTER_SOURCE) && t->filter) {
+	if ((filter->base.flags & TRANSFORM_FILTER_SOURCE) && t->filter) {
 		transform_set_error(_t, TRANSFORM_ERRNO_PROGRAMMER,
 			"filter %s is a source filter, but this transform already has filters added",
-			filter->name);
+			filter->base.name);
 		return (TRANSFORM_FATAL);
 	}
 
-	filter->transform = t;
+	filter->base.transform = _t;
 	if (TRANSFORM_OK != transform_read_filter_finalize(filter)) {
 		return (TRANSFORM_FATAL);
 	}
-	filter->upstream = t->filter;
+	filter->base.upstream.read = t->filter;
 	t->filter = filter;
 
 	return (TRANSFORM_OK);
@@ -816,8 +816,8 @@ _filter_read(struct transform_read_filter *filter, void **buff, size_t *buff_siz
 		return (TRANSFORM_FATAL);
 	}
 
-	ret = (filter->read)((struct transform *)filter->transform, filter->data,
-		    filter->upstream, (const void **)buff, buff_size);
+	ret = (filter->read)((struct transform *)filter->base.transform, filter->base.data,
+		    filter->base.upstream.read, (const void **)buff, buff_size);
 
 	if (TRANSFORM_FATAL == ret) {
 		filter->fatal = 1;
@@ -953,7 +953,7 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 					t *= 2;
 					if (t <= s) { /* Integer overflow! */
 						transform_set_error(
-							&filter->transform->transform,
+							filter->base.transform,
 							ENOMEM,
 						    "Unable to allocate copy buffer");
 						filter->fatal = 1;
@@ -967,7 +967,7 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 				p = (char *)realloc(filter->resizing.buffer, s);
 				if (p == NULL) {
 					transform_set_error(
-						&filter->transform->transform,
+						filter->base.transform,
 						ENOMEM,
 					    "Unable to allocate copy buffer");
 					filter->fatal = 1;
@@ -1042,7 +1042,7 @@ transform_read_filter_consume(struct transform_read_filter *filter,
 	/* We hit EOF before we satisfied the skip request. */
 	if (skipped < 0)  // Map error code to 0 for error message below.
 		skipped = 0;
-	transform_set_error(&filter->transform->transform,
+	transform_set_error(filter->base.transform,
 	    TRANSFORM_ERRNO_MISC,
 	    "Truncated input file (needed %jd bytes, only %jd available)",
 	    (intmax_t)request, (intmax_t)skipped);
@@ -1077,7 +1077,7 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 		filter->resizing.next += min;
 		filter->resizing.avail -= min;
 		request -= min;
-		filter->bytes_consumed += min;
+		filter->base.bytes_consumed += min;
 		total_bytes_skipped += min;
 	}
 
@@ -1087,14 +1087,14 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 		filter->client.next += min;
 		filter->client.avail -= min;
 		request -= min;
-		filter->bytes_consumed += min;
+		filter->base.bytes_consumed += min;
 		total_bytes_skipped += min;
 	}
 
-	if (filter->flags & TRANSFORM_FILTER_NOTIFY_ALL_CONSUME_FLAG) {
+	if (filter->base.flags & TRANSFORM_FILTER_NOTIFY_ALL_CONSUME_FLAG) {
 		if (total_bytes_skipped && filter->skip) {
-			(filter->skip)((struct transform *)filter->transform,
-				filter->data, filter->upstream, total_bytes_skipped);
+			(filter->skip)((struct transform *)filter->base.transform,
+				filter->base.data, filter->base.upstream.read, total_bytes_skipped);
 		}
 	}
 
@@ -1106,13 +1106,13 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 	if (filter->skip != NULL) {
 		int64_t aligned_request = (request / filter->alignment) * filter->alignment;
 		if (aligned_request) {
-			bytes_skipped = (filter->skip)((struct transform *)filter->transform, 
-				filter->data, filter->upstream, aligned_request);
+			bytes_skipped = (filter->skip)((struct transform *)filter->base.transform, 
+				filter->base.data, filter->base.upstream.read, aligned_request);
 			if (bytes_skipped < 0) {	/* error */
 				filter->fatal = 1;
 				return (bytes_skipped);
 			}
-			filter->bytes_consumed += bytes_skipped;
+			filter->base.bytes_consumed += bytes_skipped;
 			total_bytes_skipped += bytes_skipped;
 			request -= bytes_skipped;
 			if (request == 0)
@@ -1196,7 +1196,7 @@ transform_read_bytes_consumed(struct transform *_a)
 	transform_check_magic(_a, TRANSFORM_READ_MAGIC,
 		TRANSFORM_STATE_DATA, "transform_read_bytes_consumed");
 
-	return a->filter->bytes_consumed;
+	return a->filter->base.bytes_consumed;
 }
 
 int

@@ -91,7 +91,7 @@ struct transform_read_bidder {
  */
 struct transform_read_filter {
 
-	struct marker marker;
+	struct transform_filter		base;
 
 	/* these are callback defined methods */
 	transform_read_filter_read_callback *read;
@@ -99,21 +99,7 @@ struct transform_read_filter {
 	transform_read_filter_close_callback *close;
 	transform_read_filter_visit_fds_callback *visit_fds;
 
-	struct transform_read_filter *upstream; /* Who I read from. */
-	
-	const char	*name;
-	int		 code;
-
-	/* My private data. */
-	void *data;
-
-	int64_t flags;
-
 	/* everything following is managed by libtransform */
-
-	struct transform_read *transform; /* Associated transform. */
-
-	int64_t bytes_consumed;
 
 	/* Used by reblocking logic.
 	 * for example, if the invoking code requests a lookahead 2x the

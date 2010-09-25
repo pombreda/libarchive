@@ -101,14 +101,14 @@ __transform_check_state(struct marker *m, unsigned int magic,
 
 #define __transform_filter_check_magic(f, magic, state, function)	\
 	__transform_check_magic(								\
-		&(((struct transform_read_filter *)(f))->transform->transform), 	\
-		&(((struct transform_read_filter *)(f))->marker), 		\
+		(((struct transform_filter *)(f))->transform), 	\
+		&(((struct transform_filter *)(f))->marker), 		\
 		(magic), (state), "transform_read_filter", (function))
 
 #define __transform_filter_check_magic2(t, f, magic, state, function)	\
 	__transform_check_magic(								\
 		(t), 	\
-		&(((struct transform_read_filter *)(f))->marker), 		\
+		&(((struct transform_filter *)(f))->marker), 		\
 		(magic), (state), "transform_read_filter", (function))
 
 #define __transform_read_bidder_check_magic(t, b, magic, state, function)	\
@@ -155,7 +155,38 @@ struct transform_buffer_borrowed {
 	const void  *next;
 	size_t      avail;
 };
-                            
+
+struct transform_read_filter;
+struct transform_write_filter;
+
+/* generic filter */
+struct transform_filter {
+	struct marker marker;
+
+	const char  *name;
+	int         code;
+	int64_t	    flags;
+
+	/* 
+	 * generic counter of bytes that have been finalized/consumed
+	 * by the filter above- for readers, this is the number of bytes
+	 * consume/skiped, for writers this is the number of bytes it's
+	 * pushed down into the next filter.
+	 */
+
+	int64_t		bytes_consumed;
+
+	/* my associated transform, if any. */
+	struct transform *transform;
+
+	/* the private/contextual data the filter uses */
+	void        *data;
+
+	union {
+		struct transform_read_filter *read;
+		struct transform_write_filter *write;
+	} upstream;
+};
 
 #define	err_combine(a,b)	((a) < (b) ? (a) : (b))
 

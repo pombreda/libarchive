@@ -156,6 +156,7 @@ struct transform;
  * library.
  */
 
+struct transform_filter;
 struct transform_read_filter;
 
 __LA_INT64_T transform_read_filter_consume(struct transform_read_filter *, int64_t);
