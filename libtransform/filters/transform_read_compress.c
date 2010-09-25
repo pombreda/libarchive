@@ -93,6 +93,7 @@ struct private_data {
 	/* Input variables. */
 	const unsigned char	*next_in;
 	size_t			 avail_in;
+	size_t			 consume_unnotified;
 	int			 bit_buffer;
 	int			 bits_avail;
 	size_t			 bytes_in_section;
@@ -402,6 +403,11 @@ getbits(struct private_data *state, struct transform_read_filter *upstream,
 
 	while (state->bits_avail < n) {
 		if (state->avail_in <= 0) {
+			if (state->consume_unnotified) {
+				transform_read_filter_consume(upstream,
+					state->consume_unnotified);
+				state->consume_unnotified = 0;
+			}
 			state->next_in
 			    = transform_read_filter_ahead(upstream, 1, &ret);
 			if (ret == 0)
@@ -409,7 +415,7 @@ getbits(struct private_data *state, struct transform_read_filter *upstream,
 			if (ret < 0 || state->next_in == NULL)
 				return (TRANSFORM_FATAL);
 			state->avail_in = ret;
-			transform_read_filter_consume(upstream, ret);
+			state->consume_unnotified = state->avail_in = ret;
 		}
 		state->bit_buffer |= *state->next_in++ << state->bits_avail;
 		state->avail_in--;
