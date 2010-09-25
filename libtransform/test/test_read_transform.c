@@ -25,22 +25,36 @@
 #include "test.h"
 __FBSDID("$FreeBSD: src/lib/libtransform/test/test_bad_fd.c,v 1.2 2008/09/01 05:38:33 kientzle Exp $");
 
+static void *
+setup_file(const char *filename, struct stat *st)
+{
+	void *src;
+	int fd;
+
+	extract_reference_file(filename);
+	assertEqualInt(0, stat(filename, st));
+	assert(NULL != (src = malloc(st->st_size)));
+	if (src) {
+		fd = open(filename, O_RDONLY);
+		assert(fd >= 0);
+		assertEqualInt(st->st_size, read(fd, src, st->st_size));
+		close(0);
+	}
+	return src;
+}
+
 static void
-read_test(char *filename)
+read_test(const char *filename)
 {
 	struct transform *t, *t_src;
 	struct stat st;
 	void *src, *trg;
-	int fd;
 	ssize_t avail = 0;
-	extract_reference_file(filename);
-	assertEqualInt(0, stat(filename, &st));
-	assert(NULL != (src = malloc(st.st_size)));
-	fd = open(filename, O_RDONLY);
-	assert(fd >= 0);
-	assertEqualInt(st.st_size, read(fd, src, st.st_size));
-	close(0);
 
+	src = setup_file(filename, &st);
+	assert(NULL != src);
+	if (!src)
+		return;
 
 	/* assert it doesn't muck with things, and is a straight pass thru where possible */
 	assert((t = transform_read_new()) != NULL);
@@ -82,7 +96,42 @@ read_test(char *filename)
 	transform_read_free(t_src);
 }
 
+
+static void
+test_read_ahead(const char *filename)
+{
+	struct transform *t, *t_src;
+	struct stat st;
+	void *src, *trg;
+	ssize_t avail = 0;
+
+	src = setup_file(filename, &st);
+	assert(NULL != src);
+	if (!src)
+		return;
+
+	/* verify that this handles multiple read_aheads properly
+	 */
+	assert((t = transform_read_new()) != NULL);
+	assert((t_src = transform_read_new()) != NULL);
+	assertEqualIntA(t_src, TRANSFORM_OK, transform_read_open_filename(t_src, filename, (10 * 1024)));
+	assertEqualIntA(t, TRANSFORM_OK, transform_read_open_transform(t, t_src, 0, -1));
+	trg = (void *)transform_read_ahead(t, 1, &avail);
+	assert(0 == transform_read_bytes_consumed(t_src));
+	assert(avail < st.st_size);
+	trg = (void *)transform_read_ahead(t, st.st_size, &avail);
+	assert(0 == transform_read_bytes_consumed(t_src));
+	assert(avail == st.st_size);
+	assertEqualMem(trg, src, st.st_size);
+	assertEqualIntA(t, st.st_size, transform_read_consume(t, st.st_size));
+	assert(NULL == transform_read_ahead(t, 1, &avail));
+	transform_read_free(t);
+	transform_read_free(t_src);
+}
+
+
 DEFINE_TEST(test_read_transform)
 {
 	read_test("test_compat_bzip2_1.tbz");
+	test_read_ahead("test_read_format_gtar_sparse_1_17_posix00.tar");
 }
