@@ -183,6 +183,8 @@ __transform_write_allocate_filter(struct transform *_a)
 
 	f = calloc(1, sizeof(*f));
 	f->transform = _a;
+	f->marker.magic = TRANSFORM_WRITE_FILTER_MAGIC;
+	f->marker.state = TRANSFORM_STATE_DATA;
 	if (a->filter_first == NULL)
 		a->filter_first = f;
 	else

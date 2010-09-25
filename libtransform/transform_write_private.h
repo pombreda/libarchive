@@ -44,6 +44,7 @@ int transform_write_open2(struct transform *, void *,
 	transform_close_callback *, transform_visit_fds_callback *);
 
 struct transform_write_filter {
+	struct marker marker;
 	int64_t bytes_written;
 	struct transform *transform; /* Associated transform. */
 	struct transform_write_filter *next_filter; /* Who I write to. */
