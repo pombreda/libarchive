@@ -25,7 +25,7 @@
 #include "test.h"
 __FBSDID("$FreeBSD: src/lib/libtransform/test/test_bad_fd.c,v 1.2 2008/09/01 05:38:33 kientzle Exp $");
 
-void *
+static void *
 setup_file(const char *filename, struct stat *st)
 {
 	void *src;
