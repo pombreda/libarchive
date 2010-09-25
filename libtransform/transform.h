@@ -453,6 +453,8 @@ __LA_DECL int transform_read_filter_set_alignment(struct transform_read_filter *
 	size_t);
 
 
+__LA_DECL struct transform_read_filter *
+	transform_read_get_filter(struct transform *, int position);
 
 __LA_DECL int transform_autodetect_add_bidder_create(struct transform_read_bidder *,
 	const void *, const char *, 

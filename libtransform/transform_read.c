@@ -445,49 +445,45 @@ _transform_read_free(struct transform *_a)
 	return (r);
 }
 
-static struct transform_read_filter *
-get_filter(struct transform *_a, int n)
+struct transform_read_filter *
+transform_read_get_filter(struct transform *_t, int n)
 {
-	struct transform_read *a = (struct transform_read *)_a;
-	struct transform_read_filter *f = a->filter;
-	/* We use n == -1 for 'the last filter', which is always the client proxy. */
-	if (n == -1 && f != NULL) {
-		struct transform_read_filter *last = f;
-		f = f->upstream;
-		while (f != NULL) {
-			last = f;
-			f = f->upstream;
-		}
-		return (last);
+	struct transform_read *t = (struct transform_read *)_t;
+	struct transform_read_filter *f;
+	if(TRANSFORM_OK != __transform_check_magic(_t, &(_t->marker), 
+		TRANSFORM_READ_MAGIC, TRANSFORM_STATE_ANY, "transform",
+		"transform_read_get_filter")) {
+		return (NULL);
 	}
-	if (n < 0)
-		return NULL;
-	while (n > 0 && f != NULL) {
+	/* We use n == -1 for 'the last filter', which is always the source filter */
+	f = t->filter;
+	while ((n > 0 && f) || (n <= -1 && f->upstream)) {
 		f = f->upstream;
-		--n;
+		n--;
 	}
-	return (f);
+
+	return f;
 }
 
 static int
-_transform_filter_code(struct transform *_a, int n)
+_transform_filter_code(struct transform *_t, int n)
 {
-	struct transform_read_filter *f = get_filter(_a, n);
-	return f == NULL ? -1 : f->code;
+	struct transform_read_filter *f = transform_read_get_filter(_t, n);
+	return f ? f->code : -1;
 }
 
 static const char *
-_transform_filter_name(struct transform *_a, int n)
+_transform_filter_name(struct transform *_t, int n)
 {
-	struct transform_read_filter *f = get_filter(_a, n);
+	struct transform_read_filter *f = transform_read_get_filter(_t, n);
 	return f == NULL ? NULL : f->name;
 }
 
 static int64_t
-_transform_filter_bytes(struct transform *_a, int n)
+_transform_filter_bytes(struct transform *_t, int n)
 {
-	struct transform_read_filter *f = get_filter(_a, n);
-	return f == NULL ? -1 : f->bytes_consumed;
+	struct transform_read_filter *f = transform_read_get_filter(_t, n);
+	return f ? f->bytes_consumed : -1;
 }
 
 struct transform_read_bidder *
