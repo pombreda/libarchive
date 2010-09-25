@@ -274,18 +274,6 @@ __LA_DECL const void *transform_read_ahead(struct transform *, size_t, ssize_t *
 __LA_DECL int64_t transform_read_consume(struct transform *, int64_t);
 __LA_DECL int64_t transform_read_bytes_consumed(struct transform *);
 
-/* Read data from the body of an entry.  Similar to read(2). */
-__LA_DECL __LA_SSIZE_T		 transform_read_data(struct transform *,
-				    void *, size_t);
-
-/*-
- * Some convenience functions that are built on transform_read_data:
- *  'skip': skips entire entry
- *  'into_buffer': writes data into memory buffer that you provide
- *  'into_fd': writes data to specified filedes
- */
-__LA_DECL int transform_read_data_into_fd(struct transform *, int fd);
-
 /*
  * Set read options.
  */
