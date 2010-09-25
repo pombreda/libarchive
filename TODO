@@ -1,3 +1,41 @@
- read_uu filter doesn't actually return the data the preceeding data to prefixed chunks; this is suboptimal.
+MUST BE COMPLETED PRIOR TO MAKING ABI GURANTEES, AKA FIRST REAL PUBLIC RELEASE:
+- pruning as much of the transform_read_* specific api's as possible, folding them into a common transform_* api
+- same for transform_read_filter_*
+- renaming where applicable- the api names were inherited from libarchive, but don't hold quite the same meaning
+  (or can be named better in light of the specific focus of libtransform);
+- matching at least the mainline libarchive's performance for tcp.sh on rotational disk, or having a damn good excuse
+- matching at least the mainline libarchive's performance for tcp.sh on tmpfs.  No excuse.  there were enough subtle memcpy's
+  in mainline this is doable, thus must be done (achieving it means things are aligned right, meaning we shouldn't have to
+  mangle the abi after the first release).  This is delayable if it can be contained behind the opaque api.
+- apply the same sort of filter exposure that was done to read, to write
+- fix the inherint leak that the archive filter addition/transform opening induces- either rework the api, or
+  enforce an api contract that the filters will be free'd upon failure (to ensure it doesn't end up in the state of "was it freed?")
+- add transform_read_consume poisoning of the claimed consumed space- both trashing that section of the buffer, and for
+  when the consume matches the previous pass thru read_ahead, explicitly free'ing that allocation.  For pass up's of a buffer
+  window from a filter, malloc a copy so we can always free that window upon consumation == readahead.  Purpose of this functionality
+  is for developer debug builds, and filter development debugging only- poisoning will break bad implementations (so the issue can
+  be found), free'ing (the heavy handed solution) will segfault it (certain cases, archive_read tar support in particular, haven't
+  been root caused under poisoning, free'ing will kill it at the point of access).
+- timk's suggestion of moving to setters for initializing filters, transforms, etc, needs to be address.
+  pros:
+   it simplifies the prototype for *_new functions, instead of 5-9 args, it's 2-3, with 2-6 setter invocaitons
+  harring's view of the cons:
+   this makes the api a bit easier to screw up- instead of *having* to have something supplied into the _new invocation
+   (especially for required functionality, not just optionals) that would be a compile time failure if wanged up,
+   now users can forget to invoke something.  At best if there is a finalize (filters currently have one, which needs revisiting)
+   it can detect and give the finger, although stating _what_ failed is problematic (error reporting is done through an associated
+   transform- there may not be one at this stage of poking the filter).
+  * this decision needs to be reached one way or another.  Harring prefers api's that avoid the potential foot-shooting
+   that goes with api contracts (specifically when you don't follow the contract), although timk's points are valid, and
+   doing setters does make it easier to extend/add new functionality, although that functionality has to be optional if ABI
+   is to be guranteed.
+- bringing the libarchive tests online, those that can be.
+- tweak the test infrastructure to support multiple contexts.  It's not pretty, but it will give the ability to
+  essentially get a stack backtrace (in context x, in context y, in context z, assertion blah failed) thus ratcheting up
+  the data inclued in failure reports
+- run down why intermediate failures in libtransform_test aren't writing data to the collapsed log file for that test.
+- whatever else I forgot
+
+- read_uu filter doesn't actually return the data the preceeding data to prefixed chunks; this is suboptimal.
   basically, need two filters here; one that dies if it's not told to start right at the begining of a uu block, and one that
   will pass data on till it hits a uu block, than transparently decompress it.
