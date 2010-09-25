@@ -55,6 +55,8 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_open_fd.c 201103 2009-1
 #define O_BINARY 0
 #endif
 
+#define DEFAULT_BLOCK_SIZE 64 * 1024
+
 struct read_fd_data {
 	int	 fd;
 	char use_lseek;
@@ -193,7 +195,7 @@ _common_open_fd(struct transform *t, int fd, const char *filename,
 	/* Disk-like devices prefer power-of-two block sizes.  */
 	/* Use provided block_size as a guide so users have some control. */
 	if (is_disk_like) {
-		size_t new_block_size = 64 * 1024;
+		size_t new_block_size = DEFAULT_BLOCK_SIZE;
 		while (new_block_size < block_size
 		    && new_block_size < 64 * 1024 * 1024)
 			new_block_size *= 2;
@@ -338,10 +340,10 @@ file_close(struct transform *t, void *client_data)
 		    && !S_ISCHR(mine->st_mode)
 		    && !S_ISBLK(mine->st_mode)) {
 			ssize_t bytesRead;
-			void *p = malloc(64 * 1024);
+			void *p = malloc(DEFAULT_BLOCK_SIZE);
 			if (p) {
 				do {
-					bytesRead = read(mine->fd, p, 64 * 1024);
+					bytesRead = read(mine->fd, p, DEFAULT_BLOCK_SIZE);
 				} while (bytesRead > 0);
 				free(p);
 			}
