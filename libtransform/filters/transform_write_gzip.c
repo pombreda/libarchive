@@ -77,7 +77,8 @@ static int transform_compressor_gzip_options(struct transform *, void *,
 static int transform_compressor_gzip_open(struct transform_write_filter *);
 static int transform_compressor_gzip_write(struct transform_write_filter *,
 	const void *, const void *, size_t);
-static int transform_compressor_gzip_close(struct transform_write_filter *);
+static int transform_compressor_gzip_close(struct transform *, void *,
+	struct transform_write_filter *);
 static int transform_compressor_gzip_free(struct transform *, void *);
 static int drive_compressor(struct transform *, struct private_data *,
 	int finishing, struct transform_write_filter *);
@@ -243,17 +244,18 @@ transform_compressor_gzip_write(struct transform_write_filter *f,
  * Finish the compression...
  */
 static int
-transform_compressor_gzip_close(struct transform_write_filter *f)
+transform_compressor_gzip_close(struct transform *t, void *_data,
+	struct transform_write_filter *upstream)
 {
 	unsigned char trailer[8];
-	struct private_data *data = (struct private_data *)f->base.data;
+	struct private_data *data = (struct private_data *)_data;
 	int ret, r1;
 
 	/* Finish compression cycle */
-	ret = drive_compressor(f->base.transform, data, 1, f->base.upstream.write);
+	ret = drive_compressor(t, data, 1, upstream);
 	if (ret == TRANSFORM_OK) {
 		/* Write the last compressed data. */
-		ret = __transform_write_filter(f->base.upstream.write,
+		ret = __transform_write_filter(upstream,
 		    data->compressed,
 		    data->compressed_buffer_size - data->stream.avail_out);
 	}
@@ -267,18 +269,18 @@ transform_compressor_gzip_close(struct transform_write_filter *f)
 		trailer[5] = (data->total_in >> 8)&0xff;
 		trailer[6] = (data->total_in >> 16)&0xff;
 		trailer[7] = (data->total_in >> 24)&0xff;
-		ret = __transform_write_filter(f->base.upstream.write, trailer, 8);
+		ret = __transform_write_filter(upstream, trailer, 8);
 	}
 
 	switch (deflateEnd(&(data->stream))) {
 	case Z_OK:
 		break;
 	default:
-		transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
+		transform_set_error(t, TRANSFORM_ERRNO_MISC,
 		    "Failed to clean up compressor");
 		ret = TRANSFORM_FATAL;
 	}
-	r1 = __transform_write_close_filter(f->base.upstream.write);
+	r1 = __transform_write_close_filter(upstream);
 	return (r1 < ret ? r1 : ret);
 }
 

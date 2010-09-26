@@ -86,6 +86,7 @@ struct private_data {
 	int64_t		 total_out;
 	/* the CRC32 value of uncompressed data for lzip */
 	uint32_t	 crc32;
+	int code; // yes this is duplicated in filter objects themselves...
 };
 
 static int	transform_compressor_xz_options(struct transform *, void *,
@@ -93,7 +94,8 @@ static int	transform_compressor_xz_options(struct transform *, void *,
 static int	transform_compressor_xz_open(struct transform_write_filter *);
 static int	transform_compressor_xz_write(struct transform_write_filter *,
 	const void *, const void *, size_t);
-static int	transform_compressor_xz_close(struct transform_write_filter *);
+static int	transform_compressor_xz_close(struct transform *, void *,
+	struct transform_write_filter *);
 static int	transform_compressor_xz_free(struct transform *, void *);
 static int	drive_compressor(struct transform *, struct private_data *, 
 	int finishing, struct transform_write_filter *);
@@ -137,6 +139,7 @@ common_setup(struct transform *t, const char *name, int code)
 		free(data);
 		return (TRANSFORM_FATAL);
 	}
+	data->code = code;
 	return (TRANSFORM_OK);
 }
 
@@ -180,10 +183,10 @@ transform_compressor_xz_init_stream(struct transform_write_filter *f,
 	data->stream = lzma_stream_init_data;
 	data->stream.next_out = data->compressed;
 	data->stream.avail_out = data->compressed_buffer_size;
-	if (f->base.code == TRANSFORM_FILTER_XZ)
+	if (data->code == TRANSFORM_FILTER_XZ)
 		ret = lzma_stream_encoder(&(data->stream),
 		    data->lzmafilters, LZMA_CHECK_CRC64);
-	else if (f->base.code == TRANSFORM_FILTER_LZMA)
+	else if (data->code == TRANSFORM_FILTER_LZMA)
 		ret = lzma_alone_encoder(&(data->stream), &data->lzma_opt);
 	else {	/* TRANSFORM_FILTER_LZIP */
 		int dict_size = data->lzma_opt.dict_size;
@@ -264,7 +267,7 @@ transform_compressor_xz_open(struct transform_write_filter *f)
 	}
 
 	/* Initialize compression library. */
-	if (f->base.code == TRANSFORM_FILTER_LZIP) {
+	if (data->code == TRANSFORM_FILTER_LZIP) {
 		const struct option_value *val =
 		    &option_values[data->compression_level];
 
@@ -333,7 +336,7 @@ transform_compressor_xz_write(struct transform_write_filter *f,
 
 	/* Update statistics */
 	data->total_in += length;
-	if (f->base.code == TRANSFORM_FILTER_LZIP)
+	if (data->code == TRANSFORM_FILTER_LZIP)
 		data->crc32 = lzma_crc32(buff, length, data->crc32);
 
 	/* Compress input data to output buffer */
@@ -351,28 +354,28 @@ transform_compressor_xz_write(struct transform_write_filter *f,
  * Finish the compression...
  */
 static int
-transform_compressor_xz_close(struct transform_write_filter *f)
+transform_compressor_xz_close(struct transform *t, void *_data,
+	struct transform_write_filter *upstream)
 {
-	struct private_data *data = (struct private_data *)f->base.data;
+	struct private_data *data = (struct private_data *)_data;
 	int ret, r1;
 
-	ret = drive_compressor(f->base.transform, data, 1, f->base.upstream.write);
+	ret = drive_compressor(t, data, 1, upstream);
 	if (ret == TRANSFORM_OK) {
 		data->total_out +=
 		    data->compressed_buffer_size - data->stream.avail_out;
-		ret = __transform_write_filter(f->base.upstream.write,
+		ret = __transform_write_filter(upstream,
 		    data->compressed,
 		    data->compressed_buffer_size - data->stream.avail_out);
-		if (f->base.code == TRANSFORM_FILTER_LZIP && ret == TRANSFORM_OK) {
+		if (data->code == TRANSFORM_FILTER_LZIP && ret == TRANSFORM_OK) {
 			transform_le32enc(data->compressed, data->crc32);
 			transform_le64enc(data->compressed+4, data->total_in);
 			transform_le64enc(data->compressed+12, data->total_out + 20);
-			ret = __transform_write_filter(f->base.upstream.write,
-			    data->compressed, 20);
+			ret = __transform_write_filter(upstream, data->compressed, 20);
 		}
 	}
 	lzma_end(&(data->stream));
-	r1 = __transform_write_close_filter(f->base.upstream.write);
+	r1 = __transform_write_close_filter(upstream);
 	return (r1 < ret ? r1 : ret);
 }
 

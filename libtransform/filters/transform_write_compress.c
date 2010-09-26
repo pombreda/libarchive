@@ -112,7 +112,8 @@ struct private_data {
 static int transform_compressor_compress_open(struct transform_write_filter *);
 static int transform_compressor_compress_write(struct transform_write_filter *,
 	const void *filter_data, const void *, size_t);
-static int transform_compressor_compress_close(struct transform_write_filter *);
+static int transform_compressor_compress_close(struct transform *, void *,
+	struct transform_write_filter *);
 static int transform_compressor_compress_free(struct transform *, void *);
 
 /*
@@ -408,26 +409,27 @@ transform_compressor_compress_write(struct transform_write_filter *f,
  * Finish the compression...
  */
 static int
-transform_compressor_compress_close(struct transform_write_filter *f)
+transform_compressor_compress_close(struct transform *_t, void *_data,
+	struct transform_write_filter *upstream)
 {
-	struct private_data *state = (struct private_data *)f->base.data;
+	struct private_data *state = (struct private_data *)_data;
 	int ret;
 
 	if (!state->opened)
 		goto cleanup;
 
-	ret = output_code(state, state->cur_code, f->base.upstream.write);
+	ret = output_code(state, state->cur_code, upstream);
 	if (ret != TRANSFORM_OK)
 		goto cleanup;
-	ret = output_flush(state, f->base.upstream.write);
+	ret = output_flush(state, upstream);
 	if (ret != TRANSFORM_OK)
 		goto cleanup;
 
 	/* Write the last block */
-	ret = __transform_write_filter(f->base.upstream.write,
+	ret = __transform_write_filter(upstream,
 	    state->compressed, state->compressed_offset);
 cleanup:
-	ret = __transform_write_close_filter(f->base.upstream.write);
+	ret = __transform_write_close_filter(upstream);
 	return (ret);
 }
 

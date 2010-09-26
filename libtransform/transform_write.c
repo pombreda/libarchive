@@ -298,7 +298,7 @@ int
 __transform_write_close_filter(struct transform_write_filter *f)
 {
 	if (f->close != NULL)
-		return (f->close)(f);
+		return (f->close)(f->base.transform, f->base.data, f->base.upstream.write);
 	if (f->base.upstream.write != NULL)
 		return (__transform_write_close_filter(f->base.upstream.write));
 	return (TRANSFORM_OK);
@@ -430,14 +430,16 @@ transform_write_client_write(struct transform_write_filter *f,
 }
 
 static int
-transform_write_client_close(struct transform_write_filter *f)
+transform_write_client_close(struct transform *_t, void *_data,
+	struct transform_write_filter *upstream)
 {
-	struct transform_write *a = (struct transform_write *)f->base.transform;
-	struct transform_none *state = (struct transform_none *)f->base.data;
+	struct transform_write *a = (struct transform_write *)_t;
+	struct transform_none *state = (struct transform_none *)_data;
 	ssize_t block_length;
 	ssize_t target_block_length;
 	ssize_t bytes_written;
 	int ret = TRANSFORM_OK;
+	(void)upstream;
 
 	/* If there's pending data, pad and write the last block */
 	if (state->next != state->buffer) {

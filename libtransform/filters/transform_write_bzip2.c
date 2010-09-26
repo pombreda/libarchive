@@ -71,7 +71,8 @@ struct private_data {
 #define	SET_NEXT_IN(st,src)					\
 	(st)->stream.next_in = (char *)(uintptr_t)(const void *)(src)
 
-static int transform_compressor_bzip2_close(struct transform_write_filter *);
+static int transform_compressor_bzip2_close(struct transform *, void *,
+	struct transform_write_filter *);
 static int transform_compressor_bzip2_free(struct transform *, void *);
 static int transform_compressor_bzip2_open(struct transform_write_filter *);
 static int transform_compressor_bzip2_options(struct transform *, void *,
@@ -229,16 +230,17 @@ transform_compressor_bzip2_write(struct transform_write_filter *f,
  * Finish the compression.
  */
 static int
-transform_compressor_bzip2_close(struct transform_write_filter *f)
+transform_compressor_bzip2_close(struct transform *t, void *_data,
+	struct transform_write_filter *upstream)
 {
-	struct private_data *data = (struct private_data *)f->base.data;
+	struct private_data *data = (struct private_data *)_data;
 	int ret, r1;
 
 	/* Finish compression cycle. */
-	ret = drive_compressor(f->base.transform, data, 1, f->base.upstream.write);
+	ret = drive_compressor(t, data, 1, upstream);
 	if (ret == TRANSFORM_OK) {
 		/* Write the last block */
-		ret = __transform_write_filter(f->base.upstream.write,
+		ret = __transform_write_filter(upstream,
 		    data->compressed,
 		    data->compressed_buffer_size - data->stream.avail_out);
 	}
@@ -247,12 +249,12 @@ transform_compressor_bzip2_close(struct transform_write_filter *f)
 	case BZ_OK:
 		break;
 	default:
-		transform_set_error(f->base.transform, TRANSFORM_ERRNO_PROGRAMMER,
+		transform_set_error(t, TRANSFORM_ERRNO_PROGRAMMER,
 		    "Failed to clean up compressor");
 		ret = TRANSFORM_FATAL;
 	}
 
-	r1 = __transform_write_close_filter(f->base.upstream.write);
+	r1 = __transform_write_close_filter(upstream);
 	return (r1 < ret ? r1 : ret);
 }
 
