@@ -215,16 +215,15 @@ static unsigned char rmask[9] =
 	{0x00, 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff};
 
 static int
-output_byte(struct transform_write_filter *f, unsigned char c)
+output_byte(struct private_data *state, unsigned char c, struct transform_write_filter *upstream)
 {
-	struct private_data *state = f->base.data;
 	ssize_t bytes_written;
 
 	state->compressed[state->compressed_offset++] = c;
 	++state->out_count;
 
 	if (state->compressed_buffer_size == state->compressed_offset) {
-		bytes_written = __transform_write_filter(f->base.upstream.write,
+		bytes_written = __transform_write_filter(upstream,
 		    state->compressed, state->compressed_buffer_size);
 		if (bytes_written <= 0)
 			return TRANSFORM_FATAL;
@@ -235,9 +234,9 @@ output_byte(struct transform_write_filter *f, unsigned char c)
 }
 
 static int
-output_code(struct transform_write_filter *f, int ocode)
+output_code(struct private_data *state, int ocode,
+	struct transform_write_filter *upstream)
 {
-	struct private_data *state = f->base.data;
 	int bits, ret, clear_flg, bit_offset;
 
 	clear_flg = ocode == CLEAR;
@@ -248,13 +247,13 @@ output_code(struct transform_write_filter *f, int ocode)
 	 */
 	bit_offset = state->bit_offset % 8;
 	state->bit_buf |= (ocode << bit_offset) & 0xff;
-	output_byte(f, state->bit_buf);
+	output_byte(state, state->bit_buf, upstream);
 
 	bits = state->code_len - (8 - bit_offset);
 	ocode >>= 8 - bit_offset;
 	/* Get any 8 bit parts in the middle (<=1 for up to 16 bits). */
 	if (bits >= 8) {
-		output_byte(f, ocode & 0xff);
+		output_byte(state, ocode & 0xff, upstream);
 		ocode >>= 8;
 		bits -= 8;
 	}
@@ -275,7 +274,7 @@ output_code(struct transform_write_filter *f, int ocode)
 		*/
 		if (state->bit_offset > 0) {
 			while (state->bit_offset < state->code_len * 8) {
-				ret = output_byte(f, state->bit_buf);
+				ret = output_byte(state, state->bit_buf, upstream);
 				if (ret != TRANSFORM_OK)
 					return ret;
 				state->bit_offset += 8;
@@ -301,15 +300,14 @@ output_code(struct transform_write_filter *f, int ocode)
 }
 
 static int
-output_flush(struct transform_write_filter *f)
+output_flush(struct private_data *state, struct transform_write_filter *f)
 {
-	struct private_data *state = f->base.data;
 	int ret;
 
 	/* At EOF, write the rest of the buffer. */
 	if (state->bit_offset % 8) {
 		state->code_len = (state->bit_offset % 8 + 7) / 8;
-		ret = output_byte(f, state->bit_buf);
+		ret = output_byte(state, state->bit_buf, f->base.upstream.write);
 		if (ret != TRANSFORM_OK)
 			return ret;
 	}
@@ -369,7 +367,7 @@ transform_compressor_compress_write(struct transform_write_filter *f,
 		if (state->hashtab[i] >= 0)
 			goto probe;
  nomatch:
-		ret = output_code(f, state->cur_code);
+		ret = output_code(state, state->cur_code, f->base.upstream.write);
 		if (ret != TRANSFORM_OK)
 			return ret;
 		state->cur_code = c;
@@ -396,7 +394,7 @@ transform_compressor_compress_write(struct transform_write_filter *f,
 			state->compress_ratio = 0;
 			memset(state->hashtab, 0xff, sizeof(state->hashtab));
 			state->first_free = FIRST;
-			ret = output_code(f, CLEAR);
+			ret = output_code(state, CLEAR, f->base.upstream.write);
 			if (ret != TRANSFORM_OK)
 				return ret;
 		}
@@ -418,10 +416,10 @@ transform_compressor_compress_close(struct transform_write_filter *f)
 	if (!state->opened)
 		goto cleanup;
 
-	ret = output_code(f, state->cur_code);
+	ret = output_code(state, state->cur_code, f->base.upstream.write);
 	if (ret != TRANSFORM_OK)
 		goto cleanup;
-	ret = output_flush(f);
+	ret = output_flush(state, f->base.upstream.write);
 	if (ret != TRANSFORM_OK)
 		goto cleanup;
 
