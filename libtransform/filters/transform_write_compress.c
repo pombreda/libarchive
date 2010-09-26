@@ -106,6 +106,7 @@ struct private_data {
 	unsigned char	*compressed;
 	size_t		 compressed_buffer_size;
 	size_t		 compressed_offset;
+	int opened;
 };
 
 static int transform_compressor_compress_open(struct transform_write_filter *);
@@ -118,16 +119,42 @@ static int transform_compressor_compress_free(struct transform_write_filter *);
  * Add a compress filter to this write handle.
  */
 int
-transform_write_add_filter_compress(struct transform *_a)
+transform_write_add_filter_compress(struct transform *t)
 {
-	struct transform_write *a = (struct transform_write *)_a;
-	struct transform_write_filter *f = __transform_write_allocate_filter(_a);
+	struct private_data *state;
 
-	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
+	transform_check_magic(t, TRANSFORM_WRITE_MAGIC,
 	    TRANSFORM_STATE_NEW, "transform_write_add_filter_compress");
-	f->open = &transform_compressor_compress_open;
-	f->code = TRANSFORM_FILTER_COMPRESS;
-	f->name = "compress";
+
+	state = (struct private_data *)calloc(1, sizeof(*state));
+	if (state == NULL) {
+		transform_set_error(t, ENOMEM,
+		    "Can't allocate data for compression");
+		return (TRANSFORM_FATAL);
+	}
+
+	state->compressed_buffer_size = 65536;
+	state->compressed = malloc(state->compressed_buffer_size);
+
+	if (state->compressed == NULL) {
+		transform_set_error(t, ENOMEM,
+		    "Can't allocate data for compression buffer");
+		free(state);
+		return (TRANSFORM_FATAL);
+	}
+
+	if (TRANSFORM_OK != transform_write_add_filter(t, state,
+		"compress", TRANSFORM_FILTER_COMPRESS,
+		NULL,
+		transform_compressor_compress_open,
+		transform_compressor_compress_write,
+		transform_compressor_compress_close,
+		transform_compressor_compress_free,
+		0)) {
+		free(state->compressed);
+		free(state);
+		return (TRANSFORM_FATAL);
+	}
 	return (TRANSFORM_OK);
 }
 
@@ -140,33 +167,12 @@ transform_compressor_compress_open(struct transform_write_filter *f)
 	int ret;
 	struct private_data *state;
 
-	f->code = TRANSFORM_FILTER_COMPRESS;
-	f->name = "compress";
-
 	ret = __transform_write_open_filter(f->next_filter);
 	if (ret != TRANSFORM_OK)
 		return (ret);
 
-	state = (struct private_data *)calloc(1, sizeof(*state));
-	if (state == NULL) {
-		transform_set_error(f->transform, ENOMEM,
-		    "Can't allocate data for compression");
-		return (TRANSFORM_FATAL);
-	}
-
-	state->compressed_buffer_size = 65536;
-	state->compressed = malloc(state->compressed_buffer_size);
-
-	if (state->compressed == NULL) {
-		transform_set_error(f->transform, ENOMEM,
-		    "Can't allocate data for compression buffer");
-		free(state);
-		return (TRANSFORM_FATAL);
-	}
-
-	f->write = transform_compressor_compress_write;
-	f->close = transform_compressor_compress_close;
-	f->free = transform_compressor_compress_free;
+	state = (struct private_data *)f->data;
+	state->opened = 1;
 
 	state->max_maxcode = 0x10000;	/* Should NEVER generate this code. */
 	state->in_count = 0;		/* Length of input. */
@@ -187,7 +193,6 @@ transform_compressor_compress_open(struct transform_write_filter *f)
 	state->compressed[2] = 0x90; /* Block mode, 16bit max */
 	state->compressed_offset = 3;
 
-	f->data = state;
 	return (0);
 }
 
@@ -409,6 +414,9 @@ transform_compressor_compress_close(struct transform_write_filter *f)
 {
 	struct private_data *state = (struct private_data *)f->data;
 	int ret;
+
+	if (!state->opened)
+		goto cleanup;
 
 	ret = output_code(f, state->cur_code);
 	if (ret != TRANSFORM_OK)
