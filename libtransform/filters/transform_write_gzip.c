@@ -90,7 +90,6 @@ int
 transform_write_add_filter_gzip(struct transform *_a)
 {
 	struct transform_write *a = (struct transform_write *)_a;
-	struct transform_write_filter *f = __transform_write_allocate_filter(_a);
 	struct private_data *data;
 	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
 	    TRANSFORM_STATE_NEW, "transform_write_add_filter_gzip");
@@ -100,14 +99,19 @@ transform_write_add_filter_gzip(struct transform *_a)
 		transform_set_error(&a->transform, ENOMEM, "Out of memory");
 		return (TRANSFORM_FATAL);
 	}
-	f->data = data;
 	data->compression_level = Z_DEFAULT_COMPRESSION;
-	f->open = &transform_compressor_gzip_open;
-	f->options = &transform_compressor_gzip_options;
-	f->close = &transform_compressor_gzip_close;
-	f->free = &transform_compressor_gzip_free;
-	f->code = TRANSFORM_FILTER_GZIP;
-	f->name = "gzip";
+	
+	if (TRANSFORM_OK != transform_write_add_filter(_a,
+		data, "gzip", TRANSFORM_FILTER_GZIP,
+		transform_compressor_gzip_options,
+		transform_compressor_gzip_open,
+		transform_compressor_gzip_write,
+		transform_compressor_gzip_close,
+		transform_compressor_gzip_free,
+		0)) {
+		free(data);
+		return (TRANSFORM_FATAL);
+	}
 	return (TRANSFORM_OK);
 }
 
