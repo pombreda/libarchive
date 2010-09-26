@@ -1,3 +1,5 @@
+Sep 26, 2010: when an archive_open_callback returns ARCHIVE_FATAL, the matching
+   archive_close_callback is no longer invoked.
 
 Jan 02, 2010: libarchive 2.7.902a released (test release for 2.8)
 Jan 02, 2010: Fix tar/test/test_windows on MinGW

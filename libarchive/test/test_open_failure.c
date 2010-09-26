@@ -153,11 +153,11 @@ DEFINE_TEST(test_open_failure)
 	    archive_write_open(a, &private, my_open, my_write, my_close));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.write_called);
-	assertEqualInt(1, private.close_called);
+	assertEqualInt(0, private.close_called);
 	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.write_called);
-	assertEqualInt(1, private.close_called);
+	assertEqualInt(0, private.close_called);
 
 	memset(&private, 0, sizeof(private));
 	private.magic = MAGIC;
@@ -170,11 +170,11 @@ DEFINE_TEST(test_open_failure)
 	    archive_write_open(a, &private, my_open, my_write, my_close));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.write_called);
-	assertEqualInt(1, private.close_called);
+	assertEqualInt(0, private.close_called);
 	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.write_called);
-	assertEqualInt(1, private.close_called);
+	assertEqualInt(0, private.close_called);
 
 	memset(&private, 0, sizeof(private));
 	private.magic = MAGIC;
@@ -186,10 +186,10 @@ DEFINE_TEST(test_open_failure)
 	    archive_write_open(a, &private, my_open, my_write, my_close));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.write_called);
-	assertEqualInt(1, private.close_called);
+	assertEqualInt(0, private.close_called);
 	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.write_called);
-	assertEqualInt(1, private.close_called);
+	assertEqualInt(0, private.close_called);
 
 }
