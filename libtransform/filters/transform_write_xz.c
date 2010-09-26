@@ -91,8 +91,7 @@ struct private_data {
 
 static int	transform_compressor_xz_options(struct transform *, void *,
 		    const char *, const char *);
-static int	transform_compressor_xz_open(struct transform *, void **,
-	struct transform_write_filter *);
+static int	transform_compressor_xz_open(struct transform *, void **);
 static ssize_t	transform_compressor_xz_write(struct transform *,
 	void *, const void *, size_t, struct transform_write_filter *);
 static int	transform_compressor_xz_close(struct transform *, void *,
@@ -247,15 +246,9 @@ transform_compressor_xz_init_stream(struct transform *t,
  * Setup callback.
  */
 static int
-transform_compressor_xz_open(struct transform *t, void **_data,
-	struct transform_write_filter *upstream)
+transform_compressor_xz_open(struct transform *t, void **_data)
 {
 	struct private_data *data = (struct private_data *)*_data;
-	int ret;
-
-	ret = __transform_write_open_filter(upstream);
-	if (ret != TRANSFORM_OK)
-		return (ret);
 
 	if (data->compressed == NULL) {
 		data->compressed_buffer_size = 65536;

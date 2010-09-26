@@ -184,7 +184,7 @@ __transform_write_allocate_filter(struct transform *_a)
 	f = calloc(1, sizeof(*f));
 	f->base.transform = _a;
 	f->base.marker.magic = TRANSFORM_WRITE_FILTER_MAGIC;
-	f->base.marker.state = TRANSFORM_STATE_DATA;
+	f->base.marker.state = TRANSFORM_STATE_NEW;
 	if (a->filter_first == NULL)
 		a->filter_first = f;
 	else
@@ -212,7 +212,7 @@ transform_write_filter_new(const void *data, const char *name, int code,
 		return (NULL);
 
 	filter->base.marker.magic = TRANSFORM_WRITE_FILTER_MAGIC;
-	filter->base.marker.state = TRANSFORM_STATE_DATA;
+	filter->base.marker.state = TRANSFORM_STATE_NEW;
 	filter->base.data = (void *)data;
 	filter->base.name = name;
 	filter->base.code = code;
@@ -290,12 +290,30 @@ __transform_write_filter(struct transform_write_filter *f,
 /*
  * Open a filter.
  */
-int
-__transform_write_open_filter(struct transform_write_filter *f)
+static int
+__transform_write_open_filter(struct transform_write_filter *filter)
 {
-	if (f->open == NULL)
-		return (TRANSFORM_OK);
-	return (f->open)(f->base.transform, &(f->base.data), f->base.upstream.write);
+	int r1 = TRANSFORM_OK, r2 = TRANSFORM_OK;
+
+	if (TRANSFORM_FATAL == __transform_filter_check_magic(filter,
+		TRANSFORM_WRITE_FILTER_MAGIC, TRANSFORM_STATE_NEW,
+		"transform_read_filter_skip")) {
+		 return (TRANSFORM_FATAL);
+	}
+
+	if (filter->base.upstream.write) {
+		r1 = __transform_write_open_filter(filter->base.upstream.write);
+		if (TRANSFORM_FATAL == r1) {
+			return (r1);
+		}
+	}
+	if (filter->open) {
+		r2 = (filter->open)(filter->base.transform, &(filter->base.data));
+	}
+	if (TRANSFORM_FATAL == r2) {
+		filter->base.marker.state = TRANSFORM_STATE_DATA;
+	}
+	return (r2 < r1 ? r2 : r1);
 }
 
 /*
@@ -321,8 +339,7 @@ transform_write_output(struct transform *_a, const void *buff, size_t length)
 }
 
 static int
-transform_write_client_open(struct transform *_a, void **_data,
-	struct transform_write_filter *upstream)
+transform_write_client_open(struct transform *_a, void **_data)
 {
 	struct transform_write *a = (struct transform_write *)_a;
 	struct transform_none *state;

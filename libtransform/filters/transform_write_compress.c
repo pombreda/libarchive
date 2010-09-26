@@ -109,8 +109,7 @@ struct private_data {
 	int opened;
 };
 
-static int transform_compressor_compress_open(struct transform *,
-	void **, struct transform_write_filter *);
+static int transform_compressor_compress_open(struct transform *, void **);
 static ssize_t transform_compressor_compress_write(struct transform *,
 	void *, const void *, size_t, struct transform_write_filter *);
 static int transform_compressor_compress_close(struct transform *, void *,
@@ -164,15 +163,9 @@ transform_write_add_filter_compress(struct transform *t)
  * Setup callback.
  */
 static int
-transform_compressor_compress_open(struct transform *t, void **_data,
-	struct transform_write_filter *upstream)
+transform_compressor_compress_open(struct transform *t, void **_data)
 {
-	int ret;
 	struct private_data *state;
-
-	ret = __transform_write_open_filter(upstream);
-	if (ret != TRANSFORM_OK)
-		return (ret);
 
 	state = (struct private_data *)*_data;
 	state->opened = 1;

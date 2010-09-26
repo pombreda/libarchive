@@ -76,8 +76,7 @@ struct private_data {
 	size_t		 child_buf_len, child_buf_avail;
 };
 
-static int transform_compressor_program_open(struct transform *, void **,
-	struct transform_write_filter *);
+static int transform_compressor_program_open(struct transform *, void **);
 static ssize_t transform_compressor_program_write(struct transform *,
 	void *, const void *, size_t, struct transform_write_filter *);
 static int transform_compressor_program_close(struct transform *, void *,
@@ -130,15 +129,9 @@ transform_write_add_filter_program(struct transform *t, const char *cmd)
  * Setup callback.
  */
 static int
-transform_compressor_program_open(struct transform *t, void **_data,
-	struct transform_write_filter *upstream)
+transform_compressor_program_open(struct transform *t, void **_data)
 {
 	struct private_data *data = (struct private_data *)*_data;
-	int ret;
-
-	ret = __transform_write_open_filter(upstream);
-	if (ret != TRANSFORM_OK)
-		return (ret);
 
 	if (data->child_buf == NULL) {
 		data->child_buf_len = 65536;

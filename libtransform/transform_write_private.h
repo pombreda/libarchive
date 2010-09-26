@@ -60,7 +60,6 @@ struct transform_write_filter {
 struct transform_write_filter *__transform_write_allocate_filter(struct transform *);
 
 int __transform_write_filter(struct transform_write_filter *, const void *, size_t);
-int __transform_write_open_filter(struct transform_write_filter *);
 int __transform_write_close_filter(struct transform_write_filter *);
 
 struct transform_write {
