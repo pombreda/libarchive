@@ -78,7 +78,7 @@ struct private_data {
 
 static int transform_compressor_program_open(struct transform *, void **,
 	struct transform_write_filter *);
-static int transform_compressor_program_write(struct transform *,
+static ssize_t transform_compressor_program_write(struct transform *,
 	void *, const void *, size_t, struct transform_write_filter *);
 static int transform_compressor_program_close(struct transform *, void *,
 	struct transform_write_filter *);
@@ -234,13 +234,14 @@ restart_write:
 /*
  * Write data to the compressed stream.
  */
-static int
+static ssize_t
 transform_compressor_program_write(struct transform *t,
-	void *_data, const void *buff, size_t length,
+	void *_data, const void *buff, size_t request,
 	struct transform_write_filter *upstream)
 {
 	ssize_t ret;
 	const char *buf;
+	size_t length = request;
 
 	buf = buff;
 	while (length > 0) {
@@ -253,7 +254,7 @@ transform_compressor_program_write(struct transform *t,
 		length -= ret;
 		buf += ret;
 	}
-	return (TRANSFORM_OK);
+	return (request - length);
 }
 
 

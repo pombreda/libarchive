@@ -272,13 +272,19 @@ int
 __transform_write_filter(struct transform_write_filter *f,
 	const void *buff, size_t length)
 {
-	int r;
-	if (length == 0)
-		return(TRANSFORM_OK);
-	r = (f->write)(f->base.transform, f->base.data, buff, length,
+	ssize_t ret;
+	ret = (f->write)(f->base.transform, f->base.data, buff, length,
 		f->base.upstream.write);
+	if (ret < 0) {
+		return (ret);
+	} else if (ret != length) {
+		transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
+			"write_filter %s wrote less than requested... got %u for %u",
+			f->base.name, (unsigned int)ret, (unsigned int)length);
+		return (TRANSFORM_FATAL);
+	}
 	f->base.bytes_consumed += length;
-	return (r);
+	return (TRANSFORM_OK);
 }
 
 /*
@@ -349,7 +355,7 @@ transform_write_client_open(struct transform *_a, void **_data,
 	return (a->client_opener(_a, a->client_data));
 }
 
-static int
+static ssize_t
 transform_write_client_write(struct transform *_t,
 	void *_state, const void *_buff, size_t length,
 	struct transform_write_filter *upstream)
@@ -371,13 +377,13 @@ transform_write_client_write(struct transform *_t,
 	if (state->buffer_size == 0) {
 		while (remaining > 0) {
 			bytes_written = (a->client_writer)(&a->transform,
-				a->client_data, buff, remaining);
+				a->client_data, buff, remaining, NULL);
 			if (bytes_written <= 0)
 				return (TRANSFORM_FATAL);
 			remaining -= bytes_written;
 			buff += bytes_written;
 		}
-		return (TRANSFORM_OK);
+		return (length);
 	}
 
 	/* If the copy buffer isn't empty, try to fill it. */
@@ -397,7 +403,7 @@ transform_write_client_write(struct transform *_t,
 			size_t to_write = state->buffer_size;
 			while (to_write > 0) {
 				bytes_written = (a->client_writer)(&a->transform,
-					a->client_data, p, to_write);
+					a->client_data, p, to_write, NULL);
 				if (bytes_written <= 0)
 					return (TRANSFORM_FATAL);
 				if ((size_t)bytes_written > to_write) {
@@ -416,7 +422,7 @@ transform_write_client_write(struct transform *_t,
 	while ((size_t)remaining > state->buffer_size) {
 		/* Write out full blocks directly to client. */
 		bytes_written = (a->client_writer)(&a->transform,
-			a->client_data, buff, state->buffer_size);
+			a->client_data, buff, state->buffer_size, NULL);
 		if (bytes_written <= 0)
 			return (TRANSFORM_FATAL);
 		buff += bytes_written;
@@ -429,7 +435,7 @@ transform_write_client_write(struct transform *_t,
 		state->next += remaining;
 		state->avail -= remaining;
 	}
-	return (TRANSFORM_OK);
+	return (length);
 }
 
 static int
@@ -465,7 +471,7 @@ transform_write_client_close(struct transform *_t, void *_data,
 			block_length = target_block_length;
 		}
 		bytes_written = (a->client_writer)(&a->transform,
-			a->client_data, state->buffer, block_length);
+			a->client_data, state->buffer, block_length, upstream);
 		ret = bytes_written <= 0 ? TRANSFORM_FATAL : TRANSFORM_OK;
 	}
 	if (a->client_closer)

@@ -53,7 +53,8 @@ struct write_memory_data {
 
 static int	memory_write_close(struct transform *, void *);
 static int	memory_write_open(struct transform *, void *);
-static ssize_t	memory_write(struct transform *, void *, const void *buff, size_t);
+static ssize_t	memory_write(struct transform *, void *, const void *buff, size_t,
+	struct transform_write_filter *);
 
 /*
  * Client provides a pointer to a block of memory to receive
@@ -99,10 +100,13 @@ memory_write_open(struct transform *t, void *client_data)
  * how much has been written into their buffer at any time.
  */
 static ssize_t
-memory_write(struct transform *a, void *client_data, const void *buff, size_t length)
+memory_write(struct transform *a, void *client_data, const void *buff, size_t length,
+	struct transform_write_filter *upstream)
 {
 	struct write_memory_data *mine;
 	mine = client_data;
+
+	(void)upstream;
 
 	if (mine->used + length > mine->size) {
 		transform_set_error(a, ENOMEM, "Buffer exhausted");

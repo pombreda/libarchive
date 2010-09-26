@@ -76,7 +76,7 @@ static int transform_compressor_gzip_options(struct transform *, void *,
 		    const char *, const char *);
 static int transform_compressor_gzip_open(struct transform *, void **,
 	struct transform_write_filter *);
-static int transform_compressor_gzip_write(struct transform *,
+static ssize_t transform_compressor_gzip_write(struct transform *,
 	void *, const void *, size_t, struct transform_write_filter *);
 static int transform_compressor_gzip_close(struct transform *, void *,
 	struct transform_write_filter *);
@@ -220,7 +220,7 @@ transform_compressor_gzip_options(struct transform *t, void *_data,
 /*
  * Write data to the compressed stream.
  */
-static int
+static ssize_t
 transform_compressor_gzip_write(struct transform *t,
 	void *_data, const void *buff, size_t length,
 	struct transform_write_filter *upstream)
@@ -232,14 +232,18 @@ transform_compressor_gzip_write(struct transform *t,
 	data->crc = crc32(data->crc, (const Bytef *)buff, length);
 	data->total_in += length;
 
+
 	/* Compress input data to output buffer */
 	SET_NEXT_IN(data, buff);
 	data->stream.avail_in = length;
-	if (TRANSFORM_OK != (ret = drive_compressor(t, data, 0, upstream))) {
-		return (ret);
+
+	ret = drive_compressor(t, data, 0, upstream);
+
+	if (TRANSFORM_OK == ret) {
+		return (length);
 	}
 
-	return (TRANSFORM_OK);
+	return (ret);
 }
 
 /*

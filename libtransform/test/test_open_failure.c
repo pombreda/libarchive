@@ -53,9 +53,11 @@ my_read(struct transform *a, void *_private, struct transform_read_filter *upstr
 }
 
 static ssize_t
-my_write(struct transform *a, void *_private, const void *buff, size_t s)
+my_write(struct transform *a, void *_private, const void *buff, size_t s,
+	struct transform_write_filter *upstream)
 {
 	struct my_data *private = (struct my_data *)_private;
+	(void)upstream;
 	assertEqualInt(MAGIC, private->magic);
 	++private->write_called;
 	return (private->write_return);

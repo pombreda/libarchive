@@ -78,7 +78,7 @@ static int transform_compressor_bzip2_open(struct transform *, void **,
 	struct transform_write_filter *);
 static int transform_compressor_bzip2_options(struct transform *, void *,
 		    const char *, const char *);
-static int transform_compressor_bzip2_write(struct transform *, void *,
+static ssize_t transform_compressor_bzip2_write(struct transform *, void *,
 	const void *, size_t, struct transform_write_filter *);
 static int drive_compressor(struct transform *, struct private_data *,
 	int finishing, struct transform_write_filter *);
@@ -205,12 +205,7 @@ transform_compressor_bzip2_options(struct transform *t, void *_data,
 	return (TRANSFORM_WARN);
 }
 
-/*
- * Write data to the compressed stream.
- *
- * Returns TRANSFORM_OK if all data written, error otherwise.
- */
-static int
+static ssize_t
 transform_compressor_bzip2_write(struct transform *t,
 	void *_data, const void *buff, size_t length,
 	struct transform_write_filter *upstream)
@@ -225,7 +220,7 @@ transform_compressor_bzip2_write(struct transform *t,
 	data->stream.avail_in = length;
 	if (drive_compressor(t, data, 0, upstream))
 		return (TRANSFORM_FATAL);
-	return (TRANSFORM_OK);
+	return (length);
 }
 
 

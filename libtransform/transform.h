@@ -181,7 +181,8 @@ typedef __LA_INT64_T	transform_skip_callback(struct transform *,
 /* Returns size actually written, zero on EOF, -1 on error. */
 typedef __LA_SSIZE_T	transform_write_callback(struct transform *,
 			    void *_client_data,
-			    const void *_buffer, size_t _length);
+			    const void *_buffer, size_t _length,
+			    struct transform_write_filter *);
 
 typedef int	transform_open_callback(struct transform *, void *_client_data);
 
@@ -195,8 +196,7 @@ typedef int transform_write_options_callback(struct transform *, void *,
 	const char *key, const char *value);
 typedef int transform_write_open_callback(struct transform *, void **,
 	struct transform_write_filter *);
-typedef int transform_write_filter_callback(struct transform *, void *,
-	const void *, size_t, struct transform_write_filter *);
+#define transform_write_filter_callback transform_write_callback
 typedef int transform_write_close_callback(struct transform *, void *,
 	struct transform_write_filter *);
 #define transform_write_free_callback transform_close_callback

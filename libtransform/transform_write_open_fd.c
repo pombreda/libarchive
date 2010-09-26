@@ -57,7 +57,8 @@ struct write_fd_data {
 
 static int	file_close(struct transform *, void *);
 static int	file_open(struct transform *, void *);
-static ssize_t	file_write(struct transform *, void *, const void *buff, size_t);
+static ssize_t	file_write(struct transform *, void *, const void *buff, size_t,
+	struct transform_write_filter *);
 static int      file_visit_fds(struct transform *, const void *,
     transform_fd_visitor *visitor, const void *visitor_data);
 
@@ -112,10 +113,13 @@ file_open(struct transform *t, void *client_data)
 }
 
 static ssize_t
-file_write(struct transform *t, void *client_data, const void *buff, size_t length)
+file_write(struct transform *t, void *client_data, const void *buff, size_t length,
+	struct transform_write_filter *upstream)
 {
 	struct write_fd_data	*mine;
 	ssize_t	bytesWritten;
+
+	(void)upstream;
 
 	mine = (struct write_fd_data *)client_data;
 	for (;;) {
