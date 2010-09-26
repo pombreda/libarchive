@@ -72,7 +72,7 @@ struct private_data {
 #define	SET_NEXT_IN(st,src)					\
 	(st)->stream.next_in = (Bytef *)(uintptr_t)(const void *)(src)
 
-static int transform_compressor_gzip_options(struct transform_write_filter *,
+static int transform_compressor_gzip_options(struct transform *, void *,
 		    const char *, const char *);
 static int transform_compressor_gzip_open(struct transform_write_filter *);
 static int transform_compressor_gzip_write(struct transform_write_filter *,
@@ -200,10 +200,10 @@ transform_compressor_gzip_open(struct transform_write_filter *f)
  * Set write options.
  */
 static int
-transform_compressor_gzip_options(struct transform_write_filter *f, const char *key,
-    const char *value)
+transform_compressor_gzip_options(struct transform *t, void *_data,
+	const char *key, const char *value)
 {
-	struct private_data *data = (struct private_data *)f->base.data;
+	struct private_data *data = (struct private_data *)_data;
 
 	if (strcmp(key, "compression-level") == 0) {
 		if (value == NULL || !(value[0] >= '0' && value[0] <= '9') ||

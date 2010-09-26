@@ -55,7 +55,7 @@ transform_write_set_filter_option(struct transform *_a, const char *name,
 			continue;
 		if (name != NULL && strcmp(name, filter->base.name) != 0)
 			continue;
-		r = filter->options(filter, key, value);
+		r = filter->options(_a, filter->base.data, key, value);
 		if (r == TRANSFORM_FATAL)
 			return (r);
 		if (r == TRANSFORM_OK)

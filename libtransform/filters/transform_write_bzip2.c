@@ -74,7 +74,7 @@ struct private_data {
 static int transform_compressor_bzip2_close(struct transform_write_filter *);
 static int transform_compressor_bzip2_free(struct transform *, void *);
 static int transform_compressor_bzip2_open(struct transform_write_filter *);
-static int transform_compressor_bzip2_options(struct transform_write_filter *,
+static int transform_compressor_bzip2_options(struct transform *, void *,
 		    const char *, const char *);
 static int transform_compressor_bzip2_write(struct transform_write_filter *,
 	const void *, const void *, size_t);
@@ -181,10 +181,10 @@ transform_compressor_bzip2_open(struct transform_write_filter *f)
  * Set write options.
  */
 static int
-transform_compressor_bzip2_options(struct transform_write_filter *f,
+transform_compressor_bzip2_options(struct transform *t, void *_data,
     const char *key, const char *value)
 {
-	struct private_data *data = (struct private_data *)f->base.data;
+	struct private_data *data = (struct private_data *)_data;
 
 	if (strcmp(key, "compression-level") == 0) {
 		if (value == NULL || !(value[0] >= '0' && value[0] <= '9') ||
