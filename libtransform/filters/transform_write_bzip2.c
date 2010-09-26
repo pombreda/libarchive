@@ -141,7 +141,6 @@ transform_compressor_bzip2_open(struct transform_write_filter *f)
 	memset(&data->stream, 0, sizeof(data->stream));
 	data->stream.next_out = data->compressed;
 	data->stream.avail_out = data->compressed_buffer_size;
-	f->write = transform_compressor_bzip2_write;
 
 	/* Initialize compression library */
 	ret = BZ2_bzCompressInit(&(data->stream),

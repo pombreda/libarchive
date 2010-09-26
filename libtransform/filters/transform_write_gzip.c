@@ -158,8 +158,6 @@ transform_compressor_gzip_open(struct transform_write_filter *f)
 	data->stream.next_out += 10;
 	data->stream.avail_out -= 10;
 
-	f->write = transform_compressor_gzip_write;
-
 	/* Initialize compression library. */
 	ret = deflateInit2(&(data->stream),
 	    data->compression_level,

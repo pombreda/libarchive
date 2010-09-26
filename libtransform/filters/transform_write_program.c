@@ -156,9 +156,6 @@ transform_compressor_program_open(struct transform_write_filter *f)
 		return (TRANSFORM_FATAL);
 	}
 
-	f->write = transform_compressor_program_write;
-	f->close = transform_compressor_program_close;
-	f->free = transform_compressor_program_free;
 	return (0);
 }
 
