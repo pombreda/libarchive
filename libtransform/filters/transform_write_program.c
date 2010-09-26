@@ -80,7 +80,7 @@ static int transform_compressor_program_open(struct transform_write_filter *);
 static int transform_compressor_program_write(struct transform_write_filter *,
 	const void *, const void *, size_t);
 static int transform_compressor_program_close(struct transform_write_filter *);
-static int transform_compressor_program_free(struct transform_write_filter *);
+static int transform_compressor_program_free(struct transform *, void *);
 static void _free_data(struct private_data *data);
 
 /*
@@ -313,11 +313,10 @@ cleanup:
 }
 
 static int
-transform_compressor_program_free(struct transform_write_filter *f)
+transform_compressor_program_free(struct transform *t, void *_data)
 {
-	struct private_data *data = (struct private_data *)f->base.data;
+	struct private_data *data = (struct private_data *)_data;
 	_free_data(data);
-	f->base.data = NULL;
 	return (TRANSFORM_OK);
 }
 

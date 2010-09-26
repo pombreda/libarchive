@@ -94,7 +94,7 @@ static int	transform_compressor_xz_open(struct transform_write_filter *);
 static int	transform_compressor_xz_write(struct transform_write_filter *,
 	const void *, const void *, size_t);
 static int	transform_compressor_xz_close(struct transform_write_filter *);
-static int	transform_compressor_xz_free(struct transform_write_filter *);
+static int	transform_compressor_xz_free(struct transform *, void *);
 static int	drive_compressor(struct transform_write_filter *,
 		    struct private_data *, int finishing);
 
@@ -376,12 +376,11 @@ transform_compressor_xz_close(struct transform_write_filter *f)
 }
 
 static int
-transform_compressor_xz_free(struct transform_write_filter *f)
+transform_compressor_xz_free(struct transform *t, void *_data)
 {
-	struct private_data *data = (struct private_data *)f->base.data;
+	struct private_data *data = (struct private_data *)_data;
 	free(data->compressed);
 	free(data);
-	f->base.data = NULL;
 	return (TRANSFORM_OK);
 }
 

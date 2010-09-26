@@ -113,7 +113,7 @@ static int transform_compressor_compress_open(struct transform_write_filter *);
 static int transform_compressor_compress_write(struct transform_write_filter *,
 	const void *filter_data, const void *, size_t);
 static int transform_compressor_compress_close(struct transform_write_filter *);
-static int transform_compressor_compress_free(struct transform_write_filter *);
+static int transform_compressor_compress_free(struct transform *, void *);
 
 /*
  * Add a compress filter to this write handle.
@@ -430,14 +430,14 @@ transform_compressor_compress_close(struct transform_write_filter *f)
 	    state->compressed, state->compressed_offset);
 cleanup:
 	ret = __transform_write_close_filter(f->base.upstream.write);
-	free(state->compressed);
-	free(state);
 	return (ret);
 }
 
 static int
-transform_compressor_compress_free(struct transform_write_filter *f)
+transform_compressor_compress_free(struct transform *t, void *_state)
 {
-	(void)f; /* UNUSED */
+	struct private_data *state = (struct private_data *)_state;
+	free(state->compressed);
+	free(state);
 	return (TRANSFORM_OK);
 }

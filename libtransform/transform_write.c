@@ -597,7 +597,7 @@ __transform_write_filters_free(struct transform_write *a)
 		struct transform_write_filter *next
 			= a->filter_first->base.upstream.write;
 		if (a->filter_first->free != NULL) {
-			r1 = (*a->filter_first->free)(a->filter_first);
+			r1 = (*a->filter_first->free)((struct transform *)a, a->filter_first->base.data);
 			if (r > r1)
 				r = r1;
 		}
