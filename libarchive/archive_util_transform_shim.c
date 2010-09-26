@@ -151,9 +151,12 @@ __archive_shim_skip(struct transform *t, void *data,
 
 ssize_t
 __archive_shim_write(struct transform *t, void *data, const void *buff,
-    size_t length)
+    size_t length, struct transform_write_filter *upstream)
 {
 	struct archive_shim *mine = (struct archive_shim *)data;
+
+	(void)upstream;
+
 	if (mine->writer) {
 		return ((mine->writer)(mine->archive, mine->client_data, buff, length));
 	}

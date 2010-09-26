@@ -148,7 +148,8 @@ int64_t __archive_shim_skip(struct transform *, void *,
 	struct transform_read_filter *, int64_t);
 #endif
 
-ssize_t __archive_shim_write(struct transform *, void *, const void *, size_t);
+ssize_t __archive_shim_write(struct transform *, void *, const void *, size_t,
+	struct transform_write_filter *);
 int __archive_shim_read(struct transform *, void *, 
 	struct transform_read_filter *, const void **, size_t *);
 
