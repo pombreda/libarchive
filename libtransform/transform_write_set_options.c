@@ -50,10 +50,10 @@ transform_write_set_filter_option(struct transform *_a, const char *name,
 	transform_check_magic(_a, TRANSFORM_WRITE_MAGIC, TRANSFORM_STATE_NEW,
 		"transform_write_set_filter_options");
 
-	for (filter = a->filter_first; filter != NULL; filter = filter->next_filter) {
+	for (filter = a->filter_first; filter != NULL; filter = filter->base.upstream.write) {
 		if (filter->options == NULL)
 			continue;
-		if (name != NULL && strcmp(name, filter->name) != 0)
+		if (name != NULL && strcmp(name, filter->base.name) != 0)
 			continue;
 		r = filter->options(filter, key, value);
 		if (r == TRANSFORM_FATAL)

@@ -85,22 +85,21 @@ static int drive_compressor(struct transform_write_filter *,
  * Add a bzip2 compression filter to this write handle.
  */
 int
-transform_write_add_filter_bzip2(struct transform *_a)
+transform_write_add_filter_bzip2(struct transform *t)
 {
-	struct transform_write *a = (struct transform_write *)_a;
 	struct private_data *data;
 
-	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
+	transform_check_magic(t, TRANSFORM_WRITE_MAGIC,
 	    TRANSFORM_STATE_NEW, "transform_write_add_filter_bzip2");
 
 	data = calloc(1, sizeof(*data));
 	if (data == NULL) {
-		transform_set_error(&a->transform, ENOMEM, "Out of memory");
+		transform_set_error(t, ENOMEM, "Out of memory");
 		return (TRANSFORM_FATAL);
 	}
 	data->compression_level = 9; /* default */
 
-	if (TRANSFORM_OK != transform_write_add_filter(_a, data, "bzip2",
+	if (TRANSFORM_OK != transform_write_add_filter(t, data, "bzip2",
 		TRANSFORM_FILTER_BZIP2,
 		transform_compressor_bzip2_options,
 		transform_compressor_bzip2_open,
@@ -119,10 +118,10 @@ transform_write_add_filter_bzip2(struct transform *_a)
 static int
 transform_compressor_bzip2_open(struct transform_write_filter *f)
 {
-	struct private_data *data = (struct private_data *)f->data;
+	struct private_data *data = (struct private_data *)f->base.data;
 	int ret;
 
-	ret = __transform_write_open_filter(f->next_filter);
+	ret = __transform_write_open_filter(f->base.upstream.write);
 	if (ret != 0)
 		return (ret);
 
@@ -133,7 +132,7 @@ transform_compressor_bzip2_open(struct transform_write_filter *f)
 		data->compressed
 		    = (char *)malloc(data->compressed_buffer_size);
 		if (data->compressed == NULL) {
-			transform_set_error(f->transform, ENOMEM,
+			transform_set_error(f->base.transform, ENOMEM,
 			    "Can't allocate data for compression buffer");
 			return (TRANSFORM_FATAL);
 		}
@@ -148,28 +147,28 @@ transform_compressor_bzip2_open(struct transform_write_filter *f)
 	ret = BZ2_bzCompressInit(&(data->stream),
 	    data->compression_level, 0, 30);
 	if (ret == BZ_OK) {
-		f->data = data;
+		f->base.data = data;
 		return (TRANSFORM_OK);
 	}
 
 	/* Library setup failed: clean up. */
-	transform_set_error(f->transform, TRANSFORM_ERRNO_MISC,
+	transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
 	    "Internal error initializing compression library");
 
 	/* Override the error message if we know what really went wrong. */
 	switch (ret) {
 	case BZ_PARAM_ERROR:
-		transform_set_error(f->transform, TRANSFORM_ERRNO_MISC,
+		transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
 		    "Internal error initializing compression library: "
 		    "invalid setup parameter");
 		break;
 	case BZ_MEM_ERROR:
-		transform_set_error(f->transform, ENOMEM,
+		transform_set_error(f->base.transform, ENOMEM,
 		    "Internal error initializing compression library: "
 		    "out of memory");
 		break;
 	case BZ_CONFIG_ERROR:
-		transform_set_error(f->transform, TRANSFORM_ERRNO_MISC,
+		transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
 		    "Internal error initializing compression library: "
 		    "mis-compiled library");
 		break;
@@ -186,7 +185,7 @@ static int
 transform_compressor_bzip2_options(struct transform_write_filter *f,
     const char *key, const char *value)
 {
-	struct private_data *data = (struct private_data *)f->data;
+	struct private_data *data = (struct private_data *)f->base.data;
 
 	if (strcmp(key, "compression-level") == 0) {
 		if (value == NULL || !(value[0] >= '0' && value[0] <= '9') ||
@@ -233,14 +232,14 @@ transform_compressor_bzip2_write(struct transform_write_filter *f,
 static int
 transform_compressor_bzip2_close(struct transform_write_filter *f)
 {
-	struct private_data *data = (struct private_data *)f->data;
+	struct private_data *data = (struct private_data *)f->base.data;
 	int ret, r1;
 
 	/* Finish compression cycle. */
 	ret = drive_compressor(f, data, 1);
 	if (ret == TRANSFORM_OK) {
 		/* Write the last block */
-		ret = __transform_write_filter(f->next_filter,
+		ret = __transform_write_filter(f->base.upstream.write,
 		    data->compressed,
 		    data->compressed_buffer_size - data->stream.avail_out);
 	}
@@ -249,22 +248,22 @@ transform_compressor_bzip2_close(struct transform_write_filter *f)
 	case BZ_OK:
 		break;
 	default:
-		transform_set_error(f->transform, TRANSFORM_ERRNO_PROGRAMMER,
+		transform_set_error(f->base.transform, TRANSFORM_ERRNO_PROGRAMMER,
 		    "Failed to clean up compressor");
 		ret = TRANSFORM_FATAL;
 	}
 
-	r1 = __transform_write_close_filter(f->next_filter);
+	r1 = __transform_write_close_filter(f->base.upstream.write);
 	return (r1 < ret ? r1 : ret);
 }
 
 static int
 transform_compressor_bzip2_free(struct transform_write_filter *f)
 {
-	struct private_data *data = (struct private_data *)f->data;
+	struct private_data *data = (struct private_data *)f->base.data;
 	free(data->compressed);
 	free(data);
-	f->data = NULL;
+	f->base.data = NULL;
 	return (TRANSFORM_OK);
 }
 
@@ -284,7 +283,7 @@ drive_compressor(struct transform_write_filter *f,
 
 	for (;;) {
 		if (data->stream.avail_out == 0) {
-			bytes_written = __transform_write_filter(f->next_filter,
+			bytes_written = __transform_write_filter(f->base.upstream.write,
 			    data->compressed,
 			    data->compressed_buffer_size);
 			if (bytes_written <= 0) {
@@ -324,7 +323,7 @@ drive_compressor(struct transform_write_filter *f,
 			return (TRANSFORM_OK);
 		default:
 			/* Any other return value indicates an error */
-			transform_set_error(f->transform,
+			transform_set_error(f->base.transform,
 			    TRANSFORM_ERRNO_PROGRAMMER,
 			    "Bzip2 compression failed;"
 			    " BZ2_bzCompress() returned %d",

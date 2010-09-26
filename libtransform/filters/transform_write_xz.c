@@ -180,10 +180,10 @@ transform_compressor_xz_init_stream(struct transform_write_filter *f,
 	data->stream = lzma_stream_init_data;
 	data->stream.next_out = data->compressed;
 	data->stream.avail_out = data->compressed_buffer_size;
-	if (f->code == TRANSFORM_FILTER_XZ)
+	if (f->base.code == TRANSFORM_FILTER_XZ)
 		ret = lzma_stream_encoder(&(data->stream),
 		    data->lzmafilters, LZMA_CHECK_CRC64);
-	else if (f->code == TRANSFORM_FILTER_LZMA)
+	else if (f->base.code == TRANSFORM_FILTER_LZMA)
 		ret = lzma_alone_encoder(&(data->stream), &data->lzma_opt);
 	else {	/* TRANSFORM_FILTER_LZIP */
 		int dict_size = data->lzma_opt.dict_size;
@@ -191,7 +191,7 @@ transform_compressor_xz_init_stream(struct transform_write_filter *f,
 
 		/* Calculate a coded dictionary size */
 		if (dict_size < (1 << 12) || dict_size > (1 << 27)) {
-			transform_set_error(f->transform, TRANSFORM_ERRNO_MISC,
+			transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
 			    "Unacceptable dictionary dize for lzip: %d",
 			    dict_size);
 			return (TRANSFORM_FATAL);
@@ -226,12 +226,12 @@ transform_compressor_xz_init_stream(struct transform_write_filter *f,
 
 	switch (ret) {
 	case LZMA_MEM_ERROR:
-		transform_set_error(f->transform, ENOMEM,
+		transform_set_error(f->base.transform, ENOMEM,
 		    "Internal error initializing compression library: "
 		    "Cannot allocate memory");
 		break;
 	default:
-		transform_set_error(f->transform, TRANSFORM_ERRNO_MISC,
+		transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
 		    "Internal error initializing compression library: "
 		    "It's a bug in liblzma");
 		break;
@@ -245,10 +245,10 @@ transform_compressor_xz_init_stream(struct transform_write_filter *f,
 static int
 transform_compressor_xz_open(struct transform_write_filter *f)
 {
-	struct private_data *data = f->data;
+	struct private_data *data = f->base.data;
 	int ret;
 
-	ret = __transform_write_open_filter(f->next_filter);
+	ret = __transform_write_open_filter(f->base.upstream.write);
 	if (ret != TRANSFORM_OK)
 		return (ret);
 
@@ -257,14 +257,14 @@ transform_compressor_xz_open(struct transform_write_filter *f)
 		data->compressed
 		    = (unsigned char *)malloc(data->compressed_buffer_size);
 		if (data->compressed == NULL) {
-			transform_set_error(f->transform, ENOMEM,
+			transform_set_error(f->base.transform, ENOMEM,
 			    "Can't allocate data for compression buffer");
 			return (TRANSFORM_FATAL);
 		}
 	}
 
 	/* Initialize compression library. */
-	if (f->code == TRANSFORM_FILTER_LZIP) {
+	if (f->base.code == TRANSFORM_FILTER_LZIP) {
 		const struct option_value *val =
 		    &option_values[data->compression_level];
 
@@ -284,7 +284,7 @@ transform_compressor_xz_open(struct transform_write_filter *f)
 		data->lzmafilters[1].id = LZMA_VLI_UNKNOWN;/* Terminate */
 	} else {
 		if (lzma_lzma_preset(&data->lzma_opt, data->compression_level)) {
-			transform_set_error(f->transform, TRANSFORM_ERRNO_MISC,
+			transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
 			    "Internal error initializing compression library");
 		}
 		data->lzmafilters[0].id = LZMA_FILTER_LZMA2;
@@ -293,7 +293,7 @@ transform_compressor_xz_open(struct transform_write_filter *f)
 	}
 	ret = transform_compressor_xz_init_stream(f, data);
 	if (ret == LZMA_OK) {
-		f->data = data;
+		f->base.data = data;
 		return (0);
 	}
 	return (TRANSFORM_FATAL);
@@ -306,7 +306,7 @@ static int
 transform_compressor_xz_options(struct transform_write_filter *f,
     const char *key, const char *value)
 {
-	struct private_data *data = (struct private_data *)f->data;
+	struct private_data *data = (struct private_data *)f->base.data;
 
 	if (strcmp(key, "compression-level") == 0) {
 		if (value == NULL || !(value[0] >= '0' && value[0] <= '9') ||
@@ -333,7 +333,7 @@ transform_compressor_xz_write(struct transform_write_filter *f,
 
 	/* Update statistics */
 	data->total_in += length;
-	if (f->code == TRANSFORM_FILTER_LZIP)
+	if (f->base.code == TRANSFORM_FILTER_LZIP)
 		data->crc32 = lzma_crc32(buff, length, data->crc32);
 
 	/* Compress input data to output buffer */
@@ -352,36 +352,36 @@ transform_compressor_xz_write(struct transform_write_filter *f,
 static int
 transform_compressor_xz_close(struct transform_write_filter *f)
 {
-	struct private_data *data = (struct private_data *)f->data;
+	struct private_data *data = (struct private_data *)f->base.data;
 	int ret, r1;
 
 	ret = drive_compressor(f, data, 1);
 	if (ret == TRANSFORM_OK) {
 		data->total_out +=
 		    data->compressed_buffer_size - data->stream.avail_out;
-		ret = __transform_write_filter(f->next_filter,
+		ret = __transform_write_filter(f->base.upstream.write,
 		    data->compressed,
 		    data->compressed_buffer_size - data->stream.avail_out);
-		if (f->code == TRANSFORM_FILTER_LZIP && ret == TRANSFORM_OK) {
+		if (f->base.code == TRANSFORM_FILTER_LZIP && ret == TRANSFORM_OK) {
 			transform_le32enc(data->compressed, data->crc32);
 			transform_le64enc(data->compressed+4, data->total_in);
 			transform_le64enc(data->compressed+12, data->total_out + 20);
-			ret = __transform_write_filter(f->next_filter,
+			ret = __transform_write_filter(f->base.upstream.write,
 			    data->compressed, 20);
 		}
 	}
 	lzma_end(&(data->stream));
-	r1 = __transform_write_close_filter(f->next_filter);
+	r1 = __transform_write_close_filter(f->base.upstream.write);
 	return (r1 < ret ? r1 : ret);
 }
 
 static int
 transform_compressor_xz_free(struct transform_write_filter *f)
 {
-	struct private_data *data = (struct private_data *)f->data;
+	struct private_data *data = (struct private_data *)f->base.data;
 	free(data->compressed);
 	free(data);
-	f->data = NULL;
+	f->base.data = NULL;
 	return (TRANSFORM_OK);
 }
 
@@ -401,7 +401,7 @@ drive_compressor(struct transform_write_filter *f,
 	for (;;) {
 		if (data->stream.avail_out == 0) {
 			data->total_out += data->compressed_buffer_size;
-			ret = __transform_write_filter(f->next_filter,
+			ret = __transform_write_filter(f->base.upstream.write,
 			    data->compressed,
 			    data->compressed_buffer_size);
 			if (ret != TRANSFORM_OK)
@@ -430,11 +430,11 @@ drive_compressor(struct transform_write_filter *f,
 			/* This return can only occur in finishing case. */
 			if (finishing)
 				return (TRANSFORM_OK);
-			transform_set_error(f->transform, TRANSFORM_ERRNO_MISC,
+			transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
 			    "lzma compression data error");
 			return (TRANSFORM_FATAL);
 		case LZMA_MEMLIMIT_ERROR:
-			transform_set_error(f->transform, ENOMEM,
+			transform_set_error(f->base.transform, ENOMEM,
 			    "lzma compression error: "
 			    "%ju MiB would have been needed",
 			    (lzma_memusage(&(data->stream)) + 1024 * 1024 -1)
@@ -442,7 +442,7 @@ drive_compressor(struct transform_write_filter *f,
 			return (TRANSFORM_FATAL);
 		default:
 			/* Any other return value indicates an error. */
-			transform_set_error(f->transform, TRANSFORM_ERRNO_MISC,
+			transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
 			    "lzma compression failed:"
 			    " lzma_code() call returned status %d",
 			    ret);

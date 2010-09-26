@@ -88,29 +88,28 @@ static void _free_data(struct private_data *data);
  * external program.
  */
 int
-transform_write_add_filter_program(struct transform *_a, const char *cmd)
+transform_write_add_filter_program(struct transform *t, const char *cmd)
 {
-	struct transform_write *a = (struct transform_write *)_a;
 	struct private_data *data;
 	static const char *prefix = "Program: ";
-	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
+	transform_check_magic(t, TRANSFORM_WRITE_MAGIC,
 	    TRANSFORM_STATE_NEW, "transform_write_add_filter_program");
 	data = calloc(1, sizeof(*data));
 	if (data == NULL) {
-		transform_set_error(&a->transform, ENOMEM, "Out of memory");
+		transform_set_error(t, ENOMEM, "Out of memory");
 		return (TRANSFORM_FATAL);
 	}
 	data->cmd = strdup(cmd);
 	data->description = (char *)malloc(strlen(prefix) + strlen(cmd) + 1);
 	if (!data->cmd || !data->description) {
 		_free_data(data);
-		transform_set_error(&a->transform, ENOMEM, "allocation failed");
+		transform_set_error(t, ENOMEM, "allocation failed");
 		return (TRANSFORM_FATAL);
 	}
 	strcpy(data->description, prefix);
 	strcat(data->description, cmd);
 
-	if (TRANSFORM_OK != transform_write_add_filter(_a,
+	if (TRANSFORM_OK != transform_write_add_filter(t,
 		data, data->description, TRANSFORM_FILTER_PROGRAM,
 		NULL,
 		transform_compressor_program_open,
@@ -131,10 +130,10 @@ transform_write_add_filter_program(struct transform *_a, const char *cmd)
 static int
 transform_compressor_program_open(struct transform_write_filter *f)
 {
-	struct private_data *data = (struct private_data *)f->data;
+	struct private_data *data = (struct private_data *)f->base.data;
 	int ret;
 
-	ret = __transform_write_open_filter(f->next_filter);
+	ret = __transform_write_open_filter(f->base.upstream.write);
 	if (ret != TRANSFORM_OK)
 		return (ret);
 
@@ -144,7 +143,7 @@ transform_compressor_program_open(struct transform_write_filter *f)
 		data->child_buf = malloc(data->child_buf_len);
 
 		if (data->child_buf == NULL) {
-			transform_set_error(f->transform, ENOMEM,
+			transform_set_error(f->base.transform, ENOMEM,
 			    "Can't allocate compression buffer");
 			return (TRANSFORM_FATAL);
 		}
@@ -152,7 +151,7 @@ transform_compressor_program_open(struct transform_write_filter *f)
 
 	if ((data->child = __transform_create_child(data->cmd,
 		 &data->child_stdin, &data->child_stdout)) == -1) {
-		transform_set_error(f->transform, EINVAL,
+		transform_set_error(f->base.transform, EINVAL,
 		    "Can't initialise filter");
 		return (TRANSFORM_FATAL);
 	}
@@ -218,7 +217,7 @@ restart_write:
 
 	data->child_buf_avail += ret;
 
-	ret = __transform_write_filter(f->next_filter,
+	ret = __transform_write_filter(f->base.upstream.write,
 	    data->child_buf, data->child_buf_avail);
 	if (ret <= 0)
 		return (-1);
@@ -245,7 +244,7 @@ transform_compressor_program_write(struct transform_write_filter *f,
 	while (length > 0) {
 		ret = child_write(f, (struct private_data *)filter_data, buf, length);
 		if (ret == -1 || ret == 0) {
-			transform_set_error(f->transform, EIO,
+			transform_set_error(f->base.transform, EIO,
 			    "Can't write to filter");
 			return (TRANSFORM_FATAL);
 		}
@@ -262,7 +261,7 @@ transform_compressor_program_write(struct transform_write_filter *f,
 static int
 transform_compressor_program_close(struct transform_write_filter *f)
 {
-	struct private_data *data = (struct private_data *)f->data;
+	struct private_data *data = (struct private_data *)f->base.data;
 	int ret, r1, status;
 	ssize_t bytes_read;
 
@@ -282,14 +281,14 @@ transform_compressor_program_close(struct transform_write_filter *f)
 			break;
 
 		if (bytes_read == -1) {
-			transform_set_error(f->transform, errno,
+			transform_set_error(f->base.transform, errno,
 			    "Read from filter failed unexpectedly.");
 			ret = TRANSFORM_FATAL;
 			goto cleanup;
 		}
 		data->child_buf_avail += bytes_read;
 
-		ret = __transform_write_filter(f->next_filter,
+		ret = __transform_write_filter(f->base.upstream.write,
 		    data->child_buf, data->child_buf_avail);
 		if (ret != TRANSFORM_OK) {
 			ret = TRANSFORM_FATAL;
@@ -308,20 +307,20 @@ cleanup:
 		continue;
 
 	if (status != 0) {
-		transform_set_error(f->transform, EIO,
+		transform_set_error(f->base.transform, EIO,
 		    "Filter exited with failure.");
 		ret = TRANSFORM_FATAL;
 	}
-	r1 = __transform_write_close_filter(f->next_filter);
+	r1 = __transform_write_close_filter(f->base.upstream.write);
 	return (r1 < ret ? r1 : ret);
 }
 
 static int
 transform_compressor_program_free(struct transform_write_filter *f)
 {
-	struct private_data *data = (struct private_data *)f->data;
+	struct private_data *data = (struct private_data *)f->base.data;
 	_free_data(data);
-	f->data = NULL;
+	f->base.data = NULL;
 	return (TRANSFORM_OK);
 }
 

@@ -44,20 +44,15 @@ int transform_write_open2(struct transform *, void *,
 	transform_close_callback *, transform_visit_fds_callback *);
 
 struct transform_write_filter {
-	struct marker marker;
-	int64_t bytes_written;
-	struct transform *transform; /* Associated transform. */
-	struct transform_write_filter *next_filter; /* Who I write to. */
+	struct transform_filter base;
+
 	transform_write_options_callback  *options;
 	transform_write_open_callback     *open;
 	transform_write_filter_callback   *write;
 	transform_write_close_callback    *close;
 	transform_write_free_callback     *free;
 	transform_visit_fds_callback *visit_fds;
-	void	 *data;
-	const char *name;
-	int	  code;
-	int64_t flags;
+
 	int	  bytes_per_block;
 	int	  bytes_in_last_block;
 };

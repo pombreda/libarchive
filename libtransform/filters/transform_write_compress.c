@@ -167,11 +167,11 @@ transform_compressor_compress_open(struct transform_write_filter *f)
 	int ret;
 	struct private_data *state;
 
-	ret = __transform_write_open_filter(f->next_filter);
+	ret = __transform_write_open_filter(f->base.upstream.write);
 	if (ret != TRANSFORM_OK)
 		return (ret);
 
-	state = (struct private_data *)f->data;
+	state = (struct private_data *)f->base.data;
 	state->opened = 1;
 
 	state->max_maxcode = 0x10000;	/* Should NEVER generate this code. */
@@ -217,14 +217,14 @@ static unsigned char rmask[9] =
 static int
 output_byte(struct transform_write_filter *f, unsigned char c)
 {
-	struct private_data *state = f->data;
+	struct private_data *state = f->base.data;
 	ssize_t bytes_written;
 
 	state->compressed[state->compressed_offset++] = c;
 	++state->out_count;
 
 	if (state->compressed_buffer_size == state->compressed_offset) {
-		bytes_written = __transform_write_filter(f->next_filter,
+		bytes_written = __transform_write_filter(f->base.upstream.write,
 		    state->compressed, state->compressed_buffer_size);
 		if (bytes_written <= 0)
 			return TRANSFORM_FATAL;
@@ -237,7 +237,7 @@ output_byte(struct transform_write_filter *f, unsigned char c)
 static int
 output_code(struct transform_write_filter *f, int ocode)
 {
-	struct private_data *state = f->data;
+	struct private_data *state = f->base.data;
 	int bits, ret, clear_flg, bit_offset;
 
 	clear_flg = ocode == CLEAR;
@@ -303,7 +303,7 @@ output_code(struct transform_write_filter *f, int ocode)
 static int
 output_flush(struct transform_write_filter *f)
 {
-	struct private_data *state = f->data;
+	struct private_data *state = f->base.data;
 	int ret;
 
 	/* At EOF, write the rest of the buffer. */
@@ -412,7 +412,7 @@ transform_compressor_compress_write(struct transform_write_filter *f,
 static int
 transform_compressor_compress_close(struct transform_write_filter *f)
 {
-	struct private_data *state = (struct private_data *)f->data;
+	struct private_data *state = (struct private_data *)f->base.data;
 	int ret;
 
 	if (!state->opened)
@@ -426,10 +426,10 @@ transform_compressor_compress_close(struct transform_write_filter *f)
 		goto cleanup;
 
 	/* Write the last block */
-	ret = __transform_write_filter(f->next_filter,
+	ret = __transform_write_filter(f->base.upstream.write,
 	    state->compressed, state->compressed_offset);
 cleanup:
-	ret = __transform_write_close_filter(f->next_filter);
+	ret = __transform_write_close_filter(f->base.upstream.write);
 	free(state->compressed);
 	free(state);
 	return (ret);
