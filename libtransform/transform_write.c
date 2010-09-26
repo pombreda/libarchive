@@ -193,6 +193,75 @@ __transform_write_allocate_filter(struct transform *_a)
 	return f;
 }
 
+struct transform_write_filter *
+transform_write_filter_new(const void *data, const char *name, int code,
+	transform_write_options_callback *options_callback,
+	transform_write_open_callback *open_callback,
+	transform_write_filter_callback *write_callback,
+	transform_write_close_callback *close_callback,
+	transform_write_free_callback *free_callback,
+	int64_t flags)
+{
+	struct transform_write_filter *filter;
+
+	if (!write_callback)
+		return (NULL);
+
+	filter = calloc(1, sizeof(struct transform_write_filter));
+	if (!filter)
+		return (NULL);
+
+	filter->marker.magic = TRANSFORM_WRITE_FILTER_MAGIC;
+	filter->marker.state = TRANSFORM_STATE_DATA;
+	filter->data = (void *)data;
+	filter->name = name;
+	filter->code = code;
+	filter->options = options_callback;
+	filter->open = open_callback;
+	filter->write = write_callback;
+	filter->close = close_callback;
+	filter->free = free_callback;
+	filter->flags = flags;
+	return (filter);
+}
+
+int
+transform_write_add_filter(struct transform *_t,
+	const void *data, const char *name, int code,
+	transform_write_options_callback *options_callback,
+	transform_write_open_callback *open_callback,
+	transform_write_filter_callback *write_callback,
+	transform_write_close_callback *close_callback,
+	transform_write_free_callback *free_callback,
+	int64_t flags)
+{
+	struct transform_write_filter *filter;
+	struct transform_write *t = (struct transform_write *)_t;
+	transform_check_magic(_t, TRANSFORM_WRITE_MAGIC,
+		TRANSFORM_STATE_NEW, "transform_write_add_filter");
+
+	filter = transform_write_filter_new(data, name, code,
+		options_callback, open_callback, write_callback,
+		close_callback, free_callback, flags);
+	if (!filter) {
+		transform_set_error(_t, EINVAL,
+			"failed to add a write filter; either memory allocation failed "
+			"or the client forgot to supply a write callback");
+		return (TRANSFORM_FATAL);
+	}
+
+	filter->transform = _t;
+
+	if (t->filter_first == NULL)
+		t->filter_first = filter;
+	else
+		t->filter_last->next_filter = filter;
+	t->filter_last = filter;
+
+	return (TRANSFORM_OK);
+}
+
+
 /*
  * Write data to a particular filter.
  */

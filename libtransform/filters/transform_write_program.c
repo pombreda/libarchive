@@ -81,6 +81,7 @@ static int transform_compressor_program_write(struct transform_write_filter *,
 	const void *, const void *, size_t);
 static int transform_compressor_program_close(struct transform_write_filter *);
 static int transform_compressor_program_free(struct transform_write_filter *);
+static void _free_data(struct private_data *data);
 
 /*
  * Add a filter to this write handle that passes all data through an
@@ -89,7 +90,6 @@ static int transform_compressor_program_free(struct transform_write_filter *);
 int
 transform_write_add_filter_program(struct transform *_a, const char *cmd)
 {
-	struct transform_write_filter *f = __transform_write_allocate_filter(_a);
 	struct transform_write *a = (struct transform_write *)_a;
 	struct private_data *data;
 	static const char *prefix = "Program: ";
@@ -102,13 +102,26 @@ transform_write_add_filter_program(struct transform *_a, const char *cmd)
 	}
 	data->cmd = strdup(cmd);
 	data->description = (char *)malloc(strlen(prefix) + strlen(cmd) + 1);
+	if (!data->cmd || !data->description) {
+		_free_data(data);
+		transform_set_error(&a->transform, ENOMEM, "allocation failed");
+		return (TRANSFORM_FATAL);
+	}
 	strcpy(data->description, prefix);
 	strcat(data->description, cmd);
 
-	f->name = data->description;
-	f->data = data;
-	f->open = &transform_compressor_program_open;
-	f->code = TRANSFORM_FILTER_PROGRAM;
+	if (TRANSFORM_OK != transform_write_add_filter(_a,
+		data, data->description, TRANSFORM_FILTER_PROGRAM,
+		NULL,
+		transform_compressor_program_open,
+		transform_compressor_program_write,
+		transform_compressor_program_close,
+		transform_compressor_program_free,
+		0))
+		{
+		_free_data(data);
+		return (TRANSFORM_FATAL);
+	}
 	return (TRANSFORM_OK);
 }
 
@@ -307,12 +320,19 @@ static int
 transform_compressor_program_free(struct transform_write_filter *f)
 {
 	struct private_data *data = (struct private_data *)f->data;
+	_free_data(data);
+	f->data = NULL;
+	return (TRANSFORM_OK);
+}
+
+static void
+_free_data(struct private_data *data)
+{
 	free(data->cmd);
 	free(data->description);
 	free(data->child_buf);
 	free(data);
-	f->data = NULL;
-	return (TRANSFORM_OK);
 }
+
 
 #endif /* !defined(HAVE_PIPE) || !defined(HAVE_VFORK) || !defined(HAVE_FCNTL) */

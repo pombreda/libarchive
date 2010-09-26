@@ -158,6 +158,7 @@ struct transform;
 
 struct transform_filter;
 struct transform_read_filter;
+struct transform_write_filter;
 
 __LA_INT64_T transform_read_filter_consume(struct transform_read_filter *, int64_t);
 __LA_DECL const void *transform_read_filter_ahead(struct transform_read_filter *,
@@ -188,6 +189,15 @@ typedef int	transform_close_callback(struct transform *, void *_client_data);
 
 typedef int transform_fd_visitor(struct transform *,
 	int fd, void *visitor_data);
+
+
+typedef int transform_write_options_callback(struct transform_write_filter *,
+	const char *key, const char *value);
+typedef int transform_write_open_callback(struct transform_write_filter *);
+typedef int transform_write_filter_callback(struct transform_write_filter *, const void *,
+	const void *, size_t);
+typedef int transform_write_close_callback(struct transform_write_filter *);
+typedef int transform_write_free_callback(struct transform_write_filter *);
 
 /*
  * Codes to identify various stream filters.
@@ -452,6 +462,26 @@ __LA_DECL int transform_read_filter_set_buffering(struct transform_read_filter *
 	size_t);
 __LA_DECL int transform_read_filter_set_alignment(struct transform_read_filter *,
 	size_t);
+
+__LA_DECL struct transform_write_filter *
+	transform_write_filter_new(
+	const void *data, const char *filter_name, int code,
+	transform_write_options_callback *,
+	transform_write_open_callback *,
+	transform_write_filter_callback *,
+	transform_write_close_callback *,
+	transform_write_free_callback *,
+	int64_t flags);
+
+__LA_DECL int
+	transform_write_add_filter(struct transform *,
+	const void *data, const char *filter_name, int code,
+	transform_write_options_callback *,
+	transform_write_open_callback *,
+	transform_write_filter_callback *,
+	transform_write_close_callback *,
+	transform_write_free_callback *,
+	int64_t flags);
 
 
 __LA_DECL struct transform_read_filter *

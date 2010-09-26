@@ -88,7 +88,6 @@ int
 transform_write_add_filter_bzip2(struct transform *_a)
 {
 	struct transform_write *a = (struct transform_write *)_a;
-	struct transform_write_filter *f = __transform_write_allocate_filter(_a);
 	struct private_data *data;
 
 	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
@@ -101,13 +100,16 @@ transform_write_add_filter_bzip2(struct transform *_a)
 	}
 	data->compression_level = 9; /* default */
 
-	f->data = data;
-	f->options = &transform_compressor_bzip2_options;
-	f->close = &transform_compressor_bzip2_close;
-	f->free = &transform_compressor_bzip2_free;
-	f->open = &transform_compressor_bzip2_open;
-	f->code = TRANSFORM_FILTER_BZIP2;
-	f->name = "bzip2";
+	if (TRANSFORM_OK != transform_write_add_filter(_a, data, "bzip2",
+		TRANSFORM_FILTER_BZIP2,
+		transform_compressor_bzip2_options,
+		transform_compressor_bzip2_open,
+		transform_compressor_bzip2_write,
+		transform_compressor_bzip2_close,
+		transform_compressor_bzip2_free,
+		0)) {
+		return (TRANSFORM_FATAL);
+	}
 	return (TRANSFORM_OK);
 }
 

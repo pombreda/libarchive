@@ -117,21 +117,26 @@ static const struct option_value option_values[] = {
 };
 
 static int
-common_setup(struct transform_write_filter *f)
+common_setup(struct transform *t, const char *name, int code)
 {
-	struct private_data *data;
-	struct transform_write *a = (struct transform_write *)f->transform;
-	data = calloc(1, sizeof(*data));
+	struct private_data *data = calloc(1, sizeof(*data));
 	if (data == NULL) {
-		transform_set_error(&a->transform, ENOMEM, "Out of memory");
+		transform_set_error(t, ENOMEM, "Out of memory");
 		return (TRANSFORM_FATAL);
 	}
-	f->data = data;
 	data->compression_level = LZMA_PRESET_DEFAULT;
-	f->open = &transform_compressor_xz_open;
-	f->close = transform_compressor_xz_close;
-	f->free = transform_compressor_xz_free;
-	f->options = &transform_compressor_xz_options;
+
+	if (TRANSFORM_OK != transform_write_add_filter(t,
+		data, name, code,
+		transform_compressor_xz_options,
+		transform_compressor_xz_open,
+		transform_compressor_xz_write,
+		transform_compressor_xz_close,
+		transform_compressor_xz_free,
+		0)) {
+		free(data);
+		return (TRANSFORM_FATAL);
+	}
 	return (TRANSFORM_OK);
 }
 
@@ -141,18 +146,9 @@ common_setup(struct transform_write_filter *f)
 int
 transform_write_add_filter_xz(struct transform *_a)
 {
-	struct transform_write_filter *f;
-	int r;
-
 	transform_check_magic(_a, TRANSFORM_WRITE_MAGIC,
 	    TRANSFORM_STATE_NEW, "transform_write_add_filter_xz");
-	f = __transform_write_allocate_filter(_a);
-	r = common_setup(f);
-	if (r == TRANSFORM_OK) {
-		f->code = TRANSFORM_FILTER_XZ;
-		f->name = "xz";
-	}
-	return (r);
+	return  common_setup(_a, "xz", TRANSFORM_FILTER_XZ);
 }
 
 /* LZMA is handled identically, we just need a different compression
@@ -161,35 +157,17 @@ transform_write_add_filter_xz(struct transform *_a)
 int
 transform_write_add_filter_lzma(struct transform *_a)
 {
-	struct transform_write_filter *f;
-	int r;
-
 	transform_check_magic(_a, TRANSFORM_WRITE_MAGIC,
 	    TRANSFORM_STATE_NEW, "transform_write_add_filter_lzma");
-	f = __transform_write_allocate_filter(_a);
-	r = common_setup(f);
-	if (r == TRANSFORM_OK) {
-		f->code = TRANSFORM_FILTER_LZMA;
-		f->name = "lzma";
-	}
-	return (r);
+	return common_setup(_a, "lzma", TRANSFORM_FILTER_LZMA);
 }
 
 int
 transform_write_add_filter_lzip(struct transform *_a)
 {
-	struct transform_write_filter *f;
-	int r;
-
 	transform_check_magic(_a, TRANSFORM_WRITE_MAGIC,
 	    TRANSFORM_STATE_NEW, "transform_write_add_filter_lzip");
-	f = __transform_write_allocate_filter(_a);
-	r = common_setup(f);
-	if (r == TRANSFORM_OK) {
-		f->code = TRANSFORM_FILTER_LZIP;
-		f->name = "lzip";
-	}
-	return (r);
+	return common_setup(_a, "lzip", TRANSFORM_FILTER_LZIP);
 }
 
 static int
@@ -284,8 +262,6 @@ transform_compressor_xz_open(struct transform_write_filter *f)
 			return (TRANSFORM_FATAL);
 		}
 	}
-
-	f->write = transform_compressor_xz_write;
 
 	/* Initialize compression library. */
 	if (f->code == TRANSFORM_FILTER_LZIP) {
