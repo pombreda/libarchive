@@ -77,8 +77,8 @@ static int transform_compressor_bzip2_free(struct transform *, void *);
 static int transform_compressor_bzip2_open(struct transform_write_filter *);
 static int transform_compressor_bzip2_options(struct transform *, void *,
 		    const char *, const char *);
-static int transform_compressor_bzip2_write(struct transform_write_filter *,
-	const void *, const void *, size_t);
+static int transform_compressor_bzip2_write(struct transform *, void *,
+	const void *, size_t, struct transform_write_filter *);
 static int drive_compressor(struct transform *, struct private_data *,
 	int finishing, struct transform_write_filter *);
 
@@ -209,10 +209,11 @@ transform_compressor_bzip2_options(struct transform *t, void *_data,
  * Returns TRANSFORM_OK if all data written, error otherwise.
  */
 static int
-transform_compressor_bzip2_write(struct transform_write_filter *f,
-	const void *filter_data, const void *buff, size_t length)
+transform_compressor_bzip2_write(struct transform *t,
+	void *_data, const void *buff, size_t length,
+	struct transform_write_filter *upstream)
 {
-	struct private_data *data = (struct private_data *)filter_data;
+	struct private_data *data = (struct private_data *)_data;
 
 	/* Update statistics */
 	data->total_in += length;
@@ -220,7 +221,7 @@ transform_compressor_bzip2_write(struct transform_write_filter *f,
 	/* Compress input data to output buffer */
 	SET_NEXT_IN(data, buff);
 	data->stream.avail_in = length;
-	if (drive_compressor(f->base.transform, data, 0, f->base.upstream.write))
+	if (drive_compressor(t, data, 0, upstream))
 		return (TRANSFORM_FATAL);
 	return (TRANSFORM_OK);
 }

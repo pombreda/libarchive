@@ -275,7 +275,8 @@ __transform_write_filter(struct transform_write_filter *f,
 	int r;
 	if (length == 0)
 		return(TRANSFORM_OK);
-	r = (f->write)(f, f->base.data, buff, length);
+	r = (f->write)(f->base.transform, f->base.data, buff, length,
+		f->base.upstream.write);
 	f->base.bytes_consumed += length;
 	return (r);
 }
@@ -348,11 +349,12 @@ transform_write_client_open(struct transform_write_filter *f)
 }
 
 static int
-transform_write_client_write(struct transform_write_filter *f,
-	const void *filter_data, const void *_buff, size_t length)
+transform_write_client_write(struct transform *_t,
+	void *_state, const void *_buff, size_t length,
+	struct transform_write_filter *upstream)
 {
-	struct transform_write *a = (struct transform_write *)f->base.transform;
-	struct transform_none *state = (struct transform_none *)filter_data;
+	struct transform_write *a = (struct transform_write *)_t;
+	struct transform_none *state = (struct transform_none *)_state;
 	const char *buff = (const char *)_buff;
 	ssize_t remaining, to_copy;
 	ssize_t bytes_written;

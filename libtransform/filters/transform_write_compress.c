@@ -110,8 +110,8 @@ struct private_data {
 };
 
 static int transform_compressor_compress_open(struct transform_write_filter *);
-static int transform_compressor_compress_write(struct transform_write_filter *,
-	const void *filter_data, const void *, size_t);
+static int transform_compressor_compress_write(struct transform *,
+	void *, const void *, size_t, struct transform_write_filter *);
 static int transform_compressor_compress_close(struct transform *, void *,
 	struct transform_write_filter *);
 static int transform_compressor_compress_free(struct transform *, void *);
@@ -320,10 +320,11 @@ output_flush(struct private_data *state, struct transform_write_filter *f)
  * Write data to the compressed stream.
  */
 static int
-transform_compressor_compress_write(struct transform_write_filter *f,
-	const void *filter_data, const void *buff, size_t length)
+transform_compressor_compress_write(struct transform *t,
+	void *_data, const void *buff, size_t length,
+	struct transform_write_filter *upstream)
 {
-	struct private_data *state = (struct private_data *)filter_data;
+	struct private_data *state = (struct private_data *)_data;
 	int i;
 	int ratio;
 	int c, disp, ret;
@@ -368,7 +369,7 @@ transform_compressor_compress_write(struct transform_write_filter *f,
 		if (state->hashtab[i] >= 0)
 			goto probe;
  nomatch:
-		ret = output_code(state, state->cur_code, f->base.upstream.write);
+		ret = output_code(state, state->cur_code, upstream);
 		if (ret != TRANSFORM_OK)
 			return ret;
 		state->cur_code = c;
@@ -395,7 +396,7 @@ transform_compressor_compress_write(struct transform_write_filter *f,
 			state->compress_ratio = 0;
 			memset(state->hashtab, 0xff, sizeof(state->hashtab));
 			state->first_free = FIRST;
-			ret = output_code(state, CLEAR, f->base.upstream.write);
+			ret = output_code(state, CLEAR, upstream);
 			if (ret != TRANSFORM_OK)
 				return ret;
 		}

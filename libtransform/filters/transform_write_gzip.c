@@ -75,8 +75,8 @@ struct private_data {
 static int transform_compressor_gzip_options(struct transform *, void *,
 		    const char *, const char *);
 static int transform_compressor_gzip_open(struct transform_write_filter *);
-static int transform_compressor_gzip_write(struct transform_write_filter *,
-	const void *, const void *, size_t);
+static int transform_compressor_gzip_write(struct transform *,
+	void *, const void *, size_t, struct transform_write_filter *);
 static int transform_compressor_gzip_close(struct transform *, void *,
 	struct transform_write_filter *);
 static int transform_compressor_gzip_free(struct transform *, void *);
@@ -220,10 +220,11 @@ transform_compressor_gzip_options(struct transform *t, void *_data,
  * Write data to the compressed stream.
  */
 static int
-transform_compressor_gzip_write(struct transform_write_filter *f, 
-	const void *filter_data, const void *buff, size_t length)
+transform_compressor_gzip_write(struct transform *t,
+	void *_data, const void *buff, size_t length,
+	struct transform_write_filter *upstream)
 {
-	struct private_data *data = (struct private_data *)filter_data;
+	struct private_data *data = (struct private_data *)_data;
 	int ret;
 
 	/* Update statistics */
@@ -233,9 +234,9 @@ transform_compressor_gzip_write(struct transform_write_filter *f,
 	/* Compress input data to output buffer */
 	SET_NEXT_IN(data, buff);
 	data->stream.avail_in = length;
-	if ((ret = drive_compressor(f->base.transform, data, 0,
-		f->base.upstream.write)) != TRANSFORM_OK)
+	if (TRANSFORM_OK != (ret = drive_compressor(t, data, 0, upstream))) {
 		return (ret);
+	}
 
 	return (TRANSFORM_OK);
 }

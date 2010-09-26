@@ -77,8 +77,8 @@ struct private_data {
 };
 
 static int transform_compressor_program_open(struct transform_write_filter *);
-static int transform_compressor_program_write(struct transform_write_filter *,
-	const void *, const void *, size_t);
+static int transform_compressor_program_write(struct transform *,
+	void *, const void *, size_t, struct transform_write_filter *);
 static int transform_compressor_program_close(struct transform *, void *,
 	struct transform_write_filter *);
 static int transform_compressor_program_free(struct transform *, void *);
@@ -161,8 +161,9 @@ transform_compressor_program_open(struct transform_write_filter *f)
 }
 
 static ssize_t
-child_write(struct transform_write_filter *f, struct private_data *data,
-	const char *buf, size_t buf_len)
+child_write(struct transform *t, struct private_data *data,
+	const char *buf, size_t buf_len,
+	struct transform_write_filter *upstream)
 {
 	ssize_t ret;
 
@@ -215,7 +216,7 @@ restart_write:
 
 	data->child_buf_avail += ret;
 
-	ret = __transform_write_filter(f->base.upstream.write,
+	ret = __transform_write_filter(upstream,
 	    data->child_buf, data->child_buf_avail);
 	if (ret <= 0)
 		return (-1);
@@ -232,17 +233,18 @@ restart_write:
  * Write data to the compressed stream.
  */
 static int
-transform_compressor_program_write(struct transform_write_filter *f,
-	const void *filter_data, const void *buff, size_t length)
+transform_compressor_program_write(struct transform *t,
+	void *_data, const void *buff, size_t length,
+	struct transform_write_filter *upstream)
 {
 	ssize_t ret;
 	const char *buf;
 
 	buf = buff;
 	while (length > 0) {
-		ret = child_write(f, (struct private_data *)filter_data, buf, length);
+		ret = child_write(t, (struct private_data *)_data, buf, length, upstream);
 		if (ret == -1 || ret == 0) {
-			transform_set_error(f->base.transform, EIO,
+			transform_set_error(t, EIO,
 			    "Can't write to filter");
 			return (TRANSFORM_FATAL);
 		}
