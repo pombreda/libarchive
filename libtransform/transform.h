@@ -197,7 +197,7 @@ typedef int transform_write_options_callback(struct transform *, void *,
 typedef int transform_write_open_callback(struct transform *, void **);
 #define transform_write_filter_callback transform_write_callback
 typedef int transform_write_close_callback(struct transform *, void *,
-	struct transform_write_filter *);
+	struct transform_write_filter *upstream);
 #define transform_write_free_callback transform_close_callback
 
 /*

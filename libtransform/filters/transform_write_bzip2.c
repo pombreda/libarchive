@@ -226,7 +226,7 @@ transform_compressor_bzip2_close(struct transform *t, void *_data,
 	struct transform_write_filter *upstream)
 {
 	struct private_data *data = (struct private_data *)_data;
-	int ret, r1;
+	int ret;
 
 	/* Finish compression cycle. */
 	ret = drive_compressor(t, data, 1, upstream);
@@ -246,8 +246,7 @@ transform_compressor_bzip2_close(struct transform *t, void *_data,
 		ret = TRANSFORM_FATAL;
 	}
 
-	r1 = __transform_write_close_filter(upstream);
-	return (r1 < ret ? r1 : ret);
+	return (ret);
 }
 
 static int

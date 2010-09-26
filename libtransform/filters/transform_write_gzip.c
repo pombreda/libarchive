@@ -249,7 +249,7 @@ transform_compressor_gzip_close(struct transform *t, void *_data,
 {
 	unsigned char trailer[8];
 	struct private_data *data = (struct private_data *)_data;
-	int ret, r1;
+	int ret;
 
 	/* Finish compression cycle */
 	ret = drive_compressor(t, data, 1, upstream);
@@ -280,8 +280,7 @@ transform_compressor_gzip_close(struct transform *t, void *_data,
 		    "Failed to clean up compressor");
 		ret = TRANSFORM_FATAL;
 	}
-	r1 = __transform_write_close_filter(upstream);
-	return (r1 < ret ? r1 : ret);
+	return (ret);
 }
 
 static int

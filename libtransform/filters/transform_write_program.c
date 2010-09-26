@@ -259,7 +259,7 @@ transform_compressor_program_close(struct transform *t, void *_data,
 	struct transform_write_filter *upstream)
 {
 	struct private_data *data = (struct private_data *)_data;
-	int ret, r1, status;
+	int ret, status;
 	ssize_t bytes_read;
 
 	ret = 0;
@@ -308,8 +308,7 @@ cleanup:
 		    "Filter exited with failure.");
 		ret = TRANSFORM_FATAL;
 	}
-	r1 = __transform_write_close_filter(upstream);
-	return (r1 < ret ? r1 : ret);
+	return (ret);
 }
 
 static int

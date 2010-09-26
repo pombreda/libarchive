@@ -106,7 +106,6 @@ struct private_data {
 	unsigned char	*compressed;
 	size_t		 compressed_buffer_size;
 	size_t		 compressed_offset;
-	int opened;
 };
 
 static int transform_compressor_compress_open(struct transform *, void **);
@@ -168,7 +167,6 @@ transform_compressor_compress_open(struct transform *t, void **_data)
 	struct private_data *state;
 
 	state = (struct private_data *)*_data;
-	state->opened = 1;
 
 	state->max_maxcode = 0x10000;	/* Should NEVER generate this code. */
 	state->in_count = 0;		/* Length of input. */
@@ -412,21 +410,14 @@ transform_compressor_compress_close(struct transform *_t, void *_data,
 	struct private_data *state = (struct private_data *)_data;
 	int ret;
 
-	if (!state->opened)
-		goto cleanup;
-
 	ret = output_code(state, state->cur_code, upstream);
-	if (ret != TRANSFORM_OK)
-		goto cleanup;
-	ret = output_flush(state, upstream);
-	if (ret != TRANSFORM_OK)
-		goto cleanup;
-
-	/* Write the last block */
-	ret = __transform_write_filter(upstream,
-	    state->compressed, state->compressed_offset);
-cleanup:
-	ret = __transform_write_close_filter(upstream);
+	if (ret == TRANSFORM_OK) {
+		ret = output_flush(state, upstream);
+		if (ret == TRANSFORM_OK) {
+			ret = __transform_write_filter(upstream,
+			    state->compressed, state->compressed_offset);
+		}
+	}
 	return (ret);
 }
 

@@ -70,6 +70,7 @@ static int  _transform_visit_fds(struct transform *,
 static int	_transform_write_close(struct transform *);
 static int	_transform_write_free(struct transform *);
 static void __transform_write_filters_free(struct transform_write *);
+static int transform_write_close_filters(struct transform_write *);
 
 struct transform_none {
 	size_t buffer_size;
@@ -310,7 +311,7 @@ __transform_write_open_filter(struct transform_write_filter *filter)
 	if (filter->open) {
 		r2 = (filter->open)(filter->base.transform, &(filter->base.data));
 	}
-	if (TRANSFORM_FATAL == r2) {
+	if (TRANSFORM_FATAL != r2) {
 		filter->base.marker.state = TRANSFORM_STATE_DATA;
 	}
 	return (r2 < r1 ? r2 : r1);
@@ -319,14 +320,25 @@ __transform_write_open_filter(struct transform_write_filter *filter)
 /*
  * Close a filter.
  */
-int
-__transform_write_close_filter(struct transform_write_filter *f)
+static int
+transform_write_close_filters(struct transform_write *t)
 {
-	if (f->close != NULL)
-		return (f->close)(f->base.transform, f->base.data, f->base.upstream.write);
-	if (f->base.upstream.write != NULL)
-		return (__transform_write_close_filter(f->base.upstream.write));
-	return (TRANSFORM_OK);
+	int ret = TRANSFORM_OK, new_ret = TRANSFORM_OK;
+	struct transform_write_filter *filter = t->filter_first;
+
+	while (filter) {
+		/* check the state- if it never was even opened, closing it is not sane */
+		if (filter->base.marker.state == TRANSFORM_STATE_DATA) {
+			if (filter->close) {
+				new_ret = (filter->close)((struct transform *)t, filter->base.data,
+					filter->base.upstream.write);
+				ret = new_ret > ret ? ret : new_ret;
+			}
+			filter->base.marker.state = TRANSFORM_STATE_CLOSED;
+		}
+		filter = filter->base.upstream.write;
+	}
+	return (ret);
 }
 
 int
@@ -538,7 +550,7 @@ transform_write_open2(struct transform *_a, void *client_data,
 
 	ret = __transform_write_open_filter(a->filter_first);
 	if (ret < TRANSFORM_WARN) {
-		r1 = __transform_write_close_filter(a->filter_first);
+		r1 = transform_write_close_filters(a);
 		return (r1 < ret ? r1 : ret);
 	}
 
@@ -565,7 +577,7 @@ _transform_write_close(struct transform *_a)
 	transform_clear_error(&a->transform);
 
 	/* Finish the compression and close the stream. */
-	r1 = __transform_write_close_filter(a->filter_first);
+	r1 = transform_write_close_filters(a);
 	if (r1 < r)
 		r = r1;
 
