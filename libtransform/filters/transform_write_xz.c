@@ -91,7 +91,8 @@ struct private_data {
 
 static int	transform_compressor_xz_options(struct transform *, void *,
 		    const char *, const char *);
-static int	transform_compressor_xz_open(struct transform_write_filter *);
+static int	transform_compressor_xz_open(struct transform *, void **,
+	struct transform_write_filter *);
 static int	transform_compressor_xz_write(struct transform *,
 	void *, const void *, size_t, struct transform_write_filter *);
 static int	transform_compressor_xz_close(struct transform *, void *,
@@ -174,7 +175,7 @@ transform_write_add_filter_lzip(struct transform *_a)
 }
 
 static int
-transform_compressor_xz_init_stream(struct transform_write_filter *f,
+transform_compressor_xz_init_stream(struct transform *t, 
     struct private_data *data)
 {
 	static const lzma_stream lzma_stream_init_data = LZMA_STREAM_INIT;
@@ -194,7 +195,7 @@ transform_compressor_xz_init_stream(struct transform_write_filter *f,
 
 		/* Calculate a coded dictionary size */
 		if (dict_size < (1 << 12) || dict_size > (1 << 27)) {
-			transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
+			transform_set_error(t, TRANSFORM_ERRNO_MISC,
 			    "Unacceptable dictionary dize for lzip: %d",
 			    dict_size);
 			return (TRANSFORM_FATAL);
@@ -229,12 +230,12 @@ transform_compressor_xz_init_stream(struct transform_write_filter *f,
 
 	switch (ret) {
 	case LZMA_MEM_ERROR:
-		transform_set_error(f->base.transform, ENOMEM,
+		transform_set_error(t, ENOMEM,
 		    "Internal error initializing compression library: "
 		    "Cannot allocate memory");
 		break;
 	default:
-		transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
+		transform_set_error(t, TRANSFORM_ERRNO_MISC,
 		    "Internal error initializing compression library: "
 		    "It's a bug in liblzma");
 		break;
@@ -246,12 +247,13 @@ transform_compressor_xz_init_stream(struct transform_write_filter *f,
  * Setup callback.
  */
 static int
-transform_compressor_xz_open(struct transform_write_filter *f)
+transform_compressor_xz_open(struct transform *t, void **_data,
+	struct transform_write_filter *upstream)
 {
-	struct private_data *data = f->base.data;
+	struct private_data *data = (struct private_data *)*_data;
 	int ret;
 
-	ret = __transform_write_open_filter(f->base.upstream.write);
+	ret = __transform_write_open_filter(upstream);
 	if (ret != TRANSFORM_OK)
 		return (ret);
 
@@ -260,7 +262,7 @@ transform_compressor_xz_open(struct transform_write_filter *f)
 		data->compressed
 		    = (unsigned char *)malloc(data->compressed_buffer_size);
 		if (data->compressed == NULL) {
-			transform_set_error(f->base.transform, ENOMEM,
+			transform_set_error(t, ENOMEM,
 			    "Can't allocate data for compression buffer");
 			return (TRANSFORM_FATAL);
 		}
@@ -287,19 +289,15 @@ transform_compressor_xz_open(struct transform_write_filter *f)
 		data->lzmafilters[1].id = LZMA_VLI_UNKNOWN;/* Terminate */
 	} else {
 		if (lzma_lzma_preset(&data->lzma_opt, data->compression_level)) {
-			transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
+			transform_set_error(t, TRANSFORM_ERRNO_MISC,
 			    "Internal error initializing compression library");
 		}
 		data->lzmafilters[0].id = LZMA_FILTER_LZMA2;
 		data->lzmafilters[0].options = &data->lzma_opt;
 		data->lzmafilters[1].id = LZMA_VLI_UNKNOWN;/* Terminate */
 	}
-	ret = transform_compressor_xz_init_stream(f, data);
-	if (ret == LZMA_OK) {
-		f->base.data = data;
-		return (0);
-	}
-	return (TRANSFORM_FATAL);
+	return (transform_compressor_xz_init_stream(t, data) == LZMA_OK ? TRANSFORM_OK :
+		TRANSFORM_FATAL);
 }
 
 /*

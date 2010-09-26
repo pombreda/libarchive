@@ -74,7 +74,8 @@ struct private_data {
 
 static int transform_compressor_gzip_options(struct transform *, void *,
 		    const char *, const char *);
-static int transform_compressor_gzip_open(struct transform_write_filter *);
+static int transform_compressor_gzip_open(struct transform *, void **,
+	struct transform_write_filter *);
 static int transform_compressor_gzip_write(struct transform *,
 	void *, const void *, size_t, struct transform_write_filter *);
 static int transform_compressor_gzip_close(struct transform *, void *,
@@ -119,13 +120,14 @@ transform_write_add_filter_gzip(struct transform *t)
  * Setup callback.
  */
 static int
-transform_compressor_gzip_open(struct transform_write_filter *f)
+transform_compressor_gzip_open(struct transform *t, void **_data,
+	struct transform_write_filter *upstream)
 {
-	struct private_data *data = (struct private_data *)f->base.data;
+	struct private_data *data = (struct private_data *)*_data;
 	int ret;
-	time_t t;
+	time_t cur_time;
 
-	ret = __transform_write_open_filter(f->base.upstream.write);
+	ret = __transform_write_open_filter(upstream);
 	if (ret != TRANSFORM_OK)
 		return (ret);
 
@@ -134,7 +136,7 @@ transform_compressor_gzip_open(struct transform_write_filter *f)
 		data->compressed
 		    = (unsigned char *)malloc(data->compressed_buffer_size);
 		if (data->compressed == NULL) {
-			transform_set_error(f->base.transform, ENOMEM,
+			transform_set_error(t, ENOMEM,
 			    "Can't allocate data for compression buffer");
 			return (TRANSFORM_FATAL);
 		}
@@ -145,15 +147,15 @@ transform_compressor_gzip_open(struct transform_write_filter *f)
 	data->stream.avail_out = data->compressed_buffer_size;
 
 	/* Prime output buffer with a gzip header. */
-	t = time(NULL);
+	cur_time = time(NULL);
 	data->compressed[0] = 0x1f; /* GZip signature bytes */
 	data->compressed[1] = 0x8b;
 	data->compressed[2] = 0x08; /* "Deflate" compression */
 	data->compressed[3] = 0; /* No options */
-	data->compressed[4] = (t)&0xff;  /* Timestamp */
-	data->compressed[5] = (t>>8)&0xff;
-	data->compressed[6] = (t>>16)&0xff;
-	data->compressed[7] = (t>>24)&0xff;
+	data->compressed[4] = (cur_time)&0xff;  /* Timestamp */
+	data->compressed[5] = (cur_time>>8)&0xff;
+	data->compressed[6] = (cur_time>>16)&0xff;
+	data->compressed[7] = (cur_time>>24)&0xff;
 	data->compressed[8] = 0; /* No deflate options */
 	data->compressed[9] = 3; /* OS=Unix */
 	data->stream.next_out += 10;
@@ -168,27 +170,26 @@ transform_compressor_gzip_open(struct transform_write_filter *f)
 	    Z_DEFAULT_STRATEGY);
 
 	if (ret == Z_OK) {
-		f->base.data = data;
 		return (TRANSFORM_OK);
 	}
 
 	/* Library setup failed: clean up. */
-	transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC, "Internal error "
+	transform_set_error(t, TRANSFORM_ERRNO_MISC, "Internal error "
 	    "initializing compression library");
 
 	/* Override the error message if we know what really went wrong. */
 	switch (ret) {
 	case Z_STREAM_ERROR:
-		transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
+		transform_set_error(t, TRANSFORM_ERRNO_MISC,
 		    "Internal error initializing "
 		    "compression library: invalid setup parameter");
 		break;
 	case Z_MEM_ERROR:
-		transform_set_error(f->base.transform, ENOMEM, "Internal error initializing "
+		transform_set_error(t, ENOMEM, "Internal error initializing "
 		    "compression library");
 		break;
 	case Z_VERSION_ERROR:
-		transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
+		transform_set_error(t, TRANSFORM_ERRNO_MISC,
 		    "Internal error initializing "
 		    "compression library: invalid library version");
 		break;

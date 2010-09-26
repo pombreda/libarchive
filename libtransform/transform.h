@@ -193,7 +193,8 @@ typedef int transform_fd_visitor(struct transform *,
 
 typedef int transform_write_options_callback(struct transform *, void *,
 	const char *key, const char *value);
-typedef int transform_write_open_callback(struct transform_write_filter *);
+typedef int transform_write_open_callback(struct transform *, void **,
+	struct transform_write_filter *);
 typedef int transform_write_filter_callback(struct transform *, void *,
 	const void *, size_t, struct transform_write_filter *);
 typedef int transform_write_close_callback(struct transform *, void *,

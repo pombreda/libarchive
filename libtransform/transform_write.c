@@ -289,7 +289,7 @@ __transform_write_open_filter(struct transform_write_filter *f)
 {
 	if (f->open == NULL)
 		return (TRANSFORM_OK);
-	return (f->open)(f);
+	return (f->open)(f->base.transform, &(f->base.data), f->base.upstream.write);
 }
 
 /*
@@ -315,24 +315,25 @@ transform_write_output(struct transform *_a, const void *buff, size_t length)
 }
 
 static int
-transform_write_client_open(struct transform_write_filter *f)
+transform_write_client_open(struct transform *_a, void **_data,
+	struct transform_write_filter *upstream)
 {
-	struct transform_write *a = (struct transform_write *)f->base.transform;
+	struct transform_write *a = (struct transform_write *)_a;
 	struct transform_none *state;
 	void *buffer;
 	size_t buffer_size;
 
-	f->bytes_per_block = transform_write_get_bytes_per_block(f->base.transform);
-	f->bytes_in_last_block =
-		transform_write_get_bytes_in_last_block(f->base.transform);
-	buffer_size = f->bytes_per_block;
+	a->filter_last->bytes_per_block = transform_write_get_bytes_per_block(_a);
+	a->filter_last->bytes_in_last_block =
+		transform_write_get_bytes_in_last_block(_a);
+	buffer_size = a->filter_last->bytes_per_block;
 
 	state = (struct transform_none *)calloc(1, sizeof(*state));
 	buffer = (char *)malloc(buffer_size);
 	if (state == NULL || buffer == NULL) {
 		free(state);
 		free(buffer);
-		transform_set_error(f->base.transform, ENOMEM,
+		transform_set_error(_a, ENOMEM,
 			"Can't allocate data for output buffering");
 		return (TRANSFORM_FATAL);
 	}
@@ -341,11 +342,11 @@ transform_write_client_open(struct transform_write_filter *f)
 	state->buffer = buffer;
 	state->next = state->buffer;
 	state->avail = state->buffer_size;
-	f->base.data = state;
+	*_data = state;
 
 	if (a->client_opener == NULL)
 		return (TRANSFORM_OK);
-	return (a->client_opener(f->base.transform, a->client_data));
+	return (a->client_opener(_a, a->client_data));
 }
 
 static int

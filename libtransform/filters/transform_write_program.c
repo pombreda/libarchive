@@ -76,7 +76,8 @@ struct private_data {
 	size_t		 child_buf_len, child_buf_avail;
 };
 
-static int transform_compressor_program_open(struct transform_write_filter *);
+static int transform_compressor_program_open(struct transform *, void **,
+	struct transform_write_filter *);
 static int transform_compressor_program_write(struct transform *,
 	void *, const void *, size_t, struct transform_write_filter *);
 static int transform_compressor_program_close(struct transform *, void *,
@@ -129,12 +130,13 @@ transform_write_add_filter_program(struct transform *t, const char *cmd)
  * Setup callback.
  */
 static int
-transform_compressor_program_open(struct transform_write_filter *f)
+transform_compressor_program_open(struct transform *t, void **_data,
+	struct transform_write_filter *upstream)
 {
-	struct private_data *data = (struct private_data *)f->base.data;
+	struct private_data *data = (struct private_data *)*_data;
 	int ret;
 
-	ret = __transform_write_open_filter(f->base.upstream.write);
+	ret = __transform_write_open_filter(upstream);
 	if (ret != TRANSFORM_OK)
 		return (ret);
 
@@ -144,7 +146,7 @@ transform_compressor_program_open(struct transform_write_filter *f)
 		data->child_buf = malloc(data->child_buf_len);
 
 		if (data->child_buf == NULL) {
-			transform_set_error(f->base.transform, ENOMEM,
+			transform_set_error(t, ENOMEM,
 			    "Can't allocate compression buffer");
 			return (TRANSFORM_FATAL);
 		}
@@ -152,7 +154,7 @@ transform_compressor_program_open(struct transform_write_filter *f)
 
 	if ((data->child = __transform_create_child(data->cmd,
 		 &data->child_stdin, &data->child_stdout)) == -1) {
-		transform_set_error(f->base.transform, EINVAL,
+		transform_set_error(t, EINVAL,
 		    "Can't initialise filter");
 		return (TRANSFORM_FATAL);
 	}

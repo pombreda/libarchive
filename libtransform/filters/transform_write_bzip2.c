@@ -74,7 +74,8 @@ struct private_data {
 static int transform_compressor_bzip2_close(struct transform *, void *,
 	struct transform_write_filter *);
 static int transform_compressor_bzip2_free(struct transform *, void *);
-static int transform_compressor_bzip2_open(struct transform_write_filter *);
+static int transform_compressor_bzip2_open(struct transform *, void **,
+	struct transform_write_filter *);
 static int transform_compressor_bzip2_options(struct transform *, void *,
 		    const char *, const char *);
 static int transform_compressor_bzip2_write(struct transform *, void *,
@@ -117,12 +118,13 @@ transform_write_add_filter_bzip2(struct transform *t)
  * Setup callback.
  */
 static int
-transform_compressor_bzip2_open(struct transform_write_filter *f)
+transform_compressor_bzip2_open(struct transform *t, void **_data,
+	struct transform_write_filter *upstream)
 {
-	struct private_data *data = (struct private_data *)f->base.data;
+	struct private_data *data = (struct private_data *)*_data;
 	int ret;
 
-	ret = __transform_write_open_filter(f->base.upstream.write);
+	ret = __transform_write_open_filter(upstream);
 	if (ret != 0)
 		return (ret);
 
@@ -133,7 +135,7 @@ transform_compressor_bzip2_open(struct transform_write_filter *f)
 		data->compressed
 		    = (char *)malloc(data->compressed_buffer_size);
 		if (data->compressed == NULL) {
-			transform_set_error(f->base.transform, ENOMEM,
+			transform_set_error(t, ENOMEM,
 			    "Can't allocate data for compression buffer");
 			return (TRANSFORM_FATAL);
 		}
@@ -147,28 +149,28 @@ transform_compressor_bzip2_open(struct transform_write_filter *f)
 	ret = BZ2_bzCompressInit(&(data->stream),
 	    data->compression_level, 0, 30);
 	if (ret == BZ_OK) {
-		f->base.data = data;
+		*_data = data;
 		return (TRANSFORM_OK);
 	}
 
 	/* Library setup failed: clean up. */
-	transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
+	transform_set_error(t, TRANSFORM_ERRNO_MISC,
 	    "Internal error initializing compression library");
 
 	/* Override the error message if we know what really went wrong. */
 	switch (ret) {
 	case BZ_PARAM_ERROR:
-		transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
+		transform_set_error(t, TRANSFORM_ERRNO_MISC,
 		    "Internal error initializing compression library: "
 		    "invalid setup parameter");
 		break;
 	case BZ_MEM_ERROR:
-		transform_set_error(f->base.transform, ENOMEM,
+		transform_set_error(t, ENOMEM,
 		    "Internal error initializing compression library: "
 		    "out of memory");
 		break;
 	case BZ_CONFIG_ERROR:
-		transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
+		transform_set_error(t, TRANSFORM_ERRNO_MISC,
 		    "Internal error initializing compression library: "
 		    "mis-compiled library");
 		break;
