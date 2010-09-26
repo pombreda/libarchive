@@ -325,6 +325,9 @@ __LA_DECL int transform_write_set_bytes_in_last_block(struct transform *,
 		     int bytes_in_last_block);
 __LA_DECL int transform_write_get_bytes_in_last_block(struct transform *);
 
+__LA_DECL int transform_write_filter_output(struct transform_write_filter *,
+	const void *, size_t);
+
 __LA_DECL int transform_write_add_filter_bzip2(struct transform *);
 __LA_DECL int transform_write_add_filter_compress(struct transform *);
 __LA_DECL int transform_write_add_filter_gzip(struct transform *);

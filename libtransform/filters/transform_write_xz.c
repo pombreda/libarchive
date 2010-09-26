@@ -44,8 +44,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_write_set_compression_xz.c 2
 
 #include "transform.h"
 #include "transform_endian.h"
-#include "transform_private.h"
-#include "transform_write_private.h"
 
 
 #ifndef HAVE_LZMA_H
@@ -149,8 +147,6 @@ common_setup(struct transform *t, const char *name, int code)
 int
 transform_write_add_filter_xz(struct transform *_a)
 {
-	transform_check_magic(_a, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_NEW, "transform_write_add_filter_xz");
 	return  common_setup(_a, "xz", TRANSFORM_FILTER_XZ);
 }
 
@@ -160,16 +156,12 @@ transform_write_add_filter_xz(struct transform *_a)
 int
 transform_write_add_filter_lzma(struct transform *_a)
 {
-	transform_check_magic(_a, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_NEW, "transform_write_add_filter_lzma");
 	return common_setup(_a, "lzma", TRANSFORM_FILTER_LZMA);
 }
 
 int
 transform_write_add_filter_lzip(struct transform *_a)
 {
-	transform_check_magic(_a, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_NEW, "transform_write_add_filter_lzip");
 	return common_setup(_a, "lzip", TRANSFORM_FILTER_LZIP);
 }
 
@@ -356,14 +348,14 @@ transform_compressor_xz_close(struct transform *t, void *_data,
 	if (ret == TRANSFORM_OK) {
 		data->total_out +=
 		    data->compressed_buffer_size - data->stream.avail_out;
-		ret = __transform_write_filter(upstream,
+		ret = transform_write_filter_output(upstream,
 		    data->compressed,
 		    data->compressed_buffer_size - data->stream.avail_out);
 		if (data->code == TRANSFORM_FILTER_LZIP && ret == TRANSFORM_OK) {
 			transform_le32enc(data->compressed, data->crc32);
 			transform_le64enc(data->compressed+4, data->total_in);
 			transform_le64enc(data->compressed+12, data->total_out + 20);
-			ret = __transform_write_filter(upstream, data->compressed, 20);
+			ret = transform_write_filter_output(upstream, data->compressed, 20);
 		}
 	}
 	lzma_end(&(data->stream));
@@ -395,7 +387,7 @@ drive_compressor(struct transform *t, struct private_data *data, int finishing,
 	for (;;) {
 		if (data->stream.avail_out == 0) {
 			data->total_out += data->compressed_buffer_size;
-			ret = __transform_write_filter(upstream,
+			ret = transform_write_filter_output(upstream,
 			    data->compressed,
 			    data->compressed_buffer_size);
 			if (ret != TRANSFORM_OK)

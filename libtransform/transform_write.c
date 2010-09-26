@@ -270,10 +270,17 @@ transform_write_add_filter(struct transform *_t,
  * Write data to a particular filter.
  */
 int
-__transform_write_filter(struct transform_write_filter *f,
+transform_write_filter_output(struct transform_write_filter *f,
 	const void *buff, size_t length)
 {
 	ssize_t ret;
+	
+	if (TRANSFORM_FATAL == __transform_filter_check_magic(f,
+		TRANSFORM_WRITE_FILTER_MAGIC, TRANSFORM_STATE_DATA,
+		"transform_read_filter_output")) {
+		 return (TRANSFORM_FATAL);
+	}
+
 	ret = (f->write)(f->base.transform, f->base.data, buff, length,
 		f->base.upstream.write);
 	if (ret < 0) {
@@ -347,7 +354,7 @@ transform_write_output(struct transform *_a, const void *buff, size_t length)
 	struct transform_write *a = (struct transform_write *)_a;
 	transform_check_magic(_a, TRANSFORM_WRITE_MAGIC,
 		TRANSFORM_STATE_DATA, "transform_write_output");
-	return (__transform_write_filter(a->filter_first, buff, length));
+	return (transform_write_filter_output(a->filter_first, buff, length));
 }
 
 static int

@@ -90,9 +90,6 @@ transform_write_add_filter_bzip2(struct transform *t)
 {
 	struct private_data *data;
 
-	transform_check_magic(t, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_NEW, "transform_write_add_filter_bzip2");
-
 	data = calloc(1, sizeof(*data));
 	if (data == NULL) {
 		transform_set_error(t, ENOMEM, "Out of memory");
@@ -232,7 +229,7 @@ transform_compressor_bzip2_close(struct transform *t, void *_data,
 	ret = drive_compressor(t, data, 1, upstream);
 	if (ret == TRANSFORM_OK) {
 		/* Write the last block */
-		ret = __transform_write_filter(upstream,
+		ret = transform_write_filter_output(upstream,
 		    data->compressed,
 		    data->compressed_buffer_size - data->stream.avail_out);
 	}
@@ -274,7 +271,7 @@ drive_compressor(struct transform *t, struct private_data *data, int finishing,
 
 	for (;;) {
 		if (data->stream.avail_out == 0) {
-			bytes_written = __transform_write_filter(upstream,
+			bytes_written = transform_write_filter_output(upstream,
 			    data->compressed,
 			    data->compressed_buffer_size);
 			if (bytes_written <= 0) {

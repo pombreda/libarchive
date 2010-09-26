@@ -71,8 +71,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_write_set_compression_compre
 #endif
 
 #include "transform.h"
-#include "transform_private.h"
-#include "transform_write_private.h"
 
 #define	HSIZE		69001	/* 95% occupancy */
 #define	HSHIFT		8	/* 8 - trunc(log2(HSIZE / 65536)) */
@@ -122,9 +120,6 @@ int
 transform_write_add_filter_compress(struct transform *t)
 {
 	struct private_data *state;
-
-	transform_check_magic(t, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_NEW, "transform_write_add_filter_compress");
 
 	state = (struct private_data *)calloc(1, sizeof(*state));
 	if (state == NULL) {
@@ -217,7 +212,7 @@ output_byte(struct private_data *state, unsigned char c, struct transform_write_
 	++state->out_count;
 
 	if (state->compressed_buffer_size == state->compressed_offset) {
-		bytes_written = __transform_write_filter(upstream,
+		bytes_written = transform_write_filter_output(upstream,
 		    state->compressed, state->compressed_buffer_size);
 		if (bytes_written <= 0)
 			return TRANSFORM_FATAL;
@@ -294,14 +289,14 @@ output_code(struct private_data *state, int ocode,
 }
 
 static int
-output_flush(struct private_data *state, struct transform_write_filter *f)
+output_flush(struct private_data *state, struct transform_write_filter *upstream)
 {
 	int ret;
 
 	/* At EOF, write the rest of the buffer. */
 	if (state->bit_offset % 8) {
 		state->code_len = (state->bit_offset % 8 + 7) / 8;
-		ret = output_byte(state, state->bit_buf, f->base.upstream.write);
+		ret = output_byte(state, state->bit_buf, upstream);
 		if (ret != TRANSFORM_OK)
 			return ret;
 	}
@@ -414,7 +409,7 @@ transform_compressor_compress_close(struct transform *_t, void *_data,
 	if (ret == TRANSFORM_OK) {
 		ret = output_flush(state, upstream);
 		if (ret == TRANSFORM_OK) {
-			ret = __transform_write_filter(upstream,
+			ret = transform_write_filter_output(upstream,
 			    state->compressed, state->compressed_offset);
 		}
 	}

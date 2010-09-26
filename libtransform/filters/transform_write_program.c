@@ -43,8 +43,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_write_set_compression_progra
 #endif
 
 #include "transform.h"
-#include "transform_private.h"
-#include "transform_write_private.h"
 
 /* This capability is only available on POSIX systems. */
 #if (!defined(HAVE_PIPE) || !defined(HAVE_FCNTL) || \
@@ -93,8 +91,7 @@ transform_write_add_filter_program(struct transform *t, const char *cmd)
 {
 	struct private_data *data;
 	static const char *prefix = "Program: ";
-	transform_check_magic(t, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_NEW, "transform_write_add_filter_program");
+
 	data = calloc(1, sizeof(*data));
 	if (data == NULL) {
 		transform_set_error(t, ENOMEM, "Out of memory");
@@ -211,7 +208,7 @@ restart_write:
 
 	data->child_buf_avail += ret;
 
-	ret = __transform_write_filter(upstream,
+	ret = transform_write_filter_output(upstream,
 	    data->child_buf, data->child_buf_avail);
 	if (ret <= 0)
 		return (-1);
@@ -285,7 +282,7 @@ transform_compressor_program_close(struct transform *t, void *_data,
 		}
 		data->child_buf_avail += bytes_read;
 
-		ret = __transform_write_filter(upstream,
+		ret = transform_write_filter_output(upstream,
 		    data->child_buf, data->child_buf_avail);
 		if (ret != TRANSFORM_OK) {
 			ret = TRANSFORM_FATAL;

@@ -42,8 +42,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_write_set_compression_gzip.c
 #endif
 
 #include "transform.h"
-#include "transform_private.h"
-#include "transform_write_private.h"
 
 #ifndef HAVE_ZLIB_H
 int
@@ -91,8 +89,6 @@ int
 transform_write_add_filter_gzip(struct transform *t)
 {
 	struct private_data *data;
-	transform_check_magic(t, TRANSFORM_WRITE_MAGIC,
-	    TRANSFORM_STATE_NEW, "transform_write_add_filter_gzip");
 
 	data = calloc(1, sizeof(*data));
 	if (data == NULL) {
@@ -255,7 +251,7 @@ transform_compressor_gzip_close(struct transform *t, void *_data,
 	ret = drive_compressor(t, data, 1, upstream);
 	if (ret == TRANSFORM_OK) {
 		/* Write the last compressed data. */
-		ret = __transform_write_filter(upstream,
+		ret = transform_write_filter_output(upstream,
 		    data->compressed,
 		    data->compressed_buffer_size - data->stream.avail_out);
 	}
@@ -269,7 +265,7 @@ transform_compressor_gzip_close(struct transform *t, void *_data,
 		trailer[5] = (data->total_in >> 8)&0xff;
 		trailer[6] = (data->total_in >> 16)&0xff;
 		trailer[7] = (data->total_in >> 24)&0xff;
-		ret = __transform_write_filter(upstream, trailer, 8);
+		ret = transform_write_filter_output(upstream, trailer, 8);
 	}
 
 	switch (deflateEnd(&(data->stream))) {
@@ -307,7 +303,7 @@ drive_compressor(struct transform *t, struct private_data *data, int finishing,
 
 	for (;;) {
 		if (data->stream.avail_out == 0) {
-			ret = __transform_write_filter(upstream,
+			ret = transform_write_filter_output(upstream,
 			    data->compressed,
 			    data->compressed_buffer_size);
 			if (ret != TRANSFORM_OK)
