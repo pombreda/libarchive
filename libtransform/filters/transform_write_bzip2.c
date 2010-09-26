@@ -78,8 +78,8 @@ static int transform_compressor_bzip2_options(struct transform *, void *,
 		    const char *, const char *);
 static int transform_compressor_bzip2_write(struct transform_write_filter *,
 	const void *, const void *, size_t);
-static int drive_compressor(struct transform_write_filter *,
-		    struct private_data *, int finishing);
+static int drive_compressor(struct transform *, struct private_data *,
+	int finishing, struct transform_write_filter *);
 
 /*
  * Add a bzip2 compression filter to this write handle.
@@ -219,7 +219,7 @@ transform_compressor_bzip2_write(struct transform_write_filter *f,
 	/* Compress input data to output buffer */
 	SET_NEXT_IN(data, buff);
 	data->stream.avail_in = length;
-	if (drive_compressor(f, data, 0))
+	if (drive_compressor(f->base.transform, data, 0, f->base.upstream.write))
 		return (TRANSFORM_FATAL);
 	return (TRANSFORM_OK);
 }
@@ -235,7 +235,7 @@ transform_compressor_bzip2_close(struct transform_write_filter *f)
 	int ret, r1;
 
 	/* Finish compression cycle. */
-	ret = drive_compressor(f, data, 1);
+	ret = drive_compressor(f->base.transform, data, 1, f->base.upstream.write);
 	if (ret == TRANSFORM_OK) {
 		/* Write the last block */
 		ret = __transform_write_filter(f->base.upstream.write,
@@ -273,15 +273,15 @@ transform_compressor_bzip2_free(struct transform *t, void *_data)
  * false) and the end-of-transform case (finishing == true).
  */
 static int
-drive_compressor(struct transform_write_filter *f,
-    struct private_data *data, int finishing)
+drive_compressor(struct transform *t, struct private_data *data, int finishing,
+	struct transform_write_filter *upstream)
 {
 	ssize_t	bytes_written;
 	int ret;
 
 	for (;;) {
 		if (data->stream.avail_out == 0) {
-			bytes_written = __transform_write_filter(f->base.upstream.write,
+			bytes_written = __transform_write_filter(upstream,
 			    data->compressed,
 			    data->compressed_buffer_size);
 			if (bytes_written <= 0) {
@@ -321,7 +321,7 @@ drive_compressor(struct transform_write_filter *f,
 			return (TRANSFORM_OK);
 		default:
 			/* Any other return value indicates an error */
-			transform_set_error(f->base.transform,
+			transform_set_error(t,
 			    TRANSFORM_ERRNO_PROGRAMMER,
 			    "Bzip2 compression failed;"
 			    " BZ2_bzCompress() returned %d",

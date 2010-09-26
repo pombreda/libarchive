@@ -95,8 +95,8 @@ static int	transform_compressor_xz_write(struct transform_write_filter *,
 	const void *, const void *, size_t);
 static int	transform_compressor_xz_close(struct transform_write_filter *);
 static int	transform_compressor_xz_free(struct transform *, void *);
-static int	drive_compressor(struct transform_write_filter *,
-		    struct private_data *, int finishing);
+static int	drive_compressor(struct transform *, struct private_data *, 
+	int finishing, struct transform_write_filter *);
 
 struct option_value {
 	uint32_t dict_size;
@@ -339,7 +339,8 @@ transform_compressor_xz_write(struct transform_write_filter *f,
 	/* Compress input data to output buffer */
 	data->stream.next_in = buff;
 	data->stream.avail_in = length;
-	if ((ret = drive_compressor(f, data, 0)) != TRANSFORM_OK)
+	if ((ret = drive_compressor(f->base.transform, data, 0,
+		f->base.upstream.write)) != TRANSFORM_OK)
 		return (ret);
 
 	return (TRANSFORM_OK);
@@ -355,7 +356,7 @@ transform_compressor_xz_close(struct transform_write_filter *f)
 	struct private_data *data = (struct private_data *)f->base.data;
 	int ret, r1;
 
-	ret = drive_compressor(f, data, 1);
+	ret = drive_compressor(f->base.transform, data, 1, f->base.upstream.write);
 	if (ret == TRANSFORM_OK) {
 		data->total_out +=
 		    data->compressed_buffer_size - data->stream.avail_out;
@@ -392,15 +393,15 @@ transform_compressor_xz_free(struct transform *t, void *_data)
  * false) and the end-of-transform case (finishing == true).
  */
 static int
-drive_compressor(struct transform_write_filter *f,
-    struct private_data *data, int finishing)
+drive_compressor(struct transform *t, struct private_data *data, int finishing,
+	struct transform_write_filter *upstream)
 {
 	int ret;
 
 	for (;;) {
 		if (data->stream.avail_out == 0) {
 			data->total_out += data->compressed_buffer_size;
-			ret = __transform_write_filter(f->base.upstream.write,
+			ret = __transform_write_filter(upstream,
 			    data->compressed,
 			    data->compressed_buffer_size);
 			if (ret != TRANSFORM_OK)
@@ -429,11 +430,11 @@ drive_compressor(struct transform_write_filter *f,
 			/* This return can only occur in finishing case. */
 			if (finishing)
 				return (TRANSFORM_OK);
-			transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
+			transform_set_error(t, TRANSFORM_ERRNO_MISC,
 			    "lzma compression data error");
 			return (TRANSFORM_FATAL);
 		case LZMA_MEMLIMIT_ERROR:
-			transform_set_error(f->base.transform, ENOMEM,
+			transform_set_error(t, ENOMEM,
 			    "lzma compression error: "
 			    "%ju MiB would have been needed",
 			    (lzma_memusage(&(data->stream)) + 1024 * 1024 -1)
@@ -441,7 +442,7 @@ drive_compressor(struct transform_write_filter *f,
 			return (TRANSFORM_FATAL);
 		default:
 			/* Any other return value indicates an error. */
-			transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
+			transform_set_error(t, TRANSFORM_ERRNO_MISC,
 			    "lzma compression failed:"
 			    " lzma_code() call returned status %d",
 			    ret);

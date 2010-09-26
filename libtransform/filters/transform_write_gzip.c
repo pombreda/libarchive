@@ -79,8 +79,8 @@ static int transform_compressor_gzip_write(struct transform_write_filter *,
 	const void *, const void *, size_t);
 static int transform_compressor_gzip_close(struct transform_write_filter *);
 static int transform_compressor_gzip_free(struct transform *, void *);
-static int drive_compressor(struct transform_write_filter *,
-		    struct private_data *, int finishing);
+static int drive_compressor(struct transform *, struct private_data *,
+	int finishing, struct transform_write_filter *);
 
 
 /*
@@ -232,7 +232,8 @@ transform_compressor_gzip_write(struct transform_write_filter *f,
 	/* Compress input data to output buffer */
 	SET_NEXT_IN(data, buff);
 	data->stream.avail_in = length;
-	if ((ret = drive_compressor(f, data, 0)) != TRANSFORM_OK)
+	if ((ret = drive_compressor(f->base.transform, data, 0,
+		f->base.upstream.write)) != TRANSFORM_OK)
 		return (ret);
 
 	return (TRANSFORM_OK);
@@ -249,7 +250,7 @@ transform_compressor_gzip_close(struct transform_write_filter *f)
 	int ret, r1;
 
 	/* Finish compression cycle */
-	ret = drive_compressor(f, data, 1);
+	ret = drive_compressor(f->base.transform, data, 1, f->base.upstream.write);
 	if (ret == TRANSFORM_OK) {
 		/* Write the last compressed data. */
 		ret = __transform_write_filter(f->base.upstream.write,
@@ -298,14 +299,14 @@ transform_compressor_gzip_free(struct transform *t, void *_data)
  * false) and the end-of-transform case (finishing == true).
  */
 static int
-drive_compressor(struct transform_write_filter *f,
-    struct private_data *data, int finishing)
+drive_compressor(struct transform *t, struct private_data *data, int finishing,
+	struct transform_write_filter *upstream)
 {
 	int ret;
 
 	for (;;) {
 		if (data->stream.avail_out == 0) {
-			ret = __transform_write_filter(f->base.upstream.write,
+			ret = __transform_write_filter(upstream,
 			    data->compressed,
 			    data->compressed_buffer_size);
 			if (ret != TRANSFORM_OK)
@@ -335,7 +336,7 @@ drive_compressor(struct transform_write_filter *f,
 			return (TRANSFORM_OK);
 		default:
 			/* Any other return value indicates an error. */
-			transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
+			transform_set_error(t, TRANSFORM_ERRNO_MISC,
 			    "GZip compression failed:"
 			    " deflate() call returned status %d",
 			    ret);
