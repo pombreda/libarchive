@@ -648,7 +648,6 @@ header_odc(struct archive_read *a, struct cpio *cpio,
 
 	/* Parse out octal fields. */
 	header = (const struct cpio_odc_header *)h;
-	__archive_read_consume(a, sizeof(struct cpio_odc_header));
 
 	archive_entry_set_dev(entry, atol8(header->c_dev, sizeof(header->c_dev)));
 	archive_entry_set_ino(entry, atol8(header->c_ino, sizeof(header->c_ino)));
@@ -670,6 +669,7 @@ header_odc(struct archive_read *a, struct cpio *cpio,
 	    atol8(header->c_filesize, sizeof(header->c_filesize));
 	archive_entry_set_size(entry, cpio->entry_bytes_remaining);
 	cpio->entry_padding = 0;
+	__archive_read_consume(a, sizeof(struct cpio_odc_header));
 	return (r);
 }
 
@@ -697,7 +697,6 @@ header_afiol(struct archive_read *a, struct cpio *cpio,
 
 	/* Parse out octal fields. */
 	header = (const struct cpio_afiol_header *)h;
-	__archive_read_consume(a, sizeof(struct cpio_afiol_header));
 
 	archive_entry_set_dev(entry, atol16(header->c_dev, sizeof(header->c_dev)));
 	archive_entry_set_ino(entry, atol16(header->c_ino, sizeof(header->c_ino)));
@@ -714,6 +713,7 @@ header_afiol(struct archive_read *a, struct cpio *cpio,
 	    atol16(header->c_filesize, sizeof(header->c_filesize));
 	archive_entry_set_size(entry, cpio->entry_bytes_remaining);
 	cpio->entry_padding = 0;
+	__archive_read_consume(a, sizeof(struct cpio_afiol_header));
 	return (ARCHIVE_OK);
 }
 
@@ -735,7 +735,6 @@ header_bin_le(struct archive_read *a, struct cpio *cpio,
 
 	/* Parse out binary fields. */
 	header = (const struct cpio_bin_header *)h;
-	__archive_read_consume(a, sizeof(struct cpio_bin_header));
 
 	archive_entry_set_dev(entry, header->c_dev[0] + header->c_dev[1] * 256);
 	archive_entry_set_ino(entry, header->c_ino[0] + header->c_ino[1] * 256);
@@ -751,6 +750,7 @@ header_bin_le(struct archive_read *a, struct cpio *cpio,
 	cpio->entry_bytes_remaining = le4(header->c_filesize);
 	archive_entry_set_size(entry, cpio->entry_bytes_remaining);
 	cpio->entry_padding = cpio->entry_bytes_remaining & 1; /* Pad to even. */
+	__archive_read_consume(a, sizeof(struct cpio_bin_header));
 	return (ARCHIVE_OK);
 }
 
@@ -771,7 +771,6 @@ header_bin_be(struct archive_read *a, struct cpio *cpio,
 
 	/* Parse out binary fields. */
 	header = (const struct cpio_bin_header *)h;
-	__archive_read_consume(a, sizeof(struct cpio_bin_header));
 
 	archive_entry_set_dev(entry, header->c_dev[0] * 256 + header->c_dev[1]);
 	archive_entry_set_ino(entry, header->c_ino[0] * 256 + header->c_ino[1]);
@@ -787,6 +786,7 @@ header_bin_be(struct archive_read *a, struct cpio *cpio,
 	cpio->entry_bytes_remaining = be4(header->c_filesize);
 	archive_entry_set_size(entry, cpio->entry_bytes_remaining);
 	cpio->entry_padding = cpio->entry_bytes_remaining & 1; /* Pad to even. */
+	__archive_read_consume(a, sizeof(struct cpio_bin_header));
 	return (ARCHIVE_OK);
 }
 
