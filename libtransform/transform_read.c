@@ -1229,6 +1229,7 @@ transform_read_consume_block(struct transform *_t, void *buff, size_t request)
 		avail = minimum(avail, (end - buff));
 		memcpy(buff, data, avail);
 		buff += avail;
+		transform_read_filter_consume(filter, avail);
 	}
 	return (request - (end - buff));
 }
