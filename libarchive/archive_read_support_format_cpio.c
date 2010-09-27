@@ -470,7 +470,6 @@ header_newc(struct archive_read *a, struct cpio *cpio,
 	h = __archive_read_ahead(a, sizeof(struct cpio_newc_header), NULL);
 	if (h == NULL)
 	    return (ARCHIVE_FATAL);
-	__archive_read_consume(a, sizeof(struct cpio_newc_header));
 
 	/* Parse out hex fields. */
 	header = (const struct cpio_newc_header *)h;
@@ -509,6 +508,7 @@ header_newc(struct archive_read *a, struct cpio *cpio,
 	archive_entry_set_size(entry, cpio->entry_bytes_remaining);
 	/* Pad file contents to a multiple of 4. */
 	cpio->entry_padding = 3 & -cpio->entry_bytes_remaining;
+	__archive_read_consume(a, sizeof(struct cpio_newc_header));
 	return (r);
 }
 
