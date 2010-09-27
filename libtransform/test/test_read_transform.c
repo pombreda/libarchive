@@ -76,9 +76,11 @@ read_test(const char *filename)
 	assert(st.st_size > 200);
 	trg = (void *)transform_read_ahead(t, 100, &avail);
 	assert(NULL != trg);
-	assertEqualMem(trg, src + 10, 100);
-	assertEqualIntA(t, 100, transform_read_consume(t, 100));
-	assert(NULL == transform_read_ahead(t, 1, &avail));
+	if (trg) {
+		assertEqualMem(trg, src + 10, 100);
+		assertEqualIntA(t, 100, transform_read_consume(t, 100));
+		assert(NULL == transform_read_ahead(t, 1, &avail));
+	}
 	transform_read_free(t);
 
 	/* continue on. */
@@ -87,10 +89,12 @@ read_test(const char *filename)
 	int64_t count = st.st_size - 200;
 	trg = (void *)transform_read_ahead(t, count, &avail);
 	assert(NULL != trg);
-	assertEqualInt(avail, count);
-	assertEqualMem(trg, src + 200, count);
-	assertEqualIntA(t, count, transform_read_consume(t, count));
-	assert(NULL == transform_read_ahead(t, 1, &avail));
+	if (trg) {
+		assertEqualInt(avail, count);
+		assertEqualMem(trg, src + 200, count);
+		assertEqualIntA(t, count, transform_read_consume(t, count));
+		assert(NULL == transform_read_ahead(t, 1, &avail));
+	}
 
 	transform_read_free(t);
 	transform_read_free(t_src);
@@ -117,14 +121,18 @@ test_read_ahead(const char *filename)
 	assertEqualIntA(t_src, TRANSFORM_OK, transform_read_open_filename(t_src, filename, (10 * 1024)));
 	assertEqualIntA(t, TRANSFORM_OK, transform_read_open_transform(t, t_src, 0, -1));
 	trg = (void *)transform_read_ahead(t, 1, &avail);
+	assert(trg != NULL);
 	assert(0 == transform_read_bytes_consumed(t_src));
 	assert(avail < st.st_size);
 	trg = (void *)transform_read_ahead(t, st.st_size, &avail);
 	assert(0 == transform_read_bytes_consumed(t_src));
 	assert(avail == st.st_size);
-	assertEqualMem(trg, src, st.st_size);
-	assertEqualIntA(t, st.st_size, transform_read_consume(t, st.st_size));
-	assert(NULL == transform_read_ahead(t, 1, &avail));
+	assert(trg != NULL);
+	if (trg) {
+		assertEqualMem(trg, src, st.st_size);
+		assertEqualIntA(t, st.st_size, transform_read_consume(t, st.st_size));
+		assert(NULL == transform_read_ahead(t, 1, &avail));
+	}
 	transform_read_free(t);
 	transform_read_free(t_src);
 }

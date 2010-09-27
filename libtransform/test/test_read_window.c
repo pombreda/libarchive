@@ -154,16 +154,16 @@ test_read_ahead(char *filename)
 		assert(avail < st.st_size);
 	}
 
-	assert(0 == transform_filter_bytes(t, -1));
+	assertEqualIntA(t, 0, transform_filter_bytes(t, -1));
 
 	trg = (void *)transform_read_ahead(t, st.st_size, &avail);
 	assert(NULL != trg);
 	if (trg) {
 		assertEqualInt(avail, st.st_size);
+		assertEqualIntA(t, 0, transform_filter_bytes(t, -1));
 		assertEqualInt(0, memcmp(trg, src, st.st_size));
 		assertEqualInt(st.st_size, transform_read_consume(t, st.st_size));
 	}
-	assert(0 == transform_filter_bytes(t, -1));
 	free(src);
 	transform_read_free(t);
 }

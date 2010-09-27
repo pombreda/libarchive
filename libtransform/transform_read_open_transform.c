@@ -88,7 +88,7 @@ transform_read_open_transform(struct transform *t, struct transform *src,
 
 	return (transform_read_open2(t, (void *)data,
 		_transform_read, _transform_skip, _transform_close,
-		NULL, TRANSFORM_FILTER_NOTIFY_ALL_CONSUME_FLAG |
+		NULL, TRANSFORM_FILTER_IS_PASSTHRU |
 			TRANSFORM_FILTER_SELF_BUFFERING));
 }
 
@@ -99,15 +99,24 @@ _transform_read(struct transform *t, void *_data,
 	struct private_data *data = (struct private_data *)_data;
 	ssize_t avail;
 
-	*buff = transform_read_ahead(data->src, 1, &avail);
+	*buff = transform_read_ahead(data->src, *bytes_read, &avail);
+	*bytes_read = avail;
 	if (avail < 0) {
 		transform_set_error(t,
 			transform_errno(data->src),
 			"%s",
 			transform_error_string(data->src));
+		return (TRANSFORM_FATAL);
+	} else if (*buff) {
+		/* things went fine... exit out now. */
+		/* request was too large; return what we can. */
+		return (TRANSFORM_OK);
 	}
+	/* EOF occured.  return what was available. */
+	*buff = transform_read_ahead(data->src, *bytes_read, &avail);
 	*bytes_read = avail;
-	return (avail == 0 ? TRANSFORM_EOF : TRANSFORM_OK);
+	/* since no end was specified, premature_eof is impossible. */
+	return (TRANSFORM_EOF);
 }
 
 static int64_t _transform_skip(struct transform *t, void *_data,

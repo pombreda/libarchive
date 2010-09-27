@@ -113,7 +113,7 @@ window_bidder_init(struct transform *t, const void *w_bid_data)
 
 	if (TRANSFORM_FATAL == transform_read_add_new_filter(t, (void *)w_data,
 		"window", TRANSFORM_FILTER_WINDOW, window_read, window_skip,
-		window_free, NULL, TRANSFORM_FILTER_NOTIFY_ALL_CONSUME_FLAG |
+		window_free, NULL, TRANSFORM_FILTER_IS_PASSTHRU |
 			TRANSFORM_FILTER_SELF_BUFFERING))
 		{
 
@@ -145,7 +145,8 @@ window_read(struct transform *t, void *_data,
 	struct window_data *w_data = (struct window_data *)_data;
 	ssize_t available;
 	int64_t consumed;
-	
+	size_t desired = *bytes_read;
+
 	if (0 == w_data->allowed) {
 		*bytes_read = 0;
 		return (TRANSFORM_EOF);
@@ -157,33 +158,54 @@ window_read(struct transform *t, void *_data,
 		if (consumed < 0) {
 			/* retry statuses? either way, pass back the error */
 			return (consumed);
+		} else if (consumed == 0) {
+			*bytes_read = 0;
+			*buff = NULL;
+			return (TRANSFORM_EOF);
 		}
 		w_data->start -= consumed;
 	}
 
-	*buff = transform_read_filter_ahead(upstream, 1, &available);
-	if (available < 0) {
-		return (available);
-	} else if (0 == available) {
-		*bytes_read = 0;
-		if (-1 == w_data->allowed) {
-			return (TRANSFORM_EOF);
+	if (-1 != w_data->allowed) {
+		if (desired > w_data->allowed) {
+			/* minimal request is larger than what is allowed.  EOF it */
+			desired = w_data->allowed;
 		}
-		/* probably should be upcopying the error from our transform source here */
-		transform_set_error(t, TRANSFORM_ERRNO_MISC,
-			"premature EOF encountered- still had %lu bytes left",
-			w_data->allowed);
-		return (TRANSFORM_PREMATURE_EOF);
+	}
+		
+	*buff = transform_read_filter_ahead(upstream, desired, &available);
+	if (*buff) {
+		*bytes_read = available;
+		if (-1 != w_data->allowed) {
+			if (available >= w_data->allowed) {
+				*bytes_read = w_data->allowed;
+				return (TRANSFORM_EOF);
+			}
+		}
+		return (TRANSFORM_OK);
+	} else if (available < 0) {
+		/* error, and not an EOF error */
+		return (available);
 	}
 
-	if (-1 != w_data->allowed) {
-		if (w_data->allowed < available) {
-			*bytes_read = w_data->allowed;
-			return (TRANSFORM_EOF);
-		}
+	if (available == 0) {
+		/* EOF on a boundary. */
+		*buff = NULL;
+		*bytes_read = 0;
+		return (w_data->allowed > 0 ? TRANSFORM_PREMATURE_EOF : TRANSFORM_EOF);
+	}
+	/* finally, the fun one. request was too large.  grab what's available,
+	 * return that size, and set EOF
+	 */
+	*buff = transform_read_filter_ahead(upstream, available, NULL);
+	if (!*buff) {
+		transform_set_error(t, TRANSFORM_ERRNO_PROGRAMMER,
+			"windowed request %u failed- impossible unless read_filter or this filter "
+			"is buggy", (unsigned int)available);
+		return (TRANSFORM_FATAL);
 	}
 	*bytes_read = available;
-	return (TRANSFORM_OK);
+	return (TRANSFORM_EOF);
 }
 
 
@@ -192,13 +214,18 @@ window_skip(struct transform *t, void *_data,
 	struct transform_read_filter *upstream, int64_t request)
 {
 	struct window_data *w_data = (struct window_data *)_data;
-	int64_t skipped;
+	int64_t skipped, allowed = request;
 
-	if (-1 != w_data->allowed && request > w_data->allowed) {
-		return (-1);
+	if (w_data->allowed >= 0) {
+		if (!w_data->allowed)
+			return 0;
+		if (request > w_data->allowed) {
+			allowed = w_data->allowed;
+		}
 	}
-	skipped = transform_read_filter_skip(upstream, request);
-	if (-1 != w_data->allowed && skipped > 0)
+	skipped = transform_read_filter_skip(upstream, allowed);
+	if (skipped > 0 && -1 != w_data->allowed) {
 		w_data->allowed -= skipped;
+	}
 	return (skipped);
 }

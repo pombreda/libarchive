@@ -219,7 +219,7 @@ typedef int transform_write_close_callback(struct transform *, void *,
  * flags related to filter creation
  */
 #define TRANSFORM_FILTER_NO_FLAGS 0
-#define TRANSFORM_FILTER_NOTIFY_ALL_CONSUME_FLAG 0x1
+#define TRANSFORM_FILTER_IS_PASSTHRU 0x1
 #define TRANSFORM_FILTER_SELF_BUFFERING	0x2
 #define TRANSFORM_FILTER_SOURCE	0x4 /* takes no upstream */
 

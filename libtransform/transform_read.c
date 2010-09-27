@@ -847,6 +847,50 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 		return (NULL);
 	}
 
+	if (filter->base.flags & TRANSFORM_FILTER_IS_PASSTHRU) {
+		/* handle this seperately from the resizing crap below. */
+		
+		if (filter->client.avail >= min) {
+			if (avail)
+				*avail = filter->client.avail;
+			return (filter->client.next);
+		} else if (filter->end_of_file) {
+			if (avail)
+				*avail = filter->client.avail;
+			return (NULL);
+		}
+		filter->client.avail = min;
+
+		ret = _filter_read(filter, (void **)&filter->client.buffer,
+			&filter->client.avail);
+
+		filter->client.next = filter->client.buffer;
+		filter->client.size = filter->client.avail;
+
+		if (TRANSFORM_FATAL == ret) {
+			filter->client.size = filter->client.avail = 0;
+			filter->client.next = filter->client.buffer = NULL;
+			if (avail != NULL)
+				*avail = TRANSFORM_FATAL;
+			return (NULL);
+		}
+		
+		if (avail)
+			*avail = filter->client.avail;
+
+		if (min > filter->client.avail) {
+			/* EOF was encountered, or a broken filter */
+			if (!filter->end_of_file) {
+				transform_set_error(filter->base.transform, TRANSFORM_ERRNO_PROGRAMMER,
+					"pass thru filter %s was asked for %u, returned %u, but didn't "
+					"set EOF", filter->base.name, (unsigned int)min,
+					(unsigned int)filter->client.avail);
+			}
+			return (NULL);
+		}
+		return (filter->client.next);
+	}
+
 	/*
 	 * Keep pulling more data until we can satisfy the request.
 	 */
@@ -1091,14 +1135,14 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 		total_bytes_skipped += min;
 	}
 
-	if (filter->base.flags & TRANSFORM_FILTER_NOTIFY_ALL_CONSUME_FLAG) {
+	if (filter->base.flags & TRANSFORM_FILTER_IS_PASSTHRU) {
 		if (total_bytes_skipped && filter->skip) {
 			(filter->skip)((struct transform *)filter->base.transform,
 				filter->base.data, filter->base.upstream.read, total_bytes_skipped);
 		}
 	}
 
-	if (request == 0) {
+	if (request == 0 || filter->end_of_file) {
 		return (total_bytes_skipped);
 	}
 
