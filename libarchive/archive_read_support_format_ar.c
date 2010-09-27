@@ -173,7 +173,6 @@ _ar_read_header(struct archive_read *a, struct archive_entry *entry,
 	uint64_t number; /* Used to hold parsed numbers before validation. */
 	size_t bsd_name_length, entry_size;
 	char *p, *st;
-	const void *b;
 	int r;
 
 	/* Verify the magic signature on the file header. */
@@ -285,10 +284,9 @@ _ar_read_header(struct archive_read *a, struct archive_entry *entry,
 			*unconsumed = 0;
 		}
 
-		if ((b = __archive_read_ahead(a, entry_size, NULL)) == NULL)
+		if (entry_size != __archive_read_consume_block(a, st, entry_size)) {
 			return (ARCHIVE_FATAL);
-		memcpy(st, b, entry_size);
-		__archive_read_consume(a, entry_size);
+		}
 		/* All contents are consumed. */
 		ar->entry_bytes_remaining = 0;
 		archive_entry_set_size(entry, ar->entry_bytes_remaining);
@@ -355,22 +353,17 @@ _ar_read_header(struct archive_read *a, struct archive_entry *entry,
 		}
 
 		/* Read the long name into memory. */
-		if ((b = __archive_read_ahead(a, bsd_name_length, NULL)) == NULL) {
-			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-			    "Truncated input file");
-			return (ARCHIVE_FATAL);
-		}
-		/* Store it in the entry. */
 		p = (char *)malloc(bsd_name_length + 1);
 		if (p == NULL) {
 			archive_set_error(&a->archive, ENOMEM,
 			    "Can't allocate fname buffer");
 			return (ARCHIVE_FATAL);
 		}
-		strncpy(p, b, bsd_name_length);
+		if (bsd_name_length != __archive_read_consume_block(a, p, bsd_name_length)) {
+			free(p);
+			return (ARCHIVE_FATAL);
+		}
 		p[bsd_name_length] = '\0';
-
-		__archive_read_consume(a, bsd_name_length);
 
 		archive_entry_copy_pathname(entry, p);
 		free(p);

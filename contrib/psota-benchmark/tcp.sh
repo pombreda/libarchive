@@ -2,8 +2,9 @@
 # tar comparision program
 # 2007-10-25 Jan Psota
 
-n=3                                     # number of repetitions
+n=5                                     # number of repetitions
 TAR="bsdtar gnutar star"                # TApeArchivers to compare
+TAR="bsdtar"
 OPT=("" "--seek" "-no-fsync")
 pax="--format=pax"                      # comment out for defaults
 OPN=(create list extract compare)       # operations
