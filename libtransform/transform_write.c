@@ -111,12 +111,7 @@ transform_write_new(void)
 	a->transform.marker.magic = TRANSFORM_WRITE_MAGIC;
 	a->transform.marker.state = TRANSFORM_STATE_NEW;
 	a->transform.vtable = transform_write_vtable();
-	/*
-	 * The value 10240 here matches the traditional tar default,
-	 * but is otherwise arbitrary.
-	 * TODO: Set the default block size from the format selected.
-	 */
-	a->bytes_per_block = 10240;
+	a->bytes_per_block = DEFAULT_WRITE_BLOCK_SIZE;
 	a->bytes_in_last_block = -1;	/* Default */
 
 	return (&a->transform);

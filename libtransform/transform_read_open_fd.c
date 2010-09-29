@@ -193,9 +193,9 @@ _common_open_fd(struct transform *t, int fd, const char *filename,
 	/* Disk-like devices prefer power-of-two block sizes.  */
 	/* Use provided block_size as a guide so users have some control. */
 	if (is_disk_like) {
-		size_t new_block_size = DEFAULT_BLOCK_SIZE;
+		size_t new_block_size = DEFAULT_READ_BLOCK_SIZE;
 		while (new_block_size < block_size
-		    && new_block_size < MAX_BUFFERING_SIZE)
+		    && new_block_size < MAX_READ_BUFFER_SIZE)
 			new_block_size *= 2;
 		block_size = new_block_size;
 	}
@@ -338,10 +338,10 @@ file_close(struct transform *t, void *client_data)
 		    && !S_ISCHR(mine->st_mode)
 		    && !S_ISBLK(mine->st_mode)) {
 			ssize_t bytesRead;
-			void *p = malloc(DEFAULT_BLOCK_SIZE);
+			void *p = malloc(DEFAULT_READ_BLOCK_SIZE);
 			if (p) {
 				do {
-					bytesRead = read(mine->fd, p, DEFAULT_BLOCK_SIZE);
+					bytesRead = read(mine->fd, p, DEFAULT_READ_BLOCK_SIZE);
 				} while (bytesRead > 0);
 				free(p);
 			}

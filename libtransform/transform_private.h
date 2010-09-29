@@ -42,6 +42,21 @@
 #define	__LA_DEAD
 #endif
 
+/* this matches tar default.  needs validation for libtransform,
+ * but that cannot happen until last_block bits are pushed
+ * down into a transform or libarchive itself
+ */
+#define DEFAULT_WRITE_BLOCK_SIZE 4 * 1024
+
+#define DEFAULT_READ_BLOCK_SIZE 8 * 1024
+// this literally is the fopen set of functions...
+#define DEFAULT_READ_FILE_BLOCK_SIZE 8 * 1024
+
+#define MAX_BUFFER_SIZE 64 * 1024 * 1024
+
+#define MAX_READ_BUFFER_SIZE MAX_BUFFER_SIZE
+
+
 #define	TRANSFORM_WRITE_MAGIC		(0xb0c5c0deU)
 #define	TRANSFORM_READ_MAGIC		(0xdeb0c5U)
 #define	TRANSFORM_READ_FILTER_MAGIC		(0xf9da10cbU)

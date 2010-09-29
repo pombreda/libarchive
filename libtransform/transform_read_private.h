@@ -36,13 +36,6 @@
 #include "transform_string.h"
 #include "transform_private.h"
 
-// normal buffering defaults
-#define DEFAULT_BLOCK_SIZE 64 * 1024
-// this literally is the fopen set of functions...
-#define DEFAULT_FILE_BLOCK_SIZE 128 * 1024
-
-#define MAX_BUFFERING_SIZE 64 * 1024 * 1024
-
 struct transform_read;
 struct transform_read_bidder;
 struct transform_read_filter;
