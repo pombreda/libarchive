@@ -195,7 +195,7 @@ _common_open_fd(struct transform *t, int fd, const char *filename,
 	if (is_disk_like) {
 		size_t new_block_size = DEFAULT_BLOCK_SIZE;
 		while (new_block_size < block_size
-		    && new_block_size < 64 * 1024 * 1024)
+		    && new_block_size < MAX_BUFFERING_SIZE)
 			new_block_size *= 2;
 		block_size = new_block_size;
 	}
