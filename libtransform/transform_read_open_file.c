@@ -105,8 +105,7 @@ transform_read_open_FILE(struct transform *t, FILE *f)
 
 	/* we ignore error output here; filter isn't initialized (meaning no alloc),
 	 * no error possible */
-	transform_read_filter_set_buffering(source,
-		128 * 1024);
+	transform_read_filter_set_buffering(source, DEFAULT_FILE_BLOCK_SIZE);
 
 	return transform_read_open_source(t, source);
 }
