@@ -55,8 +55,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read_open_fd.c 201103 2009-1
 #define O_BINARY 0
 #endif
 
-#define DEFAULT_BLOCK_SIZE 64 * 1024
-
 struct read_fd_data {
 	int	 fd;
 	char use_lseek;

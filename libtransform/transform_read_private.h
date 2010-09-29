@@ -36,6 +36,8 @@
 #include "transform_string.h"
 #include "transform_private.h"
 
+#define DEFAULT_BLOCK_SIZE 64 * 1024
+
 struct transform_read;
 struct transform_read_bidder;
 struct transform_read_filter;

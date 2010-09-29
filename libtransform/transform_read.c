@@ -606,7 +606,7 @@ transform_read_filter_finalize(struct transform_read_filter *filter)
 	filter->base.marker.state = TRANSFORM_STATE_DATA;
 	if (!(filter->base.flags & TRANSFORM_FILTER_SELF_BUFFERING)) {
 		ret = transform_read_filter_set_buffering(filter,
-			filter->managed_size ? filter->managed_size : 64 * 1024);
+			filter->managed_size ? filter->managed_size : DEFAULT_BLOCK_SIZE);
 	}
 	if (TRANSFORM_OK != ret) {
 		/* revert it back,  possibly go fatal instead? */
