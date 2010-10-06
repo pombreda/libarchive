@@ -53,8 +53,6 @@ struct transform_write_filter {
 	transform_write_free_callback     *free;
 	transform_visit_fds_callback *visit_fds;
 
-	int	  bytes_per_block;
-	int	  bytes_in_last_block;
 };
 
 struct transform_write_filter *__transform_write_allocate_filter(struct transform *);

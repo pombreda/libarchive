@@ -360,10 +360,7 @@ transform_write_client_open(struct transform *_a, void **_data)
 	void *buffer;
 	size_t buffer_size;
 
-	a->filter_last->bytes_per_block = transform_write_get_bytes_per_block(_a);
-	a->filter_last->bytes_in_last_block =
-		transform_write_get_bytes_in_last_block(_a);
-	buffer_size = a->filter_last->bytes_per_block;
+	buffer_size = transform_write_get_bytes_per_block(_a);
 
 	state = (struct transform_none *)calloc(1, sizeof(*state));
 	buffer = (char *)malloc(buffer_size);
@@ -478,6 +475,9 @@ transform_write_client_close(struct transform *_t, void *_data,
 	ssize_t block_length;
 	ssize_t target_block_length;
 	ssize_t bytes_written;
+	int bytes_in_last_block = transform_write_get_bytes_in_last_block(_t);
+	int bytes_per_block = transform_write_get_bytes_per_block(_t);
+
 	int ret = TRANSFORM_OK;
 	(void)upstream;
 
@@ -486,16 +486,16 @@ transform_write_client_close(struct transform *_t, void *_data,
 		block_length = state->buffer_size - state->avail;
 
 		/* Tricky calculation to determine size of last block */
-		if (a->bytes_in_last_block <= 0)
+		if (bytes_in_last_block <= 0)
 			/* Default or Zero: pad to full block */
-			target_block_length = a->bytes_per_block;
+			target_block_length = bytes_per_block;
 		else
 			/* Round to next multiple of bytes_in_last_block. */
-			target_block_length = a->bytes_in_last_block *
-				( (block_length + a->bytes_in_last_block - 1) /
-				a->bytes_in_last_block);
-		if (target_block_length > a->bytes_per_block)
-			target_block_length = a->bytes_per_block;
+			target_block_length = bytes_in_last_block *
+				( (block_length + bytes_in_last_block - 1) /
+				bytes_in_last_block);
+		if (target_block_length > bytes_per_block)
+			target_block_length = bytes_per_block;
 		if (block_length < target_block_length) {
 			memset(state->next, 0,
 				target_block_length - block_length);
