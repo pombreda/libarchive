@@ -6,10 +6,10 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
+ *	notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
+ *	notice, this list of conditions and the following disclaimer in the
+ *	documentation and/or other materials provided with the distribution.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -105,14 +105,14 @@ file_open(struct transform *t, void *client_data)
 	mine->fd = open(mine->filename, flags, 0666);
 	if (mine->fd < 0) {
 		transform_set_error(t, errno, "Failed to open '%s'",
-		    mine->filename);
+			mine->filename);
 		return (TRANSFORM_FATAL);
 	}
 
 	if (fstat(mine->fd, &st) != 0) {
-               transform_set_error(t, errno, "Couldn't stat '%s'",
-                   mine->filename);
-               return (TRANSFORM_FATAL);
+		transform_set_error(t, errno, "Couldn't stat '%s'",
+			mine->filename);
+		return (TRANSFORM_FATAL);
 	}
 
 	/*
@@ -120,7 +120,7 @@ file_open(struct transform *t, void *client_data)
 	 */
 	if (transform_write_get_bytes_in_last_block(t) < 0) {
 		if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode) ||
-		    S_ISFIFO(st.st_mode))
+			S_ISFIFO(st.st_mode))
 			/* Pad last block when writing to device or FIFO. */
 			transform_write_set_bytes_in_last_block(t, 0);
 		else
