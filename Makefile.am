@@ -93,9 +93,8 @@ libtransform_la_SOURCES = 									\
 	libtransform/filters/transform_read_window.c	\
 	libtransform/transform_write.c							\
 	libtransform/transform_write_set_options.c		\
-	libtransform/transform_write_open_fd.c			\
 	libtransform/transform_write_open_file.c			\
-	libtransform/transform_write_open_filename.c			\
+	libtransform/transform_write_open_fd.c			\
 	libtransform/transform_write_open_memory.c			\
 	libtransform/filters/transform_write_bzip2.c	\
 	libtransform/filters/transform_write_compress.c	\

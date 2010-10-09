@@ -6,10 +6,10 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
+ *	notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
+ *	notice, this list of conditions and the following disclaimer in the
+ *	documentation and/or other materials provided with the distribution.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -24,7 +24,7 @@
  */
 
 #include "transform_platform.h"
-__FBSDID("$FreeBSD: head/lib/libtransform/transform_write_open_fd.c 201093 2009-12-28 02:28:44Z kientzle $");
+__FBSDID("$FreeBSD: head/lib/libtransform/transform_write_open_filename.c 191165 2009-04-17 00:39:35Z kientzle $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -34,9 +34,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_write_open_fd.c 201093 2009-
 #endif
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
-#ifdef HAVE_IO_H
-#include <io.h>
 #endif
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
@@ -49,63 +46,109 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_write_open_fd.c 201093 2009-
 #endif
 
 #include "transform.h"
-#include "transform_write_private.h"
 
-struct write_fd_data {
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+
+struct write_file_data {
 	int		fd;
+	int 	close_fd;
+	char	filename[1];
 };
 
+static int  common_open_write_fd(struct transform *t, int fd, const char *filename);
 static int	file_close(struct transform *, void *);
 static int	file_open(struct transform *, void *);
 static ssize_t	file_write(struct transform *, void *, const void *buff, size_t,
 	struct transform_write_filter *);
-static int      file_visit_fds(struct transform *, const void *,
-    transform_fd_visitor *visitor, const void *visitor_data);
 
 int
-transform_write_open_fd(struct transform *a, int fd)
+transform_write_open_filename(struct transform *t, const char *filename)
 {
-	struct write_fd_data *mine;
-
-	mine = (struct write_fd_data *)malloc(sizeof(*mine));
-	if (mine == NULL) {
-		transform_set_error(a, ENOMEM, "No memory");
+	if (!filename) {
+		transform_set_error(t, TRANSFORM_ERRNO_PROGRAMMER,
+			"null filename passed in");
 		return (TRANSFORM_FATAL);
 	}
+
+	return (common_open_write_fd(t, -1, NULL));
+}
+
+int
+transform_write_open_fd(struct transform *t, int fd)
+{
+	if (fd < 0) {
+		transform_set_error(t, EINVAL,
+			"transform_write_open_fd called with an invalid fd- %d",
+			fd);
+		return (TRANSFORM_FATAL);
+	}
+	return (common_open_write_fd(t, fd, NULL));
+}
+
+static int
+common_open_write_fd(struct transform *t, int fd, const char *filename)
+{
+	struct write_file_data *mine;
+	size_t filename_len = 0;
+
+	if (filename) {
+		filename_len = strlen(filename);
+	}
+
+	mine = (struct write_file_data *)calloc(1, sizeof(*mine) + filename_len);
+	if (!mine) {
+		transform_set_error(t, ENOMEM, "No memory");
+		return (TRANSFORM_FATAL);
+	}
+	if (filename) {
+		strcpy(mine->filename, filename);
+	}
 	mine->fd = fd;
-#if defined(__CYGWIN__) || defined(_WIN32)
-	setmode(mine->fd, O_BINARY);
-#endif
-	return (transform_write_open2(a, mine,
-		    file_open, file_write, file_close, file_visit_fds));
+	mine->close_fd = (fd < 0);
+	return (transform_write_open(t, mine,
+		file_open, file_write, file_close));
 }
 
 static int
 file_open(struct transform *t, void *client_data)
 {
-	struct write_fd_data *mine;
+	int flags;
+	struct write_file_data *mine;
 	struct stat st;
 
-	mine = (struct write_fd_data *)client_data;
+	mine = (struct write_file_data *)client_data;
+
+	/*
+	 * Open the file if needed
+	 */
+	if (mine->fd < 0) {
+		flags = O_WRONLY | O_CREAT | O_TRUNC | O_BINARY;
+		mine->fd = open(mine->filename, flags, 0666);
+		if (mine->fd < 0) {
+			transform_set_error(t, errno, "Failed to open '%s'",
+				mine->filename);
+			return (TRANSFORM_FATAL);
+		}
+	}
 
 	if (fstat(mine->fd, &st) != 0) {
-		transform_set_error(t, errno, "Couldn't stat fd %d", mine->fd);
+		transform_set_error(t, errno, "Couldn't stat '%s'",
+			mine->filename);
 		return (TRANSFORM_FATAL);
 	}
 
 	/*
-	 * If client hasn't explicitly set the last block handling,
-	 * then set it here.
+	 * Set up default last block handling.
 	 */
 	if (transform_write_get_bytes_in_last_block(t) < 0) {
-		/* If the output is a block or character device, fifo,
-		 * or stdout, pad the last block, otherwise leave it
-		 * unpadded. */
 		if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode) ||
-		    S_ISFIFO(st.st_mode) || (mine->fd == 1))
-			/* Last block will be fully padded. */
+			S_ISFIFO(st.st_mode))
+			/* Pad last block when writing to device or FIFO. */
 			transform_write_set_bytes_in_last_block(t, 0);
 		else
+			/* Don't pad last block otherwise. */
 			transform_write_set_bytes_in_last_block(t, 1);
 	}
 
@@ -116,12 +159,12 @@ static ssize_t
 file_write(struct transform *t, void *client_data, const void *buff, size_t length,
 	struct transform_write_filter *upstream)
 {
-	struct write_fd_data	*mine;
+	struct write_file_data	*mine;
 	ssize_t	bytesWritten;
 
 	(void)upstream;
 
-	mine = (struct write_fd_data *)client_data;
+	mine = (struct write_file_data *)client_data;
 	for (;;) {
 		bytesWritten = write(mine->fd, buff, length);
 		if (bytesWritten <= 0) {
@@ -135,19 +178,14 @@ file_write(struct transform *t, void *client_data, const void *buff, size_t leng
 }
 
 static int
-file_close(struct transform *a, void *client_data)
+file_close(struct transform *t, void *client_data)
 {
-	struct write_fd_data	*mine = (struct write_fd_data *)client_data;
+	struct write_file_data	*mine = (struct write_file_data *)client_data;
 
-	(void)a; /* UNUSED */
+	(void)t; /* UNUSED */
+	if (mine->close_fd) {
+		close(mine->fd);
+	}
 	free(mine);
 	return (TRANSFORM_OK);
-}
-
-static int
-file_visit_fds(struct transform *transform, const void *_data,
-    transform_fd_visitor *visitor, const void *visitor_data)
-{
-	struct write_fd_data *mine = (struct write_fd_data *)_data;
-	return visitor(transform, mine->fd, (void *)visitor_data);
 }

@@ -39,7 +39,6 @@ SET(libtransform_SOURCES
   transform_write_private.h
   transform_write_open_fd.c
   transform_write_open_file.c
-  transform_write_open_filename.c
   transform_write_open_memory.c
   filters/transform_write_bzip2.c
   filters/transform_write_compress.c
