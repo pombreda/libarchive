@@ -72,8 +72,11 @@ transform_write_open_filename(struct transform *a, const char *filename)
 {
 	struct write_file_data *mine;
 
-	if (filename == NULL || filename[0] == '\0')
-		return (transform_write_open_fd(a, 1));
+	if (!filename) {
+		transform_set_error(a, TRANSFORM_ERRNO_PROGRAMMER,
+			"null filename passed in");
+		return (TRANSFORM_FATAL);
+	}
 
 	mine = (struct write_file_data *)malloc(sizeof(*mine) + strlen(filename));
 	if (mine == NULL) {
