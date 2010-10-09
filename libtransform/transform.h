@@ -345,7 +345,6 @@ __LA_DECL int transform_write_open(struct transform *, void *,
 __LA_DECL int transform_write_open_fd(struct transform *, int _fd);
 __LA_DECL int transform_write_open_filename(struct transform *, const char *_file);
 /* A deprecated synonym for transform_write_open_filename() */
-__LA_DECL int transform_write_open_file(struct transform *, const char *_file);
 __LA_DECL int transform_write_open_FILE(struct transform *, FILE *);
 
 /* _buffSize is the size of the buffer, _used refers to a variable that

@@ -62,12 +62,6 @@ static ssize_t	file_write(struct transform *, void *, const void *buff, size_t,
 	struct transform_write_filter *);
 
 int
-transform_write_open_file(struct transform *a, const char *filename)
-{
-	return (transform_write_open_filename(a, filename));
-}
-
-int
 transform_write_open_filename(struct transform *a, const char *filename)
 {
 	struct write_file_data *mine;
