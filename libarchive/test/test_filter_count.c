@@ -59,7 +59,7 @@ write_test(void)
 	}
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_open_memory(a, buff, 4096, 0));
 	/* bzip2 and none */
-	assertEqualInt(2, archive_filter_count(a));
+	assertEqualInt(3, archive_filter_count(a));
 	archive_write_free(a);
 }
 
