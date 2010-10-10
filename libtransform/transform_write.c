@@ -264,7 +264,7 @@ transform_write_add_filter(struct transform *_t,
 /*
  * Write data to a particular filter.
  */
-int
+ssize_t
 transform_write_filter_output(struct transform_write_filter *f,
 	const void *buff, size_t length)
 {
@@ -343,7 +343,7 @@ transform_write_close_filters(struct transform_write *t)
 	return (ret);
 }
 
-int
+ssize_t
 transform_write_output(struct transform *_a, const void *buff, size_t length)
 {
 	struct transform_write *a = (struct transform_write *)_a;

@@ -316,7 +316,7 @@ __LA_DECL int 		 transform_write_reset_filters(struct transform *);
  *   6) transform_write_free to cleanup the writer and release resources
  */
 __LA_DECL struct transform	*transform_write_new(void);
-__LA_DECL int transform_write_output(struct transform *, const void *, size_t);
+__LA_DECL ssize_t transform_write_output(struct transform *, const void *, size_t);
 __LA_DECL int transform_write_set_bytes_per_block(struct transform *,
 		     int bytes_per_block);
 __LA_DECL int transform_write_get_bytes_per_block(struct transform *);
@@ -325,7 +325,7 @@ __LA_DECL int transform_write_set_bytes_in_last_block(struct transform *,
 		     int bytes_in_last_block);
 __LA_DECL int transform_write_get_bytes_in_last_block(struct transform *);
 
-__LA_DECL int transform_write_filter_output(struct transform_write_filter *,
+__LA_DECL ssize_t transform_write_filter_output(struct transform_write_filter *,
 	const void *, size_t);
 
 __LA_DECL int transform_write_add_filter_bzip2(struct transform *);
