@@ -221,6 +221,7 @@
 
 /* Function declarations.  These are defined in test_utility.c. */
 void failure(const char *fmt, ...);
+void failure_context(const char *fmt, ...);
 int assertion_assert(const char *, int, int, const char *, void *);
 int assertion_chdir(const char *, int, const char *);
 int assertion_empty_file(const char *, ...);
