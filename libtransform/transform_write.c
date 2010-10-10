@@ -260,14 +260,22 @@ transform_write_filter_output(struct transform_write_filter *f,
 	ret = (f->write)(f->base.transform, f->base.data, buff, length,
 		f->base.upstream.write);
 	if (ret < 0) {
+		if (!transform_errno(f->base.transform)) {
+			transform_set_error(f->base.transform, TRANSFORM_ERRNO_PROGRAMMER,
+				"write_filter %s (code %d) returned non-ok (%d), but set no error",
+				f->base.name, f->base.code, (int)ret);
+		}
 		return (ret);
-	} else if (ret != length) {
-		transform_set_error(f->base.transform, TRANSFORM_ERRNO_MISC,
-			"write_filter %s wrote less than requested... got %u for %u",
-			f->base.name, (unsigned int)ret, (unsigned int)length);
+	}
+	f->base.bytes_consumed += ret;
+	if (ret != length) {
+		if (!transform_errno(f->base.transform)) {
+			transform_set_error(f->base.transform, TRANSFORM_ERRNO_PROGRAMMER,
+				"write_filter %s (code %d) was requested to write (%d), wrote (%d), but set no error",
+				f->base.name, f->base.code, (int)length, (int)ret);
+		}
 		return (TRANSFORM_FATAL);
 	}
-	f->base.bytes_consumed += length;
 	return (TRANSFORM_OK);
 }
 
