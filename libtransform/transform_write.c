@@ -79,6 +79,7 @@ struct transform_none {
 	char *next;
 };
 
+
 static struct transform_vtable *
 transform_write_vtable(void)
 {
@@ -461,37 +462,14 @@ transform_write_client_close(struct transform *_t, void *_data,
 {
 	struct transform_write *a = (struct transform_write *)_t;
 	struct transform_none *state = (struct transform_none *)_data;
-	ssize_t block_length;
-	ssize_t target_block_length;
 	ssize_t bytes_written;
-	int bytes_in_last_block = transform_write_get_bytes_in_last_block(_t);
-	int bytes_per_block = transform_write_get_bytes_per_block(_t);
-
 	int ret = TRANSFORM_OK;
 	(void)upstream;
 
 	/* If there's pending data, pad and write the last block */
 	if (state->next != state->buffer) {
-		block_length = state->buffer_size - state->avail;
-
-		/* Tricky calculation to determine size of last block */
-		if (bytes_in_last_block <= 0)
-			/* Default or Zero: pad to full block */
-			target_block_length = bytes_per_block;
-		else
-			/* Round to next multiple of bytes_in_last_block. */
-			target_block_length = bytes_in_last_block *
-				( (block_length + bytes_in_last_block - 1) /
-				bytes_in_last_block);
-		if (target_block_length > bytes_per_block)
-			target_block_length = bytes_per_block;
-		if (block_length < target_block_length) {
-			memset(state->next, 0,
-				target_block_length - block_length);
-			block_length = target_block_length;
-		}
 		bytes_written = (a->client_writer)(&a->transform,
-			a->client_data, state->buffer, block_length, upstream);
+			a->client_data, state->buffer, state->next - state->buffer, upstream);
 		ret = bytes_written <= 0 ? TRANSFORM_FATAL : TRANSFORM_OK;
 	}
 	if (a->client_closer)
@@ -530,6 +508,12 @@ transform_write_open2(struct transform *_a, void *client_data,
 	a->client_opener = opener;
 	a->client_closer = closer;
 	a->client_data = client_data;
+
+
+	ret = transform_write_add_filter_dynamic_padding(_a);
+	if (ret != TRANSFORM_OK) {
+		return (TRANSFORM_FATAL);
+	}
 
 	if (TRANSFORM_OK != transform_write_add_filter(_a,
 		client_data, "write:sink", TRANSFORM_FILTER_NONE,

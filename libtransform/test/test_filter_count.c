@@ -54,7 +54,7 @@ write_test(void)
 	}
 	assertEqualIntA(a, TRANSFORM_OK, transform_write_open_memory(a, buff, 4096, 0));
 	/* bzip2 and none */
-	assertEqualInt(2, transform_filter_count(a));
+	assertEqualInt(3, transform_filter_count(a));
 	transform_write_free(a);
 }
 

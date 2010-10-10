@@ -100,6 +100,7 @@ libtransform_la_SOURCES = 									\
 	libtransform/filters/transform_write_compress.c	\
 	libtransform/filters/transform_write_gzip.c		\
 	libtransform/filters/transform_write_none.c		\
+	libtransform/filters/transform_write_padding.c		\
 	libtransform/filters/transform_write_program.c	\
 	libtransform/filters/transform_write_xz.c		\
 	libtransform/transform_util.c					\

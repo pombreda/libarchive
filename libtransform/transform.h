@@ -337,7 +337,11 @@ __LA_DECL int transform_write_add_filter_none(struct transform *);
 __LA_DECL int transform_write_add_filter_program(struct transform *,
 		     const char *cmd);
 __LA_DECL int transform_write_add_filter_xz(struct transform *);
-
+__LA_DECL int transform_write_add_filter_padding(struct transform *, int64_t block_size);
+/* calculate the last bytes in block/block_size value from the transform at the time
+ * of closing.  Don't use this... likely to be removed.
+ */
+__LA_DECL int transform_write_add_filter_dynamic_padding(struct transform *);
 
 __LA_DECL int transform_write_open(struct transform *, void *,
 		     transform_open_callback *, transform_write_callback *,
