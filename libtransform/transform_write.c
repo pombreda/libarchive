@@ -168,27 +168,6 @@ transform_write_get_bytes_in_last_block(struct transform *_a)
 	return (a->bytes_in_last_block);
 }
 
-/*
- * Allocate and return the next filter structure.
- */
-struct transform_write_filter *
-__transform_write_allocate_filter(struct transform *_a)
-{
-	struct transform_write *a = (struct transform_write *)_a;
-	struct transform_write_filter *f;
-
-	f = calloc(1, sizeof(*f));
-	f->base.transform = _a;
-	f->base.marker.magic = TRANSFORM_WRITE_FILTER_MAGIC;
-	f->base.marker.state = TRANSFORM_STATE_NEW;
-	if (a->filter_first == NULL)
-		a->filter_first = f;
-	else
-		a->filter_last->base.upstream.write = f;
-	a->filter_last = f;
-	return f;
-}
-
 struct transform_write_filter *
 transform_write_filter_new(const void *data, const char *name, int code,
 	transform_write_options_callback *options_callback,
@@ -202,6 +181,9 @@ transform_write_filter_new(const void *data, const char *name, int code,
 
 	if (!write_callback)
 		return (NULL);
+	if (!name) {
+		return (NULL);
+	}
 
 	filter = calloc(1, sizeof(struct transform_write_filter));
 	if (!filter)
@@ -259,7 +241,6 @@ transform_write_add_filter(struct transform *_t,
 
 	return (TRANSFORM_OK);
 }
-
 
 /*
  * Write data to a particular filter.
@@ -531,7 +512,6 @@ transform_write_open2(struct transform *_a, void *client_data,
 	transform_close_callback *closer, transform_visit_fds_callback *visit_fds)
 {
 	struct transform_write *a = (struct transform_write *)_a;
-	struct transform_write_filter *client_filter;
 	int ret, r1;
 
 	transform_check_magic(&a->transform, TRANSFORM_WRITE_MAGIC,
@@ -543,12 +523,16 @@ transform_write_open2(struct transform *_a, void *client_data,
 	a->client_closer = closer;
 	a->client_data = client_data;
 
-	client_filter = __transform_write_allocate_filter(_a);
-	client_filter->open = transform_write_client_open;
-	client_filter->write = transform_write_client_write;
-	client_filter->close = transform_write_client_close;
-	client_filter->visit_fds = visit_fds;
-	client_filter->base.data = client_data;
+	if (TRANSFORM_OK != transform_write_add_filter(_a,
+		client_data, "write:sink", TRANSFORM_FILTER_NONE,
+		NULL,
+		transform_write_client_open,
+		transform_write_client_write,
+		transform_write_client_close,
+		NULL,
+		TRANSFORM_FILTER_SOURCE)) {
+		return (TRANSFORM_FATAL);
+	}
 
 	ret = __transform_write_open_filter(a->filter_first);
 	if (ret < TRANSFORM_WARN) {
