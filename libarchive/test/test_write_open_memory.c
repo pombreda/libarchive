@@ -47,6 +47,7 @@ DEFINE_TEST(test_write_open_memory)
 	for (i = 100; i < 1600; i++) {
 		size_t used;
 		size_t blocksize = 94;
+		failure_context("buffer size=%d\n", (int)i);
 		assert((a = archive_write_new()) != NULL);
 		assertEqualIntA(a, ARCHIVE_OK,
 		    archive_write_set_format_ustar(a));
@@ -66,7 +67,6 @@ DEFINE_TEST(test_write_open_memory)
 			    archive_write_header(a, ae));
 		/* If buffer is smaller than a tar header plus 1024 byte
 		 * end-of-archive marker, then this should fail. */
-		failure("buffer size=%d\n", (int)i);
 		if (i < 1536)
 			assertEqualIntA(a, ARCHIVE_FATAL,
 			    archive_write_close(a));
@@ -80,5 +80,6 @@ DEFINE_TEST(test_write_open_memory)
 		assertEqualInt(buff[i], 0xAE);
 		assert(used <= i);
 	}
+	failure_context(NULL);
 	archive_entry_free(ae);
 }
