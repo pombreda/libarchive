@@ -44,6 +44,7 @@ SET(libtransform_SOURCES
   filters/transform_write_compress.c
   filters/transform_write_gzip.c
   filters/transform_write_none.c
+  filters/transform_write_padding.c
   filters/transform_write_program.c
   filters/transform_write_xz.c
   transform_write_set_options.c
