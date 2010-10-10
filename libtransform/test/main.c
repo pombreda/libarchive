@@ -247,11 +247,11 @@ void
 failure_context(const char *fmt, ...)
 {
 	va_list ap;
-    if(fmt == NULL) {
-    	is_context = 0;
-    	nextmsg = NULL;
-    	return;
-    }
+	if(fmt == NULL) {
+		is_context = 0;
+		nextmsg = NULL;
+		return;
+	}
 	va_start(ap, fmt);
 	vsprintf(msgbuff, fmt, ap);
 	va_end(ap);
