@@ -132,7 +132,6 @@ padding_close(struct transform *t, void *_data,
 	if (pdata->is_dynamic) {
 		bytes_in_last = transform_write_get_bytes_in_last_block(t);
 		if (bytes_in_last == 1) {
-			/* no padding */
 			return (TRANSFORM_OK);
 		} else if (bytes_in_last <= 0) {
 			bytes_in_last = pdata->block_size;

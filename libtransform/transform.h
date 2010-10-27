@@ -345,7 +345,7 @@ __LA_DECL int transform_write_add_filter_dynamic_padding(struct transform *);
 
 __LA_DECL int transform_write_open(struct transform *, void *,
 		     transform_open_callback *, transform_write_callback *,
-		     transform_close_callback *);
+		     transform_write_close_callback *);
 __LA_DECL int transform_write_open_fd(struct transform *, int _fd);
 __LA_DECL int transform_write_open_filename(struct transform *, const char *_file);
 /* A deprecated synonym for transform_write_open_filename() */

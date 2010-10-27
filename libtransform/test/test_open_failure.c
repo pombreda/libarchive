@@ -73,9 +73,19 @@ my_open(struct transform *a, void *_private)
 }
 
 static int
-my_close(struct transform *a, void *_private)
+my_read_close(struct transform *a, void *_private)
 {
 	struct my_data *private = (struct my_data *)_private;
+	assertEqualInt(MAGIC, private->magic);
+	++private->close_called;
+	return (private->close_return);
+}
+
+static int
+my_write_close(struct transform *a, void *_private, struct transform_write_filter *upstream)
+{
+	struct my_data *private = (struct my_data *)_private;
+	(void)upstream;
 	assertEqualInt(MAGIC, private->magic);
 	++private->close_called;
 	return (private->close_return);
@@ -92,7 +102,7 @@ DEFINE_TEST(test_open_failure)
 	a = transform_read_new();
 	assert(a != NULL);
 	assertEqualInt(TRANSFORM_OK,
-	    transform_read_open(a, &private, my_read, NULL, my_close));
+	    transform_read_open(a, &private, my_read, NULL, my_read_close));
 	assertEqualInt(0, private.read_called);
 	assertEqualInt(0, private.close_called);
 
@@ -104,7 +114,7 @@ DEFINE_TEST(test_open_failure)
 	a = transform_read_new();
 	assert(a != NULL);
 	assertEqualInt(TRANSFORM_OK,
-	    transform_read_open(a, &private, my_read, NULL, my_close));
+	    transform_read_open(a, &private, my_read, NULL, my_read_close));
 	transform_read_consume(a, 2);
 	transform_read_consume(a, 2);
 	assertEqualInt(TRANSFORM_FATAL,
@@ -127,7 +137,7 @@ DEFINE_TEST(test_open_failure)
 	a = transform_write_new();
 	assert(a != NULL);
 	assertEqualInt(TRANSFORM_FATAL,
-	    transform_write_open(a, &private, my_open, my_write, my_close));
+	    transform_write_open(a, &private, my_open, my_write, my_write_close));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.write_called);
 	assertEqualInt(0, private.close_called);
@@ -139,7 +149,7 @@ DEFINE_TEST(test_open_failure)
 	assert(a != NULL);
 	transform_write_add_filter_compress(a);
 	assertEqualInt(TRANSFORM_FATAL,
-	    transform_write_open(a, &private, my_open, my_write, my_close));
+	    transform_write_open(a, &private, my_open, my_write, my_write_close));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.write_called);
 	assertEqualInt(0, private.close_called);
@@ -151,7 +161,7 @@ DEFINE_TEST(test_open_failure)
 	assert(a != NULL);
 	transform_write_add_filter_gzip(a);
 	assertEqualInt(TRANSFORM_FATAL,
-	    transform_write_open(a, &private, my_open, my_write, my_close));
+	    transform_write_open(a, &private, my_open, my_write, my_write_close));
 	assertEqualInt(1, private.open_called);
 	assertEqualInt(0, private.write_called);
 	assertEqualInt(0, private.close_called);

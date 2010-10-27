@@ -51,7 +51,7 @@ struct write_memory_data {
 	unsigned char * buff;
 };
 
-static int	memory_write_close(struct transform *, void *);
+static int	memory_write_close(struct transform *, void *, struct transform_write_filter *);
 static int	memory_write_open(struct transform *, void *);
 static ssize_t	memory_write(struct transform *, void *, const void *buff, size_t,
 	struct transform_write_filter *);
@@ -120,10 +120,11 @@ memory_write(struct transform *a, void *client_data, const void *buff, size_t le
 }
 
 static int
-memory_write_close(struct transform *a, void *client_data)
+memory_write_close(struct transform *a, void *client_data, struct transform_write_filter *upstream)
 {
 	struct write_memory_data *mine;
 	(void)a; /* UNUSED */
+	(void)upstream;
 	mine = client_data;
 	free(mine);
 	return (TRANSFORM_OK);

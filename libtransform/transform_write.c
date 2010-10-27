@@ -473,7 +473,7 @@ transform_write_client_close(struct transform *_t, void *_data,
 		ret = bytes_written <= 0 ? TRANSFORM_FATAL : TRANSFORM_OK;
 	}
 	if (a->client_closer)
-		(*a->client_closer)(&a->transform, a->client_data);
+		(*a->client_closer)(&a->transform, a->client_data, NULL);
 	free(state->buffer);
 	free(state);
 	a->client_data = NULL;
@@ -486,7 +486,7 @@ transform_write_client_close(struct transform *_t, void *_data,
 int
 transform_write_open(struct transform *_a, void *client_data,
 	transform_open_callback *opener, transform_write_callback *writer,
-	transform_close_callback *closer)
+	transform_write_close_callback *closer)
 {
 	return transform_write_open2(_a, client_data, opener, writer,
 		closer, NULL);
@@ -495,7 +495,7 @@ transform_write_open(struct transform *_a, void *client_data,
 int
 transform_write_open2(struct transform *_a, void *client_data,
 	transform_open_callback *opener, transform_write_callback *writer,
-	transform_close_callback *closer, transform_visit_fds_callback *visit_fds)
+	transform_write_close_callback *closer, transform_visit_fds_callback *visit_fds)
 {
 	struct transform_write *a = (struct transform_write *)_a;
 	int ret, r1;

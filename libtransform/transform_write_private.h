@@ -41,7 +41,7 @@ struct transform_write_filter;
 
 int transform_write_open2(struct transform *, void *,
 	transform_open_callback *, transform_write_callback *,
-	transform_close_callback *, transform_visit_fds_callback *);
+	transform_write_close_callback *, transform_visit_fds_callback *);
 
 struct transform_write_filter {
 	struct transform_filter base;
@@ -65,7 +65,7 @@ struct transform_write {
 	/* Callbacks to open/read/write/close transform stream. */
 	transform_open_callback	*client_opener;
 	transform_write_callback	*client_writer;
-	transform_close_callback	*client_closer;
+	transform_write_close_callback	*client_closer;
 	void			*client_data;
 
 	/*
