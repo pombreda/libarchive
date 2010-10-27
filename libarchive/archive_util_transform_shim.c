@@ -130,6 +130,21 @@ __archive_shim_close(struct transform *t, void *data)
 	return (ret);
 }
 
+int
+__archive_shim_write_close(struct transform *t, void *data,
+	struct transform_write_filter *upstream)
+{
+	int ret = TRANSFORM_OK;
+	(void)upstream;
+    struct archive_shim *mine = (struct archive_shim *)data;
+	if (mine->closer) {
+		ret = (__archive_error_to_transform(mine->archive, t,
+			(mine->closer)(mine->archive, mine->client_data)));
+	}
+	free(mine);
+	return (ret);
+}
+
 #if ARCHIVE_VERSION_NUMBER < 3000000
 /* Libarchive 2.0 used off_t here, but that is a bad idea on Linux and a
  * few other platforms where off_t varies with build settings. */

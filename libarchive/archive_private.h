@@ -139,6 +139,8 @@ void * __archive_shim_new(struct archive *, archive_open_callback *,
 
 int __archive_shim_open(struct transform *, void *);
 int __archive_shim_close(struct transform *, void *);
+int __archive_shim_write_close(struct transform *, void *,
+	struct transform_write_filter *);
 
 #if ARCHIVE_VERSION_NUMBER < 3000000
 off_t __archive_shim_skip(struct transform *, void *,

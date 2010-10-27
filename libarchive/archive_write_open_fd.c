@@ -55,7 +55,7 @@ struct write_fd_data {
 	int		fd;
 };
 
-static int	file_close(struct transform *, void *);
+static int	file_close(struct transform *, void *, struct transform_write_filter *);
 static int	file_open(struct transform *, void *);
 static ssize_t	file_write(struct transform *, void *, const void *buff, size_t,
 	struct transform_write_filter *);
@@ -140,11 +140,12 @@ file_write(struct transform *t, void *client_data, const void *buff, size_t leng
 }
 
 static int
-file_close(struct transform *a, void *client_data)
+file_close(struct transform *a, void *client_data, struct transform_write_filter *upstream)
 {
 	struct write_fd_data	*mine = (struct write_fd_data *)client_data;
 
 	(void)a; /* UNUSED */
+	(void)upstream;
 	free(mine);
 	return (ARCHIVE_OK);
 }

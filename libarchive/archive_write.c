@@ -250,7 +250,7 @@ archive_write_open(struct archive *a, void *_client_data,
 		return (ARCHIVE_FATAL);
 	}
 	return archive_write_open_transform(a, client_data,
-		__archive_shim_open, __archive_shim_write, __archive_shim_close);
+		__archive_shim_open, __archive_shim_write, __archive_shim_write_close);
 }
 
 /*
@@ -259,7 +259,7 @@ archive_write_open(struct archive *a, void *_client_data,
 int
 archive_write_open_transform(struct archive *_a, void *client_data,
     transform_open_callback *opener, transform_write_callback *writer,
-    transform_close_callback *closer)
+    transform_write_close_callback *closer)
 {
 	struct archive_write *a = (struct archive_write *)_a;
 	int ret;
