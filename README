@@ -1,0 +1,3 @@
+A test for extracting symlinks from Zip archives.
+
+Libarchive doesn't yet pass this, and it will require some significant refactoring before we can, so I'm checking this test here for future reference.
