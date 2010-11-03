@@ -50,9 +50,14 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_ar.c 201101 
 #include "archive_read_private.h"
 
 struct ar {
-	off_t	 entry_bytes_remaining;
-	off_t	 entry_offset;
-	off_t	 entry_padding;
+	int64_t	 entry_bytes_remaining;
+	/* unconsumed is purely to track data we've gotten from readahead,
+	 * but haven't yet marked as consumed.  Must be paired with
+	 * entry_bytes_remaining usage/modification.
+	 */
+	size_t   entry_bytes_unconsumed;
+	int64_t	 entry_offset;
+	int64_t	 entry_padding;
 	char	*strtab;
 	size_t	 strtab_size;
 	char	 read_global_header;
@@ -78,13 +83,8 @@ struct ar {
 
 static int	archive_read_format_ar_bid(struct archive_read *a);
 static int	archive_read_format_ar_cleanup(struct archive_read *a);
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int	archive_read_format_ar_read_data(struct archive_read *a,
-		    const void **buff, size_t *size, off_t *offset);
-#else
 static int	archive_read_format_ar_read_data(struct archive_read *a,
 		    const void **buff, size_t *size, int64_t *offset);
-#endif
 static int	archive_read_format_ar_skip(struct archive_read *a);
 static int	archive_read_format_ar_read_header(struct archive_read *a,
 		    struct archive_entry *e);
@@ -166,38 +166,15 @@ archive_read_format_ar_bid(struct archive_read *a)
 }
 
 static int
-archive_read_format_ar_read_header(struct archive_read *a,
-    struct archive_entry *entry)
+_ar_read_header(struct archive_read *a, struct archive_entry *entry,
+	struct ar *ar, const char *h, size_t *unconsumed)
 {
 	char filename[AR_name_size + 1];
-	struct ar *ar;
 	uint64_t number; /* Used to hold parsed numbers before validation. */
-	ssize_t bytes_read;
 	size_t bsd_name_length, entry_size;
 	char *p, *st;
 	const void *b;
-	const char *h;
 	int r;
-
-	ar = (struct ar*)(a->format->data);
-
-	if (!ar->read_global_header) {
-		/*
-		 * We are now at the beginning of the archive,
-		 * so we need first consume the ar global header.
-		 */
-		__archive_read_consume(a, 8);
-		ar->read_global_header = 1;
-		/* Set a default format code for now. */
-		a->archive.archive_format = ARCHIVE_FORMAT_AR;
-	}
-
-	/* Read the header for the next file entry. */
-	if ((b = __archive_read_ahead(a, 60, &bytes_read)) == NULL)
-		/* Broken header. */
-		return (ARCHIVE_EOF);
-	__archive_read_consume(a, 60);
-	h = (const char *)b;
 
 	/* Verify the magic signature on the file header. */
 	if (strncmp(h + AR_fmag_offset, "`\n", 2) != 0) {
@@ -302,6 +279,12 @@ archive_read_format_ar_read_header(struct archive_read *a,
 		}
 		ar->strtab = st;
 		ar->strtab_size = entry_size;
+
+		if (*unconsumed) {
+			__archive_read_consume(a, *unconsumed);
+			*unconsumed = 0;
+		}
+
 		if ((b = __archive_read_ahead(a, entry_size, NULL)) == NULL)
 			return (ARCHIVE_FATAL);
 		memcpy(st, b, entry_size);
@@ -357,7 +340,7 @@ archive_read_format_ar_read_header(struct archive_read *a,
 		 * overflowing a size_t and against the filename size
 		 * being larger than the entire entry. */
 		if (number > (uint64_t)(bsd_name_length + 1)
-		    || (off_t)bsd_name_length > ar->entry_bytes_remaining) {
+		    || (int64_t)bsd_name_length > ar->entry_bytes_remaining) {
 			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
 			    "Bad input file size");
 			return (ARCHIVE_FATAL);
@@ -366,14 +349,17 @@ archive_read_format_ar_read_header(struct archive_read *a,
 		/* Adjust file size reported to client. */
 		archive_entry_set_size(entry, ar->entry_bytes_remaining);
 
+		if (*unconsumed) {
+			__archive_read_consume(a, *unconsumed);
+			*unconsumed = 0;
+		}
+
 		/* Read the long name into memory. */
 		if ((b = __archive_read_ahead(a, bsd_name_length, NULL)) == NULL) {
 			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
 			    "Truncated input file");
 			return (ARCHIVE_FATAL);
 		}
-		__archive_read_consume(a, bsd_name_length);
-
 		/* Store it in the entry. */
 		p = (char *)malloc(bsd_name_length + 1);
 		if (p == NULL) {
@@ -383,6 +369,9 @@ archive_read_format_ar_read_header(struct archive_read *a,
 		}
 		strncpy(p, b, bsd_name_length);
 		p[bsd_name_length] = '\0';
+
+		__archive_read_consume(a, bsd_name_length);
+
 		archive_entry_copy_pathname(entry, p);
 		free(p);
 		return (ARCHIVE_OK);
@@ -419,6 +408,42 @@ archive_read_format_ar_read_header(struct archive_read *a,
 }
 
 static int
+archive_read_format_ar_read_header(struct archive_read *a,
+    struct archive_entry *entry)
+{
+	struct ar *ar = (struct ar*)(a->format->data);
+	size_t unconsumed;
+	const void *header_data;
+	int ret;
+
+	if (!ar->read_global_header) {
+		/*
+		 * We are now at the beginning of the archive,
+		 * so we need first consume the ar global header.
+		 */
+		__archive_read_consume(a, 8);
+		ar->read_global_header = 1;
+		/* Set a default format code for now. */
+		a->archive.archive_format = ARCHIVE_FORMAT_AR;
+	}
+
+	/* Read the header for the next file entry. */
+	if ((header_data = __archive_read_ahead(a, 60, NULL)) == NULL)
+		/* Broken header. */
+		return (ARCHIVE_EOF);
+	
+	unconsumed = 60;
+	
+	ret = _ar_read_header(a, entry, ar, (const char *)header_data, &unconsumed);
+
+	if (unconsumed)
+		__archive_read_consume(a, unconsumed);
+
+	return ret;
+}
+
+
+static int
 ar_parse_common_header(struct ar *ar, struct archive_entry *entry,
     const char *h)
 {
@@ -442,20 +467,19 @@ ar_parse_common_header(struct ar *ar, struct archive_entry *entry,
 	return (ARCHIVE_OK);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int
-archive_read_format_ar_read_data(struct archive_read *a,
-    const void **buff, size_t *size, off_t *offset)
-#else
 static int
 archive_read_format_ar_read_data(struct archive_read *a,
     const void **buff, size_t *size, int64_t *offset)
-#endif
 {
 	ssize_t bytes_read;
 	struct ar *ar;
 
 	ar = (struct ar *)(a->format->data);
+
+	if (ar->entry_bytes_unconsumed) {
+		__archive_read_consume(a, ar->entry_bytes_unconsumed);
+		ar->entry_bytes_unconsumed = 0;
+	}
 
 	if (ar->entry_bytes_remaining > 0) {
 		*buff = __archive_read_ahead(a, 1, &bytes_read);
@@ -469,20 +493,22 @@ archive_read_format_ar_read_data(struct archive_read *a,
 		if (bytes_read > ar->entry_bytes_remaining)
 			bytes_read = (ssize_t)ar->entry_bytes_remaining;
 		*size = bytes_read;
+		ar->entry_bytes_unconsumed = bytes_read;
 		*offset = ar->entry_offset;
 		ar->entry_offset += bytes_read;
 		ar->entry_bytes_remaining -= bytes_read;
-		__archive_read_consume(a, (size_t)bytes_read);
 		return (ARCHIVE_OK);
 	} else {
-		while (ar->entry_padding > 0) {
-			*buff = __archive_read_ahead(a, 1, &bytes_read);
-			if (bytes_read <= 0)
-				return (ARCHIVE_FATAL);
-			if (bytes_read > ar->entry_padding)
-				bytes_read = (ssize_t)ar->entry_padding;
-			__archive_read_consume(a, (size_t)bytes_read);
-			ar->entry_padding -= bytes_read;
+		int64_t skipped = __archive_read_consume(a, ar->entry_padding);
+		if (skipped >= 0) {
+			ar->entry_padding -= skipped;
+		}
+		if (ar->entry_padding) {
+			if (skipped >= 0) {
+				archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+					"Truncated ar archive- failed consuming padding");
+			}
+			return (ARCHIVE_FATAL);
 		}
 		*buff = NULL;
 		*size = 0;
@@ -494,17 +520,19 @@ archive_read_format_ar_read_data(struct archive_read *a,
 static int
 archive_read_format_ar_skip(struct archive_read *a)
 {
-	off_t bytes_skipped;
+	int64_t bytes_skipped;
 	struct ar* ar;
 
 	ar = (struct ar *)(a->format->data);
 
 	bytes_skipped = __archive_read_consume(a,
-	    ar->entry_bytes_remaining + ar->entry_padding);
+	    ar->entry_bytes_remaining + ar->entry_padding
+	    + ar->entry_bytes_unconsumed);
 	if (bytes_skipped < 0)
 		return (ARCHIVE_FATAL);
 
 	ar->entry_bytes_remaining = 0;
+	ar->entry_bytes_unconsumed = 0;
 	ar->entry_padding = 0;
 
 	return (ARCHIVE_OK);

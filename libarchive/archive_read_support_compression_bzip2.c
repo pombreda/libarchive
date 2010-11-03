@@ -48,7 +48,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_bzip2.c
 #include "archive_private.h"
 #include "archive_read_private.h"
 
-#if HAVE_BZLIB_H
+#if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 struct private_data {
 	bz_stream	 stream;
 	char		*out_block;
@@ -86,7 +86,7 @@ archive_read_support_compression_bzip2(struct archive *_a)
 	reader->init = bzip2_reader_init;
 	reader->options = NULL;
 	reader->free = bzip2_reader_free;
-#if HAVE_BZLIB_H
+#if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 	return (ARCHIVE_OK);
 #else
 	archive_set_error(_a, ARCHIVE_ERRNO_MISC,
@@ -146,7 +146,7 @@ bzip2_reader_bid(struct archive_read_filter_bidder *self, struct archive_read_fi
 	return (bits_checked);
 }
 
-#ifndef HAVE_BZLIB_H
+#if !defined(HAVE_BZLIB_H) || !defined(BZ_CONFIG_ERROR)
 
 /*
  * If we don't have the library on this system, we can't actually do the
@@ -274,8 +274,12 @@ bzip2_filter_read(struct archive_read_filter *self, const void **p)
 		 * doesn't declare it so. <sigh> */
 		read_buf =
 		    __archive_read_filter_ahead(self->upstream, 1, &ret);
-		if (read_buf == NULL)
+		if (read_buf == NULL) {
+			archive_set_error(&self->archive->archive,
+			    ARCHIVE_ERRNO_MISC,
+			    "truncated bzip2 input");
 			return (ARCHIVE_FATAL);
+		}
 		state->stream.next_in = (char *)(uintptr_t)read_buf;
 		state->stream.avail_in = ret;
 		/* There is no more data, return whatever we have. */
@@ -351,4 +355,4 @@ bzip2_filter_close(struct archive_read_filter *self)
 	return (ret);
 }
 
-#endif /* HAVE_BZLIB_H */
+#endif /* HAVE_BZLIB_H && BZ_CONFIG_ERROR */

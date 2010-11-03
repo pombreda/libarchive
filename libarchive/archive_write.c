@@ -257,9 +257,11 @@ __archive_write_open_filter(struct archive_write_filter *f)
 int
 __archive_write_close_filter(struct archive_write_filter *f)
 {
-	if (f->close == NULL)
-		return (ARCHIVE_OK);
-	return (f->close)(f);
+	if (f->close != NULL)
+		return (f->close)(f);
+	if (f->next_filter != NULL)
+		return (__archive_write_close_filter(f->next_filter));
+	return (ARCHIVE_OK);
 }
 
 int
@@ -353,7 +355,7 @@ archive_write_client_write(struct archive_write_filter *f,
                 /* If buffer is not empty... */
                 /* ... copy data into buffer ... */
                 to_copy = ((size_t)remaining > state->avail) ?
-                    state->avail : remaining;
+			state->avail : (size_t)remaining;
                 memcpy(state->next, buff, to_copy);
                 state->next += to_copy;
                 state->avail -= to_copy;
@@ -361,11 +363,21 @@ archive_write_client_write(struct archive_write_filter *f,
                 remaining -= to_copy;
                 /* ... if it's full, write it out. */
                 if (state->avail == 0) {
-                        bytes_written = (a->client_writer)(&a->archive,
-                            a->client_data, state->buffer, state->buffer_size);
-                        if (bytes_written <= 0)
-                                return (ARCHIVE_FATAL);
-                        /* XXX TODO: if bytes_written < state->buffer_size */
+			char *p = state->buffer;
+			size_t to_write = state->buffer_size;
+			while (to_write > 0) {
+				bytes_written = (a->client_writer)(&a->archive,
+				    a->client_data, p, to_write);
+				if (bytes_written <= 0)
+					return (ARCHIVE_FATAL);
+				if ((size_t)bytes_written > to_write) {
+					archive_set_error(&(a->archive),
+					    -1, "write overrun");
+					return (ARCHIVE_FATAL);
+				}
+				p += bytes_written;
+				to_write -= bytes_written;
+			}
                         state->next = state->buffer;
                         state->avail = state->buffer_size;
                 }
@@ -442,7 +454,7 @@ archive_write_open(struct archive *_a, void *client_data,
 {
 	struct archive_write *a = (struct archive_write *)_a;
 	struct archive_write_filter *client_filter;
-	int ret;
+	int ret, r1;
 
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_MAGIC,
 	    ARCHIVE_STATE_NEW, "archive_write_open");
@@ -459,10 +471,13 @@ archive_write_open(struct archive *_a, void *client_data,
 	client_filter->close = archive_write_client_close;
 
 	ret = __archive_write_open_filter(a->filter_first);
+	if (ret < ARCHIVE_WARN) {
+		r1 = __archive_write_close_filter(a->filter_first);
+		return (r1 < ret ? r1 : ret);
+	}
 
 	a->archive.state = ARCHIVE_STATE_HEADER;
-
-	if (a->format_init && ret == ARCHIVE_OK)
+	if (a->format_init)
 		ret = (a->format_init)(a);
 	return (ret);
 }

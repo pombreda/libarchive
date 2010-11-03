@@ -4,12 +4,14 @@ dnl First, define all of the version numbers up front.
 dnl In particular, this allows the version macro to be used in AC_INIT
 
 dnl These first two version numbers are updated automatically on each release.
-m4_define([LIBARCHIVE_VERSION_S],[2.8.900a])
-m4_define([LIBARCHIVE_VERSION_N],[2008900])
+m4_define([LIBARCHIVE_VERSION_S],[3.0.0a])
+m4_define([LIBARCHIVE_VERSION_N],[3000000])
 
 dnl bsdtar and bsdcpio versioning tracks libarchive
 m4_define([BSDTAR_VERSION_S],LIBARCHIVE_VERSION_S())
 m4_define([BSDCPIO_VERSION_S],LIBARCHIVE_VERSION_S())
+
+AC_PREREQ(2.65)
 
 #
 # Now starts the "real" configure script.
@@ -195,12 +197,14 @@ AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([acl/libacl.h attr/xattr.h copyfile.h ctype.h errno.h])
 AC_CHECK_HEADERS([ext2fs/ext2_fs.h fcntl.h grp.h])
 AC_CHECK_HEADERS([inttypes.h io.h langinfo.h limits.h])
-AC_CHECK_HEADERS([linux/fiemap.h linux/fs.h])
+AC_CHECK_HEADERS([linux/fiemap.h linux/fs.h linux/magic.h])
 AC_CHECK_HEADERS([locale.h paths.h poll.h pwd.h regex.h signal.h stdarg.h])
 AC_CHECK_HEADERS([stdint.h stdlib.h string.h])
-AC_CHECK_HEADERS([sys/acl.h sys/cdefs.h sys/extattr.h sys/ioctl.h sys/mkdev.h])
-AC_CHECK_HEADERS([sys/param.h sys/poll.h sys/select.h sys/time.h sys/utime.h])
-AC_CHECK_HEADERS([sys/utsname.h time.h unistd.h utime.h wchar.h wctype.h])
+AC_CHECK_HEADERS([sys/acl.h sys/cdefs.h sys/extattr.h sys/ioctl.h])
+AC_CHECK_HEADERS([sys/mkdev.h sys/mount.h])
+AC_CHECK_HEADERS([sys/param.h sys/poll.h sys/select.h sys/statvfs.h])
+AC_CHECK_HEADERS([sys/time.h sys/utime.h sys/utsname.h sys/vfs.h])
+AC_CHECK_HEADERS([time.h unistd.h utime.h wchar.h wctype.h])
 AC_CHECK_HEADERS([windows.h winioctl])
 
 # Checks for libraries.
@@ -250,7 +254,7 @@ if test "x$with_xml2" != "xno"; then
     CPPFLAGS="${CPPFLAGS} `${XML2_CONFIG} --cflags`"
     LIBS="${LIBS} `${XML2_CONFIG} --libs`"
   fi
-  AC_CHECK_HEADERS([libxml/xmlreader.h])
+  AC_CHECK_HEADERS([libxml/xmlreader.h libxml/xmlwriter.h])
   AC_CHECK_LIB(xml2,xmlInitParser)
 fi
 if test "x$ac_cv_header_libxml_xmlreader_h" != "xyes"; then
@@ -265,9 +269,6 @@ AC_DEFUN([MD_CHECK], [
     saved_LIBS="$LIBS"
     saved_CPPFLAGS="$CPPFLAGS"
     CPPFLAGS="$CPPFLAGS -I$srcdir/libarchive"
-    if test $ac_cv_header_sys_types_h = yes; then
-      CPPFLAGS="$CPPFLAGS -DHAVE_SYS_TYPES_H=1"
-    fi
     LIBS="$LIBS $4"
     AC_MSG_CHECKING([support for ARCHIVE_HASH_$1_$2])
     AC_LINK_IFELSE([
@@ -299,17 +300,22 @@ main(int argc, char **argv)
 ])
 
 MD_CHECK(MD5, LIBC, md5)
+MD_CHECK(MD5, LIBSYSTEM, md5)
 MD_CHECK(RMD160, LIBC, rmd160)
 MD_CHECK(SHA1, LIBC, sha1)
+MD_CHECK(SHA1, LIBSYSTEM, sha1)
 MD_CHECK(SHA256, LIBC, sha256)
 MD_CHECK(SHA256, LIBC2, sha256)
 MD_CHECK(SHA256, LIBC3, sha256)
+MD_CHECK(SHA256, LIBSYSTEM, sha256)
 MD_CHECK(SHA384, LIBC, sha384)
 MD_CHECK(SHA384, LIBC2, sha384)
 MD_CHECK(SHA384, LIBC3, sha384)
+MD_CHECK(SHA384, LIBSYSTEM, sha384)
 MD_CHECK(SHA512, LIBC, sha512)
 MD_CHECK(SHA512, LIBC2, sha512)
 MD_CHECK(SHA512, LIBC3, sha512)
+MD_CHECK(SHA512, LIBSYSTEM, sha512)
 
 if test "x$with_openssl" != "xno"; then
     MD_CHECK(MD5, OPENSSL, md5, -lcrypto)
@@ -409,14 +415,14 @@ AC_CHECK_STDCALL_FUNC([CreateHardLinkA],[const char *, const char *, void *])
 AC_CHECK_FUNCS([chflags chown chroot ctime_r])
 AC_CHECK_FUNCS([fchdir fchflags fchmod fchown fcntl fork])
 AC_CHECK_FUNCS([fstat ftruncate futimens futimes geteuid getpid])
-AC_CHECK_FUNCS([getgrnam_r getpwnam_r])
+AC_CHECK_FUNCS([getgrgid_r getgrnam_r getpwnam_r getpwuid_r gmtime_r])
 AC_CHECK_FUNCS([lchflags lchmod lchown link localtime_r lstat])
 AC_CHECK_FUNCS([lutimes mbrtowc memmove memset mkdir mkfifo mknod mkstemp])
 AC_CHECK_FUNCS([nl_langinfo pipe poll readlink])
-AC_CHECK_FUNCS([select setenv setlocale sigaction])
+AC_CHECK_FUNCS([select setenv setlocale sigaction statvfs])
 AC_CHECK_FUNCS([strchr strdup strerror strncpy_s strrchr symlink timegm])
 AC_CHECK_FUNCS([tzset unsetenv utime utimensat utimes vfork])
-AC_CHECK_FUNCS([wcrtomb wcscpy wcslen wctomb wmemcmp wmemcpy])
+AC_CHECK_FUNCS([wcrtomb wcscmp wcscpy wcslen wctomb wmemcmp wmemcpy])
 # detects cygwin-1.7, as opposed to older versions
 AC_CHECK_FUNCS([cygwin_conv_path])
 

@@ -170,6 +170,7 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_write_set_format_shar.c		\
 	libarchive/archive_write_set_format_ustar.c		\
 	libarchive/archive_write_set_format_gnutar.c		\
+	libarchive/archive_write_set_format_xar.c		\
 	libarchive/archive_write_set_format_zip.c		\
 	libarchive/archive_write_set_options.c			\
 	libarchive/config_freebsd.h				\
@@ -245,6 +246,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_compat_gzip.c			\
 	libarchive/test/test_compat_lzip.c			\
 	libarchive/test/test_compat_lzma.c			\
+	libarchive/test/test_compat_mac_gnutar.c		\
 	libarchive/test/test_compat_solaris_tar_acl.c		\
 	libarchive/test/test_compat_tar_hardlink.c		\
 	libarchive/test/test_compat_xz.c			\
@@ -256,6 +258,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_fuzz.c				\
 	libarchive/test/test_entry_strmode.c			\
 	libarchive/test/test_link_resolver.c			\
+	libarchive/test/test_open_failure.c			\
 	libarchive/test/test_open_fd.c				\
 	libarchive/test/test_open_file.c			\
 	libarchive/test/test_open_filename.c			\
@@ -263,6 +266,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_read_compress_program.c		\
 	libarchive/test/test_read_data_large.c			\
 	libarchive/test/test_read_disk.c			\
+	libarchive/test/test_read_disk_directory_traversals.c	\
 	libarchive/test/test_read_disk_entry_from_file.c	\
 	libarchive/test/test_read_extract.c			\
 	libarchive/test/test_read_file_nonexistent.c		\
@@ -290,6 +294,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_read_format_isojoliet_bz2.c	\
 	libarchive/test/test_read_format_isojoliet_long.c	\
 	libarchive/test/test_read_format_isojoliet_rr.c		\
+	libarchive/test/test_read_format_isojoliet_versioned.c	\
 	libarchive/test/test_read_format_isorr_bz2.c		\
 	libarchive/test/test_read_format_isorr_ce.c		\
 	libarchive/test/test_read_format_isorr_new_bz2.c	\
@@ -348,6 +353,8 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_write_format_tar.c			\
 	libarchive/test/test_write_format_tar_empty.c		\
 	libarchive/test/test_write_format_tar_ustar.c		\
+	libarchive/test/test_write_format_xar.c			\
+	libarchive/test/test_write_format_xar_empty.c		\
 	libarchive/test/test_write_format_zip.c			\
 	libarchive/test/test_write_format_zip_empty.c		\
 	libarchive/test/test_write_format_zip_no_compression.c	\
@@ -370,9 +377,11 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_compat_gtar_1.tar.uu			\
 	libarchive/test/test_compat_gzip_1.tgz.uu			\
 	libarchive/test/test_compat_gzip_2.tgz.uu			\
+	libarchive/test/test_compat_lzip_1.tlz.uu			\
 	libarchive/test/test_compat_lzma_1.tlz.uu			\
 	libarchive/test/test_compat_lzma_2.tlz.uu			\
 	libarchive/test/test_compat_lzma_3.tlz.uu			\
+	libarchive/test/test_compat_mac_gnutar.tgz.uu			\
 	libarchive/test/test_compat_solaris_tar_acl.tar.uu		\
 	libarchive/test/test_compat_tar_hardlink_1.tar.uu		\
 	libarchive/test/test_compat_xz_1.txz.uu				\
@@ -504,6 +513,7 @@ bsdtar_test_SOURCES=						\
 	tar/test/test_option_k.c				\
 	tar/test/test_option_keep_newer_files.c			\
 	tar/test/test_option_n.c				\
+	tar/test/test_option_newer_than.c			\
 	tar/test/test_option_q.c				\
 	tar/test/test_option_r.c				\
 	tar/test/test_option_s.c				\
@@ -656,6 +666,10 @@ bsdcpio_test_EXTRA_DIST=			\
 	cpio/test/test_gcpio_compat_ref.crc.uu	\
 	cpio/test/test_gcpio_compat_ref.newc.uu	\
 	cpio/test/test_gcpio_compat_ref.ustar.uu \
+	cpio/test/test_gcpio_compat_ref_nosym.bin.uu \
+	cpio/test/test_gcpio_compat_ref_nosym.crc.uu \
+	cpio/test/test_gcpio_compat_ref_nosym.newc.uu \
+	cpio/test/test_gcpio_compat_ref_nosym.ustar.uu \
 	cpio/test/test_option_f.cpio.uu		\
 	cpio/test/test_option_m.cpio.uu		\
 	cpio/test/test_option_t.cpio.uu		\

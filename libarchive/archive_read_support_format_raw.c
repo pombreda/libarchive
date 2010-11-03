@@ -40,18 +40,14 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_raw.c 201107
 
 struct raw_info {
 	int64_t offset; /* Current position in the file. */
+	int64_t unconsumed;
 	int     end_of_file;
 };
 
 static int	archive_read_format_raw_bid(struct archive_read *);
 static int	archive_read_format_raw_cleanup(struct archive_read *);
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int	archive_read_format_raw_read_data(struct archive_read *,
-		    const void **, size_t *, off_t *);
-#else
 static int	archive_read_format_raw_read_data(struct archive_read *,
 		    const void **, size_t *, int64_t *);
-#endif
 static int	archive_read_format_raw_read_data_skip(struct archive_read *);
 static int	archive_read_format_raw_read_header(struct archive_read *,
 		    struct archive_entry *);
@@ -125,20 +121,20 @@ archive_read_format_raw_read_header(struct archive_read *a,
 	return (ARCHIVE_OK);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int
-archive_read_format_raw_read_data(struct archive_read *a,
-    const void **buff, size_t *size, off_t *offset)
-#else
 static int
 archive_read_format_raw_read_data(struct archive_read *a,
     const void **buff, size_t *size, int64_t *offset)
-#endif
 {
 	struct raw_info *info;
 	ssize_t avail;
 
 	info = (struct raw_info *)(a->format->data);
+
+	if (info->unconsumed) {
+		__archive_read_consume(a, info->unconsumed);
+		info->unconsumed = 0;
+	}
+
 	if (info->end_of_file)
 		return (ARCHIVE_EOF);
 
@@ -146,10 +142,10 @@ archive_read_format_raw_read_data(struct archive_read *a,
 	*buff = __archive_read_ahead(a, 1, &avail);
 	if (avail > 0) {
 		/* Consume and return the bytes we just read */
-		__archive_read_consume(a, avail);
 		*size = avail;
 		*offset = info->offset;
 		info->offset += *size;
+		info->unconsumed = avail;
 		return (ARCHIVE_OK);
 	} else if (0 == avail) {
 		/* Record and return end-of-file. */
@@ -168,7 +164,13 @@ archive_read_format_raw_read_data(struct archive_read *a,
 static int
 archive_read_format_raw_read_data_skip(struct archive_read *a)
 {
-	(void)a; /* UNUSED */
+	struct raw_info *info = (struct raw_info *)(a->format->data);
+
+	if (info->unconsumed) {
+		__archive_read_consume(a, info->unconsumed);
+		info->unconsumed = 0;
+	}
+
 	return (ARCHIVE_OK);
 }
 

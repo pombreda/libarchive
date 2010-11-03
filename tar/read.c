@@ -103,6 +103,7 @@ progress_func(void *cookie)
 	struct archive *a = progress_data->archive;
 	struct archive_entry *entry = progress_data->entry;
 	uint64_t comp, uncomp;
+	int compression;
 
 	if (!need_report())
 		return;
@@ -112,9 +113,13 @@ progress_func(void *cookie)
 	if (a != NULL) {
 		comp = archive_position_compressed(a);
 		uncomp = archive_position_uncompressed(a);
+		if (comp > uncomp)
+			compression = 0;
+		else
+			compression = (int)((uncomp - comp) * 100 / uncomp);
 		fprintf(stderr,
 		    "In: %s bytes, compression %d%%;",
-		    tar_i64toa(comp), (int)((uncomp - comp) * 100 / uncomp));
+		    tar_i64toa(comp), compression);
 		fprintf(stderr, "  Out: %d files, %s bytes\n",
 		    archive_file_count(a), tar_i64toa(uncomp));
 	}
@@ -136,8 +141,9 @@ read_archive(struct bsdtar *bsdtar, char mode)
 	FILE			 *out;
 	struct archive		 *a;
 	struct archive_entry	 *entry;
-	const struct stat	 *st;
 	int			  r;
+	time_t			  sec;
+	long			  nsec;
 
 	while (*bsdtar->argv) {
 		lafe_include(&bsdtar->matching, *bsdtar->argv);
@@ -156,9 +162,7 @@ read_archive(struct bsdtar *bsdtar, char mode)
 	archive_read_support_format_all(a);
 	if (ARCHIVE_OK != archive_read_set_options(a, bsdtar->option_options))
 		lafe_errc(1, 0, "%s", archive_error_string(a));
-	if (archive_read_open_file(a, bsdtar->filename,
-	    bsdtar->bytes_per_block != 0 ? bsdtar->bytes_per_block :
-	    DEFAULT_BYTES_PER_BLOCK))
+	if (archive_read_open_file(a, bsdtar->filename, bsdtar->bytes_per_block))
 		lafe_errc(1, 0, "Error opening archive: %s",
 		    archive_error_string(a));
 
@@ -220,21 +224,36 @@ read_archive(struct bsdtar *bsdtar, char mode)
 		/*
 		 * Exclude entries that are too old.
 		 */
-		st = archive_entry_stat(entry);
 		if (bsdtar->newer_ctime_sec > 0) {
-			if (st->st_ctime < bsdtar->newer_ctime_sec)
+			/* Use ctime if format provides, else mtime. */
+			if (archive_entry_ctime_is_set(entry)) {
+				sec = archive_entry_ctime(entry);
+				nsec = archive_entry_ctime_nsec(entry);
+			} else if (archive_entry_mtime_is_set(entry)) {
+				sec = archive_entry_mtime(entry);
+				nsec = archive_entry_mtime_nsec(entry);
+			} else {
+				sec = 0;
+				nsec = 0;
+			}
+			if (sec < bsdtar->newer_ctime_sec)
 				continue; /* Too old, skip it. */
-			if (st->st_ctime == bsdtar->newer_ctime_sec
-			    && ARCHIVE_STAT_CTIME_NANOS(st)
-			    <= bsdtar->newer_ctime_nsec)
+			if (sec == bsdtar->newer_ctime_sec
+			    && nsec <= bsdtar->newer_ctime_nsec)
 				continue; /* Too old, skip it. */
 		}
 		if (bsdtar->newer_mtime_sec > 0) {
-			if (st->st_mtime < bsdtar->newer_mtime_sec)
+			if (archive_entry_mtime_is_set(entry)) {
+				sec = archive_entry_mtime(entry);
+				nsec = archive_entry_mtime_nsec(entry);
+			} else {
+				sec = 0;
+				nsec = 0;
+			}
+			if (sec < bsdtar->newer_mtime_sec)
 				continue; /* Too old, skip it. */
-			if (st->st_mtime == bsdtar->newer_mtime_sec
-			    && ARCHIVE_STAT_MTIME_NANOS(st)
-			    <= bsdtar->newer_mtime_nsec)
+			if (sec == bsdtar->newer_mtime_sec
+			    && nsec <= bsdtar->newer_mtime_nsec)
 				continue; /* Too old, skip it. */
 		}
 

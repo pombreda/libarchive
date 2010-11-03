@@ -65,7 +65,13 @@ static int	_archive_filter_code(struct archive *, int);
 static const char *_archive_filter_name(struct archive *, int);
 static int  _archive_filter_count(struct archive *);
 static int	_archive_read_close(struct archive *);
+static int	_archive_read_data_block(struct archive *,
+		    const void **, size_t *, int64_t *);
 static int	_archive_read_free(struct archive *);
+static int	_archive_read_next_header(struct archive *,
+		    struct archive_entry **);
+static int	_archive_read_next_header2(struct archive *,
+		    struct archive_entry *);
 static int64_t  advance_file_pointer(struct archive_read_filter *, int64_t);
 
 static struct archive_vtable *
@@ -79,6 +85,9 @@ archive_read_vtable(void)
 		av.archive_filter_code = _archive_filter_code;
 		av.archive_filter_name = _archive_filter_name;
 		av.archive_filter_count = _archive_filter_count;
+		av.archive_read_data_block = _archive_read_data_block;
+		av.archive_read_next_header = _archive_read_next_header;
+		av.archive_read_next_header2 = _archive_read_next_header2;
 		av.archive_free = _archive_read_free;
 		av.archive_close = _archive_read_close;
 	}
@@ -389,6 +398,13 @@ build_stream(struct archive_read *a)
 
 		/* If no bidder, we're done. */
 		if (best_bidder == NULL) {
+			/* Verify the filter by asking it for some data. */
+			__archive_read_filter_ahead(a->filter, 1, &avail);
+			if (avail < 0) {
+				close_filters(a);
+				free_filters(a);
+				return (ARCHIVE_FATAL);
+			}
 			a->archive.compression_name = a->filter->name;
 			a->archive.compression_code = a->filter->code;
 			return (ARCHIVE_OK);
@@ -401,15 +417,9 @@ build_stream(struct archive_read *a)
 		filter->bidder = best_bidder;
 		filter->archive = a;
 		filter->upstream = a->filter;
-		r = (best_bidder->init)(filter);
-		if (r != ARCHIVE_OK) {
-			free(filter);
-			return (r);
-		}
 		a->filter = filter;
-		/* Verify the filter by asking it for some data. */
-		__archive_read_filter_ahead(filter, 1, &avail);
-		if (avail < 0) {
+		r = (best_bidder->init)(a->filter);
+		if (r != ARCHIVE_OK) {
 			close_filters(a);
 			free_filters(a);
 			return (ARCHIVE_FATAL);
@@ -420,8 +430,8 @@ build_stream(struct archive_read *a)
 /*
  * Read header of next entry.
  */
-int
-archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
+static int
+_archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 {
 	struct archive_read *a = (struct archive_read *)_a;
 	int slot, ret;
@@ -453,7 +463,8 @@ archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 	if (a->archive.state == ARCHIVE_STATE_DATA) {
 		ret = archive_read_data_skip(&a->archive);
 		if (ret == ARCHIVE_EOF) {
-			archive_set_error(&a->archive, EIO, "Premature end-of-file.");
+			archive_set_error(&a->archive, EIO,
+			    "Premature end-of-file.");
 			a->archive.state = ARCHIVE_STATE_FATAL;
 			return (ARCHIVE_FATAL);
 		}
@@ -494,12 +505,12 @@ archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 }
 
 int
-archive_read_next_header(struct archive *_a, struct archive_entry **entryp)
+_archive_read_next_header(struct archive *_a, struct archive_entry **entryp)
 {
 	int ret;
 	struct archive_read *a = (struct archive_read *)_a;
 	*entryp = NULL;
-	ret = archive_read_next_header2(_a, a->entry);
+	ret = _archive_read_next_header2(_a, a->entry);
 	*entryp = a->entry;
 	return ret;
 }
@@ -596,7 +607,7 @@ archive_read_data(struct archive *_a, void *buff, size_t s)
 	while (s > 0) {
 		if (a->read_data_remaining == 0) {
 			read_buf = a->read_data_block;
-			r = archive_read_data_block(&a->archive, &read_buf,
+			r = _archive_read_data_block(&a->archive, &read_buf,
 			    &a->read_data_remaining, &a->read_data_offset);
 			a->read_data_block = read_buf;
 			if (r == ARCHIVE_EOF)
@@ -711,15 +722,9 @@ archive_read_data_skip(struct archive *_a)
  * Returns ARCHIVE_OK if the operation is successful, ARCHIVE_EOF if
  * the end of entry is encountered.
  */
-#if ARCHIVE_VERSION_NUMBER < 3000000
-int
-archive_read_data_block(struct archive *_a,
-    const void **buff, size_t *size, off_t *offset)
-#else
-int
-archive_read_data_block(struct archive *_a,
+static int
+_archive_read_data_block(struct archive *_a,
     const void **buff, size_t *size, int64_t *offset)
-#endif
 {
 	struct archive_read *a = (struct archive_read *)_a;
 	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_DATA,
@@ -765,7 +770,7 @@ free_filters(struct archive_read *a)
 	}
 }
 
-/* 
+/*
  * return the count of # of filters in use
  */
 static int
@@ -780,8 +785,7 @@ _archive_filter_count(struct archive *_a)
 	}
 	return count;
 }
-		
-	
+
 /*
  * Close the file and all I/O.
  */
@@ -915,11 +919,7 @@ __archive_read_register_format(struct archive_read *a,
     int (*bid)(struct archive_read *),
     int (*options)(struct archive_read *, const char *, const char *),
     int (*read_header)(struct archive_read *, struct archive_entry *),
-#if ARCHIVE_VERSION_NUMBER < 3000000
-    int (*read_data)(struct archive_read *, const void **, size_t *, off_t *),
-#else
     int (*read_data)(struct archive_read *, const void **, size_t *, int64_t *),
-#endif
     int (*read_data_skip)(struct archive_read *),
     int (*cleanup)(struct archive_read *))
 {
@@ -1211,6 +1211,9 @@ int64_t
 __archive_read_filter_consume(struct archive_read_filter * filter,
     int64_t request)
 {
+	if (request == 0)
+		return 0;
+
 	int64_t skipped = advance_file_pointer(filter, request);
 	if (skipped == request)
 		return (skipped);
@@ -1242,7 +1245,7 @@ advance_file_pointer(struct archive_read_filter *filter, int64_t request)
 
 	/* Use up the copy buffer first. */
 	if (filter->avail > 0) {
-		min = minimum(request, filter->avail);
+		min = minimum(request, (int64_t)filter->avail);
 		filter->next += min;
 		filter->avail -= min;
 		request -= min;
@@ -1252,7 +1255,7 @@ advance_file_pointer(struct archive_read_filter *filter, int64_t request)
 
 	/* Then use up the client buffer. */
 	if (filter->client_avail > 0) {
-		min = minimum(request, filter->client_avail);
+		min = minimum(request, (int64_t)filter->client_avail);
 		filter->client_next += min;
 		filter->client_avail -= min;
 		request -= min;

@@ -28,6 +28,7 @@ __FBSDID("$FreeBSD$");
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
+#include <stdio.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
@@ -325,7 +326,7 @@ struct xar {
 	enum enctype 		 rd_encoding;
 	z_stream		 stream;
 	int			 stream_valid;
-#ifdef HAVE_BZLIB_H
+#if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 	bz_stream		 bzstream;
 	int			 bzstream_valid;
 #endif
@@ -351,6 +352,7 @@ struct xar {
 	int	 		 entry_init;
 	uint64_t		 entry_total;
 	uint64_t		 entry_remaining;
+	size_t			 entry_unconsumed;
 	uint64_t		 entry_size;
 	enum enctype 		 entry_encoding;
 	struct chksumval	 entry_a_sum;
@@ -371,13 +373,8 @@ struct xmlattr_list {
 static int	xar_bid(struct archive_read *);
 static int	xar_read_header(struct archive_read *,
 		    struct archive_entry *);
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int	xar_read_data(struct archive_read *,
-		    const void **, size_t *, off_t *);
-#else
 static int	xar_read_data(struct archive_read *,
 		    const void **, size_t *, int64_t *);
-#endif
 static int	xar_read_data_skip(struct archive_read *);
 static int	xar_cleanup(struct archive_read *);
 static int	move_reading_point(struct archive_read *, uint64_t);
@@ -761,21 +758,21 @@ xar_read_header(struct archive_read *a, struct archive_entry *entry)
 	return (r);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int
-xar_read_data(struct archive_read *a,
-    const void **buff, size_t *size, off_t *offset)
-#else
 static int
 xar_read_data(struct archive_read *a,
     const void **buff, size_t *size, int64_t *offset)
-#endif
 {
 	struct xar *xar;
 	size_t used;
 	int r;
 
 	xar = (struct xar *)(a->format->data);
+
+	if (xar->entry_unconsumed) {
+		__archive_read_consume(a, xar->entry_unconsumed);
+		xar->entry_unconsumed = 0;
+	}
+
 	if (xar->end_of_file || xar->entry_remaining <= 0) {
 		r = ARCHIVE_EOF;
 		goto abort_read_data;
@@ -801,7 +798,7 @@ xar_read_data(struct archive_read *a,
 	xar->total += *size;
 	xar->offset += used;
 	xar->entry_remaining -= used;
-	__archive_read_consume(a, used);
+	xar->entry_unconsumed = used;
 
 	if (xar->entry_remaining == 0) {
 		if (xar->entry_total != xar->entry_size) {
@@ -834,10 +831,12 @@ xar_read_data_skip(struct archive_read *a)
 	xar = (struct xar *)(a->format->data);
 	if (xar->end_of_file)
 		return (ARCHIVE_EOF);
-	bytes_skipped = __archive_read_consume(a, xar->entry_remaining);
+	bytes_skipped = __archive_read_consume(a, xar->entry_remaining +
+		xar->entry_unconsumed);
 	if (bytes_skipped < 0)
 		return (ARCHIVE_FATAL);
 	xar->offset += bytes_skipped;
+	xar->entry_unconsumed = 0;
 	return (ARCHIVE_OK);
 }
 
@@ -1341,7 +1340,7 @@ decompression_init(struct archive_read *a, enum enctype encoding)
 		xar->stream.total_in = 0;
 		xar->stream.total_out = 0;
 		break;
-#ifdef HAVE_BZLIB_H
+#if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 	case BZIP2:
 		if (xar->bzstream_valid) {
 			BZ2_bzDecompressEnd(&(xar->bzstream));
@@ -1454,7 +1453,7 @@ decompression_init(struct archive_read *a, enum enctype encoding)
 	 * Unsupported compression.
 	 */
 	default:
-#ifndef HAVE_BZLIB_H
+#if !defined(HAVE_BZLIB_H) || !defined(BZ_CONFIG_ERROR)
 	case BZIP2:
 #endif
 #if !defined(HAVE_LZMA_H) || !defined(HAVE_LIBLZMA)
@@ -1514,7 +1513,7 @@ decompress(struct archive_read *a, const void **buff, size_t *outbytes,
 		*used = avail_in - xar->stream.avail_in;
 		*outbytes = avail_out - xar->stream.avail_out;
 		break;
-#ifdef HAVE_BZLIB_H
+#if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 	case BZIP2:
 		xar->bzstream.next_in = (char *)(uintptr_t)b;
 		xar->bzstream.avail_in = avail_in;
@@ -1605,7 +1604,7 @@ decompress(struct archive_read *a, const void **buff, size_t *outbytes,
 		*outbytes = avail_out - xar->lzstream.avail_out;
 		break;
 #endif
-#ifndef HAVE_BZLIB_H
+#if !defined(HAVE_BZLIB_H) || !defined(BZ_CONFIG_ERROR)
 	case BZIP2:
 #endif
 #if !defined(HAVE_LZMA_H) || !defined(HAVE_LIBLZMA)
@@ -1648,7 +1647,7 @@ decompression_cleanup(struct archive_read *a)
 			r = ARCHIVE_FATAL;
 		}
 	}
-#ifdef HAVE_BZLIB_H
+#if defined(HAVE_BZLIB_H) && defined(BZ_CONFIG_ERROR)
 	if (xar->bzstream_valid) {
 		if (BZ2_bzDecompressEnd(&(xar->bzstream)) != BZ_OK) {
 			archive_set_error(&a->archive,
@@ -3146,13 +3145,13 @@ expat_read_toc(struct archive_read *a)
 		r = rd_contents(a, &d, &outbytes, &used, xar->toc_remaining);
 		if (r != ARCHIVE_OK)
 			return (r);
-		__archive_read_consume(a, used);
 		xar->toc_remaining -= used;
 		xar->offset += used;
 		xar->toc_total += outbytes;
 		PRINT_TOC(d, outbytes);
 
 		xr = XML_Parse(parser, d, outbytes, xar->toc_remaining == 0);
+		__archive_read_consume(a, used);
 		if (xr == XML_STATUS_ERROR) {
 			XML_ParserFree(parser);
 			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,

@@ -51,6 +51,7 @@ struct bsdtar {
 	time_t		  newer_mtime_sec; /* --newer-mtime */
 	long		  newer_mtime_nsec; /* --newer-mtime-than */
 	int		  bytes_per_block; /* -b block_size */
+	int		  bytes_in_last_block; /* See -b handling. */
 	int		  verbose;   /* -v */
 	int		  extract_flags; /* Flags for extract operation */
 	int		  strip_components; /* Remove this many leading dirs */
@@ -102,6 +103,7 @@ struct bsdtar {
 	struct archive_dir	*archive_dir;	/* for write.c */
 	struct name_cache	*gname_cache;	/* for write.c */
 	char			*buff;		/* for write.c */
+	size_t			 buff_size;	/* for write.c */
 	struct lafe_matching	*matching;	/* for matching.c */
 	struct security		*security;	/* for read.c */
 	struct name_cache	*uname_cache;	/* for write.c */

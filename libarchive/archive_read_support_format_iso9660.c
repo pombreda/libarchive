@@ -348,8 +348,9 @@ struct iso9660 {
 		uint32_t	size;
 	} primary, joliet;
 
-	off_t	entry_sparse_offset;
+	int64_t	entry_sparse_offset;
 	int64_t	entry_bytes_remaining;
+	size_t  entry_bytes_unconsumed;
 	struct zisofs	 entry_zisofs;
 	struct content	*entry_content;
 };
@@ -358,13 +359,8 @@ static int	archive_read_format_iso9660_bid(struct archive_read *);
 static int	archive_read_format_iso9660_options(struct archive_read *,
 		    const char *, const char *);
 static int	archive_read_format_iso9660_cleanup(struct archive_read *);
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int	archive_read_format_iso9660_read_data(struct archive_read *,
-		    const void **, size_t *, off_t *);
-#else
 static int	archive_read_format_iso9660_read_data(struct archive_read *,
 		    const void **, size_t *, int64_t *);
-#endif
 static int	archive_read_format_iso9660_read_data_skip(struct archive_read *);
 static int	archive_read_format_iso9660_read_header(struct archive_read *,
 		    struct archive_entry *);
@@ -499,10 +495,8 @@ archive_read_format_iso9660_bid(struct archive_read *a)
 		/* Standard Identifier must be "CD001" */
 		if (memcmp(p + 1, "CD001", 5) != 0)
 			return (0);
-		if (!iso9660->primary.location) {
-			if (isPVD(iso9660, p))
-				continue;
-		}
+		if (isPVD(iso9660, p))
+			continue;
 		if (!iso9660->joliet.location) {
 			if (isJolietSVD(iso9660, p))
 				continue;
@@ -717,16 +711,18 @@ isSVD(struct iso9660 *iso9660, const unsigned char *h)
 
 	/* Location of Occurrence of Type L Path Table must be
 	 * available location,
-	 * > SYSTEM_AREA_BLOCK(16) + 2 and < Volume Space Size. */
+	 * >= SYSTEM_AREA_BLOCK(16) + 2 and < Volume Space Size. */
 	location = archive_le32dec(h+SVD_type_L_path_table_offset);
-	if (location <= SYSTEM_AREA_BLOCK+2 || location >= volume_block)
+	if (location < SYSTEM_AREA_BLOCK+2 || location >= volume_block)
 		return (0);
 
-	/* Location of Occurrence of Type M Path Table must be
-	 * available location,
-	 * > SYSTEM_AREA_BLOCK(16) + 2 and < Volume Space Size. */
+	/* The Type M Path Table must be at a valid location (WinISO
+	 * and probably other programs omit this, so we allow zero)
+	 *
+	 * >= SYSTEM_AREA_BLOCK(16) + 2 and < Volume Space Size. */
 	location = archive_be32dec(h+SVD_type_M_path_table_offset);
-	if (location <= SYSTEM_AREA_BLOCK+2 || location >= volume_block)
+	if ((location > 0 && location < SYSTEM_AREA_BLOCK+2)
+	    || location >= volume_block)
 		return (0);
 
 	/* Read Root Directory Record in Volume Descriptor. */
@@ -789,16 +785,17 @@ isEVD(struct iso9660 *iso9660, const unsigned char *h)
 
 	/* Location of Occurrence of Type L Path Table must be
 	 * available location,
-	 * > SYSTEM_AREA_BLOCK(16) + 2 and < Volume Space Size. */
+	 * >= SYSTEM_AREA_BLOCK(16) + 2 and < Volume Space Size. */
 	location = archive_le32dec(h+PVD_type_1_path_table_offset);
-	if (location <= SYSTEM_AREA_BLOCK+2 || location >= volume_block)
+	if (location < SYSTEM_AREA_BLOCK+2 || location >= volume_block)
 		return (0);
 
 	/* Location of Occurrence of Type M Path Table must be
 	 * available location,
-	 * > SYSTEM_AREA_BLOCK(16) + 2 and < Volume Space Size. */
+	 * >= SYSTEM_AREA_BLOCK(16) + 2 and < Volume Space Size. */
 	location = archive_be32dec(h+PVD_type_m_path_table_offset);
-	if (location <= SYSTEM_AREA_BLOCK+2 || location >= volume_block)
+	if ((location > 0 && location < SYSTEM_AREA_BLOCK+2)
+	    || location >= volume_block)
 		return (0);
 
 	/* Reserved field must be 0. */
@@ -870,14 +867,17 @@ isPVD(struct iso9660 *iso9660, const unsigned char *h)
 	 * available location,
 	 * > SYSTEM_AREA_BLOCK(16) + 2 and < Volume Space Size. */
 	location = archive_le32dec(h+PVD_type_1_path_table_offset);
-	if (location <= SYSTEM_AREA_BLOCK+2 || location >= volume_block)
+	if (location < SYSTEM_AREA_BLOCK+2 || location >= volume_block)
 		return (0);
 
-	/* Location of Occurrence of Type M Path Table must be
-	 * available location,
-	 * > SYSTEM_AREA_BLOCK(16) + 2 and < Volume Space Size. */
+	/* The Type M Path Table must also be at a valid location
+	 * (although ECMA 119 requires a Type M Path Table, WinISO and
+	 * probably other programs omit it, so we permit a zero here)
+	 *
+	 * >= SYSTEM_AREA_BLOCK(16) + 2 and < Volume Space Size. */
 	location = archive_be32dec(h+PVD_type_m_path_table_offset);
-	if (location <= SYSTEM_AREA_BLOCK+2 || location >= volume_block)
+	if ((location > 0 && location < SYSTEM_AREA_BLOCK+2)
+	    || location >= volume_block)
 		return (0);
 
 	/* Reserved field must be 0. */
@@ -898,11 +898,13 @@ isPVD(struct iso9660 *iso9660, const unsigned char *h)
 	if (p[DR_length_offset] != 34)
 		return (0);
 
-	iso9660->logical_block_size = logical_block_size;
-	iso9660->volume_block = volume_block;
-	iso9660->volume_size = logical_block_size * (uint64_t)volume_block;
-	iso9660->primary.location = archive_le32dec(p + DR_extent_offset);
-	iso9660->primary.size = archive_le32dec(p + DR_size_offset);
+	if (!iso9660->primary.location) {
+		iso9660->logical_block_size = logical_block_size;
+		iso9660->volume_block = volume_block;
+		iso9660->volume_size = logical_block_size * (uint64_t)volume_block;
+		iso9660->primary.location = archive_le32dec(p + DR_extent_offset);
+		iso9660->primary.size = archive_le32dec(p + DR_size_offset);
+	}
 
 	return (48);
 }
@@ -913,15 +915,15 @@ read_children(struct archive_read *a, struct file_info *parent)
 	struct iso9660 *iso9660;
 	const unsigned char *b, *p;
 	struct file_info *multi;
-	size_t step;
+	size_t step, skip_size;
 
 	iso9660 = (struct iso9660 *)(a->format->data);
 	if (iso9660->current_position > parent->offset) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
 		    "Ignoring out-of-order directory (%s) %jd > %jd",
 		    parent->name.s,
-		    iso9660->current_position,
-		    parent->offset);
+		    (intmax_t)iso9660->current_position,
+		    (intmax_t)parent->offset);
 		return (ARCHIVE_WARN);
 	}
 	if (parent->offset + parent->size > iso9660->volume_size) {
@@ -949,9 +951,9 @@ read_children(struct archive_read *a, struct file_info *parent)
 		    "ISO9660 directory list");
 		return (ARCHIVE_FATAL);
 	}
-	__archive_read_consume(a, step);
 	iso9660->current_position += step;
 	multi = NULL;
+	skip_size = step;
 	while (step) {
 		p = b;
 		b += iso9660->logical_block_size;
@@ -973,8 +975,10 @@ read_children(struct archive_read *a, struct file_info *parent)
 			    && *(p + DR_name_offset) == '\001')
 				continue;
 			child = parse_file_info(a, parent, p);
-			if (child == NULL)
+			if (child == NULL) {
+				__archive_read_consume(a, skip_size);
 				return (ARCHIVE_FATAL);
+			}
 			if (child->cl_offset)
 				heap_add_entry(&(iso9660->cl_files),
 				    child, child->cl_offset);
@@ -994,6 +998,7 @@ read_children(struct archive_read *a, struct file_info *parent)
 						    &a->archive, ENOMEM,
 						    "No memory for "
 						    "multi extent");
+						__archive_read_consume(a, skip_size);
 						return (ARCHIVE_FATAL);
 					}
 					con->offset = child->offset;
@@ -1013,6 +1018,8 @@ read_children(struct archive_read *a, struct file_info *parent)
 			}
 		}
 	}
+
+	__archive_read_consume(a, skip_size);
 
 	/* Read data which recorded by RRIP "CE" extension. */
 	if (read_CE(a, iso9660) != ARCHIVE_OK)
@@ -1285,7 +1292,8 @@ archive_read_format_iso9660_read_header(struct archive_read *a,
 		    "Ignoring out-of-order file @%jx (%s) %jd < %jd",
 		    (intmax_t)file->number,
 		    iso9660->pathname.s,
-		    file->offset, iso9660->current_position);
+		    (intmax_t)file->offset,
+		    (intmax_t)iso9660->current_position);
 		iso9660->entry_bytes_remaining = 0;
 		iso9660->entry_sparse_offset = 0;
 		return (ARCHIVE_WARN);
@@ -1343,15 +1351,9 @@ archive_read_format_iso9660_read_data_skip(struct archive_read *a)
 
 #ifdef HAVE_ZLIB_H
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int
-zisofs_read_data(struct archive_read *a,
-    const void **buff, size_t *size, off_t *offset)
-#else
 static int
 zisofs_read_data(struct archive_read *a,
     const void **buff, size_t *size, int64_t *offset)
-#endif
 {
 	struct iso9660 *iso9660;
 	struct zisofs  *zisofs;
@@ -1560,22 +1562,16 @@ next_data:
 	iso9660->entry_bytes_remaining -= bytes_read;
 	iso9660->current_position += bytes_read;
 	zisofs->pz_offset += bytes_read;
-	__archive_read_consume(a, bytes_read);
+	iso9660->entry_bytes_unconsumed += bytes_read;
 
 	return (ARCHIVE_OK);
 }
 
 #else /* HAVE_ZLIB_H */
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int
-zisofs_read_data(struct archive_read *a,
-    const void **buff, size_t *size, off_t *offset)
-#else
 static int
 zisofs_read_data(struct archive_read *a,
     const void **buff, size_t *size, int64_t *offset)
-#endif
 {
 
 	(void)buff;/* UNUSED */
@@ -1588,20 +1584,20 @@ zisofs_read_data(struct archive_read *a,
 
 #endif /* HAVE_ZLIB_H */
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static int
-archive_read_format_iso9660_read_data(struct archive_read *a,
-    const void **buff, size_t *size, off_t *offset)
-#else
 static int
 archive_read_format_iso9660_read_data(struct archive_read *a,
     const void **buff, size_t *size, int64_t *offset)
-#endif
 {
 	ssize_t bytes_read;
 	struct iso9660 *iso9660;
 
 	iso9660 = (struct iso9660 *)(a->format->data);
+
+	if (iso9660->entry_bytes_unconsumed) {
+		__archive_read_consume(a, iso9660->entry_bytes_unconsumed);
+		iso9660->entry_bytes_unconsumed = 0;
+	}
+
 	if (iso9660->entry_bytes_remaining <= 0) {
 		if (iso9660->entry_content != NULL)
 			iso9660->entry_content = iso9660->entry_content->next;
@@ -1627,8 +1623,8 @@ archive_read_format_iso9660_read_data(struct archive_read *a,
 			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
 			    "Ignoring out-of-order file (%s) %jd < %jd",
 			    iso9660->pathname.s,
-			    iso9660->entry_content->offset,
-			    iso9660->current_position);
+			    (intmax_t)iso9660->entry_content->offset,
+			    (intmax_t)iso9660->current_position);
 			*buff = NULL;
 			*size = 0;
 			*offset = iso9660->entry_sparse_offset;
@@ -1651,8 +1647,8 @@ archive_read_format_iso9660_read_data(struct archive_read *a,
 	*offset = iso9660->entry_sparse_offset;
 	iso9660->entry_sparse_offset += bytes_read;
 	iso9660->entry_bytes_remaining -= bytes_read;
+	iso9660->entry_bytes_unconsumed = bytes_read;
 	iso9660->current_position += bytes_read;
-	__archive_read_consume(a, bytes_read);
 	return (ARCHIVE_OK);
 }
 
@@ -1775,7 +1771,6 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 		}
 		*wp = L'\0';
 
-#if 0 /* untested code, is it at all useful on Joliet? */
 		/* trim trailing first version and dot from filename.
 		 *
 		 * Remember we where in UTF-16BE land!
@@ -1787,13 +1782,14 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 		 *       *, /, :, ;, ? and \.
 		 */
 		/* Chop off trailing ';1' from files. */
-		if (*(wp-2) == ';' && *(wp-1) == '1') {
+		if (*(wp-2) == L';' && *(wp-1) == L'1') {
 			wp-=2;
 			*wp = L'\0';
 		}
 
+#if 0 /* XXX: this somehow manages to strip of single-character file extensions, like '.c'. */
 		/* Chop off trailing '.' from filenames. */
-		if (*(wp-1) == '.')
+		if (*(wp-1) == L'.')
 			*(--wp) = L'\0';
 #endif
 
@@ -2510,6 +2506,12 @@ next_entry_seek(struct archive_read *a, struct iso9660 *iso9660,
 	/* Don't waste time seeking for zero-length bodies. */
 	if (file->size == 0)
 		file->offset = iso9660->current_position;
+
+	/* flush any remaining bytes from the last round to ensure we're positioned */
+	if (iso9660->entry_bytes_unconsumed) {
+		__archive_read_consume(a, iso9660->entry_bytes_unconsumed);
+		iso9660->entry_bytes_unconsumed = 0;
+	}
 
 	/* Seek forward to the start of the entry. */
 	if (iso9660->current_position < file->offset) {

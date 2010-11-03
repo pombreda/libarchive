@@ -62,22 +62,14 @@
 #include <sys/stat.h>
 #include <process.h>
 #include <direct.h>
+#if defined(__MINGW32__) && defined(HAVE_UNISTD_H)
+/* Prevent build error from a type mismatch of ftruncate().
+ * This unistd.h defines it as ftruncate(int, off_t). */
+#include <unistd.h>
+#endif
 #define NOCRYPT
 #include <windows.h>
 //#define	EFTYPE 7
-
-#if !defined(STDIN_FILENO)
-#define STDIN_FILENO 0
-#endif
-
-#if !defined(STDOUT_FILENO)
-#define STDOUT_FILENO 1
-#endif
-
-#if !defined(STDERR_FILENO)
-#define STDERR_FILENO 2
-#endif
-
 
 #if defined(_MSC_VER)
 /* TODO: Fix the code, don't suppress the warnings. */
@@ -320,10 +312,11 @@ extern int	 __la_chdir(const char *path);
 extern int	 __la_chmod(const char *path, mode_t mode);
 extern int	 __la_fcntl(int fd, int cmd, int val);
 extern int	 __la_fstat(int fd, struct stat *st);
-extern int	 __la_ftruncate(int fd, off_t length);
+extern int	 __la_ftruncate(int fd, int64_t length);
 extern int	 __la_futimes(int fd, const struct __timeval *times);
 extern int	 __la_link(const char *src, const char *dst);
 extern __int64	 __la_lseek(int fd, __int64 offset, int whence);
+extern int	 __la_lstat(const char *path, struct stat *st);
 extern size_t	 __la_mbstowcs(wchar_t *wcstr, const char *mbstr, size_t nwchars);
 extern int	 __la_mkdir(const char *path, mode_t mode);
 extern int	 __la_mkstemp(char *template);

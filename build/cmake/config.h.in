@@ -3,6 +3,9 @@
 /* MD5 via ARCHIVE_HASH_MD5_LIBC supported. */
 #cmakedefine ARCHIVE_HASH_MD5_LIBC
 
+/* MD5 via ARCHIVE_HASH_MD5_LIBSYSTEM supported. */
+#cmakedefine ARCHIVE_HASH_MD5_LIBSYSTEM
+
 /* MD5 via ARCHIVE_HASH_MD5_OPENSSL supported. */
 #cmakedefine ARCHIVE_HASH_MD5_OPENSSL
 
@@ -17,6 +20,9 @@
 
 /* SHA1 via ARCHIVE_HASH_SHA1_LIBC supported. */
 #cmakedefine ARCHIVE_HASH_SHA1_LIBC
+
+/* SHA1 via ARCHIVE_HASH_SHA1_LIBSYSTEM supported. */
+#cmakedefine ARCHIVE_HASH_SHA1_LIBSYSTEM
 
 /* SHA1 via ARCHIVE_HASH_SHA1_OPENSSL supported. */
 #cmakedefine ARCHIVE_HASH_SHA1_OPENSSL
@@ -33,6 +39,9 @@
 /* SHA256 via ARCHIVE_HASH_SHA256_LIBC3 supported. */
 #cmakedefine ARCHIVE_HASH_SHA256_LIBC3
 
+/* SHA256 via ARCHIVE_HASH_SHA256_LIBSYSTEM supported. */
+#cmakedefine ARCHIVE_HASH_SHA256_LIBSYSTEM
+
 /* SHA256 via ARCHIVE_HASH_SHA256_OPENSSL supported. */
 #cmakedefine ARCHIVE_HASH_SHA256_OPENSSL
 
@@ -48,6 +57,9 @@
 /* SHA384 via ARCHIVE_HASH_SHA384_LIBC3 supported. */
 #cmakedefine ARCHIVE_HASH_SHA384_LIBC3
 
+/* SHA384 via ARCHIVE_HASH_SHA384_LIBSYSTEM supported. */
+#cmakedefine ARCHIVE_HASH_SHA384_LIBSYSTEM
+
 /* SHA384 via ARCHIVE_HASH_SHA384_OPENSSL supported. */
 #cmakedefine ARCHIVE_HASH_SHA384_OPENSSL
 
@@ -62,6 +74,9 @@
 
 /* SHA512 via ARCHIVE_HASH_SHA512_LIBC3 supported. */
 #cmakedefine ARCHIVE_HASH_SHA512_LIBC3
+
+/* SHA512 via ARCHIVE_HASH_SHA512_LIBSYSTEM supported. */
+#cmakedefine ARCHIVE_HASH_SHA512_LIBSYSTEM
 
 /* SHA512 via ARCHIVE_HASH_SHA512_OPENSSL supported. */
 #cmakedefine ARCHIVE_HASH_SHA512_OPENSSL
@@ -257,17 +272,26 @@
 /* Define to 1 if you have the `geteuid' function. */
 #cmakedefine HAVE_GETEUID 1
 
+/* Define to 1 if you have the `getgrgid_r' function. */
+#cmakedefine HAVE_GETGRGID_R 1
+
 /* Define to 1 if you have the `getgrnam_r' function. */
 #cmakedefine HAVE_GETGRNAM_R 1
 
 /* Define to 1 if you have the `getpwnam_r' function. */
 #cmakedefine HAVE_GETPWNAM_R 1
 
+/* Define to 1 if you have the `getpwuid_r' function. */
+#cmakedefine HAVE_GETPWUID_R 1
+
 /* Define to 1 if you have the `getpid' function. */
 #cmakedefine HAVE_GETPID 1
 
 /* Define to 1 if you have the `getxattr' function. */
 #cmakedefine HAVE_GETXATTR 1
+
+/* Define to 1 if you have the `gmtime_r' function. */
+#cmakedefine HAVE_GMTIME_R 1
 
 /* Define to 1 if you have the <grp.h> header file. */
 #cmakedefine HAVE_GRP_H 1
@@ -323,6 +347,9 @@
 /* Define to 1 if you have the <libxml/xmlreader.h> header file. */
 #cmakedefine HAVE_LIBXML_XMLREADER_H 1
 
+/* Define to 1 if you have the <libxml/xmlwriter.h> header file. */
+#cmakedefine HAVE_LIBXML_XMLWRITER_H 1
+
 /* Define to 1 if you have the `z' library (-lz). */
 #cmakedefine HAVE_LIBZ 1
 
@@ -337,6 +364,9 @@
 
 /* Define to 1 if you have the <linux/fs.h> header file. */
 #cmakedefine HAVE_LINUX_FS_H 1
+
+/* Define to 1 if you have the <linux/magic.h> header file. */
+#cmakedefine HAVE_LINUX_MAGIC_H 1
 
 /* Define to 1 if you have the `listxattr' function. */
 #cmakedefine HAVE_LISTXATTR 1
@@ -438,6 +468,9 @@
 /* Define to 1 if you have the <signal.h> header file. */
 #cmakedefine HAVE_SIGNAL_H 1
 
+/* Define to 1 if you have the `statvfs' function. */ 
+#cmakedefine HAVE_STATVFS 1
+
 /* Define to 1 if `stat' has the bug that it succeeds when given the
    zero-length file name argument. */
 #cmakedefine HAVE_STAT_EMPTY_STRING_BUG 1
@@ -530,6 +563,9 @@
 /* Define to 1 if you have the <sys/mkdev.h> header file. */
 #cmakedefine HAVE_SYS_MKDEV_H 1
 
+/* Define to 1 if you have the <sys/mount.h> header file. */
+#cmakedefine HAVE_SYS_MOUNT_H 1
+
 /* Define to 1 if you have the <sys/ndir.h> header file, and it defines `DIR'.
    */
 #cmakedefine HAVE_SYS_NDIR_H 1
@@ -542,6 +578,9 @@
 
 /* Define to 1 if you have the <sys/select.h> header file. */
 #cmakedefine HAVE_SYS_SELECT_H 1
+
+/* Define to 1 if you have the <sys/statvfs.h> header file. */
+#cmakedefine HAVE_SYS_STATVFS_H 1
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #cmakedefine HAVE_SYS_STAT_H 1
@@ -557,6 +596,9 @@
 
 /* Define to 1 if you have the <sys/utsname.h> header file. */
 #cmakedefine HAVE_SYS_UTSNAME_H 1
+
+/* Define to 1 if you have the <sys/vfs.h> header file. */
+#cmakedefine HAVE_SYS_VFS_H 1
 
 /* Define to 1 if you have <sys/wait.h> that is POSIX.1 compatible. */
 #cmakedefine HAVE_SYS_WAIT_H 1
@@ -614,6 +656,9 @@
 
 /* Define to 1 if you have the `wcrtomb' function. */
 #cmakedefine HAVE_WCRTOMB 1
+
+/* Define to 1 if you have the `wcscmp' function. */
+#cmakedefine HAVE_WCSCMP 1
 
 /* Define to 1 if you have the `wcscpy' function. */
 #cmakedefine HAVE_WCSCPY 1
