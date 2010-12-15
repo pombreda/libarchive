@@ -300,8 +300,142 @@ renamed to `archive_write_free()`.
 The old name will remain available for several years
 to permit an easy transition.
 
-= Handling Errors =
+= Constructing Objects On Disk =
 
+Libarchive includes an `archive_write_disk` facility that works
+very much like `archive_write`, except that it constructs objects
+on disk instead of adding entries to an archive.
+The `archive_write_disk` facility knows how to construct
+directories, regular files, symlinks, hard links, and other
+types of disk objects.
+Here is a very simple example showing how you could
+use it to create a regular file on disk:
+
+{{{
+  struct archive *a;
+  struct archive_entry *entry;
+
+  a = archive_write_disk_new();
+  archive_write_disk_set_options(a, ARCHIVE_EXTRACT_TIME);
+
+  entry = archive_entry_new();
+  archive_entry_set_pathname(entry, "my_file.txt");
+  archive_entry_set_filetype(entry, AE_IFREG); // Note 1
+  archive_entry_set_size(ae, 5);
+  archive_entry_set_mtime(ae, 123456789, 0);
+  archive_write_header(a, entry);
+  archive_write_data(a, "abcde", 5); // Note 2
+  archive_write_finish_entry(a);
+  archive_write_free(a);
+  archive_entry_free(entry);
+}}}
+
+Note 1: The `archive_entry.h` header defines a set of `AE_XXXXX`
+constants for various file types.
+These are the same as the `IF_XXXXX` constants that are defined
+on many systems, except that not all systems have a complete set
+of `IF_XXXXX` definitions in the standard headers.
+
+Note 2: If the entry specifies a size, that size will be enforced.
+The return value from `archive_write_data` here will reflect the
+number of bytes that were actually written.
+
+= A Complete Extractor =
+
+Extracting most archives just requires creating
+two archive objects -- one `archive_read`
+object to read from an archive and one `archive_write_disk`
+to create objects on disk -- and copying the
+entries from one to the other.
+The following code is slightly simplified
+from the `examples/untar.c` code included
+in the libarchive distribution:
+
+{{{
+static void
+extract(const char *filename)
+{
+  struct archive *a;
+  struct archive *ext;
+  struct archive_entry *entry;
+  int flags;
+  int r;
+
+  /* Select which attributes we want to restore. */
+  flags = ARCHIVE_EXTRACT_TIME;
+  flags |= ARCHIVE_EXTRACT_PERM;
+  flags |= ARCHIVE_EXTRACT_ACL;
+  flags |= ARCHIVE_EXTRACT_FFLAGS;
+
+  a = archive_read_new();
+  archive_read_support_format_all(a);
+  archive_read_support_compression_all(a);
+  ext = archive_write_disk_new();
+  archive_write_disk_set_options(ext, flags);
+  archive_write_disk_set_standard_lookup(ext);
+  if ((r = archive_read_open_file(a, filename, 10240)))
+    exit(1);
+  for (;;) {
+    r = archive_read_next_header(a, &entry);
+    if (r == ARCHIVE_EOF)
+      break;
+    if (r != ARCHIVE_OK)
+      fprintf(stderr, "%s\n", archive_error_string(a));
+    if (r < ARCHIVE_WARN)
+      exit(1);
+    r = archive_write_header(ext, entry);
+    if (r != ARCHIVE_OK)
+      fprintf(stderr, "%s\n", archive_error_string(ext));
+    else if (archive_entry_size(entry) > 0) {
+      copy_data(a, ext);
+      r = archive_write_finish_entry(ext);
+      if (r != ARCHIVE_OK)
+        fprintf(stderr, "%s\n", archive_error_string(ext));
+      if (r < ARCHIVE_WARN)
+        exit(1);
+    }
+  }
+  archive_read_close(a);
+  archive_read_free(a);
+  exit(0);
+}
+}}}
+
+The function above just reads headers from the
+input archive and writes them to disk.
+The `archive_write_disk` interface will recreate
+the objects on disk, including regular files, directories,
+hardlinks, and symlinks.
+
+The key missing piece in the above is the `copy_data()`
+function to actually pull data from a read archive and
+write it to a write handle:
+
+{{{
+static int
+copy_data(struct archive *ar, struct archive *aw)
+{
+  int r;
+  const void *buff;
+  size_t size;
+  off_t offset;
+
+  for (;;) {
+    r = archive_read_data_block(ar, &buff, &size, &offset);
+    if (r == ARCHIVE_EOF)
+      return (ARCHIVE_OK);
+    if (r != ARCHIVE_OK)
+      return (r);
+    r = archive_write_data_block(aw, buff, size, offset);
+    if (r != ARCHIVE_OK) {
+      warn(archive_error_string(aw));
+      return (r);
+    }
+  }
+}
+}}}
+
+= Handling Errors =
 
 For simplicity, the examples above do not all demonstrate proper error
 handling.
