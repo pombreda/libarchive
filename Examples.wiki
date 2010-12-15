@@ -321,10 +321,10 @@ use it to create a regular file on disk:
   entry = archive_entry_new();
   archive_entry_set_pathname(entry, "my_file.txt");
   archive_entry_set_filetype(entry, AE_IFREG); // Note 1
-  archive_entry_set_size(ae, 5);
+  archive_entry_set_size(ae, 5);  // Note 2
   archive_entry_set_mtime(ae, 123456789, 0);
   archive_write_header(a, entry);
-  archive_write_data(a, "abcde", 5); // Note 2
+  archive_write_data(a, "abcde", 5); // Note 3
   archive_write_finish_entry(a);
   archive_write_free(a);
   archive_entry_free(entry);
@@ -336,17 +336,25 @@ These are the same as the `IF_XXXXX` constants that are defined
 on many systems, except that not all systems have a complete set
 of `IF_XXXXX` definitions in the standard headers.
 
-Note 2: If the entry specifies a size, that size will be enforced.
-The return value from `archive_write_data` here will reflect the
-number of bytes that were actually written.
+Note 2: If you set a size in the entry, the `archive_write_disk` object
+will enforce that size.
+
+Note 3: If you try to write more than the size set in the entry,
+your writes will be truncated; if you write fewer bytes than you
+promised, the file will be extended with zero bytes.
+
+The pattern above can also be used to reconstruct directories,
+device nodes, and FIFOs.
+The same idea also works for restoring symlinks and hardlinks,
+but you do have to initialize the entry a little differently:
+ * Symlinks have a file type `AE_IFLNK` and require a target to be set with `archive_entry_set_symlink()`
+ * Hardlinks require a target to be set with `archive_entry_set_hardlink()`; if this is set, the regular filetype is ignored.  If the entry describing a hardlink has a size, you must be prepared to write data to the linked files.  If you don't want to overwrite the file, leave the size unset.
 
 = A Complete Extractor =
 
-Extracting most archives just requires creating
-two archive objects -- one `archive_read`
-object to read from an archive and one `archive_write_disk`
-to create objects on disk -- and copying the
-entries from one to the other.
+Using the facilities described above, you can extract most archives
+to disk by simply copying entries from an `archive_read`
+object to an `archive_write_disk` object.
 The following code is slightly simplified
 from the `examples/untar.c` code included
 in the libarchive distribution:
@@ -403,10 +411,6 @@ extract(const char *filename)
 
 The function above just reads headers from the
 input archive and writes them to disk.
-The `archive_write_disk` interface will recreate
-the objects on disk, including regular files, directories,
-hardlinks, and symlinks.
-
 The key missing piece in the above is the `copy_data()`
 function to actually pull data from a read archive and
 write it to a write handle:
@@ -428,7 +432,7 @@ copy_data(struct archive *ar, struct archive *aw)
       return (r);
     r = archive_write_data_block(aw, buff, size, offset);
     if (r != ARCHIVE_OK) {
-      warn(archive_error_string(aw));
+      fprintf(stderr, "%s\n", archive_error_string(aw));
       return (r);
     }
   }
@@ -441,6 +445,7 @@ For simplicity, the examples above do not all demonstrate proper error
 handling.
 Most libarchive functions return a status code that should be acted on.
 The most important values are:
+ * `ARCHIVE_EOF` is returned only from `archive_read_data()` functions when you reach the end of the data in an entry or from `archive_read_next_header()` when you reach the end of the archive.
  * `ARCHIVE_OK` if the operation completed successfully
  * `ARCHIVE_WARN` if the operation completed with some surprises.  You may want to report the issue to your user.  `archive_error_string` will return a suitable text message, `archive_errno` returns an associated system errno value.  (Since not all errors are caused by failing system calls, `archive_errno` does not always return a meaningful value.)
  * `ARCHIVE_FAILED` if this operation failed.  In particular, this means that further operations on this entry are impossible.  This is returned, for example, if you try to write an entry type that's not supported by this archive format.  Recovery usually consists of simply going on to the next entry.
