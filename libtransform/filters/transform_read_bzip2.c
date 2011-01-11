@@ -265,8 +265,12 @@ bzip2_filter_read(struct transform *transform, void *_state,
 		 * doesn't declare it so. <sigh> */
 		read_buf =
 		    transform_read_filter_ahead(upstream, 1, &ret);
-		if (read_buf == NULL)
+		if (read_buf == NULL) {
+			transform_set_error(transform,
+			    TRANSFORM_ERRNO_MISC,
+			    "truncated bzip2 input");
 			return (TRANSFORM_FATAL);
+		}
 		state->stream.next_in = (char *)(uintptr_t)read_buf;
 		state->stream.avail_in = ret;
 		/* There is no more data, return whatever we have. */

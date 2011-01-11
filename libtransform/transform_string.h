@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2003-2007 Tim Kientzle
+ * Copyright (c) 2003-2010 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,26 +47,22 @@
 #include "transform.h"
 
 /*
- * Basic resizable/reusable string support a la Java's "StringBuffer."
+ * Basic resizable/reusable string support similar to Java's "StringBuffer."
  *
  * Unlike sbuf(9), the buffers here are fully reusable and track the
  * length throughout.
- *
- * Note that all visible symbols here begin with "__transform" as they
- * are internal symbols not intended for anyone outside of this library
- * to see or use.
  */
 
 struct transform_string {
 	char	*s;  /* Pointer to the storage */
-	size_t	 length; /* Length of 's' */
-	size_t	 buffer_length; /* Length of malloc-ed storage */
+	size_t	 length; /* Length of 's' in characters */
+	size_t	 buffer_length; /* Length of malloc-ed storage in bytes. */
 };
 
 struct transform_wstring {
 	wchar_t	*s;  /* Pointer to the storage */
 	size_t	 length; /* Length of 's' in characters */
-	size_t	 buffer_length; /* Length of malloc-ed storage */
+	size_t	 buffer_length; /* Length of malloc-ed storage in bytes. */
 };
 
 /* Initialize an transform_string object on the stack or elsewhere. */
@@ -75,53 +71,36 @@ struct transform_wstring {
 
 /* Append a C char to an transform_string, resizing as necessary. */
 struct transform_string *
-__transform_strappend_char(struct transform_string *, char);
-#define	transform_strappend_char __transform_strappend_char
+transform_strappend_char(struct transform_string *, char);
+
+/* Ditto for a wchar_t and an transform_wstring. */
 struct transform_wstring *
-__transform_wstrappend_wchar(struct transform_wstring *, wchar_t);
-#define	transform_wstrappend_wchar __transform_wstrappend_wchar
+transform_wstrappend_wchar(struct transform_wstring *, wchar_t);
 
-/* Convert a wide-char string to UTF-8 and append the result. */
+/* Convert a Unicode string to UTF-8 and append the result. */
 struct transform_string *
-__transform_strappend_w_utf8(struct transform_string *, const wchar_t *);
-#define	transform_strappend_w_utf8	__transform_strappend_w_utf8
+transform_strappend_w_utf8(struct transform_string *, const wchar_t *);
 
-/* Convert a wide-char string to current locale and append the result. */
+/* Convert a Unicode string to current locale and append the result. */
 /* Returns NULL if conversion fails. */
 struct transform_string *
-__transform_strappend_w_mbs(struct transform_string *, const wchar_t *);
-#define	transform_strappend_w_mbs	__transform_strappend_w_mbs
-
-/* Basic append operation. */
-struct transform_string *
-__transform_string_append(struct transform_string *as, const char *p, size_t s);
-struct transform_wstring *
-__transform_wstring_append(struct transform_wstring *as, const wchar_t *p, size_t s);
+transform_strappend_w_mbs(struct transform_string *, const wchar_t *);
 
 /* Copy one transform_string to another */
-void
-__transform_string_copy(struct transform_string *dest, struct transform_string *src);
-#define transform_string_copy(dest, src)		\
-	__transform_string_copy((dest), (src))
-void
-__transform_wstring_copy(struct transform_wstring *dest, struct transform_wstring *src);
-#define transform_wstring_copy(dest, src)		\
-	__transform_wstring_copy((dest), (src))
+#define	transform_string_copy(dest, src) \
+	((dest)->length = 0, transform_string_concat((dest), (src)))
+#define	transform_wstring_copy(dest, src) \
+	((dest)->length = 0, transform_wstring_concat((dest), (src)))
 
 /* Concatenate one transform_string to another */
-void
-__transform_string_concat(struct transform_string *dest, struct transform_string *src);
-#define transform_string_concat(dest, src) \
-	__transform_string_concat(dest, src)
+void transform_string_concat(struct transform_string *dest, struct transform_string *src);
+void transform_wstring_concat(struct transform_wstring *dest, struct transform_wstring *src);
 
 /* Ensure that the underlying buffer is at least as large as the request. */
 struct transform_string *
-__transform_string_ensure(struct transform_string *, size_t);
-#define	transform_string_ensure __transform_string_ensure
-
+transform_string_ensure(struct transform_string *, size_t);
 struct transform_wstring *
-__transform_wstring_ensure(struct transform_wstring *, size_t);
-#define	transform_wstring_ensure __transform_wstring_ensure
+transform_wstring_ensure(struct transform_wstring *, size_t);
 
 /* Append C string, which may lack trailing \0. */
 /* The source is declared void * here because this gets used with
@@ -129,15 +108,15 @@ __transform_wstring_ensure(struct transform_wstring *, size_t);
  * Declaring it "char *" as with some of the other functions just
  * leads to a lot of extra casts. */
 struct transform_string *
-__transform_strncat(struct transform_string *, const void *, size_t);
-#define	transform_strncat  __transform_strncat
+transform_strncat(struct transform_string *, const void *, size_t);
 struct transform_wstring *
-__transform_wstrncat(struct transform_wstring *, const void *, size_t);
-#define	transform_wstrncat  __transform_wstrncat
+transform_wstrncat(struct transform_wstring *, const wchar_t *, size_t);
 
 /* Append a C string to an transform_string, resizing as necessary. */
-#define	transform_strcat(as,p) __transform_string_append((as),(p),strlen(p))
-#define	transform_wstrcat(as,p) __transform_wstring_append((as),(p),wcslen(p))
+struct transform_string *
+transform_strcat(struct transform_string *, const void *);
+struct transform_wstring *
+transform_wstrcat(struct transform_wstring *, const wchar_t *);
 
 /* Copy a C string to an transform_string, resizing as necessary. */
 #define	transform_strcpy(as,p) \
@@ -149,7 +128,7 @@ __transform_wstrncat(struct transform_wstring *, const void *, size_t);
 #define	transform_strncpy(as,p,l) \
 	((as)->length=0, transform_strncat((as), (p), (l)))
 #define	transform_wstrncpy(as,p,l) \
-	((as)->length = 0, __transform_wstring_append((as), (p), (l)))
+	((as)->length = 0, transform_wstrncat((as), (p), (l)))
 
 /* Return length of string. */
 #define	transform_strlen(a) ((a)->length)
@@ -159,28 +138,54 @@ __transform_wstrncat(struct transform_wstring *, const void *, size_t);
 #define	transform_wstring_empty(a) ((a)->length = 0)
 
 /* Release any allocated storage resources. */
-void	__transform_string_free(struct transform_string *);
-#define	transform_string_free  __transform_string_free
-void	__transform_wstring_free(struct transform_wstring *);
-#define	transform_wstring_free  __transform_wstring_free
+void	transform_string_free(struct transform_string *);
+void	transform_wstring_free(struct transform_wstring *);
 
 /* Like 'vsprintf', but resizes the underlying string as necessary. */
-void	__transform_string_vsprintf(struct transform_string *, const char *,
+/* Note: This only implements a small subset of standard printf functionality. */
+void	transform_string_vsprintf(struct transform_string *, const char *,
 	    va_list) __LA_PRINTF(2, 0);
-#define	transform_string_vsprintf	__transform_string_vsprintf
-
-void	__transform_string_sprintf(struct transform_string *, const char *, ...)
+void	transform_string_sprintf(struct transform_string *, const char *, ...)
 	    __LA_PRINTF(2, 3);
-#define	transform_string_sprintf	__transform_string_sprintf
 
 /* Translates from UTF8 in src to Unicode in dest. */
 /* Returns non-zero if conversion failed in any way. */
-int __transform_wstrappend_utf8(struct transform_wstring *dest,
+int transform_wstrappend_utf8(struct transform_wstring *dest,
 			      struct transform_string *src);
 
 /* Translates from MBS in src to Unicode in dest. */
 /* Returns non-zero if conversion failed in any way. */
-int __transform_wstrappend_mbs(struct transform_wstring *dest,
+int transform_wstrcpy_mbs(struct transform_wstring *dest,
 			      struct transform_string *src);
+
+
+/* A "multistring" can hold Unicode, UTF8, or MBS versions of
+ * the string.  If you set and read the same version, no translation
+ * is done.  If you set and read different versions, the library
+ * will attempt to transparently convert.
+ */
+struct transform_mstring {
+	struct transform_string aes_mbs;
+	struct transform_string aes_utf8;
+	struct transform_wstring aes_wcs;
+	/* Bitmap of which of the above are valid.  Because we're lazy
+	 * about malloc-ing and reusing the underlying storage, we
+	 * can't rely on NULL pointers to indicate whether a string
+	 * has been set. */
+	int aes_set;
+#define	AES_SET_MBS 1
+#define	AES_SET_UTF8 2
+#define	AES_SET_WCS 4
+};
+
+void	transform_mstring_clean(struct transform_mstring *);
+void	transform_mstring_copy(struct transform_mstring *dest, struct transform_mstring *src);
+const char *	transform_mstring_get_mbs(struct transform_mstring *);
+const wchar_t *	transform_mstring_get_wcs(struct transform_mstring *);
+int	transform_mstring_copy_mbs(struct transform_mstring *, const char *mbs);
+int	transform_mstring_copy_wcs(struct transform_mstring *, const wchar_t *wcs);
+int	transform_mstring_copy_wcs_len(struct transform_mstring *, const wchar_t *wcs, size_t);
+int     transform_mstring_update_utf8(struct transform_mstring *aes, const char *utf8);
+
 
 #endif

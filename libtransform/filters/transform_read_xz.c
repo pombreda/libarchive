@@ -73,6 +73,14 @@ struct private_data {
 	int code;
 };
 
+#if LZMA_VERSION_MAJOR >= 5
+/* Effectively disable the limiter. */
+#define LZMA_MEMLIMIT	UINT64_MAX
+#else
+/* NOTE: This needs to check memory size which running system has. */
+#define LZMA_MEMLIMIT	(1U << 30)
+#endif
+
 /* Combined lzip/lzma/xz filter */
 static int	xz_filter_read(struct transform *, void *, 
 	struct transform_read_filter *, const void **, size_t *);
@@ -502,11 +510,11 @@ common_bidder_init(struct transform *transform,
 		 */
 		if (code == TRANSFORM_FILTER_XZ)
 			ret = lzma_stream_decoder(&(state->stream),
-		    	(1U << 30),/* memlimit */
+		    	LZMA_MEMLIMIT,/* memlimit */
 			    LZMA_CONCATENATED);
 		else
 			ret = lzma_alone_decoder(&(state->stream),
-		    	(1U << 30));/* memlimit */
+		    	LZMA_MEMLIMIT);/* memlimit */
 
 		if (ret != LZMA_OK) {
 			/* Library setup failed: Choose an error message and clean up. */
@@ -538,7 +546,7 @@ lzip_init(struct transform *transform, struct private_data *state,
 	int log2dic, ret;
 
 	h = transform_read_filter_ahead(upstream, 6, &avail_in);
-	if (h == NULL && avail_in < 0)
+	if (h == NULL)
 		return (TRANSFORM_FATAL);
 
 	/* Get a version number. */
@@ -668,8 +676,12 @@ xz_filter_read(struct transform *transform, void *_state,
 		}
 		state->stream.next_in =
 		    transform_read_filter_ahead(upstream, 1, &avail_in);
-		if (state->stream.next_in == NULL && avail_in < 0)
+		if (state->stream.next_in == NULL && avail_in < 0) {
+			transform_set_error(transform,
+			    TRANSFORM_ERRNO_MISC,
+			    "truncated input");
 			return (TRANSFORM_FATAL);
+		}
 		state->stream.avail_in = avail_in;
 
 		/* Decompress as much as we can in one pass. */
@@ -822,7 +834,11 @@ lzma_filter_read(struct transform *transform, void *_state,
 		state->stream.next_in = (unsigned char *)(uintptr_t)
 		    transform_read_filter_ahead(upstream, 1, &avail_in);
 		if (state->stream.next_in == NULL && avail_in < 0)
+			transform_set_error(transform,
+			    TRANSFORM_ERRNO_MISC,
+			    "truncated lzma input");
 			return (TRANSFORM_FATAL);
+		}
 		state->stream.avail_in = avail_in;
 
 		/* Decompress as much as we can in one pass. */

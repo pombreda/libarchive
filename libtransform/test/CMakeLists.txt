@@ -11,6 +11,7 @@ IF(ENABLE_TEST)
     test_util.c
     test_acl_basic.c
     test_acl_freebsd.c
+    test_acl_nfs4.c
     test_acl_pax.c
     test_transform_api_feature.c
     test_bad_fd.c
@@ -47,6 +48,7 @@ IF(ENABLE_TEST)
     test_read_extract.c
     test_read_file_nonexistent.c
     test_read_format_ar.c
+    test_read_format_cab.c
     test_read_format_cpio_afio.c
     test_read_format_cpio_bin.c
     test_read_format_cpio_bin_Z.c
@@ -76,6 +78,7 @@ IF(ENABLE_TEST)
     test_read_format_isorr_new_bz2.c
     test_read_format_isorr_rr_moved.c
     test_read_format_isozisofs_bz2.c
+    test_read_format_lha.c
     test_read_format_mtree.c
     test_read_format_pax_bz2.c
     test_read_format_raw.c
@@ -92,6 +95,7 @@ IF(ENABLE_TEST)
     test_read_pax_truncated.c
     test_read_position.c
     test_read_truncated.c
+    test_read_truncated_filter.c
     test_read_uu.c
     test_sparse_basic.c
     test_tar_filenames.c

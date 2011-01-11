@@ -41,7 +41,8 @@ logtransforminfo(struct transform *t)
 }
 
 int
-assertion_transform_contents_mem(struct transform *t, const void *desired, int64_t size)
+assertion_transform_contents_mem(const char *test_filename, int test_line,
+struct transform *t, const void *desired, int64_t size)
 {
 	const void *position = desired;
 	int64_t remaining = size;

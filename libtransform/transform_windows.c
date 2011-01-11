@@ -1263,9 +1263,9 @@ __transform_mktemp(const char *tmpdir)
 	 * Create a temporary file.
 	 */
 	transform_strcat(&temp_name, "libtransform_");
-	xp = temp_name.s + transform_strlen(&temp_name);
+	xp = ((BYTE *)temp_name.s) + transform_strlen(&temp_name);
 	transform_strcat(&temp_name, "XXXXXXXXXX");
-	ep = temp_name.s + transform_strlen(&temp_name);
+	ep = ((BYTE *)temp_name.s) + transform_strlen(&temp_name);
 
 	if (!CryptAcquireContext(&hProv, NULL, NULL, PROV_RSA_FULL,
 		CRYPT_VERIFYCONTEXT)) {

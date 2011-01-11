@@ -376,8 +376,12 @@ gzip_filter_read(struct transform *transform, void *_state,
 		 * it so, hence this ugly cast. */
 		state->stream.next_in = (unsigned char *)(uintptr_t)
 		    transform_read_filter_ahead(upstream, 1, &avail_in);
-		if (state->stream.next_in == NULL)
+		if (state->stream.next_in == NULL) {
+			transform_set_error(transform,
+			    TRANSFORM_ERRNO_MISC,
+			    "truncated gzip input");
 			return (TRANSFORM_FATAL);
+		}
 		state->stream.avail_in = avail_in;
 
 		/* Decompress and consume some of that data. */

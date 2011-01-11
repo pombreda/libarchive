@@ -206,15 +206,15 @@ static unsigned char rmask[9] =
 static int
 output_byte(struct private_data *state, unsigned char c, struct transform_write_filter *upstream)
 {
-	ssize_t bytes_written;
+	int ret;
 
 	state->compressed[state->compressed_offset++] = c;
 	++state->out_count;
 
 	if (state->compressed_buffer_size == state->compressed_offset) {
-		bytes_written = transform_write_filter_output(upstream,
+		ret = transform_write_filter_output(upstream,
 		    state->compressed, state->compressed_buffer_size);
-		if (bytes_written <= 0)
+		if (ret != TRANSFORM_OK)
 			return TRANSFORM_FATAL;
 		state->compressed_offset = 0;
 	}

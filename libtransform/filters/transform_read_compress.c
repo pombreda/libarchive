@@ -153,10 +153,7 @@ transform_autodetect_add_compress(struct transform_read_bidder *trb)
 
 /*
  * Test whether we can handle this data.
- *
- * This logic returns zero if any part of the signature fails.  It
- * also tries to Do The Right Thing if a very short buffer prevents us
- * from verifying as much as we would like.
+ * This logic returns zero if any part of the signature fails.
  */
 static int
 compress_bidder_bid(const void *bidder_data, struct transform_read_filter *filter)

@@ -69,7 +69,7 @@ append_int(struct transform_string *as, intmax_t d, unsigned base)
 
 
 void
-__transform_string_sprintf(struct transform_string *as, const char *fmt, ...)
+transform_string_sprintf(struct transform_string *as, const char *fmt, ...)
 {
 	va_list ap;
 
@@ -83,15 +83,16 @@ __transform_string_sprintf(struct transform_string *as, const char *fmt, ...)
  * necessary.
  */
 void
-__transform_string_vsprintf(struct transform_string *as, const char *fmt,
+transform_string_vsprintf(struct transform_string *as, const char *fmt,
     va_list ap)
 {
 	char long_flag;
 	intmax_t s; /* Signed integer temp. */
 	uintmax_t u; /* Unsigned integer temp. */
 	const char *p, *p2;
+	const wchar_t *pw;
 
-	if (__transform_string_ensure(as, 64) == NULL)
+	if (transform_string_ensure(as, 64) == NULL)
 		__transform_errx(1, "Out of memory");
 
 	if (fmt == NULL) {
@@ -121,11 +122,11 @@ __transform_string_vsprintf(struct transform_string *as, const char *fmt,
 
 		switch (*p) {
 		case '%':
-			__transform_strappend_char(as, '%');
+			transform_strappend_char(as, '%');
 			break;
 		case 'c':
 			s = va_arg(ap, int);
-			__transform_strappend_char(as, s);
+			transform_strappend_char(as, s);
 			break;
 		case 'd':
 			switch(long_flag) {
@@ -137,8 +138,20 @@ __transform_string_vsprintf(struct transform_string *as, const char *fmt,
 		        append_int(as, s, 10);
 			break;
 		case 's':
-			p2 = va_arg(ap, char *);
-			transform_strcat(as, p2);
+			switch(long_flag) {
+			case 'l':
+				pw = va_arg(ap, wchar_t *);
+				transform_strappend_w_mbs(as, pw);
+				break;
+			default:
+				p2 = va_arg(ap, char *);
+				transform_strcat(as, p2);
+				break;
+			}
+			break;
+		case 'S':
+			pw = va_arg(ap, wchar_t *);
+			transform_strappend_w_mbs(as, pw);
 			break;
 		case 'o': case 'u': case 'x': case 'X':
 			/* Common handling for unsigned integer formats. */

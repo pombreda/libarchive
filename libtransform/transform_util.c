@@ -72,7 +72,7 @@ transform_error_string(struct transform *a)
 	if (a->error != NULL  &&  *a->error != '\0')
 		return (a->error);
 	else
-		return ("(Empty error message)");
+		return (NULL);
 }
 
 /*

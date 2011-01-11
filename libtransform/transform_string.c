@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2003-2007 Tim Kientzle
+ * Copyright (c) 2003-2010 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,10 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_string.c 201095 2009-12-28 0
 /*
  * Basic resizable string support, to simplify manipulating arbitrary-sized
  * strings while minimizing heap activity.
+ *
+ * In particular, the buffer used by a string object is only grown, it
+ * never shrinks, so you can clear and reuse the same string object
+ * without incurring additional memory allocations.
  */
 
 #ifdef HAVE_STDLIB_H
@@ -48,69 +52,41 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_string.c 201095 2009-12-28 0
 #include "transform_string.h"
 
 struct transform_string *
-__transform_string_append(struct transform_string *as, const char *p, size_t s)
+transform_string_append(struct transform_string *as, const char *p, size_t s)
 {
-	if (__transform_string_ensure(as, as->length + s + 1) == NULL)
+	if (transform_string_ensure(as, as->length + s + 1) == NULL)
 		__transform_errx(1, "Out of memory");
 	memcpy(as->s + as->length, p, s);
-	as->s[as->length + s] = 0;
 	as->length += s;
+	as->s[as->length] = 0;
 	return (as);
 }
 
 struct transform_wstring *
-__transform_wstring_append(struct transform_wstring *as, const wchar_t *p, size_t s)
+transform_wstring_append(struct transform_wstring *as, const wchar_t *p, size_t s)
 {
-	if (__transform_wstring_ensure(as, as->length + s + 1) == NULL)
+	if (transform_wstring_ensure(as, as->length + s + 1) == NULL)
 		__transform_errx(1, "Out of memory");
 	memcpy(as->s + as->length, p, s * sizeof(wchar_t));
-	as->s[as->length + s] = 0;
 	as->length += s;
+	as->s[as->length] = 0;
 	return (as);
 }
 
 void
-__transform_string_copy(struct transform_string *dest, struct transform_string *src)
+transform_string_concat(struct transform_string *dest, struct transform_string *src)
 {
-	if (src->length == 0)
-		dest->length = 0;
-	else {
-		if (__transform_string_ensure(dest, src->length + 1) == NULL)
-			__transform_errx(1, "Out of memory");
-		memcpy(dest->s, src->s, src->length);
-		dest->length = src->length;
-		dest->s[dest->length] = 0;
-	}
+	transform_string_append(dest, src->s, src->length);
 }
 
 void
-__transform_wstring_copy(struct transform_wstring *dest, struct transform_wstring *src)
+transform_wstring_concat(struct transform_wstring *dest, struct transform_wstring *src)
 {
-	if (src->length == 0)
-		dest->length = 0;
-	else {
-		if (__transform_wstring_ensure(dest, src->length + 1) == NULL)
-			__transform_errx(1, "Out of memory");
-		memcpy(dest->s, src->s, src->length * sizeof(wchar_t));
-		dest->length = src->length;
-		dest->s[dest->length] = 0;
-	}
+	transform_wstring_append(dest, src->s, src->length);
 }
 
 void
-__transform_string_concat(struct transform_string *dest, struct transform_string *src)
-{
-	if (src->length > 0) {
-		if (__transform_string_ensure(dest, dest->length + src->length + 1) == NULL)
-			__transform_errx(1, "Out of memory");
-		memcpy(dest->s + dest->length, src->s, src->length);
-		dest->length += src->length;
-		dest->s[dest->length] = 0;
-	}
-}
-
-void
-__transform_string_free(struct transform_string *as)
+transform_string_free(struct transform_string *as)
 {
 	as->length = 0;
 	as->buffer_length = 0;
@@ -119,7 +95,7 @@ __transform_string_free(struct transform_string *as)
 }
 
 void
-__transform_wstring_free(struct transform_wstring *as)
+transform_wstring_free(struct transform_wstring *as)
 {
 	as->length = 0;
 	as->buffer_length = 0;
@@ -128,17 +104,20 @@ __transform_wstring_free(struct transform_wstring *as)
 }
 
 struct transform_wstring *
-__transform_wstring_ensure(struct transform_wstring *as, size_t s)
+transform_wstring_ensure(struct transform_wstring *as, size_t s)
 {
 	return (struct transform_wstring *)
-		__transform_string_ensure((struct transform_string *)as,
+		transform_string_ensure((struct transform_string *)as,
 					s * sizeof(wchar_t));
 }
 
 /* Returns NULL on any allocation failure. */
 struct transform_string *
-__transform_string_ensure(struct transform_string *as, size_t s)
+transform_string_ensure(struct transform_string *as, size_t s)
 {
+	char *p;
+	size_t new_length;
+
 	/* If buffer is already big enough, don't reallocate. */
 	if (as->s && (s <= as->buffer_length))
 		return (as);
@@ -152,18 +131,17 @@ __transform_string_ensure(struct transform_string *as, size_t s)
 	 */
 	if (as->buffer_length < 32)
 		/* Start with a minimum 32-character buffer. */
-		as->buffer_length = 32;
+		new_length = 32;
 	else if (as->buffer_length < 8192)
 		/* Buffers under 8k are doubled for speed. */
-		as->buffer_length += as->buffer_length;
+		new_length = as->buffer_length + as->buffer_length;
 	else {
 		/* Buffers 8k and over grow by at least 25% each time. */
-		size_t old_length = as->buffer_length;
-		as->buffer_length += as->buffer_length / 4;
-		/* Be safe: If size wraps, release buffer and return NULL. */
-		if (as->buffer_length < old_length) {
-			free(as->s);
-			as->s = NULL;
+		new_length = as->buffer_length + as->buffer_length / 4;
+		/* Be safe: If size wraps, fail. */
+		if (new_length < as->buffer_length) {
+			/* On failure, wipe the string and return NULL. */
+			transform_string_free(as);
 			return (NULL);
 		}
 	}
@@ -172,17 +150,30 @@ __transform_string_ensure(struct transform_string *as, size_t s)
 	 * grow the buffer.  In any case, we have to grow it enough to
 	 * hold the request.
 	 */
-	if (as->buffer_length < s)
-		as->buffer_length = s;
+	if (new_length < s)
+		new_length = s;
 	/* Now we can reallocate the buffer. */
-	as->s = (char *)realloc(as->s, as->buffer_length);
-	if (as->s == NULL)
+	p = (char *)realloc(as->s, new_length);
+	if (p == NULL) {
+		/* On failure, wipe the string and return NULL. */
+		transform_string_free(as);
 		return (NULL);
+	}
+
+	as->s = p;
+	as->buffer_length = new_length;
 	return (as);
 }
 
+/*
+ * TODO: See if there's a way to avoid scanning
+ * the source string twice.  Then test to see
+ * if it actually helps (remember that we're almost
+ * always called with pretty short arguments, so
+ * such an optimization might not help).
+ */
 struct transform_string *
-__transform_strncat(struct transform_string *as, const void *_p, size_t n)
+transform_strncat(struct transform_string *as, const void *_p, size_t n)
 {
 	size_t s;
 	const char *p, *pp;
@@ -192,41 +183,58 @@ __transform_strncat(struct transform_string *as, const void *_p, size_t n)
 	/* Like strlen(p), except won't examine positions beyond p[n]. */
 	s = 0;
 	pp = p;
-	while (*pp && s < n) {
+	while (s < n && *pp) {
 		pp++;
 		s++;
 	}
-	return (__transform_string_append(as, p, s));
+	return (transform_string_append(as, p, s));
 }
 
 struct transform_wstring *
-__transform_wstrncat(struct transform_wstring *as, const void *_p, size_t n)
+transform_wstrncat(struct transform_wstring *as, const wchar_t *p, size_t n)
 {
 	size_t s;
-	const wchar_t *p, *pp;
-
-	p = (const wchar_t *)_p;
+	const wchar_t *pp;
 
 	/* Like strlen(p), except won't examine positions beyond p[n]. */
 	s = 0;
 	pp = p;
-	while (*pp && s < n) {
+	while (s < n && *pp) {
 		pp++;
 		s++;
 	}
-	return (__transform_wstring_append(as, p, s));
+	return (transform_wstring_append(as, p, s));
 }
 
 struct transform_string *
-__transform_strappend_char(struct transform_string *as, char c)
+transform_strcat(struct transform_string *as, const void *p)
 {
-	return (__transform_string_append(as, &c, 1));
+	/* strcat is just strncat without an effective limit. 
+	 * Assert that we'll never get called with a source
+	 * string over 16MB.
+	 * TODO: Review all uses of strcat in the source
+	 * and try to replace them with strncat().
+	 */
+	return transform_strncat(as, p, 0x1000000);
 }
 
 struct transform_wstring *
-__transform_wstrappend_wchar(struct transform_wstring *as, wchar_t c)
+transform_wstrcat(struct transform_wstring *as, const wchar_t *p)
 {
-	return (__transform_wstring_append(as, &c, 1));
+	/* Ditto. */
+	return transform_wstrncat(as, p, 0x1000000);
+}
+
+struct transform_string *
+transform_strappend_char(struct transform_string *as, char c)
+{
+	return (transform_string_append(as, &c, 1));
+}
+
+struct transform_wstring *
+transform_wstrappend_wchar(struct transform_wstring *as, wchar_t c)
+{
+	return (transform_wstring_append(as, &c, 1));
 }
 
 /*
@@ -235,7 +243,7 @@ __transform_wstrappend_wchar(struct transform_wstring *as, wchar_t c)
  * but still leaves a best-effort conversion in the argument as.
  */
 struct transform_string *
-__transform_strappend_w_utf8(struct transform_string *as, const wchar_t *w)
+transform_strappend_w_utf8(struct transform_string *as, const wchar_t *w)
 {
 	char *p;
 	unsigned wc;
@@ -350,7 +358,7 @@ utf8_to_unicode(int *pwc, const char *s, size_t n)
  * Returns 0 on success, non-zero if conversion fails.
  */
 int
-__transform_wstrappend_utf8(struct transform_wstring *dest, struct transform_string *src)
+transform_wstrappend_utf8(struct transform_wstring *dest, struct transform_string *src)
 {
 	int wc, wc2;/* Must be large enough for a 21-bit Unicode code point. */
 	const char *p;
@@ -394,19 +402,19 @@ __transform_wstrappend_utf8(struct transform_wstring *dest, struct transform_str
 			/* We have a code point that won't fit into a
 			 * wchar_t; convert it to a surrogate pair. */
 			wc -= 0x10000;
-			__transform_wstrappend_wchar(dest,
-						   ((wc >> 10) & 0x3ff) + 0xD800);
-			__transform_wstrappend_wchar(dest,
-						   (wc & 0x3ff) + 0xDC00);
+			transform_wstrappend_wchar(dest,
+					     ((wc >> 10) & 0x3ff) + 0xD800);
+			transform_wstrappend_wchar(dest,
+						 (wc & 0x3ff) + 0xDC00);
 		} else
-			__transform_wstrappend_wchar(dest, wc);
+			transform_wstrappend_wchar(dest, wc);
 	}
 	return (0);
 }
 
 
 int
-__transform_wstrappend_mbs(struct transform_wstring *dest,
+transform_wstrcpy_mbs(struct transform_wstring *dest,
 			 struct transform_string *src)
 {
 	size_t r;
@@ -415,11 +423,12 @@ __transform_wstrappend_mbs(struct transform_wstring *dest,
 	 * so this length estimate will always be big enough.
 	 */
 	size_t wcs_length = src->length;
-	if (NULL == __transform_wstring_ensure(dest, wcs_length + 1))
-		__transform_errx(1, "No memory for aes_get_wcs()");
+	if (NULL == transform_wstring_ensure(dest, wcs_length + 1))
+		__transform_errx(1, "No memory for transform_mstring_get_wcs()");
 	r = mbstowcs(dest->s, src->s, wcs_length);
 	if (r != (size_t)-1 && r != 0) {
 		dest->s[r] = 0;
+		dest->length = r;
 		return (0);
 	}
 	return (-1);
@@ -438,7 +447,7 @@ __transform_wstrappend_mbs(struct transform_wstring *dest,
  * wrapper is going to know.)
  */
 struct transform_string *
-__transform_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
+transform_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
 {
 	char *p;
 	int l, wl;
@@ -460,7 +469,7 @@ __transform_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
 		free(p);
 		return (NULL);
 	}
-	__transform_string_append(as, p, l);
+	transform_string_append(as, p, l);
 	free(p);
 	return (as);
 }
@@ -477,11 +486,11 @@ __transform_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
  * either of these, fall back to the built-in UTF8 conversion.
  */
 struct transform_string *
-__transform_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
+transform_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
 {
 #if !defined(HAVE_WCTOMB) && !defined(HAVE_WCRTOMB)
 	/* If there's no built-in locale support, fall back to UTF8 always. */
-	return __transform_strappend_w_utf8(as, w);
+	return transform_strappend_w_utf8(as, w);
 #else
 	/* We cannot use the standard wcstombs() here because it
 	 * cannot tell us how big the output buffer should be.  So
@@ -530,3 +539,150 @@ __transform_strappend_w_mbs(struct transform_string *as, const wchar_t *w)
 }
 
 #endif /* _WIN32 && ! __CYGWIN__ */
+
+
+/*
+ * Multistring operations.
+ */
+
+void
+transform_mstring_clean(struct transform_mstring *aes)
+{
+	transform_wstring_free(&(aes->aes_wcs));
+	transform_string_free(&(aes->aes_mbs));
+	transform_string_free(&(aes->aes_utf8));
+	aes->aes_set = 0;
+}
+
+void
+transform_mstring_copy(struct transform_mstring *dest, struct transform_mstring *src)
+{
+	dest->aes_set = src->aes_set;
+	transform_string_copy(&(dest->aes_mbs), &(src->aes_mbs));
+	transform_string_copy(&(dest->aes_utf8), &(src->aes_utf8));
+	transform_wstring_copy(&(dest->aes_wcs), &(src->aes_wcs));
+}
+
+const char *
+transform_mstring_get_mbs(struct transform_mstring *aes)
+{
+	/* If we already have an MBS form, return that immediately. */
+	if (aes->aes_set & AES_SET_MBS)
+		return (aes->aes_mbs.s);
+	/* If there's a WCS form, try converting with the native locale. */
+	if ((aes->aes_set & AES_SET_WCS)
+	    && transform_strappend_w_mbs(&(aes->aes_mbs), aes->aes_wcs.s) != NULL) {
+		aes->aes_set |= AES_SET_MBS;
+		return (aes->aes_mbs.s);
+	}
+	/* We'll use UTF-8 for MBS if all else fails. */
+	if (aes->aes_set & AES_SET_UTF8)
+		return (aes->aes_utf8.s);
+	if ((aes->aes_set & AES_SET_WCS)
+	    && transform_strappend_w_utf8(&(aes->aes_utf8), aes->aes_wcs.s) != NULL) {
+		aes->aes_set |= AES_SET_UTF8;
+		return (aes->aes_utf8.s);
+	}
+	return (NULL);
+}
+
+const wchar_t *
+transform_mstring_get_wcs(struct transform_mstring *aes)
+{
+	/* Return WCS form if we already have it. */
+	if (aes->aes_set & AES_SET_WCS)
+		return (aes->aes_wcs.s);
+	/* Try converting UTF8 to WCS. */
+	if ((aes->aes_set & AES_SET_UTF8)
+	    && !transform_wstrappend_utf8(&(aes->aes_wcs), &(aes->aes_utf8))) {
+		aes->aes_set |= AES_SET_WCS;
+		return (aes->aes_wcs.s);
+	}
+	/* Try converting MBS to WCS using native locale. */
+	if ((aes->aes_set & AES_SET_MBS)
+	    && !transform_wstrcpy_mbs(&(aes->aes_wcs), &(aes->aes_mbs))) {
+		aes->aes_set |= AES_SET_WCS;
+		return (aes->aes_wcs.s);
+	}
+	return (NULL);
+}
+
+int
+transform_mstring_copy_mbs(struct transform_mstring *aes, const char *mbs)
+{
+	if (mbs == NULL) {
+		aes->aes_set = 0;
+		return (0);
+	}
+	aes->aes_set = AES_SET_MBS; /* Only MBS form is set now. */
+	transform_strcpy(&(aes->aes_mbs), mbs);
+	transform_string_empty(&(aes->aes_utf8));
+	transform_wstring_empty(&(aes->aes_wcs));
+	return (0);
+}
+
+int
+transform_mstring_copy_wcs(struct transform_mstring *aes, const wchar_t *wcs)
+{
+	return transform_mstring_copy_wcs_len(aes, wcs, wcs == NULL ? 0 : wcslen(wcs));
+}
+
+int
+transform_mstring_copy_wcs_len(struct transform_mstring *aes, const wchar_t *wcs, size_t len)
+{
+	if (wcs == NULL) {
+		aes->aes_set = 0;
+	}
+	aes->aes_set = AES_SET_WCS; /* Only WCS form set. */
+	transform_string_empty(&(aes->aes_mbs));
+	transform_string_empty(&(aes->aes_utf8));
+	transform_wstrncpy(&(aes->aes_wcs), wcs, len);
+	return (0);
+}
+
+/*
+ * The 'update' form tries to proactively update all forms of
+ * this string (WCS and MBS) and returns an error if any of
+ * them fail.  This is used by the 'pax' handler, for instance,
+ * to detect and report character-conversion failures early while
+ * still allowing clients to get potentially useful values from
+ * the more tolerant lazy conversions.  (get_mbs and get_wcs will
+ * strive to give the user something useful, so you can get hopefully
+ * usable values even if some of the character conversions are failing.)
+ */
+int
+transform_mstring_update_utf8(struct transform_mstring *aes, const char *utf8)
+{
+	if (utf8 == NULL) {
+		aes->aes_set = 0;
+		return (1); /* Succeeded in clearing everything. */
+	}
+
+	/* Save the UTF8 string. */
+	transform_strcpy(&(aes->aes_utf8), utf8);
+
+	/* Empty the mbs and wcs strings. */
+	transform_string_empty(&(aes->aes_mbs));
+	transform_wstring_empty(&(aes->aes_wcs));
+
+	aes->aes_set = AES_SET_UTF8;	/* Only UTF8 is set now. */
+
+	/* TODO: We should just do a direct UTF-8 to MBS conversion
+	 * here.  That would be faster, use less space, and give the
+	 * same information.  (If a UTF-8 to MBS conversion succeeds,
+	 * then UTF-8->WCS and Unicode->MBS conversions will both
+	 * succeed.) */
+
+	/* Try converting UTF8 to WCS, return false on failure. */
+	if (transform_wstrappend_utf8(&(aes->aes_wcs), &(aes->aes_utf8)))
+		return (0);
+	aes->aes_set = AES_SET_UTF8 | AES_SET_WCS; /* Both UTF8 and WCS set. */
+
+	/* Try converting WCS to MBS, return false on failure. */
+	if (transform_strappend_w_mbs(&(aes->aes_mbs), aes->aes_wcs.s) == NULL)
+		return (0);
+	aes->aes_set = AES_SET_UTF8 | AES_SET_WCS | AES_SET_MBS;
+
+	/* All conversions succeeded. */
+	return (1);
+}
