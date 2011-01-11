@@ -145,6 +145,9 @@ transform_string_vsprintf(struct transform_string *as, const char *fmt,
 				break;
 			default:
 				p2 = va_arg(ap, char *);
+				if (!p2) {
+					p2 = "(null)";
+				}
 				transform_strcat(as, p2);
 				break;
 			}
