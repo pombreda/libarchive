@@ -428,9 +428,16 @@ void
 __archive_set_error_from_transform(struct archive *a, struct transform *t)
 {
 	/* XXX optimization, transfer the error_string only if it isn't the NULL default */
- 	archive_set_error(a, ARCHIVE_ERRNO_TRANSFORM,
- 		"transform error: errno %d, error %s",
- 		transform_errno(t), transform_error_string(t));
+    const char *p = transform_error_string(t);
+    if (p) {
+		archive_set_error(a, ARCHIVE_ERRNO_TRANSFORM,
+			"transform error: errno %d, error %s",
+			transform_errno(t), p);
+	} else {
+		archive_set_error(a, ARCHIVE_ERRNO_TRANSFORM,
+			"transform error: errno %d, no error message",
+			transform_errno(t));
+	}
 }
 
 int
@@ -462,9 +469,13 @@ __convert_transform_error_to_archive_error(struct archive *a,
 	} else if (TRANSFORM_FATAL == error) {
 		return (ARCHIVE_FATAL);
 	} else {
+		const char *p = transform_error_string(t);
+		if (!p) {
+			p = "no error specified";
+		}
 		archive_set_error(a, ARCHIVE_ERRNO_PROGRAMMER,
 			"unknown transform return(%d), errno(%d), error(%s)",
-			error, transform_errno(t), transform_error_string(t));
+			error, transform_errno(t), p);
 	}
 
 	return (ARCHIVE_FATAL);
