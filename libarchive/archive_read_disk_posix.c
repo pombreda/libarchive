@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2003-2009 Tim Kientzle
- * Copyright (c) 2010 Michihiro NAKAJIMA
+ * Copyright (c) 2010,2011 Michihiro NAKAJIMA
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -80,6 +80,9 @@ __FBSDID("$FreeBSD$");
 #include "archive_private.h"
 #include "archive_read_disk_private.h"
 
+#ifndef HAVE_FCHDIR
+#error fchdir function required.
+#endif
 #ifndef O_BINARY
 #define O_BINARY	0
 #endif
@@ -110,21 +113,17 @@ __FBSDID("$FreeBSD$");
  */
 
 struct tree_entry {
-	int depth;
-	struct tree_entry *next;
-	struct tree_entry *parent;
-	struct archive_string name;
-	size_t dirname_length;
-	dev_t dev;
-	ino_t ino;
-	int flags;
-	int filesystem_id;
+	int			 depth;
+	struct tree_entry	*next;
+	struct tree_entry	*parent;
+	struct archive_string	 name;
+	size_t			 dirname_length;
+	int64_t			 dev;
+	int64_t			 ino;
+	int			 flags;
+	int			 filesystem_id;
 	/* How to return back to the parent of a symlink. */
-#ifdef HAVE_FCHDIR
-	int symlink_parent_fd;
-#else
-#error fchdir function required.
-#endif
+	int			 symlink_parent_fd;
 };
 
 struct filesystem {
@@ -137,12 +136,12 @@ struct filesystem {
 };
 
 /* Definitions for tree_entry.flags bitmap. */
-#define	isDir 1 /* This entry is a regular directory. */
-#define	isDirLink 2 /* This entry is a symbolic link to a directory. */
-#define	needsFirstVisit 4 /* This is an initial entry. */
-#define	needsDescent 8 /* This entry needs to be previsited. */
-#define	needsOpen 16 /* This is a directory that needs to be opened. */
-#define	needsAscent 32 /* This entry needs to be postvisited. */
+#define	isDir		1  /* This entry is a regular directory. */
+#define	isDirLink	2  /* This entry is a symbolic link to a directory. */
+#define	needsFirstVisit	4  /* This is an initial entry. */
+#define	needsDescent	8  /* This entry needs to be previsited. */
+#define	needsOpen	16 /* This is a directory that needs to be opened. */
+#define	needsAscent	32 /* This entry needs to be postvisited. */
 
 /*
  * Local data for this package.
@@ -150,43 +149,55 @@ struct filesystem {
 struct tree {
 	struct tree_entry	*stack;
 	struct tree_entry	*current;
-	DIR	*d;
+	DIR			*d;
 #define	INVALID_DIR_HANDLE NULL
-	struct dirent *de;
+	struct dirent		*de;
 #if defined(HAVE_READDIR_R)
-	struct dirent *dirent;
-	size_t	 dirent_allocated;
+	struct dirent		*dirent;
+	size_t			 dirent_allocated;
 #endif
-	int	 flags;
-	int	 visit_type;
-	int	 tree_errno; /* Error code from last failed operation. */
+	int			 flags;
+	int			 visit_type;
+	/* Error code from last failed operation. */
+	int			 tree_errno;
 
 	/* Dynamically-sized buffer for holding path */
-	struct archive_string path;
+	struct archive_string	 path;
 
-	const char *basename; /* Last path element */
-	size_t	 dirname_length; /* Leading dir length */
+	/* Last path element */
+	const char		*basename;
+	/* Leading dir length */
+	size_t			 dirname_length;
 
-	int	 depth;
-	int	 openCount;
-	int	 maxOpenCount;
+	int			 depth;
+	int			 openCount;
+	int			 maxOpenCount;
+	int			 initial_dir_fd;
+	int			 working_dir_fd;
 
-	struct stat	lst;
-	struct stat	st;
-	int	 descend;
+	struct stat		 lst;
+	struct stat		 st;
+	int			 descend;
 
-	char	 symlink_mode;
-	struct filesystem *current_filesystem;
-	struct filesystem *filesystem_table;
-	int		current_filesystem_id;
-	int		max_filesystem_id;
-	int		allocated_filesytem;
+	struct entry_sparse {
+		int64_t		 length;
+		int64_t		 offset;
+	}			*sparse_list, *current_sparse;
+	int			 sparse_count;
+	int			 sparse_list_size;
+
+	char			 initial_symlink_mode;
+	char			 symlink_mode;
+	struct filesystem	*current_filesystem;
+	struct filesystem	*filesystem_table;
+	int			 current_filesystem_id;
+	int			 max_filesystem_id;
+	int			 allocated_filesytem;
 };
 
 /* Definitions for tree.flags bitmap. */
-#define	hasStat 16  /* The st entry is valid. */
-#define	hasLstat 32 /* The lst entry is valid. */
-#define	hasFileInfo 64 /* The Windows fileInfo entry is valid. */
+#define	hasStat		16 /* The st entry is valid. */
+#define	hasLstat	32 /* The lst entry is valid. */
 
 static int
 tree_dir_next_posix(struct tree *t);
@@ -199,9 +210,13 @@ tree_dir_next_posix(struct tree *t);
 #endif
 
 /* Initiate/terminate a tree traversal. */
-static struct tree *tree_open(const char *);
+static struct tree *tree_open(const char *, int);
+static struct tree *tree_reopen(struct tree *, const char *);
 static void tree_close(struct tree *);
-static void tree_push(struct tree *, const char *, int);
+static void tree_free(struct tree *);
+static void tree_push(struct tree *, const char *, int, int64_t, int64_t);
+static int tree_enter_initial_dir(struct tree *);
+static int tree_enter_working_dir(struct tree *);
 
 /*
  * tree_next() returns Zero if there is no next entry, non-zero if
@@ -221,11 +236,11 @@ static void tree_push(struct tree *, const char *, int);
  * traversal completely hosed.  Right now, this is only returned for
  * chdir() failures during ascent.
  */
-#define	TREE_REGULAR	1
+#define	TREE_REGULAR		1
 #define	TREE_POSTDESCENT	2
-#define	TREE_POSTASCENT	3
-#define	TREE_ERROR_DIR	-1
-#define	TREE_ERROR_FATAL -2
+#define	TREE_POSTASCENT		3
+#define	TREE_ERROR_DIR		-1
+#define	TREE_ERROR_FATAL	-2
 
 static int tree_next(struct tree *);
 
@@ -238,10 +253,6 @@ static int tree_next(struct tree *);
  * that can be used to access the file.  Because tree does use chdir
  * extensively, the access path is almost never the same as the full
  * current path.
- *
- * TODO: Flesh out this interface to provide other information.  In
- * particular, Windows can provide file size, mode, and some permission
- * information without invoking stat() at all.
  *
  * TODO: On platforms that support it, use openat()-style operations
  * to eliminate the chdir() operations entirely while still supporting
@@ -272,6 +283,7 @@ static int tree_current_is_dir(struct tree *);
 static int update_filesystem(struct archive_read_disk *a,
 		    int64_t dev);
 static int setup_current_filesystem(struct archive_read_disk *);
+static int tree_target_is_same_as_parent(struct tree *, const struct stat *);
 
 static int	_archive_read_free(struct archive *);
 static int	_archive_read_close(struct archive *);
@@ -286,7 +298,7 @@ static const char *trivial_lookup_uname(void *, uid_t uid);
 static const char *trivial_lookup_gname(void *, int64_t gid);
 static const char *trivial_lookup_uname(void *, int64_t uid);
 #endif
-
+static int	setup_sparse(struct archive_read_disk *, struct archive_entry *);
 
 
 static struct archive_vtable *
@@ -300,6 +312,7 @@ archive_read_disk_vtable(void)
 		av.archive_close = _archive_read_close;
 		av.archive_read_data_block = _archive_read_data_block;
 		av.archive_read_next_header2 = _archive_read_next_header2;
+		inited = 1;
 	}
 	return (&av);
 }
@@ -429,6 +442,7 @@ _archive_read_free(struct archive *_a)
 	else
 		r = ARCHIVE_OK;
 
+	tree_free(a->tree);
 	if (a->cleanup_gname != NULL && a->lookup_gname_data != NULL)
 		(a->cleanup_gname)(a->lookup_gname_data);
 	if (a->cleanup_uname != NULL && a->lookup_uname_data != NULL)
@@ -451,10 +465,8 @@ _archive_read_close(struct archive *_a)
 	if (a->archive.state != ARCHIVE_STATE_FATAL)
 		a->archive.state = ARCHIVE_STATE_CLOSED;
 
-	if (a->tree != NULL) {
+	if (a->tree != NULL)
 		tree_close(a->tree);
-		a->tree = NULL;
-	}
 	if (a->entry_fd >= 0) {
 		close(a->entry_fd);
 		a->entry_fd = -1;
@@ -463,14 +475,25 @@ _archive_read_close(struct archive *_a)
 	return (ARCHIVE_OK);
 }
 
+static void
+setup_symlink_mode(struct archive_read_disk *a, char symlink_mode,
+    int follow_symlinks)
+{
+	a->symlink_mode = symlink_mode;
+	a->follow_symlinks = follow_symlinks;
+	if (a->tree != NULL) {
+		a->tree->initial_symlink_mode = a->symlink_mode;
+		a->tree->symlink_mode = a->symlink_mode;
+	}
+}
+
 int
 archive_read_disk_set_symlink_logical(struct archive *_a)
 {
 	struct archive_read_disk *a = (struct archive_read_disk *)_a;
 	archive_check_magic(_a, ARCHIVE_READ_DISK_MAGIC,
 	    ARCHIVE_STATE_ANY, "archive_read_disk_set_symlink_logical");
-	a->symlink_mode = 'L';
-	a->follow_symlinks = 1;
+	setup_symlink_mode(a, 'L', 1);
 	return (ARCHIVE_OK);
 }
 
@@ -480,8 +503,7 @@ archive_read_disk_set_symlink_physical(struct archive *_a)
 	struct archive_read_disk *a = (struct archive_read_disk *)_a;
 	archive_check_magic(_a, ARCHIVE_READ_DISK_MAGIC,
 	    ARCHIVE_STATE_ANY, "archive_read_disk_set_symlink_physical");
-	a->symlink_mode = 'P';
-	a->follow_symlinks = 0;
+	setup_symlink_mode(a, 'P', 0);
 	return (ARCHIVE_OK);
 }
 
@@ -491,8 +513,7 @@ archive_read_disk_set_symlink_hybrid(struct archive *_a)
 	struct archive_read_disk *a = (struct archive_read_disk *)_a;
 	archive_check_magic(_a, ARCHIVE_READ_DISK_MAGIC,
 	    ARCHIVE_STATE_ANY, "archive_read_disk_set_symlink_hybrid");
-	a->symlink_mode = 'H';
-	a->follow_symlinks = 1; /* Follow symlinks initially. */
+	setup_symlink_mode(a, 'H', 1);/* Follow symlinks initially. */
 	return (ARCHIVE_OK);
 }
 
@@ -532,6 +553,7 @@ _archive_read_data_block(struct archive *_a, const void **buff,
     size_t *size, int64_t *offset)
 {
 	struct archive_read_disk *a = (struct archive_read_disk *)_a;
+	struct tree *t;
 	int r;
 	ssize_t bytes;
 	size_t buffbytes;
@@ -543,17 +565,23 @@ _archive_read_data_block(struct archive *_a, const void **buff,
 		r = ARCHIVE_EOF;
 		goto abort_read_data;
 	}
+	t = a->tree;
 
 	if (a->entry_fd < 0) {
+		tree_enter_working_dir(t);
 		a->entry_fd = open(tree_current_access_path(a->tree),
 		    O_RDONLY | O_BINARY);
 		if (a->entry_fd < 0) {
 			archive_set_error(&a->archive, errno,
 			    "Couldn't open %s", tree_current_path(a->tree));
 			r = ARCHIVE_FAILED;
+			tree_enter_initial_dir(t);
 			goto abort_read_data;
 		}
+		tree_enter_initial_dir(t);
 	}
+
+	/* Allocate read buffer. */
 	if (a->entry_buff == NULL) {
 		a->entry_buff = malloc(1024 * 64);
 		if (a->entry_buff == NULL) {
@@ -567,16 +595,34 @@ _archive_read_data_block(struct archive *_a, const void **buff,
 	}
 
 	buffbytes = a->entry_buff_size;
-	if ((int64_t)buffbytes > a->entry_remaining_bytes)
-		buffbytes = (size_t)a->entry_remaining_bytes;
-	bytes = read(a->entry_fd, a->entry_buff, buffbytes);
-	if (bytes < 0) {
-		archive_set_error(&a->archive, errno,
-		    "Read error");
-		r = ARCHIVE_FATAL;
-		a->archive.state = ARCHIVE_STATE_FATAL;
-		goto abort_read_data;
+	if (buffbytes > t->current_sparse->length)
+		buffbytes = t->current_sparse->length;
+
+	/*
+	 * Skip hole.
+	 */
+	if (t->current_sparse->offset > a->entry_total) {
+		if (lseek(a->entry_fd,
+		    (off_t)t->current_sparse->offset, SEEK_SET) < 0) {
+			archive_set_error(&a->archive, errno, "Seek error");
+			r = ARCHIVE_FATAL;
+			a->archive.state = ARCHIVE_STATE_FATAL;
+			goto abort_read_data;
+		}
+		bytes = t->current_sparse->offset - a->entry_total;
+		a->entry_remaining_bytes -= bytes;
+		a->entry_total += bytes;
 	}
+	if (buffbytes > 0) {
+		bytes = read(a->entry_fd, a->entry_buff, buffbytes);
+		if (bytes < 0) {
+			archive_set_error(&a->archive, errno, "Read error");
+			r = ARCHIVE_FATAL;
+			a->archive.state = ARCHIVE_STATE_FATAL;
+			goto abort_read_data;
+		}
+	} else
+		bytes = 0;
 	if (bytes == 0) {
 		/* Get EOF */
 		a->entry_eof = 1;
@@ -594,6 +640,10 @@ _archive_read_data_block(struct archive *_a, const void **buff,
 		a->entry_fd = -1;
 		a->entry_eof = 1;
 	}
+	t->current_sparse->offset += bytes;
+	t->current_sparse->length -= bytes;
+	if (t->current_sparse->length == 0 && !a->entry_eof)
+		t->current_sparse++;
 	return (ARCHIVE_OK);
 
 abort_read_data:
@@ -626,6 +676,8 @@ _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 		a->entry_fd = -1;
 	}
 	t = a->tree;
+	/* Restore working directory. */
+	tree_enter_working_dir(t);
 	st = NULL;
 	lst = NULL;
 	do {
@@ -635,13 +687,16 @@ _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 			    "%s: Unable to continue traversing directory tree",
 			    tree_current_path(t));
 			a->archive.state = ARCHIVE_STATE_FATAL;
+			tree_enter_initial_dir(t);
 			return (ARCHIVE_FATAL);
 		case TREE_ERROR_DIR:
 			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
 			    "%s: Couldn't visit directory",
 			    tree_current_path(t));
+			tree_enter_initial_dir(t);
 			return (ARCHIVE_FAILED);
 		case 0:
+			tree_enter_initial_dir(t);
 			return (ARCHIVE_EOF);
 		case TREE_POSTDESCENT:
 		case TREE_POSTASCENT:
@@ -652,6 +707,7 @@ _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 				archive_set_error(&a->archive, errno,
 				    "%s: Cannot stat",
 				    tree_current_path(t));
+				tree_enter_initial_dir(t);
 				return (ARCHIVE_FAILED);
 			}
 			break;
@@ -675,7 +731,7 @@ _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 		a->follow_symlinks = 1;
 		/* 'L': Archive symlinks as targets, if we can. */
 		st = tree_current_stat(t);
-		if (st != NULL)
+		if (st != NULL && !tree_target_is_same_as_parent(t, st))
 			break;
 		/* If stat fails, we have a broken symlink;
 		 * in that case, don't follow the link. */
@@ -693,6 +749,7 @@ _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 
 	if (update_filesystem(a, lst->st_dev) != ARCHIVE_OK) {
 		a->archive.state = ARCHIVE_STATE_FATAL;
+		tree_enter_initial_dir(t);
 		return (ARCHIVE_FATAL);
 	}
 	t->descend = descend;
@@ -702,6 +759,10 @@ _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 	archive_entry_copy_stat(entry, st);
 	/* Populate the archive_entry with metadata from the disk. */
 	r = archive_read_disk_entry_from_file(&(a->archive), entry, -1, st);
+
+	/* Return to the initial directory. */
+	tree_enter_initial_dir(t);
+	archive_entry_copy_sourcepath(entry, tree_current_path(t));
 
 	/*
 	 * EOF and FATAL are persistent at this layer.  By
@@ -718,6 +779,9 @@ _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 		if (archive_entry_filetype(entry) == AE_IFREG) {
 			a->entry_remaining_bytes = archive_entry_size(entry);
 			a->entry_eof = (a->entry_remaining_bytes == 0)? 1: 0;
+			if (!a->entry_eof &&
+			    setup_sparse(a, entry) != ARCHIVE_OK)
+				return (ARCHIVE_FATAL);
 		} else {
 			a->entry_remaining_bytes = 0;
 			a->entry_eof = 1;
@@ -732,6 +796,44 @@ _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 	}
 
 	return (r);
+}
+
+static int
+setup_sparse(struct archive_read_disk *a, struct archive_entry *entry)
+{
+	struct tree *t = a->tree;
+	int64_t length, offset;
+	int i;
+
+	t->sparse_count = archive_entry_sparse_reset(entry);
+	if (t->sparse_count+1 > t->sparse_list_size) {
+		free(t->sparse_list);
+		t->sparse_list_size = t->sparse_count + 1;
+		t->sparse_list = malloc(sizeof(t->sparse_list[0]) *
+		    t->sparse_list_size);
+		if (t->sparse_list == NULL) {
+			t->sparse_list_size = 0;
+			archive_set_error(&a->archive, ENOMEM,
+			    "Can't allocate data");
+			a->archive.state = ARCHIVE_STATE_FATAL;
+			return (ARCHIVE_FATAL);
+		}
+	}
+	for (i = 0; i < t->sparse_count; i++) {
+		archive_entry_sparse_next(entry, &offset, &length);
+		t->sparse_list[i].offset = offset;
+		t->sparse_list[i].length = length;
+	}
+	if (i == 0) {
+		t->sparse_list[i].offset = 0;
+		t->sparse_list[i].length = archive_entry_size(entry);
+	} else {
+		t->sparse_list[i].offset = archive_entry_size(entry);
+		t->sparse_list[i].length = 0;
+	}
+	t->current_sparse = t->sparse_list;
+
+	return (ARCHIVE_OK);
 }
 
 /*
@@ -754,10 +856,12 @@ archive_read_disk_descend(struct archive *_a)
 	}
 
 	if (tree_current_is_physical_dir(t)) {
-		tree_push(t, t->basename, t->current_filesystem_id);
+		tree_push(t, t->basename, t->current_filesystem_id,
+		    t->lst.st_dev, t->lst.st_ino);
 		t->stack->flags |= isDir;
 	} else if (tree_current_is_dir(t)) {
-		tree_push(t, t->basename, t->current_filesystem_id);
+		tree_push(t, t->basename, t->current_filesystem_id,
+		    t->st.st_dev, t->st.st_ino);
 		t->stack->flags |= isDirLink;
 	}
 	t->descend = 0;
@@ -768,25 +872,26 @@ int
 archive_read_disk_open(struct archive *_a, const char *pathname)
 {
 	struct archive_read_disk *a = (struct archive_read_disk *)_a;
-	struct tree *tree;
 
-	archive_check_magic(_a, ARCHIVE_READ_DISK_MAGIC, ARCHIVE_STATE_NEW,
+	archive_check_magic(_a, ARCHIVE_READ_DISK_MAGIC,
+	    ARCHIVE_STATE_NEW | ARCHIVE_STATE_CLOSED,
 	    "archive_read_disk_open");
 	archive_clear_error(&a->archive);
 
-	tree = tree_open(pathname);
-	if (tree == NULL) {
+	if (a->tree != NULL)
+		a->tree = tree_reopen(a->tree, pathname);
+	else
+		a->tree = tree_open(pathname, a->symlink_mode);
+	if (a->tree == NULL) {
 		archive_set_error(&a->archive, ENOMEM,
 		    "Can't allocate tar data");
 		a->archive.state = ARCHIVE_STATE_FATAL;
 		return (ARCHIVE_FATAL);
 	}
-	tree->symlink_mode = a->symlink_mode;
-	tree->current_filesystem_id = -1;
-	a->tree = tree;
 	a->archive.state = ARCHIVE_STATE_HEADER;
 	a->entry_eof = 0;
 	a->entry_fd = -1;
+	a->entry_remaining_bytes = 0;
 
 	return (ARCHIVE_OK);
 }
@@ -898,7 +1003,8 @@ archive_read_disk_current_filesystem_is_remote(struct archive *_a)
 
 #if defined(__FreeBSD__) || \
    (defined(HAVE_STATVFS) && defined(ST_LOCAL)) || \
-   (defined(HAVE_SYS_VFS_H) && defined(HAVE_LINUX_MAGIC_H))
+   (defined(HAVE_SYS_VFS_H) && defined(HAVE_LINUX_MAGIC_H) && \
+	 defined(HAVE_STATFS))
 
 /*
  * If symlink is broken, statfs or statvfs will fail.
@@ -999,7 +1105,12 @@ setup_current_filesystem(struct archive_read_disk *a)
 	return (ARCHIVE_OK);
 }
 
-#elif defined(HAVE_SYS_VFS_H) && defined(HAVE_LINUX_MAGIC_H)
+#elif defined(HAVE_SYS_VFS_H) && defined(HAVE_LINUX_MAGIC_H) &&\
+	defined(HAVE_STATFS)
+/*
+ * Note: statfs is deprecated since LSB 3.2
+ */
+
 #ifndef CIFS_SUPER_MAGIC
 #define CIFS_SUPER_MAGIC 0xFF534D42
 #endif
@@ -1072,7 +1183,8 @@ setup_current_filesystem(struct archive_read_disk *a)
  * Add a directory path to the current stack.
  */
 static void
-tree_push(struct tree *t, const char *path, int filesystem_id)
+tree_push(struct tree *t, const char *path, int filesystem_id,
+    int64_t dev, int64_t ino)
 {
 	struct tree_entry *te;
 
@@ -1084,12 +1196,12 @@ tree_push(struct tree *t, const char *path, int filesystem_id)
 		te->depth = te->parent->depth + 1;
 	t->stack = te;
 	archive_string_init(&te->name);
-#ifdef HAVE_FCHDIR
 	te->symlink_parent_fd = -1;
-#endif
 	archive_strcpy(&te->name, path);
 	te->flags = needsDescent | needsOpen | needsAscent;
 	te->filesystem_id = filesystem_id;
+	te->dev = dev;
+	te->ino = ino;
 	te->dirname_length = t->dirname_length;
 }
 
@@ -1121,23 +1233,69 @@ tree_append(struct tree *t, const char *name, size_t name_length)
  * Open a directory tree for traversal.
  */
 static struct tree *
-tree_open(const char *path)
+tree_open(const char *path, int symlink_mode)
 {
-#ifdef HAVE_FCHDIR
 	struct tree *t;
 
-	t = malloc(sizeof(*t));
+	if ((t = malloc(sizeof(*t))) == NULL)
+		return (NULL);
 	memset(t, 0, sizeof(*t));
 	archive_string_init(&t->path);
 	archive_string_ensure(&t->path, 31);
-	/* First item is set up a lot like a symlink traversal. */
-	tree_push(t, path, 0);
-	t->stack->flags = needsFirstVisit | isDirLink | needsAscent;
-	t->stack->symlink_parent_fd = open(".", O_RDONLY);
-	t->openCount++;
+	t->initial_symlink_mode = symlink_mode;
+	return (tree_reopen(t, path));
+}
+
+static struct tree *
+tree_reopen(struct tree *t, const char *path)
+{
+	t->flags = 0;
+	t->visit_type = 0;
+	t->tree_errno = 0;
+	t->dirname_length = 0;
+	t->depth = 0;
+	t->descend = 0;
+	t->current = NULL;
 	t->d = INVALID_DIR_HANDLE;
+	t->current_filesystem_id = -1;
+	t->symlink_mode = t->initial_symlink_mode;
+	archive_string_empty(&t->path);
+
+	/* First item is set up a lot like a symlink traversal. */
+	tree_push(t, path, 0, 0, 0);
+	t->stack->flags = needsFirstVisit;
+	t->maxOpenCount = t->openCount = 1;
+	t->initial_dir_fd = open(".", O_RDONLY);
+	t->working_dir_fd = dup(t->initial_dir_fd);
 	return (t);
-#endif
+}
+
+static int
+tree_descent(struct tree *t)
+{
+	int r = 0;
+
+	/* If it is a link, set up fd for the ascent. */
+	if (t->stack->flags & isDirLink)
+		t->stack->symlink_parent_fd = t->working_dir_fd;
+	else {
+		close(t->working_dir_fd);
+		t->openCount--;
+	}
+	t->working_dir_fd = -1;
+	t->dirname_length = archive_strlen(&t->path);
+	if (chdir(t->stack->name.s) != 0)
+	{
+		t->tree_errno = errno;
+		r = TREE_ERROR_DIR;
+	} else {
+		t->depth++;
+		t->working_dir_fd = open(".", O_RDONLY);
+		t->openCount++;
+		if (t->openCount > t->maxOpenCount)
+			t->maxOpenCount = t->openCount;
+	}
+	return (r);
 }
 
 /*
@@ -1151,22 +1309,49 @@ tree_ascend(struct tree *t)
 
 	te = t->stack;
 	t->depth--;
+	close(t->working_dir_fd);
+	t->working_dir_fd = -1;
+	t->openCount--;
 	if (te->flags & isDirLink) {
-#ifdef HAVE_FCHDIR
 		if (fchdir(te->symlink_parent_fd) != 0) {
 			t->tree_errno = errno;
 			r = TREE_ERROR_FATAL;
 		}
-		close(te->symlink_parent_fd);
-#endif
-		t->openCount--;
+		t->working_dir_fd = te->symlink_parent_fd;
+		te->symlink_parent_fd = -1;
 	} else {
 		if (chdir("..") != 0) {
 			t->tree_errno = errno;
 			r = TREE_ERROR_FATAL;
 		}
+		t->working_dir_fd = open(".", O_RDONLY);
+		t->openCount++;
+		if (t->openCount > t->maxOpenCount)
+			t->maxOpenCount = t->openCount;
 	}
 	return (r);
+}
+
+/*
+ * Return to the initial directory where tree_open() was performed.
+ */
+static int
+tree_enter_initial_dir(struct tree *t)
+{
+	if (t->initial_dir_fd >= 0)
+		return (fchdir(t->initial_dir_fd));
+	return (0);
+}
+
+/*
+ * Restore working directory of directory traversals.
+ */
+static int
+tree_enter_working_dir(struct tree *t)
+{
+	if (t->working_dir_fd >= 0)
+		return (fchdir(t->working_dir_fd));
+	return (0);
 }
 
 /*
@@ -1211,7 +1396,8 @@ tree_next(struct tree *t)
 		if (t->stack->flags & needsFirstVisit) {
 			/* Top stack item needs a regular visit. */
 			t->current = t->stack;
-			tree_append(t, t->stack->name.s, archive_strlen(&(t->stack->name)));
+			tree_append(t, t->stack->name.s,
+			    archive_strlen(&(t->stack->name)));
 			//t->dirname_length = t->path_length;
 			//tree_pop(t);
 			t->stack->flags &= ~needsFirstVisit;
@@ -1219,27 +1405,16 @@ tree_next(struct tree *t)
 		} else if (t->stack->flags & needsDescent) {
 			/* Top stack item is dir to descend into. */
 			t->current = t->stack;
-			tree_append(t, t->stack->name.s, archive_strlen(&(t->stack->name)));
+			tree_append(t, t->stack->name.s,
+			    archive_strlen(&(t->stack->name)));
 			t->stack->flags &= ~needsDescent;
-#ifdef HAVE_FCHDIR
-			/* If it is a link, set up fd for the ascent. */
-			if (t->stack->flags & isDirLink) {
-				t->stack->symlink_parent_fd = open(".", O_RDONLY);
-				t->openCount++;
-				if (t->openCount > t->maxOpenCount)
-					t->maxOpenCount = t->openCount;
-			}
-#endif
-			t->dirname_length = archive_strlen(&t->path);
-			if (chdir(t->stack->name.s) != 0)
-			{
-				/* chdir() failed; return error */
+			r = tree_descent(t);
+			if (r != 0) {
 				tree_pop(t);
-				t->tree_errno = errno;
-				return (t->visit_type = TREE_ERROR_DIR);
-			}
-			t->depth++;
-			return (t->visit_type = TREE_POSTDESCENT);
+				t->visit_type = r;
+			} else
+				t->visit_type = TREE_POSTDESCENT;
+			return (t->visit_type);
 		} else if (t->stack->flags & needsOpen) {
 			t->stack->flags &= ~needsOpen;
 			r = tree_dir_next_posix(t);
@@ -1274,7 +1449,11 @@ tree_dir_next_posix(struct tree *t)
 		size_t dirent_size;
 #endif
 
+#if defined(HAVE_FDOPENDIR)
+		if ((t->d = fdopendir(dup(t->working_dir_fd))) == NULL) {
+#else
 		if ((t->d = opendir(".")) == NULL) {
+#endif
 			r = tree_ascend(t); /* Undo "chdir" */
 			tree_pop(t);
 			t->tree_errno = errno;
@@ -1421,6 +1600,21 @@ tree_current_is_physical_dir(struct tree *t)
 }
 
 /*
+ * Test whether the same file has been in the tree as its parent.
+ */
+static int
+tree_target_is_same_as_parent(struct tree *t, const struct stat *st)
+{
+	struct tree_entry *te;
+
+	for (te = t->current->parent; te != NULL; te = te->parent) {
+		if (te->dev == st->st_dev && te->ino == st->st_ino)
+			return (1);
+	}
+	return (0);
+}
+
+/*
  * Return the access path for the entry just returned from tree_next().
  */
 static const char *
@@ -1439,7 +1633,7 @@ tree_current_path(struct tree *t)
 }
 
 /*
- * Terminate the traversal and release any resources.
+ * Terminate the traversal.
  */
 static void
 tree_close(struct tree *t)
@@ -1451,26 +1645,33 @@ tree_close(struct tree *t)
 	}
 	/* Release anything remaining in the stack. */
 	while (t->stack != NULL) {
-#ifdef HAVE_FCHDIR
-		/*
-		 * If the current working directory have not returned to
-		 * the initial directory where tree_open() was performed,
-		 * we should return.
-		 */
-		if (t->stack->next == NULL) {
-			/* The last stack has the initial directory fd. */
-			int s = fchdir(t->stack->symlink_parent_fd);
-			(void)s; /* UNUSED */
+		if (t->stack->flags & isDirLink)
 			close(t->stack->symlink_parent_fd);
-		} else if (t->stack->flags & isDirLink)
-			close(t->stack->symlink_parent_fd);
-#endif
 		tree_pop(t);
 	}
+	if (t->working_dir_fd >= 0) {
+		close(t->working_dir_fd);
+		t->working_dir_fd = -1;
+	}
+	if (t->initial_dir_fd >= 0) {
+		close(t->initial_dir_fd);
+		t->initial_dir_fd = -1;
+	}
+}
+
+/*
+ * Release any resources.
+ */
+static void
+tree_free(struct tree *t)
+{
+	if (t == NULL)
+		return;
 	archive_string_free(&t->path);
 #if defined(HAVE_READDIR_R)
 	free(t->dirent);
 #endif
+	free(t->sparse_list);
 	free(t->filesystem_table);
 	free(t);
 }
