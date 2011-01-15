@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2003-2007 Tim Kientzle
+ * Copyright (c) 2003-2010 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -117,6 +117,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_disk.c 201159 2009-12-29 0
  * should investigate ways to support this generically. */
 
 #include "archive.h"
+#include "archive_acl_private.h"
 #include "archive_string.h"
 #include "archive_entry.h"
 #include "archive_private.h"
@@ -127,6 +128,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_disk.c 201159 2009-12-29 0
 
 struct fixup_entry {
 	struct fixup_entry	*next;
+	struct archive_acl	 acl;
 	mode_t			 mode;
 	int64_t			 atime;
 	int64_t                  birthtime;
@@ -263,10 +265,10 @@ static int	create_parent_dir(struct archive_write_disk *, char *);
 static int	older(struct stat *, struct archive_entry *);
 static int	restore_entry(struct archive_write_disk *);
 #ifdef HAVE_POSIX_ACL
-static int	set_acl(struct archive_write_disk *, int fd, struct archive_entry *,
+static int	set_acl(struct archive_write_disk *, int fd, const char *, struct archive_acl *,
 		    acl_type_t, int archive_entry_acl_type, const char *tn);
 #endif
-static int	set_acls(struct archive_write_disk *);
+static int	set_acls(struct archive_write_disk *, int fd, const char *, struct archive_acl *);
 static int	set_mac_metadata(struct archive_write_disk *, const char *,
 				 const void *, size_t);
 static int	set_xattrs(struct archive_write_disk *);
@@ -426,15 +428,12 @@ _archive_write_disk_header(struct archive *_a, struct archive_entry *entry)
 		return (ret);
 
 	/*
-	 * Set the umask to zero so we get predictable mode settings.
+	 * Query the umask so we get predictable mode settings.
 	 * This gets done on every call to _write_header in case the
 	 * user edits their umask during the extraction for some
-	 * reason. This will be reset before we return.  Note that we
-	 * don't need to do this in _finish_entry, as the chmod(), etc,
-	 * system calls don't obey umask.
+	 * reason.
 	 */
-	a->user_umask = umask(0);
-	/* From here on, early exit requires "goto done" to clean up. */
+	umask(a->user_umask = umask(0));
 
 	/* Figure out what we need to do for this entry. */
 	a->todo = TODO_MODE_BASE;
@@ -478,8 +477,12 @@ _archive_write_disk_header(struct archive *_a, struct archive_entry *entry)
 #endif
 	if (a->flags & ARCHIVE_EXTRACT_TIME)
 		a->todo |= TODO_TIMES;
-	if (a->flags & ARCHIVE_EXTRACT_ACL)
-		a->todo |= TODO_ACLS;
+	if (a->flags & ARCHIVE_EXTRACT_ACL) {
+		if (archive_entry_filetype(a->entry) == AE_IFDIR)
+			a->deferred |= TODO_ACLS;
+		else
+			a->todo |= TODO_ACLS;
+	}
 	if (a->flags & ARCHIVE_EXTRACT_MAC_METADATA) {
 		if (archive_entry_filetype(a->entry) == AE_IFDIR)
 			a->deferred |= TODO_MAC_METADATA;
@@ -493,7 +496,7 @@ _archive_write_disk_header(struct archive *_a, struct archive_entry *entry)
 	if (a->flags & ARCHIVE_EXTRACT_SECURE_SYMLINKS) {
 		ret = check_symlinks(a);
 		if (ret != ARCHIVE_OK)
-			goto done;
+			return (ret);
 	}
 #if defined(HAVE_FCHDIR) && defined(PATH_MAX)
 	/* If path exceeds PATH_MAX, shorten the path. */
@@ -569,6 +572,11 @@ _archive_write_disk_header(struct archive *_a, struct archive_entry *entry)
 		}
 	}
 
+	if (a->deferred & TODO_ACLS) {
+		fe = current_fixup(a, archive_entry_pathname(entry));
+		archive_acl_copy(&fe->acl, archive_entry_acl(entry));
+	}
+
 	if (a->deferred & TODO_MAC_METADATA) {
 		const void *metadata;
 		size_t metadata_size;
@@ -628,9 +636,6 @@ _archive_write_disk_header(struct archive *_a, struct archive_entry *entry)
 		archive_entry_set_size(entry, 0);
 		a->filesize = 0;
 	}
-done:
-	/* Restore the user's umask before returning. */
-	umask(a->user_umask);
 
 	return (ret);
 }
@@ -844,13 +849,19 @@ _archive_write_disk_finish_entry(struct archive *_a)
 		    archive_entry_gname(a->entry),
 		    archive_entry_gid(a->entry));
 	 }
+
 	/*
-	 * If restoring ownership, do it before trying to restore suid/sgid
+	 * Restore ownership before set_mode tries to restore suid/sgid
 	 * bits.  If we set the owner, we know what it is and can skip
 	 * a stat() call to examine the ownership of the file on disk.
 	 */
 	if (a->todo & TODO_OWNER)
 		ret = set_ownership(a);
+
+	/*
+	 * set_mode must precede ACLs on systems such as Solaris and
+	 * FreeBSD where setting the mode implicitly clears extended ACLs
+	 */
 	if (a->todo & TODO_MODE) {
 		int r2 = set_mode(a, a->mode);
 		if (r2 < ret) ret = r2;
@@ -876,7 +887,7 @@ _archive_write_disk_finish_entry(struct archive *_a)
 	}
 
 	/*
-	 * Time has to be restored after all other metadata;
+	 * Time must follow most other metadata;
 	 * otherwise atime will get changed.
 	 */
 	if (a->todo & TODO_TIMES) {
@@ -902,7 +913,9 @@ _archive_write_disk_finish_entry(struct archive *_a)
 	 * ACLs that prevent attribute changes (including time).
 	 */
 	if (a->todo & TODO_ACLS) {
-		int r2 = set_acls(a);
+		int r2 = set_acls(a, a->fd,
+				  archive_entry_pathname(a->entry),
+				  archive_entry_acl(a->entry));
 		if (r2 < ret) ret = r2;
 	}
 
@@ -988,6 +1001,8 @@ archive_write_disk_new(void)
 	a->lookup_uid = trivial_lookup_uid;
 	a->lookup_gid = trivial_lookup_gid;
 	a->start_time = time(NULL);
+	/* Query and restore the umask. */
+	umask(a->user_umask = umask(0));
 #ifdef HAVE_GETEUID
 	a->user_uid = geteuid();
 #endif /* HAVE_GETEUID */
@@ -1275,7 +1290,7 @@ create_filesystem_object(struct archive_write_disk *a)
 	 * that SUID, SGID, etc, require additional work to ensure
 	 * security, so we never restore them at this point.
 	 */
-	mode = final_mode & 0777;
+	mode = final_mode & 0777 & a->user_umask;
 
 	switch (a->mode & AE_IFMT) {
 	default:
@@ -1392,7 +1407,8 @@ _archive_write_disk_close(struct archive *_a)
 		}
 		if (p->fixup & TODO_MODE_BASE)
 			chmod(p->name, p->mode);
-
+		if (p->fixup & TODO_ACLS)
+			set_acls(a, -1, p->name, &p->acl);
 		if (p->fixup & TODO_FFLAGS)
 			set_fflags_platform(a, -1, p->name,
 			    p->mode, p->fflags_set, 0);
@@ -1400,6 +1416,7 @@ _archive_write_disk_close(struct archive *_a)
 			set_mac_metadata(a, p->name, p->mac_metadata,
 					 p->mac_metadata_size);
 		next = p->next;
+		archive_acl_clear(&p->acl);
 		free(p->mac_metadata);
 		free(p->name);
 		free(p);
@@ -2494,9 +2511,13 @@ set_mac_metadata(struct archive_write_disk *a, const char *pathname,
 #ifndef HAVE_POSIX_ACL
 /* Default empty function body to satisfy mainline code. */
 static int
-set_acls(struct archive_write_disk *a)
+set_acls(struct archive_write_disk *a, int fd, const char *name,
+	 struct archive_acl *acl)
 {
 	(void)a; /* UNUSED */
+	(void)fd; /* UNUSED */
+	(void)name; /* UNUSED */
+	(void)acl; /* UNUSED */
 	return (ARCHIVE_OK);
 }
 
@@ -2506,22 +2527,24 @@ set_acls(struct archive_write_disk *a)
  * XXX TODO: What about ACL types other than ACCESS and DEFAULT?
  */
 static int
-set_acls(struct archive_write_disk *a)
+set_acls(struct archive_write_disk *a, int fd, const char *name,
+	 struct archive_acl *abstract_acl)
 {
 	int		 ret;
 
-	ret = set_acl(a, a->fd, a->entry, ACL_TYPE_ACCESS,
+	ret = set_acl(a, fd, name, abstract_acl, ACL_TYPE_ACCESS,
 	    ARCHIVE_ENTRY_ACL_TYPE_ACCESS, "access");
 	if (ret != ARCHIVE_OK)
 		return (ret);
-	ret = set_acl(a, a->fd, a->entry, ACL_TYPE_DEFAULT,
+	ret = set_acl(a, fd, name, abstract_acl, ACL_TYPE_DEFAULT,
 	    ARCHIVE_ENTRY_ACL_TYPE_DEFAULT, "default");
 	return (ret);
 }
 
 
 static int
-set_acl(struct archive_write_disk *a, int fd, struct archive_entry *entry,
+set_acl(struct archive_write_disk *a, int fd, const char *name,
+    struct archive_acl *abstract_acl,
     acl_type_t acl_type, int ae_requested_type, const char *tname)
 {
 	acl_t		 acl;
@@ -2533,14 +2556,13 @@ set_acl(struct archive_write_disk *a, int fd, struct archive_entry *entry,
 	gid_t		 ae_gid;
 	const char	*ae_name;
 	int		 entries;
-	const char	*name;
 
 	ret = ARCHIVE_OK;
-	entries = archive_entry_acl_reset(entry, ae_requested_type);
+	entries = archive_acl_reset(abstract_acl, ae_requested_type);
 	if (entries == 0)
 		return (ARCHIVE_OK);
 	acl = acl_init(entries);
-	while (archive_entry_acl_next(entry, ae_requested_type, &ae_type,
+	while (archive_acl_next(abstract_acl, ae_requested_type, &ae_type,
 		   &ae_permset, &ae_tag, &ae_id, &ae_name) == ARCHIVE_OK) {
 		acl_create_entry(&acl, &acl_entry);
 
@@ -2583,8 +2605,6 @@ set_acl(struct archive_write_disk *a, int fd, struct archive_entry *entry,
 		if (ae_permset & ARCHIVE_ENTRY_ACL_READ)
 			acl_add_perm(acl_permset, ACL_READ);
 	}
-
-	name = archive_entry_pathname(entry);
 
 	/* Try restoring the ACL through 'fd' if we can. */
 #if HAVE_ACL_SET_FD

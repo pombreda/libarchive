@@ -1292,7 +1292,7 @@ iso9660_options(struct archive_write *a, const char *key, const char *value)
 			if (p[0] == '0' && (p[1] == 'x' || p[1] == 'X'))
 				p += 2;
 			while (*p) {
-				if (*p >= 'A' && *p <= 'f')
+				if (*p >= 'A' && *p <= 'F')
 					seg = (seg << 4) + *p - 'A' + 0x0a;
 				else if (*p >= 'a' && *p <= 'f')
 					seg = (seg << 4) + *p - 'a' + 0x0a;
@@ -4679,7 +4679,6 @@ isofile_register_hardlink(struct archive_write *a, struct isofile *file)
 	pathname = archive_entry_hardlink(file->entry);
 	if (pathname == NULL) {
 		/* This `file` is a hardlink target. */
-		pathname = archive_entry_pathname(file->entry);
 		hl = malloc(sizeof(*hl));
 		if (hl == NULL) {
 			archive_set_error(&a->archive, ENOMEM,
@@ -5316,7 +5315,7 @@ isoent_tree(struct archive_write *a, struct isoent **isoentpp)
 			struct archive_string as;
 
 			archive_string_init(&as);
-			__archive_string_append(&as, p, fn - p + l);
+			archive_strncat(&as, p, fn - p + l);
 			if (as.s[as.length-1] == '/') {
 				as.s[as.length-1] = '\0';
 				as.length--;

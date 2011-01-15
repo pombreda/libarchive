@@ -336,6 +336,7 @@ struct iso9660 {
 	struct {
 		struct file_info	*first;
 		struct file_info	**last;
+		int			 count;
 	}	cache_files;
 
 	uint64_t current_position;
@@ -378,9 +379,10 @@ static int	isJolietSVD(struct iso9660 *, const unsigned char *);
 static int	isSVD(struct iso9660 *, const unsigned char *);
 static int	isEVD(struct iso9660 *, const unsigned char *);
 static int	isPVD(struct iso9660 *, const unsigned char *);
-static struct file_info *next_cache_entry(struct iso9660 *iso9660);
-static int	next_entry_seek(struct archive_read *a, struct iso9660 *iso9660,
-		    struct file_info **pfile);
+static int	next_cache_entry(struct archive_read *, struct iso9660 *,
+		    struct file_info **);
+static int	next_entry_seek(struct archive_read *, struct iso9660 *,
+		    struct file_info **);
 static struct file_info *
 		parse_file_info(struct archive_read *a,
 		    struct file_info *parent, const unsigned char *isodirrec);
@@ -434,6 +436,7 @@ archive_read_support_format_iso9660(struct archive *_a)
 	iso9660->magic = ISO9660_MAGIC;
 	iso9660->cache_files.first = NULL;
 	iso9660->cache_files.last = &(iso9660->cache_files.first);
+	iso9660->cache_files.count = 0;
 	/* Enable to support Joliet extensions by default.	*/
 	iso9660->opt_support_joliet = 1;
 	/* Enable to support Rock Ridge extensions by default.	*/
@@ -1199,7 +1202,6 @@ archive_read_format_iso9660_read_header(struct archive_read *a,
 				    "ISO9660 directory list");
 				return (ARCHIVE_FATAL);
 			}
-			seenJoliet = iso9660->seenJoliet;/* Save flag. */
 			iso9660->seenJoliet = 0;
 			file = parse_file_info(a, NULL, block);
 			if (file == NULL)
@@ -1220,6 +1222,7 @@ archive_read_format_iso9660_read_header(struct archive_read *a,
 	} else
 		rd_r = ARCHIVE_OK;
 
+	file = NULL;/* Eliminate a warning. */
 	/* Get the next entry that appears after the current offset. */
 	r = next_entry_seek(a, iso9660, &file);
 	if (r != ARCHIVE_OK)
@@ -1699,6 +1702,7 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 	const unsigned char *rr_start, *rr_end;
 	const unsigned char *p;
 	size_t dr_len;
+	uint64_t fsize;
 	int32_t location;
 	int flags;
 
@@ -1707,6 +1711,7 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 	dr_len = (size_t)isodirrec[DR_length_offset];
 	name_len = (size_t)isodirrec[DR_name_len_offset];
 	location = archive_le32dec(isodirrec + DR_extent_offset);
+	fsize = toi(isodirrec + DR_size_offset, DR_size_size);
 	/* Sanity check that dr_len needs at least 34. */
 	if (dr_len < 34) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
@@ -1725,7 +1730,9 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 	 * link or file size is zero. As far as I know latest mkisofs
 	 * do that.
 	 */
-	if (location >= iso9660->volume_block) {
+	if (location > 0 &&
+	    (location + ((fsize + iso9660->logical_block_size -1)
+	       / iso9660->logical_block_size)) > iso9660->volume_block) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
 		    "Invalid location of extent of file");
 		return (NULL);
@@ -1741,7 +1748,7 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 	memset(file, 0, sizeof(*file));
 	file->parent = parent;
 	file->offset = iso9660->logical_block_size * (uint64_t)location;
-	file->size = toi(isodirrec + DR_size_offset, DR_size_size);
+	file->size = fsize;
 	file->mtime = isodate7(isodirrec + DR_date_offset);
 	file->ctime = file->atime = file->mtime;
 
@@ -1782,7 +1789,7 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 		 *       *, /, :, ;, ? and \.
 		 */
 		/* Chop off trailing ';1' from files. */
-		if (*(wp-2) == L';' && *(wp-1) == L'1') {
+		if (wp > (wbuff + 2) && *(wp-2) == L';' && *(wp-1) == L'1') {
 			wp-=2;
 			*wp = L'\0';
 		}
@@ -2109,9 +2116,13 @@ register_CE(struct archive_read *a, int32_t location,
 	offset = ((uint64_t)location) * (uint64_t)iso9660->logical_block_size;
 	if (((file->mode & AE_IFMT) == AE_IFREG &&
 	    offset >= file->offset) ||
-	    offset < iso9660->current_position) {
+	    offset < iso9660->current_position ||
+	    (((uint64_t)file->ce_offset) + file->ce_size)
+	      > iso9660->logical_block_size ||
+	    offset + file->ce_offset + file->ce_size
+		  > iso9660->volume_size) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-		    "Invalid location in SUSP \"CE\" extension");
+		    "Invalid parameter in SUSP \"CE\" extension");
 		return (ARCHIVE_FATAL);
 	}
 
@@ -2498,10 +2509,12 @@ next_entry_seek(struct archive_read *a, struct iso9660 *iso9660,
     struct file_info **pfile)
 {
 	struct file_info *file;
+	int r;
 
-	*pfile = file = next_cache_entry(iso9660);
-	if (file == NULL)
-		return (ARCHIVE_EOF);
+	r = next_cache_entry(a, iso9660, pfile);
+	if (r != ARCHIVE_OK)
+		return (r);
+	file = *pfile;
 
 	/* Don't waste time seeking for zero-length bodies. */
 	if (file->size == 0)
@@ -2528,8 +2541,9 @@ next_entry_seek(struct archive_read *a, struct iso9660 *iso9660,
 	return (ARCHIVE_OK);
 }
 
-static struct file_info *
-next_cache_entry(struct iso9660 *iso9660)
+static int
+next_cache_entry(struct archive_read *a, struct iso9660 *iso9660,
+    struct file_info **pfile)
 {
 	struct file_info *file;
 	struct {
@@ -2541,26 +2555,43 @@ next_cache_entry(struct iso9660 *iso9660)
 
 	file = cache_get_entry(iso9660);
 	if (file != NULL) {
+		int cnt = 0;
 		while (file->parent != NULL && !file->parent->exposed) {
 			/* If file's parent is not exposed, it's moved
 			 * to next entry of its parent. */
 			cache_add_to_next_of_parent(iso9660, file);
 			file = cache_get_entry(iso9660);
+			
+			/*
+			 * Sanity check for fear we should come across the
+			 * infnity loop or the segmentaion falt, both which
+			 * are caused by a broken ISO image.
+			 */
+			if (file == NULL ||
+			    ++cnt > iso9660->cache_files.count) {
+				archive_set_error(&a->archive,
+				    ARCHIVE_ERRNO_MISC,
+				    "Failed to read full block when scanning "
+				    "ISO9660 file list");
+				return (ARCHIVE_FATAL);
+			}
 		}
-		return (file);
+		*pfile = file;
+		return (ARCHIVE_OK);
 	}
 
-	file = next_entry(iso9660);
+	*pfile = file = next_entry(iso9660);
 	if (file == NULL)
-		return (NULL);
+		return (ARCHIVE_EOF);
 
 	if ((file->mode & AE_IFMT) != AE_IFREG || file->number == -1)
-		return (file);
+		return (ARCHIVE_OK);
 
 	count = 0;
 	number = file->number;
 	iso9660->cache_files.first = NULL;
 	iso9660->cache_files.last = &(iso9660->cache_files.first);
+	iso9660->cache_files.count = 0;
 	empty_files.first = NULL;
 	empty_files.last = &empty_files.first;
 	/* Collect files which has the same file serial number.
@@ -2588,8 +2619,10 @@ next_cache_entry(struct iso9660 *iso9660)
 		file = next_entry(iso9660);
 	}
 
-	if (count == 0)
-		return (file);
+	if (count == 0) {
+		*pfile = file;
+		return ((file == NULL)?ARCHIVE_EOF:ARCHIVE_OK);
+	}
 	if (file->number == -1) {
 		file->next = NULL;
 		*empty_files.last = file;
@@ -2614,7 +2647,8 @@ next_cache_entry(struct iso9660 *iso9660)
 		*iso9660->cache_files.last = empty_files.first;
 		iso9660->cache_files.last = empty_files.last;
 	}
-	return (cache_get_entry(iso9660));
+	*pfile = cache_get_entry(iso9660);
+	return ((*pfile == NULL)?ARCHIVE_EOF:ARCHIVE_OK);
 }
 
 static inline void
@@ -2623,6 +2657,7 @@ cache_add_entry(struct iso9660 *iso9660, struct file_info *file)
 	file->next = NULL;
 	*iso9660->cache_files.last = file;
 	iso9660->cache_files.last = &(file->next);
+	iso9660->cache_files.count++;
 }
 
 static inline void
@@ -2632,6 +2667,7 @@ cache_add_to_next_of_parent(struct iso9660 *iso9660, struct file_info *file)
 	file->parent->next = file;
 	if (iso9660->cache_files.last == &(file->parent->next))
 		iso9660->cache_files.last = &(file->next);
+	iso9660->cache_files.count++;
 }
 
 static inline struct file_info *
@@ -2643,6 +2679,7 @@ cache_get_entry(struct iso9660 *iso9660)
 		iso9660->cache_files.first = file->next;
 		if (iso9660->cache_files.first == NULL)
 			iso9660->cache_files.last = &(iso9660->cache_files.first);
+		iso9660->cache_files.count--;
 	}
 	return (file);
 }

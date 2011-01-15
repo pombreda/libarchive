@@ -32,9 +32,11 @@ int
 archive_read_support_format_all(struct archive *a)
 {
 	archive_read_support_format_ar(a);
+	archive_read_support_format_cab(a);
 	archive_read_support_format_cpio(a);
 	archive_read_support_format_empty(a);
 	archive_read_support_format_iso9660(a);
+	archive_read_support_format_lha(a);
 	archive_read_support_format_mtree(a);
 	archive_read_support_format_tar(a);
 	archive_read_support_format_xar(a);

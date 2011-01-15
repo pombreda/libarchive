@@ -91,6 +91,8 @@ distclean-local:
 include_HEADERS= libarchive/archive.h libarchive/archive_entry.h
 
 libarchive_la_SOURCES=						\
+	libarchive/archive_acl.c				\
+	libarchive/archive_acl_private.h			\
 	libarchive/archive_check_magic.c			\
 	libarchive/archive_crc32.h				\
 	libarchive/archive_endian.h				\
@@ -111,10 +113,11 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_rb.h					\
 	libarchive/archive_read.c				\
 	libarchive/archive_read_data_into_fd.c			\
-	libarchive/archive_read_disk.c				\
 	libarchive/archive_read_disk_entry_from_file.c		\
+	libarchive/archive_read_disk_posix.c			\
 	libarchive/archive_read_disk_private.h			\
 	libarchive/archive_read_disk_set_standard_lookup.c	\
+	libarchive/archive_read_disk_windows.c			\
 	libarchive/archive_read_extract.c			\
 	libarchive/archive_read_open_fd.c			\
 	libarchive/archive_read_open_file.c			\
@@ -124,9 +127,11 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_read_support_transform.c	\
 	libarchive/archive_read_support_format_all.c		\
 	libarchive/archive_read_support_format_ar.c		\
+	libarchive/archive_read_support_format_cab.c		\
 	libarchive/archive_read_support_format_cpio.c		\
 	libarchive/archive_read_support_format_empty.c		\
 	libarchive/archive_read_support_format_iso9660.c	\
+	libarchive/archive_read_support_format_lha.c		\
 	libarchive/archive_read_support_format_mtree.c		\
 	libarchive/archive_read_support_format_raw.c		\
 	libarchive/archive_read_support_format_tar.c		\
@@ -222,9 +227,10 @@ libarchive_test_SOURCES=					\
 	libarchive/test/main.c					\
 	libarchive/test/read_open_memory.c			\
 	libarchive/test/test.h					\
-	libarchive/test/test_acl_basic.c			\
 	libarchive/test/test_acl_freebsd.c			\
+	libarchive/test/test_acl_nfs4.c				\
 	libarchive/test/test_acl_pax.c				\
+	libarchive/test/test_acl_posix1e.c			\
 	libarchive/test/test_archive_api_feature.c		\
 	libarchive/test/test_bad_fd.c				\
 	libarchive/test/test_compat_bzip2.c			\
@@ -258,6 +264,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_read_extract.c			\
 	libarchive/test/test_read_file_nonexistent.c		\
 	libarchive/test/test_read_format_ar.c			\
+	libarchive/test/test_read_format_cab.c			\
 	libarchive/test/test_read_format_cpio_afio.c		\
 	libarchive/test/test_read_format_cpio_bin.c		\
 	libarchive/test/test_read_format_cpio_bin_Z.c		\
@@ -287,6 +294,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_read_format_isorr_new_bz2.c	\
 	libarchive/test/test_read_format_isorr_rr_moved.c	\
 	libarchive/test/test_read_format_isozisofs_bz2.c	\
+	libarchive/test/test_read_format_lha.c			\
 	libarchive/test/test_read_format_mtree.c		\
 	libarchive/test/test_read_format_pax_bz2.c		\
 	libarchive/test/test_read_format_raw.c			\
@@ -303,6 +311,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_read_pax_truncated.c		\
 	libarchive/test/test_read_position.c			\
 	libarchive/test/test_read_truncated.c			\
+	libarchive/test/test_read_truncated_filter.c		\
 	libarchive/test/test_read_uu.c				\
 	libarchive/test/test_sparse_basic.c			\
 	libarchive/test/test_tar_filenames.c			\
@@ -373,9 +382,15 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_compat_tar_hardlink_1.tar.uu		\
 	libarchive/test/test_compat_xz_1.txz.uu				\
 	libarchive/test/test_compat_zip_1.zip.uu			\
+	libarchive/test/test_compat_zip_2.zip.uu			\
 	libarchive/test/test_fuzz_1.iso.Z.uu				\
+	libarchive/test/test_fuzz.cab.uu				\
+	libarchive/test/test_fuzz.lzh.uu				\
 	libarchive/test/test_pax_filename_encoding.tar.uu		\
 	libarchive/test/test_read_format_ar.ar.uu			\
+	libarchive/test/test_read_format_cab_1.cab.uu			\
+	libarchive/test/test_read_format_cab_2.cab.uu			\
+	libarchive/test/test_read_format_cab_3.cab.uu			\
 	libarchive/test/test_read_format_cpio_bin_be.cpio.uu		\
 	libarchive/test/test_read_format_cpio_svr4_bzip2_rpm.rpm.uu	\
 	libarchive/test/test_read_format_cpio_svr4_gzip_rpm.rpm.uu	\
@@ -387,6 +402,7 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_read_format_gtar_sparse_1_17_posix10_modified.tar.uu \
 	libarchive/test/test_read_format_iso.iso.Z.uu			\
 	libarchive/test/test_read_format_iso_joliet.iso.Z.uu		\
+	libarchive/test/test_read_format_iso_joliet_by_nero.iso.Z.uu	\
 	libarchive/test/test_read_format_iso_joliet_long.iso.Z.uu	\
 	libarchive/test/test_read_format_iso_joliet_rockridge.iso.Z.uu	\
 	libarchive/test/test_read_format_iso_multi_extent.iso.Z.uu	\
@@ -395,6 +411,13 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_read_format_iso_rockridge_new.iso.Z.uu	\
 	libarchive/test/test_read_format_iso_rockridge_rr_moved.iso.Z.uu\
 	libarchive/test/test_read_format_iso_zisofs.iso.Z.uu		\
+	libarchive/test/test_read_format_lha_header0.lzh.uu		\
+	libarchive/test/test_read_format_lha_header1.lzh.uu		\
+	libarchive/test/test_read_format_lha_header2.lzh.uu		\
+	libarchive/test/test_read_format_lha_lh0.lzh.uu			\
+	libarchive/test/test_read_format_lha_lh6.lzh.uu			\
+	libarchive/test/test_read_format_lha_lh7.lzh.uu			\
+	libarchive/test/test_read_format_lha_withjunk.lzh.uu		\
 	libarchive/test/test_read_format_mtree.mtree.uu			\
 	libarchive/test/test_read_format_raw.data.Z.uu			\
 	libarchive/test/test_read_format_raw.data.uu			\

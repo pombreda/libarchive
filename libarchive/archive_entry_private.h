@@ -32,35 +32,8 @@
 #ifndef ARCHIVE_ENTRY_PRIVATE_H_INCLUDED
 #define	ARCHIVE_ENTRY_PRIVATE_H_INCLUDED
 
+#include "archive_acl_private.h"
 #include "archive_string.h"
-
-/*
- * Handle wide character (i.e., Unicode) and non-wide character
- * strings transparently.
- */
-
-struct aes {
-	struct archive_string aes_mbs;
-	struct archive_string aes_utf8;
-	struct archive_wstring aes_wcs;
-	/* Bitmap of which of the above are valid.  Because we're lazy
-	 * about malloc-ing and reusing the underlying storage, we
-	 * can't rely on NULL pointers to indicate whether a string
-	 * has been set. */
-	int aes_set;
-#define	AES_SET_MBS 1
-#define	AES_SET_UTF8 2
-#define	AES_SET_WCS 4
-};
-
-struct ae_acl {
-	struct ae_acl *next;
-	int	type;			/* E.g., access or default */
-	int	tag;			/* E.g., user/group/other/mask */
-	int	permset;		/* r/w/x bits */
-	int	id;			/* uid/gid for user/group */
-	struct aes name;		/* uname/gname */
-};
 
 struct ae_xattr {
 	struct ae_xattr *next;
@@ -127,7 +100,6 @@ struct archive_entry {
 		uint32_t	aest_birthtime_nsec;
 		int64_t		aest_gid;
 		int64_t		aest_ino;
-		mode_t		aest_mode;
 		uint32_t	aest_nlink;
 		uint64_t	aest_size;
 		int64_t		aest_uid;
@@ -161,26 +133,23 @@ struct archive_entry {
 	/*
 	 * Use aes here so that we get transparent mbs<->wcs conversions.
 	 */
-	struct aes ae_fflags_text;	/* Text fflags per fflagstostr(3) */
+	struct archive_mstring ae_fflags_text;	/* Text fflags per fflagstostr(3) */
 	unsigned long ae_fflags_set;		/* Bitmap fflags */
 	unsigned long ae_fflags_clear;
-	struct aes ae_gname;		/* Name of owning group */
-	struct aes ae_hardlink;	/* Name of target for hardlink */
-	struct aes ae_pathname;	/* Name of entry */
-	struct aes ae_symlink;		/* symlink contents */
-	struct aes ae_uname;		/* Name of owner */
+	struct archive_mstring ae_gname;		/* Name of owning group */
+	struct archive_mstring ae_hardlink;	/* Name of target for hardlink */
+	struct archive_mstring ae_pathname;	/* Name of entry */
+	struct archive_mstring ae_symlink;		/* symlink contents */
+	struct archive_mstring ae_uname;		/* Name of owner */
 
 	/* Not used within libarchive; useful for some clients. */
-	struct aes ae_sourcepath;	/* Path this entry is sourced from. */
+	struct archive_mstring ae_sourcepath;	/* Path this entry is sourced from. */
 
 	void *mac_metadata;
 	size_t mac_metadata_size;
 
 	/* ACL support. */
-	struct ae_acl	*acl_head;
-	struct ae_acl	*acl_p;
-	int		 acl_state;	/* See acl_next for details. */
-	wchar_t		*acl_text_w;
+	struct archive_acl    acl;
 
 	/* extattr support. */
 	struct ae_xattr *xattr_head;
@@ -194,16 +163,5 @@ struct archive_entry {
 	/* Miscellaneous. */
 	char		 strmode[12];
 };
-
-/*
- * Private ACL parser.  This is private because it handles some
- * very weird formats that clients should not be messing with.
- * Clients should only deal with their platform-native formats.
- * Because of the need to support many formats cleanly, new arguments
- * are likely to get added on a regular basis.  Clients who try to use
- * this interface are likely to be surprised when it changes.
- */
-int		 __archive_entry_acl_parse_w(struct archive_entry *,
-		    const wchar_t *, int /* type */);
 
 #endif /* ARCHIVE_ENTRY_PRIVATE_H_INCLUDED */

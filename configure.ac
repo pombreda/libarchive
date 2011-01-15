@@ -274,7 +274,7 @@ AC_DEFUN([MD_CHECK], [
     CPPFLAGS="$CPPFLAGS -I$srcdir/libarchive"
     LIBS="$LIBS $4"
     AC_MSG_CHECKING([support for ARCHIVE_HASH_$1_$2])
-    AC_LINK_IFELSE([
+    AC_LINK_IFELSE([AC_LANG_SOURCE([
 #define $1_COMPILE_TEST
 #define ARCHIVE_HASH_$1_$2
 #define __LIBARCHIVE_BUILD
@@ -290,7 +290,7 @@ main(int argc, char **argv)
 	archive_$3_final(&ctx, *argv);
 	return 0;
 }
-],
+])],
     [ AC_MSG_RESULT([yes])
       found_$1=yes
       mdLIBS="$mdLIBS $4"
@@ -421,7 +421,7 @@ AC_CHECK_FUNCS([fstat ftruncate futimens futimes geteuid getpid])
 AC_CHECK_FUNCS([getgrgid_r getgrnam_r getpwnam_r getpwuid_r gmtime_r])
 AC_CHECK_FUNCS([lchflags lchmod lchown link localtime_r lstat])
 AC_CHECK_FUNCS([lutimes mbrtowc memmove memset mkdir mkfifo mknod mkstemp])
-AC_CHECK_FUNCS([nl_langinfo pipe poll readlink])
+AC_CHECK_FUNCS([nl_langinfo pipe poll readdir_r readlink])
 AC_CHECK_FUNCS([select setenv setlocale sigaction statvfs])
 AC_CHECK_FUNCS([strchr strdup strerror strncpy_s strrchr symlink timegm])
 AC_CHECK_FUNCS([tzset unsetenv utime utimensat utimes vfork])

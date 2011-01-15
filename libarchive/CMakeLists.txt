@@ -13,6 +13,7 @@ SET(include_HEADERS
 
 # Sources and private headers
 SET(libarchive_SOURCES
+  archive_acl.c
   archive_check_magic.c
   archive_endian.h
   archive_entry.c
@@ -32,10 +33,11 @@ SET(libarchive_SOURCES
   archive_rb.h
   archive_read.c
   archive_read_data_into_fd.c
-  archive_read_disk.c
   archive_read_disk_entry_from_file.c
+  archive_read_disk_posix.c
   archive_read_disk_private.h
   archive_read_disk_set_standard_lookup.c
+  archive_read_disk_windows.c
   archive_read_extract.c
   archive_read_open_fd.c
   archive_read_open_file.c
@@ -45,9 +47,11 @@ SET(libarchive_SOURCES
   archive_read_support_transform.c
   archive_read_support_format_all.c
   archive_read_support_format_ar.c
+  archive_read_support_format_cab.c
   archive_read_support_format_cpio.c
   archive_read_support_format_empty.c
   archive_read_support_format_iso9660.c
+  archive_read_support_format_lha.c
   archive_read_support_format_mtree.c
   archive_read_support_format_raw.c
   archive_read_support_format_tar.c

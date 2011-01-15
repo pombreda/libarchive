@@ -30,7 +30,7 @@ static void
 test_xar(const char *option)
 {
 	char buff2[64];
-	size_t buffsize = 1000000;
+	size_t buffsize = 1500;
 	char *buff;
 	struct archive_entry *ae;
 	struct archive *a;
