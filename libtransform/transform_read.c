@@ -1195,10 +1195,12 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 			filter->client.avail -= request;
 			if (filter->client.buffer != filter->managed_buffer)
 				filter->client.size = filter->client.avail;
+			filter->base.bytes_consumed += request;
 			total_bytes_skipped += request;
 			return (total_bytes_skipped);
 		}
 
+		filter->base.bytes_consumed += filter->client.avail;
 		total_bytes_skipped += filter->client.avail;
 		request -= filter->client.avail;
 	}
