@@ -634,8 +634,6 @@ _archive_read_data_block(struct archive *_a,
 static int
 _archive_read_close(struct archive *a)
 {
-	int r = ARCHIVE_OK, r1 = ARCHIVE_OK;
-
 	archive_check_magic(a, ARCHIVE_READ_MAGIC,
 	    ARCHIVE_STATE_ANY | ARCHIVE_STATE_FATAL, "archive_read_close");
 	archive_clear_error(a);
@@ -644,12 +642,8 @@ _archive_read_close(struct archive *a)
 
 	/* TODO: Clean up the formatters. */
 
-	r1 = transform_read_close(a->transform);
-	r1 = __convert_transform_error_to_archive_error(a, a->transform, r1);
-	if (r1 < r)
-		r = r1;
-
-	return (r);
+	return (__convert_transform_error_to_archive_error(a, a->transform,
+		transform_read_close(a->transform)));
 }
 
 /*
