@@ -54,7 +54,6 @@ __FBSDID("$FreeBSD: head/lib/libtransform/transform_read.c 201157 2009-12-29 05:
 #include "transform_read_private.h"
 
 #define minimum(a, b) ((a) < (b) ? (a) : (b))
-#define maximum(a, b) ((a) > (b) ? (a) : (b))
 
 #ifndef assert
 #define assert(x) (void)0
