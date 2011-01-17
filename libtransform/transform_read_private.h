@@ -109,7 +109,11 @@ struct transform_read_filter {
 
 	struct transform_buffer resizing;
 
-	size_t buff_size_preferred;
+	/* since our upstream may expose /their/ buffers to us,
+	 * we keep track of our own upstream buffer we expose to them.
+	 * primarily this is keeping refs around so we know if client
+	 * is pointing into our space, or into the actual upstreams
+	 */
 	void   *managed_buffer;
 	size_t managed_size;
 
