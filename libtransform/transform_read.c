@@ -127,7 +127,7 @@ transform_read_set_filter_options(struct transform *_a, const char *s)
 	int len, r;
 
 	transform_check_magic(_a, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
-	    "transform_read_set_filter_options");
+		"transform_read_set_filter_options");
 
 	if (s == NULL || *s == '\0')
 		return (TRANSFORM_OK);
@@ -140,7 +140,7 @@ transform_read_set_filter_options(struct transform *_a, const char *s)
 			/* This bidder does not support option */
 			continue;
 		while ((len = __transform_parse_options(s, bidder->name,
-		    sizeof(key), key, sizeof(val), val)) > 0) {
+			sizeof(key), key, sizeof(val), val)) > 0) {
 			if (val[0] == '\0')
 				r = bidder->set_option(bidder->data, key, NULL);
 			else
@@ -152,7 +152,7 @@ transform_read_set_filter_options(struct transform *_a, const char *s)
 	}
 	if (len < 0) {
 		transform_set_error(&a->transform, TRANSFORM_ERRNO_MISC,
-		    "Illegal format options.");
+			"Illegal format options.");
 		return (TRANSFORM_WARN);
 	}
 	return (TRANSFORM_OK);
@@ -182,7 +182,7 @@ transform_read_open2(struct transform *_t, void *client_data,
 	struct transform_read_filter *filter = NULL;
 
 	transform_check_magic(_t, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
-	    "transform_read_open");
+		"transform_read_open");
 
 	filter = transform_read_filter_new(client_data, "none", TRANSFORM_FILTER_NONE,
 		client_reader, client_skipper, client_closer, visit_fds,
@@ -208,7 +208,7 @@ transform_read_open_source(struct transform *_t,
 	int e;
 
 	transform_check_magic(_t, TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW,
-	    "transform_read_open");
+		"transform_read_open");
 
 	if (TRANSFORM_FATAL == __transform_filter_check_magic2(_t, source,
 		TRANSFORM_READ_FILTER_MAGIC, TRANSFORM_STATE_NEW,
@@ -266,7 +266,7 @@ build_stream(struct transform_read *t)
 		/* do a single byte read to verify this filter transforms properly */
 		transform_read_filter_ahead(t->filter, 1, &avail);
 		if (TRANSFORM_FATAL == avail) {
-			/* 
+			/*
 			 * this will ignore eof and warnings.
 			 * we do not view an EOF as an error here- if a later
 			 * opener requires a read and fails, than it's a failure
@@ -405,7 +405,7 @@ _transform_read_close(struct transform *_a)
 	int r = TRANSFORM_OK, r1 = TRANSFORM_OK;
 
 	transform_check_magic(&a->transform, TRANSFORM_READ_MAGIC,
-	    TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL, "transform_read_close");
+		TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL, "transform_read_close");
 	transform_clear_error(&a->transform);
 	if (a->transform.marker.state != TRANSFORM_STATE_FATAL)
 		a->transform.marker.state = TRANSFORM_STATE_CLOSED;
@@ -432,9 +432,9 @@ _transform_read_free(struct transform *_a)
 	if (_a == NULL)
 		return (TRANSFORM_OK);
 	transform_check_magic(_a, TRANSFORM_READ_MAGIC,
-	    TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL, "transform_read_free");
+		TRANSFORM_STATE_ANY | TRANSFORM_STATE_FATAL, "transform_read_free");
 	if (a->transform.marker.state != TRANSFORM_STATE_CLOSED
-	    && a->transform.marker.state != TRANSFORM_STATE_FATAL)
+		&& a->transform.marker.state != TRANSFORM_STATE_FATAL)
 		r = transform_read_close(&a->transform);
 
 	/* Free the filters.  Note this is safe to invoke multiple times. */
@@ -454,7 +454,7 @@ transform_read_get_filter(struct transform *_t, int n)
 {
 	struct transform_read *t = (struct transform_read *)_t;
 	struct transform_read_filter *f;
-	if(TRANSFORM_OK != __transform_check_magic(_t, &(_t->marker), 
+	if(TRANSFORM_OK != __transform_check_magic(_t, &(_t->marker),
 		TRANSFORM_READ_MAGIC, TRANSFORM_STATE_ANY, "transform",
 		"transform_read_get_filter")) {
 		return (NULL);
@@ -530,7 +530,7 @@ transform_read_bidder_add(struct transform *_t,
 	struct transform_read *t = (struct transform_read *)_t;
 	struct transform_read_bidder *bidder, *ptr;
 
-	if(TRANSFORM_OK != __transform_check_magic(_t, &(_t->marker), 
+	if(TRANSFORM_OK != __transform_check_magic(_t, &(_t->marker),
 		TRANSFORM_READ_MAGIC, TRANSFORM_STATE_NEW, "transform",
 		"transform_read_bidder_add")) {
 		return (NULL);
@@ -561,7 +561,7 @@ transform_read_bidder_add(struct transform *_t,
 
 struct transform_read_filter *
 transform_read_filter_new(const void *data, const char *name,
-	int code, 
+	int code,
 	transform_read_filter_read_callback *reader,
 	transform_read_filter_skip_callback *skipper,
 	transform_read_filter_close_callback *closer,
@@ -862,7 +862,7 @@ _filter_read(struct transform_read_filter *filter, const void **buff,
 	}
 
 	ret = (filter->read)((struct transform *)filter->base.transform, filter->base.data,
-		    filter->base.upstream.read, buff, buff_size);
+		filter->base.upstream.read, buff, buff_size);
 
 	if (TRANSFORM_FATAL == ret) {
 		filter->fatal = 1;
@@ -1031,25 +1031,25 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 
 
 	if (filter->resizing.avail) {
-		 if (filter->resizing.avail >= min) {
-			  if (avail)
-				    *avail = filter->resizing.avail;
-			  return (filter->resizing.next);
-		  }
+		if (filter->resizing.avail >= min) {
+			if (avail)
+				*avail = filter->resizing.avail;
+			return (filter->resizing.next);
+		}
 	} else if (filter->client.avail >= min) {
-		 if (avail)
-			  *avail = filter->client.avail;
-		 return (filter->client.next);
+		if (avail)
+			*avail = filter->client.avail;
+		return (filter->client.next);
 	}
 
 	if (filter->resizing.avail) {
-		 if (filter->resizing.next != filter->resizing.buffer) {
-			  /* be as lazy as possible.  move only when we have to. */
-			  if (min + filter->resizing.next > filter->resizing.buffer + filter->resizing.size) {
-				   memmove(filter->resizing.buffer, filter->resizing.next, filter->resizing.avail);
-				   filter->resizing.next = filter->resizing.buffer;
-			  }
-		 }
+		if (filter->resizing.next != filter->resizing.buffer) {
+			/* be as lazy as possible.  move only when we have to. */
+			if (min + filter->resizing.next > filter->resizing.buffer + filter->resizing.size) {
+				memmove(filter->resizing.buffer, filter->resizing.next, filter->resizing.avail);
+				filter->resizing.next = filter->resizing.buffer;
+			}
+		}
 	}
 
 	/* if we made it here... we need more data.  sanity check if it's available. */
@@ -1072,20 +1072,20 @@ transform_read_filter_ahead(struct transform_read_filter *filter,
 	// size_t request = min - filter->request->sizing.avail;
 	size_t request = filter->resizing.size - filter->resizing.avail;
 	ret = _fill_window(filter, filter->resizing.next + filter->resizing.avail, &request,
-		 1);
+		1);
 	if (TRANSFORM_FATAL == ret) {
-		 if (avail)
-			  *avail = TRANSFORM_FATAL;
-		 return NULL;
+		if (avail)
+			*avail = TRANSFORM_FATAL;
+		return NULL;
 	}
 	filter->resizing.avail += request;
 	if (min > filter->resizing.avail) {
-		 if (avail)
-			  *avail = 0;
-		 return (NULL);
+		if (avail)
+			*avail = 0;
+		return (NULL);
 	}
 	if (avail)
-		 *avail = filter->resizing.avail;
+		*avail = filter->resizing.avail;
 	return (filter->resizing.next);
 }
 
@@ -1125,9 +1125,9 @@ transform_read_filter_consume(struct transform_read_filter *filter,
 	if (skipped < 0)  // Map error code to 0 for error message below.
 		skipped = 0;
 	transform_set_error(filter->base.transform,
-	    TRANSFORM_ERRNO_MISC,
-	    "Truncated input file (needed %jd bytes, only %jd available)",
-	    (intmax_t)request, (intmax_t)skipped);
+		TRANSFORM_ERRNO_MISC,
+		"Truncated input file (needed %jd bytes, only %jd available)",
+		(intmax_t)request, (intmax_t)skipped);
 	return (TRANSFORM_FATAL);
 }
 
@@ -1199,7 +1199,7 @@ transform_read_filter_skip(struct transform_read_filter *filter, int64_t request
 	if (filter->skip != NULL) {
 		int64_t aligned_request = (request / filter->alignment) * filter->alignment;
 		if (aligned_request) {
-			bytes_skipped = (filter->skip)((struct transform *)filter->base.transform, 
+			bytes_skipped = (filter->skip)((struct transform *)filter->base.transform,
 				filter->base.data, filter->base.upstream.read, aligned_request);
 			if (bytes_skipped < 0) {	/* error */
 				filter->fatal = 1;
