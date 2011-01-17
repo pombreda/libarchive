@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2010 Brian Harring
+ * Copyright (c) 2010-2011 Brian Harring
  * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
@@ -619,6 +619,8 @@ transform_read_filter_finalize(struct transform_read_filter *filter)
 int
 transform_read_filter_set_buffering(struct transform_read_filter *filter, size_t size)
 {
+	void *data;
+	size_t rounded;
 	if (TRANSFORM_FATAL == __transform_filter_check_magic(filter,
 		TRANSFORM_READ_FILTER_MAGIC, TRANSFORM_STATE_DATA | TRANSFORM_STATE_NEW,
 		"transform_read_set_buffering")) {
@@ -634,26 +636,32 @@ transform_read_filter_set_buffering(struct transform_read_filter *filter, size_t
 	}
 
 	/* floor it to an aligned size */
-	size /= filter->alignment;
-	if (size <= 1) {
-		/* validate this heuristic- assumption is two windows of data is best, may not be */
-		size = 2;
+	rounded = (size / filter->alignment) * filter->alignment;
+	if (size % filter->alignment) {
+		/* residue means we round up, since they specific min. for the buffering */
+		rounded += filter->alignment;
 	}
-	size *= filter->alignment;
-	
-	filter->managed_size = size;
 
 	/* only realloc the buffer if we're in a data state. */
 	if (filter->base.marker.state == TRANSFORM_STATE_DATA) {
-		if(NULL == (filter->managed_buffer = realloc(filter->managed_buffer, size))) {
+		data = realloc(filter->managed_buffer, rounded);
+		if (!data) {
 			if (filter->base.transform) {
 				transform_set_error((struct transform *)filter->base.transform, ENOMEM,
 					"memory allocation for filter buffer of size %lu failed",
-					(unsigned long)size);
+					(unsigned long)rounded);
 			}
 			return (TRANSFORM_FATAL);
 		}
+		if (filter->client.buffer == filter->managed_buffer) {
+			/* reset it's ptrs. */
+			filter->client.next = (filter->client.next - filter->client.buffer) + data;
+			filter->client.buffer = data;
+			filter->client.size = rounded;
+		}
+		filter->managed_buffer = data;
 	}
+	filter->managed_size = rounded;
 	return (TRANSFORM_OK);
 }	
 
