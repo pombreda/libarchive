@@ -94,6 +94,7 @@ transform_write_vtable(void)
 		av.transform_filter_count = _transform_write_filter_count;
 		av.transform_free = _transform_write_free;
 		av.transform_visit_fds = _transform_visit_fds;
+		inited = 1;
 	}
 	return (&av);
 }

@@ -88,6 +88,7 @@ transform_read_vtable(void)
 		av.transform_free = _transform_read_free;
 		av.transform_close = _transform_read_close;
 		av.transform_visit_fds = _transform_visit_fds;
+		inited = 1;
 	}
 	return (&av);
 }
