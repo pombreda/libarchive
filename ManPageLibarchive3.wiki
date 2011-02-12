@@ -33,13 +33,14 @@ GNU-format tar archives,
 </li><li>
 most common cpio archive formats,
 </li><li>
-ISO9660 CD images (with or without RockRidge extensions),
+ISO9660 CD images (including RockRidge and Joliet extensions),
 </li><li>
 Zip archives.
 </li></ul>
 The library automatically detects archives compressed with
 *gzip*(1),
 *bzip2*(1),
+*xz*(1),
 or
 *compress*(1)
 and decompresses them transparently.
@@ -58,6 +59,8 @@ POSIX
 archives,
 </li><li>
 POSIX octet-oriented cpio archives,
+</li><li>
+Zip archive,
 </li><li>
 two different variants of shar archives.
 </li></ul>
@@ -140,12 +143,12 @@ You can use
 (which works much like the
 *read*(2)
 system call)
-to read this data from the archive.
+to read this data from the archive, or
+*archive_read_data_block*()
+which provides a slightly more efficient interface.
 You may prefer to use the higher-level
 *archive_read_data_skip*(),
 which reads and discards the data for this entry,
-*archive_read_data_to_buffer*(),
-which reads the data into an in-memory buffer,
 *archive_read_data_to_file*(),
 which copies the data to the provided file descriptor, or
 *archive_read_extract*(),
@@ -166,6 +169,11 @@ should call
 to close the archive, then call
 *archive_read_finish*()
 to release all resources, including all memory allocated by the library.
+(Note:
+*archive_read_finish*()
+is deprecated in Libarchive 3.0; please use
+*archive_read_free*()
+instead.)
 
 The
 *archive_read*(3)
@@ -204,10 +212,37 @@ to write the actual data.
 After all entries have been written, use the
 *archive_write_finish*()
 function to release all resources.
+(Note:
+*archive_write_finish*()
+is deprecated in Libarchive 3.0; please use
+*archive_write_free*()
+instead.)
 
 The
 *archive_write*(3)
 manual page provides more detailed calling information for this API.
+== WRITING ENTRIES TO DISK ==
+The
+*archive_write_disk*(3)
+API allows you to write
+*archive_entry*(3)
+objects to disk using the same API used by
+*archive_write*(3).
+The
+*archive_write_disk*(3)
+API is used internally by
+*archive_read_extract*(_;_)
+using it directly can provide greater control over how entries
+get written to disk.
+This API also makes it possible to share code between
+archive-to-archive copy and archive-to-disk extraction
+operations.
+== READING ENTRIES FROM DISK ==
+The
+*archive_read_disk*(3)
+provides some support for populating
+*archive_entry*(3)
+objects from information in the filesystem.
 == DESCRIPTION ==
 Detailed descriptions of each function are provided by the
 corresponding manual pages.
@@ -231,7 +266,9 @@ In particular, pax interchange format can easily accommodate pathnames
 in arbitrary character sets that exceed
 _PATH_MAX_.
 == RETURN VALUES ==
-Most functions return zero on success, non-zero on error.
+Most functions return
+*ARCHIVE_OK*
+(zero) on success, non-zero on error.
 The return value indicates the general severity of the error, ranging
 from
 *ARCHIVE_WARN*,
@@ -300,3 +337,14 @@ stored in an
 is supported by all formats.
 For example, cpio formats do not support nanosecond timestamps;
 old tar formats do not support large device numbers.
+
+The
+*archive_read_disk*(3)
+API should support iterating over filesystems;
+that would make it possible to share code among
+disk-to-archive, archive-to-archive, archive-to-disk,
+and disk-to-disk operations.
+Currently, it only supports reading the
+information for a single file.
+(Which is still quite useful, as it hides a lot
+of system-specific details.)

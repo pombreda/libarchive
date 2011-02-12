@@ -39,7 +39,8 @@
 *archive_read_extract2*,
 *archive_read_extract_set_progress_callback*,
 *archive_read_close*,
-*archive_read_finish*
+*archive_read_finish*,
+*archive_read_free*
 - functions for reading streaming archives
 == SYNOPSIS ==
 *#include <archive.h>*
@@ -203,6 +204,10 @@
 *int*
 <br>
 *archive_read_finish*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_read_free*(_struct archive `*`_);
 == DESCRIPTION ==
 These functions provide a complete API for reading streaming archives.
 The general process is to first create the
@@ -462,6 +467,17 @@ can be retrieved for the progress display.
 </dd><dt>*archive_read_close*()</dt><dd>
 Complete the archive and invoke the close callback.
 </dd><dt>*archive_read_finish*()</dt><dd>
+This is a deprecated synonym for
+*archive_read_free*().
+The new name was introduced with libarchive 3.0.
+Applications that need to compile with either libarchive 2
+or libarchive 3 should continue to use the
+*archive_read_finish*()
+name.
+Both names will be supported until libarchive 4.0 is
+released, which is not expected to occur earlier
+than 2013.
+</dd><dt>*archive_read_free*()</dt><dd>
 Invokes
 *archive_read_close*()
 if it was not invoked manually, then release all resources.
@@ -495,8 +511,8 @@ The callback functions must match the following prototypes:
 *typedef ssize_t*
 *archive_read_callback*(_struct archive `*`_, _void `*`client_data_, _const void `*``*`buffer_)
 </li><li>
-*typedef int*
-*archive_skip_callback*(_struct archive `*`_, _void `*`client_data_, _size_t request_)
+*typedef off_t*
+*archive_skip_callback*(_struct archive `*`_, _void `*`client_data_, _off_t request_)
 </li><li>
 *typedef int*
 *archive_open_callback*(_struct archive `*`_, _void `*`client_data_)
@@ -585,10 +601,10 @@ list_archive(const char *name)
   archive_read_support_format_all(a);
   archive_read_open(a, mydata, myopen, myread, myclose);
   while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
-    printf("%s\\n",archive_entry_pathname(entry));
+    printf("%s\en",archive_entry_pathname(entry));
     archive_read_data_skip(a);
   }
-  archive_read_finish(a);
+  archive_read_free(a);
   free(mydata);
 }
 ssize_t

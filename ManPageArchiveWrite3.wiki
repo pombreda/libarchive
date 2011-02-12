@@ -15,9 +15,6 @@
 *archive_write_set_compression_gzip*,
 *archive_write_set_compression_none*,
 *archive_write_set_compression_program*,
-*archive_write_set_compressor_options*,
-*archive_write_set_format_options*,
-*archive_write_set_options*,
 *archive_write_open*,
 *archive_write_open_fd*,
 *archive_write_open_FILE*,
@@ -27,7 +24,8 @@
 *archive_write_data*,
 *archive_write_finish_entry*,
 *archive_write_close*,
-*archive_write_finish*
+*archive_write_finish*,
+*archive_write_free*
 - functions for creating archives
 == SYNOPSIS ==
 *#include <archive.h>*
@@ -94,18 +92,6 @@
 <br>
 *int*
 <br>
-*archive_write_set_format_options*(_struct archive `*`_, _const char `*`_);
-<br>
-*int*
-<br>
-*archive_write_set_compressor_options*(_struct archive `*`_, _const char `*`_);
-<br>
-*int*
-<br>
-*archive_write_set_options*(_struct archive `*`_, _const char `*`_);
-<br>
-*int*
-<br>
 *archive_write_open*(_struct archive `*`_, _void `*`client_data_, _archive_open_callback `*`_, _archive_write_callback `*`_, _archive_close_callback `*`_);
 <br>
 *int*
@@ -143,6 +129,10 @@
 *int*
 <br>
 *archive_write_finish*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_write_free*(_struct archive `*`_);
 == DESCRIPTION ==
 These functions provide a complete API for creating streaming
 archive files.
@@ -233,68 +223,6 @@ Note that the compressed output is always properly blocked.
 The archive will be fed into the specified compression program.
 The output of that program is blocked and written to the client
 write callbacks.
-</dd><dt>
-*archive_write_set_compressor_options*(),
-*archive_write_set_format_options*(),
-*archive_write_set_options*()
-</dt> <dd>
-Specifies options that will be passed to the currently-enabled
-compressor and/or format writer.
-The argument is a comma-separated list of individual options.
-Individual options have one of the following forms:
-<dl>
-<dt>_option=value_</dt><dd>
-The option/value pair will be provided to every module.
-Modules that do not accept an option with this name will ignore it.
-</dd><dt>_option_</dt><dd>
-The option will be provided to every module with a value of
-"1".
-</dd><dt>_!option_</dt><dd>
-The option will be provided to every module with a NULL value.
-</dd><dt>_module:option=value_, _module:option_, _module:!option_</dt><dd>
-As above, but the corresponding option and value will be provided
-only to modules whose name matches
-_module_.
-</dd></dl>
-The return value will be
-*ARCHIVE_OK*
-if any module accepts the option, or
-*ARCHIVE_WARN*
-if no module accepted the option, or
-*ARCHIVE_FATAL*
-if there was a fatal error while attempting to process the option.
-
-The currently supported options are:
-<dl>
-<dt>Compressor gzip</dt><dd>
-<dl>
-<dt>*compression-level*</dt><dd>
-The value is interpreted as a decimal integer specifying the
-gzip compression level.
-</dd></dl>
-</dd><dt>Compressor xz</dt><dd>
-<dl>
-<dt>*compression-level*</dt><dd>
-The value is interpreted as a decimal integer specifying the
-compression level.
-</dd></dl>
-</dd><dt>Format mtree</dt><dd>
-<dl>
-<dt>*cksum*, *device*, *flags*, *gid*, *gname*, *indent*, *link*, *md5*, *mode*, *nlink*, *rmd160*, *sha1*, *sha256*, *sha384*, *sha512*, *size*, *time*, *uid*, *uname*</dt><dd>
-Enable a particular keyword in the mtree output.
-Prefix with an exclamation mark to disable the corresponding keyword.
-The default is equivalent to
-"device, flags, gid, gname, link, mode, nlink, size, time, type, uid, uname".
-</dd><dt>*all*</dt><dd>
-Enables all of the above keywords.
-</dd><dt>*use-set*</dt><dd>
-Enables generation of
-*/set*
-lines that specify default values for the following files and/or directories.
-</dd><dt>*indent*</dt><dd>
-XXX needs explanation XXX
-</dd></dl>
-</dd></dl>
 </dd><dt>*archive_write_open*()</dt><dd>
 Freeze the settings, open the archive, and prepare for writing entries.
 This is the most generic form of this function, which accepts
@@ -381,15 +309,18 @@ as needed.
 </dd><dt>*archive_write_close*()</dt><dd>
 Complete the archive and invoke the close callback.
 </dd><dt>*archive_write_finish*()</dt><dd>
+This is a deprecated synonym for
+*archive_write_free*().
+</dd><dt>*archive_write_free*()</dt><dd>
 Invokes
 *archive_write_close*()
-if it was not invoked manually, then releases all resources.
-Note that this function was declared to return
-*void*
-in libarchive 1.x, which made it impossible to detect errors when
+if necessary, then releases all resources.
+If you need detailed information about
 *archive_write_close*()
-was invoked implicitly from this function.
-This is corrected beginning with libarchive 2.0.
+failures, you should be careful to call it separately, as
+you cannot obtain error information after
+*archive_write_free*()
+returns.
 </dd></dl>
 More information about the
 _struct_ archive
@@ -523,16 +454,18 @@ write_archive(const char *outname, const char **filename)
     archive_entry_copy_stat(entry, &st);
     archive_entry_set_pathname(entry, *filename);
     archive_write_header(a, entry);
-    fd = open(*filename, O_RDONLY);
-    len = read(fd, buff, sizeof(buff));
-    while ( len > 0 ) {
-	archive_write_data(a, buff, len);
-	len = read(fd, buff, sizeof(buff));
+    if ((fd = open(*filename, O_RDONLY)) != -1) {
+        len = read(fd, buff, sizeof(buff));
+        while ( len > 0 ) {
+    	    archive_write_data(a, buff, len);
+	    len = read(fd, buff, sizeof(buff));
+        }
+        close(fd);
     }
     archive_entry_free(entry);
     filename++;
   }
-  archive_write_finish(a);
+  archive_write_free(a);
 }
 int main(int argc, const char **argv)
 {
@@ -581,8 +514,9 @@ may include
 *archive_write_header*(),
 *archive_write_data*(),
 *archive_write_close*(),
+*archive_write_finish*(),
 or
-*archive_write_finish*().
+*archive_write_free*().
 The client callback can call
 *archive_set_error*()
 to provide values that can then be retrieved by
@@ -592,6 +526,9 @@ and
 == SEE ALSO ==
 *tar*(1),
 *libarchive*(3),
+*archive_write_set_options*(3),
+*cpio*(5),
+*mtree*(5),
 *tar*(5)
 == HISTORY ==
 The

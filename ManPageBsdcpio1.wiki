@@ -55,7 +55,7 @@ specified directory.
 Unless specifically stated otherwise, options are applicable in
 all operating modes.
 <dl>
-<dt>*-0*</dt><dd>
+<dt>*-0*, *-Fl* null</dt><dd>
 Read filenames separated by NUL characters instead of newlines.
 This is necessary if any of the filenames being read might contain newlines.
 </dd><dt>*-A*</dt><dd>
@@ -77,8 +77,8 @@ bytes.
 (o mode only)
 Use the old POSIX portable character format.
 Equivalent to
-*--format* _odc_.
-</dd><dt>*-d*</dt><dd>
+*-Fl* format _odc_.
+</dd><dt>*-d*, *-Fl* make-directories</dt><dd>
 (i and p modes)
 Create directories as necessary.
 </dd><dt>*-E* _file_</dt><dd>
@@ -86,14 +86,14 @@ Create directories as necessary.
 Read list of file name patterns from
 _file_
 to list and extract.
-</dd><dt>*-F* _file_</dt><dd>
+</dd><dt>*-F* _file_, *-Fl* file _file_</dt><dd>
 Read archive from or write archive to
 _file_.
 </dd><dt>*-f* _pattern_</dt><dd>
 (i mode only)
 Ignore files that match
 _pattern_.
-</dd><dt>*--format* _format_</dt><dd>
+</dd><dt>*-H* _format_, *-Fl* format _format_</dt><dd>
 (o mode only)
 Produce the output archive in the specified format.
 Supported formats include:
@@ -115,29 +115,26 @@ The POSIX.1 tar format.
 The default format is
 _odc_.
 See
-*libarchive_formats*(5)
+*libarchive-formats*(5)
 for more complete information about the
 formats currently supported by the underlying
 *libarchive*(3)
 library.
-</dd><dt>*-H* _format_</dt><dd>
-Synonym for
-*--format*.
-</dd><dt>*-h*, *--help*</dt><dd>
+</dd><dt>*-h*, *-Fl* help</dt><dd>
 Print usage information.
 </dd><dt>*-I* _file_</dt><dd>
 Read archive from
 _file_.
-</dd><dt>*-i*</dt><dd>
+</dd><dt>*-i*, *-Fl* extract</dt><dd>
 Input mode.
 See above for description.
-</dd><dt>*--insecure*</dt><dd>
+</dd><dt>*-Fl* insecure</dt><dd>
 (i and p mode only)
 Disable security checks during extraction or copying.
 This allows extraction via symbolic links and path names containing
 Sq ..
 in the name.
-</dd><dt>*-J*</dt><dd>
+</dd><dt>*-J*, *-Fl* xz</dt><dd>
 (o mode only)
 Compress the file with xz-compatible compression before writing it.
 In input mode, this option is ignored; xz compression is recognized
@@ -150,20 +147,20 @@ Synonym for
 All symbolic links will be followed.
 Normally, symbolic links are archived and copied as symbolic links.
 With this option, the target of the link will be archived or copied instead.
-</dd><dt>*-l*</dt><dd>
+</dd><dt>*-l*, *-Fl* link</dt><dd>
 (p mode only)
 Create links from the target directory to the original files,
 instead of copying.
-</dd><dt>*-lzma*</dt><dd>
+</dd><dt>*-Fl* lzma</dt><dd>
 (o mode only)
 Compress the file with lzma-compatible compression before writing it.
 In input mode, this option is ignored; lzma compression is recognized
 automatically on input.
-</dd><dt>*-m*</dt><dd>
+</dd><dt>*-m*, *-Fl* preserve-modification-time</dt><dd>
 (i and p modes)
 Set file modification time on created files to match
 those in the source.
-</dd><dt>*-n*</dt><dd>
+</dd><dt>*-n*, *-Fl* numeric-uid-gid</dt><dd>
 (i mode, only with
 *-t*)
 Display numeric uid and gid.
@@ -172,26 +169,26 @@ By default,
 displays the user and group names when they are provided in the
 archive, or looks up the user and group names in the system
 password database.
-</dd><dt>*-no-preserve-owner*</dt><dd>
+</dd><dt>*-Fl* no-preserve-owner</dt><dd>
 (i mode only)
 Do not attempt to restore file ownership.
 This is the default when run by non-root users.
 </dd><dt>*-O* _file_</dt><dd>
 Write archive to
 _file_.
-</dd><dt>*-o*</dt><dd>
+</dd><dt>*-o*, *-Fl* create</dt><dd>
 Output mode.
 See above for description.
-</dd><dt>*-p*</dt><dd>
+</dd><dt>*-p*, *-Fl* pass-through</dt><dd>
 Pass-through mode.
 See above for description.
-</dd><dt>*-preserve-owner*</dt><dd>
+</dd><dt>*-Fl* preserve-owner</dt><dd>
 (i mode only)
 Restore file ownership.
 This is the default when run by the root user.
-</dd><dt>*--quiet*</dt><dd>
+</dd><dt>*-Fl* quiet</dt><dd>
 Suppress unnecessary messages.
-</dd><dt>*-R* `[`user`]``[`:`]``[`group`]`</dt><dd>
+</dd><dt>*-R* `[`user`]``[`:`]``[`group`]`, *-Fl* owner `[`user`]``[`:`]``[`group`]`</dt><dd>
 Set the owner and/or group on files in the output.
 If group is specified with no user
 (for example,
@@ -219,20 +216,24 @@ _/dev/tty_.
 If the line read is blank, the file is skipped.
 If the line contains a single period, the file is processed normally.
 Otherwise, the line is taken to be the new name of the file.
-</dd><dt>*-t*</dt><dd>
+</dd><dt>*-t*, *-Fl* list</dt><dd>
 (i mode only)
 List the contents of the archive to stdout;
 do not restore the contents to disk.
-</dd><dt>*-u*</dt><dd>
+</dd><dt>*-u*, *-Fl* unconditional</dt><dd>
 (i and p modes)
 Unconditionally overwrite existing files.
 Ordinarily, an older file will not overwrite a newer file on disk.
-</dd><dt>*-v*</dt><dd>
+</dd><dt>*-V*, *-Fl* dot</dt><dd>
+Print a dot to stderr for each file as it is processed.
+Superseded by
+*-v*.
+</dd><dt>*-v*, *-Fl* verbose</dt><dd>
 Print the name of each file to stderr as it is processed.
 With
 *-t*,
 provide a detailed listing of each file.
-</dd><dt>*--version*</dt><dd>
+</dd><dt>*-Fl* version</dt><dd>
 Print the program version information and exit.
 </dd><dt>*-y*</dt><dd>
 (o mode only)
@@ -250,6 +251,8 @@ Compress the archive with gzip-compatible compression before writing it.
 In input mode, this option is ignored;
 gzip compression is recognized automatically on input.
 </dd></dl>
+== EXIT STATUS ==
+The *cpio* utility exits 0 on success, and >0 if an error occurs.
 == ENVIRONMENT ==
 The following environment variables affect the execution of
 *cpio*:
@@ -265,12 +268,10 @@ See
 *environ*(7)
 for more information.
 </dt></dl>
-== EXIT STATUS ==
-The *cpio* utility exits 0 on success, and >0 if an error occurs.
 == EXAMPLES ==
 The
 *cpio*
-command is traditionally used to copy file heirarchies in conjunction
+command is traditionally used to copy file hierarchies in conjunction
 with the
 *find*(1)
 command.
