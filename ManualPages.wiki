@@ -29,6 +29,10 @@ In addition, they are available here for online browsing:
 
 About the numbers:  The original Unix manuals were distributed as several numbered volumes and those numbers are still used to identify categories of documentation.  The category numbers used here are:  1 is the "User Reference Manual" with documentation about command-line programs intended for use by users of the system; 3 is the "Programmer's Reference Manual" with information about programming interfaces; and 5 is the "File Formats Reference Manual" with information about the internal format of files on the system.
 
+The Wiki format here was generated automatically from the BSD mdoc format
+using the scripts in the trunk/doc directory.
+Any help in improving these scripts is greatly appreciated.
+
 Maintainers:  To update the Wiki manpages (assuming you have a checkout of the full source tree):
 {{{
  $ cd trunk/docs
