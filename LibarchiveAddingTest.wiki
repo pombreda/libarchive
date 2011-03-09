@@ -164,13 +164,33 @@ The following is a necessarily incomplete list of assert functions available to 
  * File tests: `assertIsReg`, `assertIsDir`, `assertIsSymlink`, `assertFileSize`, `assertFileNlinks`, `assertFileMtime`
  * File contents: `assertFileEmpty`, `assertFileNonEmpty`, `assertFileContents`, `assertTextFileContents`
 
+= Reference Files =
+
+Many tests require reading a pre-constructed reference file.
+Such files are stored with the source code for the associated test suite.
+Reference files are named according to the test and must be uuencoded to be checked into source control.
+
+For example, if you need a reference tar archive to use with `test_foo`, the file should be named `test_foo.tar` and stored in source control as `test_foo.tar.uu`.
+
+Within the test code, you can recover the reference file with:
+{{{
+    extract_reference_file("test_foo.tar");
+}}}
+The `extract_reference_file()` function will uudecode the requested file and put the result in the current directory.
+
+Look at `test_read_format_cpio_bin_be.c` for a simple example of this usage.
+
+A few of the older tests store reference data within the source code as a hex-encoded
+array of characters.
+This was common before `extract_reference_file()` was added and is not recommended for new code.
+
 = Some examples of tests =
 
 == Libarchive read tests ==
 
 There are quite a few read tests that simply read a pre-built input file and
 verify the results.
-These use `extractReferenceFile()` to decode a uuencoded input file, then open that
+These use `extract_reference_file()` to decode a uuencoded input file, then open that
 file with libarchive and verify the results.
 Most of these are pretty straightforward.
 
