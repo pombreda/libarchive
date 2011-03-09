@@ -7,9 +7,10 @@ dnl These first two version numbers are updated automatically on each release.
 m4_define([LIBARCHIVE_VERSION_S],[3.0.0a])
 m4_define([LIBARCHIVE_VERSION_N],[3000000])
 
-dnl bsdtar and bsdcpio versioning tracks libarchive
+dnl bsdtar, bsdcpio and bsdpax versioning tracks libarchive
 m4_define([BSDTAR_VERSION_S],LIBARCHIVE_VERSION_S())
 m4_define([BSDCPIO_VERSION_S],LIBARCHIVE_VERSION_S())
+m4_define([BSDPAX_VERSION_S],LIBARCHIVE_VERSION_S())
 
 AC_PREREQ(2.65)
 
@@ -44,6 +45,8 @@ AC_DEFINE_UNQUOTED([LIBARCHIVE_VERSION_NUMBER],"LIBARCHIVE_VERSION_N()",
 	[Version number of libarchive as a single integer])
 AC_DEFINE([BSDCPIO_VERSION_STRING],"BSDCPIO_VERSION_S()",
 	[Version number of bsdcpio])
+AC_DEFINE([BSDPAX_VERSION_STRING],"BSDPAX_VERSION_S()",
+	[Version number of bsdpax])
 AC_DEFINE([BSDTAR_VERSION_STRING],"BSDTAR_VERSION_S()",
 	[Version number of bsdtar])
 
@@ -51,6 +54,7 @@ AC_DEFINE([BSDTAR_VERSION_STRING],"BSDTAR_VERSION_S()",
 # below, but the shell variable names apparently cannot be the same as
 # the m4 macro names above.  Why?  Ask autoconf.
 BSDCPIO_VERSION_STRING=BSDCPIO_VERSION_S()
+BSDPAX_VERSION_STRING=BSDTAR_VERSION_S()
 BSDTAR_VERSION_STRING=BSDTAR_VERSION_S()
 LIBARCHIVE_VERSION_STRING=LIBARCHIVE_VERSION_S()
 LIBARCHIVE_VERSION_NUMBER=LIBARCHIVE_VERSION_N()
@@ -60,6 +64,7 @@ LIBARCHIVE_VERSION_NUMBER=LIBARCHIVE_VERSION_N()
 # the same symbols.  Why? Ask autoconf.
 AC_SUBST(ARCHIVE_LIBTOOL_VERSION)
 AC_SUBST(BSDCPIO_VERSION_STRING)
+AC_SUBST(BSDPAX_VERSION_STRING)
 AC_SUBST(BSDTAR_VERSION_STRING)
 AC_SUBST(LIBARCHIVE_VERSION_STRING)
 AC_SUBST(LIBARCHIVE_VERSION_NUMBER)
@@ -182,6 +187,49 @@ esac
 
 AM_CONDITIONAL([BUILD_BSDCPIO], [ test "$build_bsdcpio" = yes ])
 AM_CONDITIONAL([STATIC_BSDCPIO], [ test "$static_bsdcpio" = yes ])
+
+#
+# Options for building bsdpax.
+#
+# Default is not to build bsdpax, but that can be overridden.
+#
+AC_ARG_ENABLE([bsdpax],
+	[AS_HELP_STRING([--enable-bsdpax], [enable build of bsdpax (default)])
+	AS_HELP_STRING([--enable-bsdpax=static], [static build of bsdpax])
+	AS_HELP_STRING([--enable-bsdpax=shared], [dynamic build of bsdpax])
+AS_HELP_STRING([--disable-bsdpax], [disable build of bsdpax])],
+	[], [enable_bsdpax=yes])
+
+case "$enable_bsdpax" in
+yes)
+	if test "$enable_static" = "no"; then
+	   static_bsdpax=no
+	else
+	   static_bsdpax=yes
+        fi
+	build_bsdpax=yes
+	;;
+dynamic|shared)
+	if test "$enabled_shared" = "no"; then
+	   AC_MSG_FAILURE([Shared linking of bsdpax requires shared libarchive])
+	fi
+	build_bsdpax=yes
+	;;
+static)
+	build_bsdpax=yes
+	static_bsdpax=yes
+	;;
+no)
+	build_bsdpax=no
+	static_bsdpax=no
+	;;
+*)
+	AC_MSG_FAILURE([Unsupported value for --enable-bsdpax])
+	;;
+esac
+
+AM_CONDITIONAL([BUILD_BSDPAX], [ test "$build_bsdpax" = yes ])
+AM_CONDITIONAL([STATIC_BSDPAX], [ test "$static_bsdpax" = yes ])
 
 # Set up defines needed before including any headers
 case $host in

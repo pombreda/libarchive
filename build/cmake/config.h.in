@@ -250,6 +250,9 @@ typedef uint64_t uintmax_t;
 /* Version number of bsdcpio */
 #cmakedefine BSDCPIO_VERSION_STRING "${BSDCPIO_VERSION_STRING}"
 
+/* Version number of bsdpax */
+#cmakedefine BSDPAX_VERSION_STRING "${BSDPAX_VERSION_STRING}"
+
 /* Version number of bsdtar */
 #cmakedefine BSDTAR_VERSION_STRING "${BSDTAR_VERSION_STRING}"
 

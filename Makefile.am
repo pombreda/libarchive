@@ -8,19 +8,19 @@ ACLOCAL_AMFLAGS = -I build/autoconf
 #
 lib_LTLIBRARIES=	libarchive.la
 noinst_LTLIBRARIES=	libarchive_fe.la
-bin_PROGRAMS=	$(bsdtar_programs) $(bsdcpio_programs)
-man_MANS= $(libarchive_man_MANS) $(bsdtar_man_MANS) $(bsdcpio_man_MANS)
-BUILT_SOURCES= libarchive/test/list.h tar/test/list.h cpio/test/list.h
+bin_PROGRAMS=	$(bsdtar_programs) $(bsdcpio_programs) $(bsdpax_programs)
+man_MANS= $(libarchive_man_MANS) $(bsdtar_man_MANS) $(bsdcpio_man_MANS) $(bsdpax_man_MANS)
+BUILT_SOURCES= libarchive/test/list.h tar/test/list.h cpio/test/list.h pax/test/list.h
 
 #
-# What to test: We always test libarchive, test bsdtar and bsdcpio only
+# What to test: We always test libarchive, test bsdtar,bsdcpio and bsdpax only
 # if we built them.
 #
-check_PROGRAMS= libarchive_test $(bsdtar_test_programs) $(bsdcpio_test_programs)
-TESTS= libarchive_test $(bsdtar_test_programs) $(bsdcpio_test_programs)
-TESTS_ENVIRONMENT= $(libarchive_TESTS_ENVIRONMENT) $(bsdtar_TESTS_ENVIRONMENT) $(bsdcpio_TESTS_ENVIRONMENT)
+check_PROGRAMS= libarchive_test $(bsdtar_test_programs) $(bsdcpio_test_programs) $(bsdpax_test_programs)
+TESTS= libarchive_test $(bsdtar_test_programs) $(bsdcpio_test_programs) $(bsdpax_test_programs)
+TESTS_ENVIRONMENT= $(libarchive_TESTS_ENVIRONMENT) $(bsdtar_TESTS_ENVIRONMENT) $(bsdcpio_TESTS_ENVIRONMENT) $(bsdpax_TESTS_ENVIRONMENT)
 # Always build and test both bsdtar and bsdcpio as part of 'distcheck'
-DISTCHECK_CONFIGURE_FLAGS = --enable-bsdtar --enable-bsdcpio
+DISTCHECK_CONFIGURE_FLAGS = --enable-bsdtar --enable-bsdcpio --enable-bsdpax
 # The next line is commented out by default in shipping libarchive releases.
 # It is uncommented by default in trunk.
 AM_CFLAGS=-Wall -Werror
@@ -45,7 +45,9 @@ EXTRA_DIST= \
 	$(bsdtar_EXTRA_DIST)		\
 	$(bsdtar_test_EXTRA_DIST)	\
 	$(bsdcpio_EXTRA_DIST)		\
-	$(bsdcpio_test_EXTRA_DIST)
+	$(bsdcpio_test_EXTRA_DIST)	\
+	$(bsdpax_EXTRA_DIST)		\
+	$(bsdpax_test_EXTRA_DIST)
 
 # a) Clean out some unneeded files and directories
 # b) Collect all documentation and format it for distribution.
@@ -70,7 +72,8 @@ distcheck-hook:
 DISTCLEANFILES=					\
 	libarchive/test/list.h			\
 	tar/test/list.h				\
-	cpio/test/list.h
+	cpio/test/list.h			\
+	pax/test/list.h
 
 distclean-local:
 	-rm -rf .ref
@@ -708,3 +711,107 @@ bsdcpio_test_EXTRA_DIST=			\
 	cpio/test/test_option_t.stdout.uu	\
 	cpio/test/test_option_tv.stdout.uu	\
 	cpio/test/CMakeLists.txt
+
+#
+#
+# bsdpax source, docs, etc.
+#
+#
+
+bsdpax_SOURCES=				\
+		pax/bsdpax.c		\
+		pax/bsdpax.h		\
+		pax/bsdpax_platform.h	\
+		pax/cmdline.c		\
+		pax/copy.c		\
+		pax/getdate.c		\
+		pax/read.c		\
+		pax/subst.c		\
+		pax/util.c		\
+		pax/write.c
+
+if INC_WINDOWS_FILES
+bsdpax_SOURCES+=			\
+		pax/bsdpax_windows.h
+endif
+
+bsdpax_DEPENDENCIES = libarchive.la libarchive_fe.la
+
+
+if STATIC_BSDPAX
+bsdpax_ldstatic= -static
+bsdpax_ccstatic= -DLIBARCHIVE_STATIC
+else
+bsdpax_ldstatic=
+bsdpax_ccstatic=
+endif
+
+bsdpax_LDADD= libarchive_fe.la libarchive.la
+bsdpax_CPPFLAGS= -I$(top_srcdir)/libarchive -I$(top_srcdir)/libarchive_fe $(bsdpax_ccstatic) $(PLATFORMCPPFLAGS)
+bsdpax_LDFLAGS= $(bsdpax_ldstatic)
+
+bsdpax_EXTRA_DIST=		\
+	pax/test/list.h		\
+	pax/bsdpax.1		\
+	pax/bsdpax_windows.h	\
+	pax/CMakeLists.txt
+
+
+if BUILD_BSDPAX
+# Manpages to install
+bsdpax_man_MANS= pax/bsdpax.1
+bsdpax_programs= bsdpax
+else
+bsdpax_man_MANS=
+bsdpax_programs=
+endif
+
+#
+# bsdpax_test
+#
+
+bsdpax_test_SOURCES=						\
+	pax/test/main.c						\
+	pax/test/test.h						\
+	pax/test/test_0.c					\
+	pax/test/test_basic.c					\
+	pax/test/test_help.c					\
+	pax/test/test_option_D_upper.c				\
+	pax/test/test_option_H_upper.c				\
+	pax/test/test_option_L_upper.c				\
+	pax/test/test_option_T_upper.c				\
+	pax/test/test_option_Y_upper.c				\
+	pax/test/test_option_Z_upper.c				\
+	pax/test/test_option_a.c				\
+	pax/test/test_option_b.c				\
+	pax/test/test_option_c.c				\
+	pax/test/test_option_d.c				\
+	pax/test/test_option_k.c				\
+	pax/test/test_option_l.c				\
+	pax/test/test_option_n.c				\
+	pax/test/test_option_null.c				\
+	pax/test/test_option_s.c				\
+	pax/test/test_option_t.c				\
+	pax/test/test_option_u.c				\
+	pax/test/test_version.c
+
+bsdpax_test_CPPFLAGS= \
+	-I$(top_srcdir)/libarchive -I$(top_srcdir)/libarchive_fe \
+	-I$(top_srcdir)/pax -I$(top_builddir)/pax/test \
+	$(PLATFORMCPPFLAGS)
+bsdpax_test_LDADD=libarchive_fe.la
+
+pax/test/list.h: Makefile
+	cat $(top_srcdir)/pax/test/test_*.c | grep DEFINE_TEST > pax/test/list.h
+
+if BUILD_BSDPAX
+bsdpax_test_programs= bsdpax_test
+bsdpax_TESTS_ENVIRONMENT= BSDPAX=`cd $(top_builddir);/bin/pwd`/bsdpax$(EXEEXT) BSDPAX_TEST_FILES=`cd $(top_srcdir);/bin/pwd`/pax/test
+else
+bsdpax_test_programs=
+bsdpax_TESTS_ENVIRONMENT=
+endif
+
+bsdpax_test_EXTRA_DIST=			\
+	pax/test/test_option_T_upper.pax.uu	\
+	pax/test/CMakeLists.txt
