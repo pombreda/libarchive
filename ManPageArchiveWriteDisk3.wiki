@@ -8,6 +8,7 @@
 *archive_write_disk_set_user_lookup*,
 *archive_write_header*,
 *archive_write_data*,
+*archive_write_data_block*,
 *archive_write_finish_entry*,
 *archive_write_close*,
 *archive_write_finish*
@@ -47,6 +48,10 @@
 *ssize_t*
 <br>
 *archive_write_data*(_struct archive `*`_, _const void `*`_, _size_t_);
+<br>
+*ssize_t*
+<br>
+*archive_write_data_block*(_struct archive `*`_, _const void `*`_, _size_t size_, _int64_t offset_);
 <br>
 *int*
 <br>
@@ -210,6 +215,20 @@ objects.
 </dd><dt>*archive_write_data*()</dt><dd>
 Write data corresponding to the header just written.
 Returns number of bytes written or -1 on error.
+</dd><dt>*archive_write_data_block*()</dt><dd>
+Write data corresponding to the header just written.
+This is like
+*archive_write_data*()
+except that it performs a seek on the file being
+written to the specified offset before writing the data.
+This is useful when restoring sparse files from archive
+formats that support sparse files.
+Returns number of bytes written or -1 on error.
+(Note: This is currently not supported for
+*archive_write*
+handles, only for
+*archive_write_disk*
+handles.)
 </dd><dt>*archive_write_finish_entry*()</dt><dd>
 Close out the entry just written.
 Ordinarily, clients never need to call this, as it

@@ -695,7 +695,7 @@ field will indicate the total size of the file.
 === GNU tar pax archives===
 GNU tar 1.14 (XXX check this XXX) and later will write
 pax interchange format archives when you specify the
-*--posix*
+--posix
 flag.
 This format follows the pax interchange format closely,
 using some
