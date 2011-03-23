@@ -184,6 +184,17 @@ A few of the older tests store reference data within the source code as a hex-en
 array of characters.
 This was common before `extract_reference_file()` was added and is not recommended for new code.
 
+= Dos and Donts =
+
+  * DO use asserts liberally.  It's common to have an assert on almost every line.
+  * DO use assertEqualInt, assertEqualString, assertEqualMem to test equality instead of plain assert(); the specialized forms give a lot more information on a failure.
+  * DO test your tests; experiment by changing a piece of code and make sure your test fails.  If you think you've found a bug, we recommend writing the test first, make sure the test fails, then fixing the bug.
+  * DO run all of the tests before submitting a change.  Depending on your build environment, `make test` or `make check` will usually run all of the tests.
+  * DON'T rely on HAVE_ macros from config.h.  (If the tests use the same HAVE_ macros then configuration problems will be covered up.)
+  * DO use runtime tests for platform features.  For example, the ACL tests try to set an ACL on a file and read it back to determine if ACL support is available, then they exercise the libarchive ACL handling.
+  * DO look at existing tests.  Often, a bug can be tested by adding just a couple of asserts to an existing test instead of writing a new one.
+  * DO ask on the mailing lists if you have questions.  Some tests are better written than others.
+
 = Some examples of tests =
 
 == Libarchive read tests ==
@@ -209,7 +220,7 @@ These tests are nice to have but are tedious to build.
 
 There are also a couple of such validators for bsdtar and bsdcpio.
 These are very tricky since the exact data contains values that
-the test cannot completely control (such as the current time).
+the test cannot completely control (such as the current time or username).
 
 == Disk tests ==
 
@@ -248,4 +259,4 @@ By writing a custom I/O layer that implements such compression, we can write ver
 
 Of course, even scanning output to determine zero blocks can take quite a while, so the large tar tester makes one more optimization:  Libarchive is "mostly" zero-copy.  When you give it a large block to write to an entry body, it will pass pointers straight through to the output routine, except in those cases where it must copy data to correctly build blocks.  The large tar tester takes advantage of this to quickly detect when a block being written out by the archive writer is the same as some of the data that was given by the test as the entry body, and similarly when reading the archive back.
 
-Taken together, these tricks allow the large tar writer to test for issues such as proper storage of very large file sizes (tar files support several different ways to store file sizes which trade off portability versus range; libarchive tries to use the most portable one it can for each entry) and integer overflow (Windows 32-bit `off_t` broke the large tar test and led libarchive to make heavier use of `int64_t` internally.)
+Taken together, these tricks allow the large tar writer to test for issues such as proper storage of very large file sizes (tar files support several different ways to store file sizes which trade off portability versus range; libarchive tries to use the most portable one it can for each entry) and integer overflow (Windows 32-bit `off_t` broke the large tar test and led libarchive to make heavier use of `int64_t` internally) in a test that runs in under 1/4 second.
