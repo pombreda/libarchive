@@ -21,6 +21,8 @@ If you are still using any of the old functions listed here, you should have alr
 || archive_version_stamp()   || archive_version_number()  ||
 || archive_api_version()     || archive_version_number()  ||
 || archive_feature_version() || archive_version_number()  ||
+|| archive_read_set_format_options() || archive_read_set_options() ||
+|| archive_write_set_format_options() || archive_write_set_options() ||
 
 = Functions with argument changes =
 
@@ -67,3 +69,19 @@ In particular, the `write_add_filter` functions extend the write pipeline with a
 || archive_write_set_compression_gzip()     || archive_write_add_filter_gzip()     ||
 || archive_write_set_compression_lzma()     || archive_write_add_filter_lzma()     ||
 || archive_write_set_compression_xz()       || archive_write_add_filter_xz()       ||
+
+= Character Set Handling =
+
+Libarchive 2 has some deep bugs around handling character sets.
+In particular, it assumes that the local platform uses Unicode as the native wchar_t encoding, which is true on Windows, modern Linux, and a few other systems, but is certainly not universal.
+As a result, pax format archives are written incorrectly on some systems, since pax format requires UTF-8 and libarchive 2 incorrectly assumed that wchar_t strings can be easily converted to UTF-8.
+
+Libarchive 3 now uses the standard iconv library to convert between character sets and is introducing the notion of a "default character set for the archive."
+To support this, `archive_entry` objects can now be bound to a particular archive when they are created.
+The automatic character set conversions performed by `archive_entry` objects when reading and writing filenames, usernames, and other strings will now use an appropriate default character set:
+  * If the `archive_entry` object is bound to an archive, it will use the default character set for that archive.
+  * The platform default character encoding (as returned by `nl_langinfo(CHARSET)`) will be used if nothing else is specified.
+
+We are also introducing `charset` options to many of the archive readers and writers to control the character set that will be used for filenames written in those archives.
+When possible, this will be set automatically based on information in the archive itself.
+Combining this with the notion of a default character set for the archive should allow you to configure libarchive to read archives from other platforms and have the filenames and other information transparently converted to the character encoding suitable for your application.
