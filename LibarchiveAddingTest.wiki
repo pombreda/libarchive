@@ -193,6 +193,7 @@ This was common before `extract_reference_file()` was added and is not recommend
   * DON'T rely on `HAVE_` macros from config.h.  (If the tests use the same `HAVE_` macros as the code being tested then configuration problems will be covered up.)
   * DO use runtime tests for platform features.  For example, the ACL tests try to set an ACL on a file and read it back to determine if ACL support is available, then they exercise the libarchive ACL handling.
   * DO look at existing tests.  Often, a bug can be tested by adding just a couple of asserts to an existing test instead of writing a new one.
+  * DO improve existing tests.  In particular, if you see a test failure that is hard to understand, consider adding a failure() message or comments so the next person will have an easier time.
   * DO ask on the mailing lists if you have questions.  Some tests are better written than others.
 
 = Some examples of tests =
