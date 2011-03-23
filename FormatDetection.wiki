@@ -5,7 +5,7 @@
 Libarchive uses an internal "bidding" process in which
 multiple modules inspect the incoming data.
 The technical [LibarchiveInternals] page describes
-the process; this page walks through a simple example.
+the process in detail; this page walks through a simple example.
 
 = Modules and Bidding =
 
