@@ -54,7 +54,7 @@ They will also of course have the same file contents, permissions, ownership, an
 Somehow, information about these two filenames will be store in an archive "foobar.archive".
 Whatever information gets stored in the archive needs to be sufficient to recreate these two names with the correct file contents and other information.
 
-This requires that the two archive entries be treated differently:
+When the archive is extracted, these two entries will be treated quite differently:
 The first entry will actually create a new file.
 The second entry will be restored by invoking the `link()` system call with the old filename and the new filename.
 (The file metadata and even contents can actually
