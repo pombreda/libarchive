@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2004 Tim Kientzle
+ * Copyright (c) 2011 Michihiro NAKAJIMA
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -92,10 +93,13 @@ struct zip {
 
 	struct archive_string	pathname;
 	struct archive_string	extra;
+	struct archive_string_conv *sconv;
+	struct archive_string_conv *sconv_utf8;
 	char	format_name[64];
 };
 
 #define ZIP_LENGTH_AT_END	8
+#define ZIP_UTF8_NAME		(1<<11)	
 
 struct zip_file_header {
 	char	signature[4];
@@ -123,6 +127,8 @@ static const char *compression_names[] = {
 };
 
 static int	archive_read_format_zip_bid(struct archive_read *);
+static int	archive_read_format_zip_options(struct archive_read *,
+		    const char *, const char *);
 static int	archive_read_format_zip_cleanup(struct archive_read *);
 static int	archive_read_format_zip_read_data(struct archive_read *,
 		    const void **, size_t *, int64_t *);
@@ -160,7 +166,7 @@ archive_read_support_format_zip(struct archive *_a)
 	    zip,
 	    "zip",
 	    archive_read_format_zip_bid,
-	    NULL,
+	    archive_read_format_zip_options,
 	    archive_read_format_zip_read_header,
 	    archive_read_format_zip_read_data,
 	    archive_read_format_zip_read_data_skip,
@@ -234,6 +240,35 @@ archive_read_format_zip_bid(struct archive_read *a)
 	}
 
 	return (0);
+}
+
+static int
+archive_read_format_zip_options(struct archive_read *a,
+    const char *key, const char *val)
+{
+	struct zip *zip;
+	int ret = ARCHIVE_FAILED;
+
+	zip = (struct zip *)(a->format->data);
+	if (strcmp(key, "charset")  == 0) {
+		if (val == NULL || val[0] == 0)
+			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+			    "zip: charset option needs a character-set name");
+		else {
+			zip->sconv = archive_string_conversion_from_charset(
+			    &a->archive, val, 0);
+			if (zip->sconv != NULL) {
+				if (strcmp(val, "UTF-8") == 0)
+					zip->sconv_utf8 = zip->sconv;
+				ret = ARCHIVE_OK;
+			} else
+				ret = ARCHIVE_FATAL;
+		}
+	} else
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+		    "zip: unknown keyword ``%s''", key);
+
+	return (ret);
 }
 
 /*
@@ -428,6 +463,7 @@ zip_read_file_header(struct archive_read *a, struct archive_entry *entry,
 {
 	const struct zip_file_header *p;
 	const void *h;
+	int ret = ARCHIVE_OK;
 
 	if ((p = __archive_read_ahead(a, sizeof *p, NULL)) == NULL) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
@@ -465,9 +501,31 @@ zip_read_file_header(struct archive_read *a, struct archive_entry *entry,
 		    "Truncated ZIP file header");
 		return (ARCHIVE_FATAL);
 	}
-	if (archive_string_ensure(&zip->pathname, zip->filename_length) == NULL)
-		__archive_errx(1, "Out of memory");
-	archive_strncpy(&zip->pathname, h, zip->filename_length);
+	if (zip->sconv == NULL && (zip->flags & ZIP_UTF8_NAME) != 0) {
+		/* The filename is stored to be UTF-8. */
+		if (zip->sconv_utf8 == NULL)
+			zip->sconv_utf8 =
+			    archive_string_conversion_from_charset(
+				&a->archive, "UTF-8", 1);
+		if (archive_strncpy_in_locale(&zip->pathname,
+		    h, zip->filename_length, zip->sconv_utf8) != 0) {
+			archive_set_error(&a->archive,
+			    ARCHIVE_ERRNO_FILE_FORMAT,
+			    "Pathname cannot be converted "
+			    "from UTF-8 to current locale.");
+			ret = ARCHIVE_WARN;
+		}
+	} else {
+		if (archive_strncpy_in_locale(&zip->pathname,
+		    h, zip->filename_length, zip->sconv) != 0) {
+			archive_set_error(&a->archive,
+			    ARCHIVE_ERRNO_FILE_FORMAT,
+			    "Pathname cannot be converted "
+			    "from %s to current locale.",
+			    archive_string_conversion_charset_name(zip->sconv));
+			ret = ARCHIVE_WARN;
+		}
+	}
 	__archive_read_consume(a, zip->filename_length);
 	archive_entry_set_pathname(entry, zip->pathname.s);
 
@@ -510,7 +568,7 @@ zip_read_file_header(struct archive_read *a, struct archive_entry *entry,
 	    zip->compression_name);
 	a->archive.archive_format_name = zip->format_name;
 
-	return (ARCHIVE_OK);
+	return (ret);
 }
 
 /* Convert an MSDOS-style date/time into Unix-style time. */
@@ -969,8 +1027,35 @@ process_extra(const void* extra, struct zip* zip)
 				zip->gid = archive_le16dec(p + offset + 2);
 			break;
 		case 0x7875:
+		{
 			/* Info-Zip Unix Extra Field (type 3) "ux". */
+			int uidsize = 0, gidsize = 0;
+
+			if (datasize >= 1 && p[offset] == 1) {/* version=1 */
+				if (datasize >= 4) {
+					/* get a uid size. */
+					uidsize = p[offset+1];
+					if (uidsize == 2)
+						zip->uid = archive_le16dec(
+						     p + offset + 2);
+					else if (uidsize == 4 && datasize >= 6)
+						zip->uid = archive_le32dec(
+						     p + offset + 2);
+				}
+				if (datasize >= (2 + uidsize + 3)) {
+					/* get a gid size. */
+					gidsize = p[offset+2+uidsize];
+					if (gidsize == 2)
+						zip->gid = archive_le16dec(
+						    p+offset+2+uidsize+1);
+					else if (gidsize == 4 &&
+					    datasize >= (2 + uidsize + 5))
+						zip->gid = archive_le32dec(
+						    p+offset+2+uidsize+1);
+				}
+			}
 			break;
+		}
 		default:
 			break;
 		}

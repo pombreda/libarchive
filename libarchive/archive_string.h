@@ -65,6 +65,8 @@ struct archive_wstring {
 	size_t	 buffer_length; /* Length of malloc-ed storage in bytes. */
 };
 
+struct archive_string_conv;
+
 /* Initialize an archive_string object on the stack or elsewhere. */
 #define	archive_string_init(a)	\
 	do { (a)->s = NULL; (a)->length = 0; (a)->buffer_length = 0; } while(0)
@@ -77,14 +79,36 @@ archive_strappend_char(struct archive_string *, char);
 struct archive_wstring *
 archive_wstrappend_wchar(struct archive_wstring *, wchar_t);
 
-/* Convert a Unicode string to UTF-8 and append the result. */
-int
-archive_string_append_from_unicode_to_utf8(struct archive_string *, const wchar_t *, size_t);
-
 /* Convert a Unicode string to current locale and append the result. */
-/* Returns NULL if conversion fails. */
+/* Returns -1 if conversion fails. */
 int
 archive_string_append_from_unicode_to_mbs(struct archive *, struct archive_string *, const wchar_t *, size_t);
+
+
+/* Test that platform support a character-set conversion.
+ * Return -1 and set a error message if the conversion is not supported. */
+struct archive_string_conv *
+archive_string_conversion_to_charset(struct archive *, const char *, int);
+struct archive_string_conv *
+archive_string_conversion_from_charset(struct archive *, const char *, int);
+void
+archive_string_conversion_free(struct archive *);
+const char *
+archive_string_conversion_charset_name(struct archive_string_conv *);
+
+
+/* Copy one archive_string to another in locale conversion.
+ * Return -1 if conversion failes. */
+int
+archive_strncpy_in_locale(struct archive_string *, const void *, size_t,
+    struct archive_string_conv *);
+
+/* Copy one archive_string to another in locale conversion.
+ * Return -1 if conversion failes. */
+int
+archive_strncat_in_locale(struct archive_string *, const void *, size_t,
+    struct archive_string_conv *);
+
 
 /* Copy one archive_string to another */
 #define	archive_string_copy(dest, src) \
@@ -123,6 +147,8 @@ archive_wstrcat(struct archive_wstring *, const wchar_t *);
 	archive_strncpy((as), (p), ((p) == NULL ? 0 : strlen(p)))
 #define	archive_wstrcpy(as,p) \
 	archive_wstrncpy((as), (p), ((p) == NULL ? 0 : wcslen(p)))
+#define	archive_strcpy_in_locale(as,p,lo) \
+	archive_strncpy_in_locale((as), (p), ((p) == NULL ? 0 : strlen(p)), (lo))
 
 /* Copy a C string to an archive_string with limit, resizing as necessary. */
 #define	archive_strncpy(as,p,l) \
@@ -147,10 +173,6 @@ void	archive_string_vsprintf(struct archive_string *, const char *,
 	    va_list) __LA_PRINTF(2, 0);
 void	archive_string_sprintf(struct archive_string *, const char *, ...)
 	    __LA_PRINTF(2, 3);
-
-/* Translates from UTF8 to Unicode. */
-/* Returns non-zero if conversion failed in any way. */
-int archive_wstring_append_from_utf8(struct archive_wstring *dest, const char *, size_t);
 
 /* Translates from MBS to Unicode. */
 /* Returns non-zero if conversion failed in any way. */
@@ -183,6 +205,8 @@ const char *	archive_mstring_get_mbs(struct archive *, struct archive_mstring *)
 const char *	archive_mstring_get_utf8(struct archive *, struct archive_mstring *);
 const wchar_t *	archive_mstring_get_wcs(struct archive *, struct archive_mstring *);
 int	archive_mstring_copy_mbs(struct archive_mstring *, const char *mbs);
+int	archive_mstring_copy_mbs_len(struct archive_mstring *, const char *mbs,
+	    size_t);
 int	archive_mstring_copy_utf8(struct archive_mstring *, const char *utf8);
 int	archive_mstring_copy_wcs(struct archive_mstring *, const wchar_t *wcs);
 int	archive_mstring_copy_wcs_len(struct archive_mstring *, const wchar_t *wcs, size_t);

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2010 Michihiro NAKAJIMA
+ * Copyright (c) 2010-2011 Michihiro NAKAJIMA
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -290,6 +290,8 @@ struct cab {
 	unsigned char		*uncompressed_buffer;
 	size_t			 uncompressed_buffer_size;
 
+	struct archive_string_conv *sconv;
+	struct archive_string_conv *sconv_utf8;
 	char			 format_name[64];
 
 #ifdef HAVE_ZLIB_H
@@ -300,6 +302,8 @@ struct cab {
 };
 
 static int	archive_read_format_cab_bid(struct archive_read *);
+static int	archive_read_format_cab_options(struct archive_read *,
+		    const char *, const char *);
 static int	archive_read_format_cab_read_header(struct archive_read *,
 		    struct archive_entry *);
 static int	archive_read_format_cab_read_data(struct archive_read *,
@@ -362,7 +366,7 @@ archive_read_support_format_cab(struct archive *_a)
 	    cab,
 	    "cab",
 	    archive_read_format_cab_bid,
-	    NULL,
+	    archive_read_format_cab_options,
 	    archive_read_format_cab_read_header,
 	    archive_read_format_cab_read_data,
 	    archive_read_format_cab_read_data_skip,
@@ -441,6 +445,33 @@ archive_read_format_cab_bid(struct archive_read *a)
 		}
 	}
 	return (0);
+}
+
+static int
+archive_read_format_cab_options(struct archive_read *a,
+    const char *key, const char *val)
+{
+	struct cab *cab;
+	int ret = ARCHIVE_FAILED;
+
+	cab = (struct cab *)(a->format->data);
+	if (strcmp(key, "charset")  == 0) {
+		if (val == NULL || val[0] == 0)
+			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+			    "cab: charset option needs a character-set name");
+		else {
+			cab->sconv = archive_string_conversion_from_charset(
+			    &a->archive, val, 0);
+			if (cab->sconv != NULL)
+				ret = ARCHIVE_OK;
+			else
+				ret = ARCHIVE_FATAL;
+		}
+	} else
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+		    "cab: unknown keyword ``%s''", key);
+
+	return (ret);
 }
 
 static int
@@ -526,38 +557,49 @@ cab_read_ahead_remaining(struct archive_read *a, size_t min, ssize_t *avail)
 /* Convert a path separator '\' -> '/' */
 static void
 cab_convert_path_separator(struct archive_read *a, struct cab *cab,
-    struct archive_string *pathname, unsigned char attr)
+    struct archive_string *fn, unsigned char attr)
 {
-	int l, r;
+	size_t i;
 
-	if (strchr(pathname->s, '\\') == NULL)
+	for (i = 0; i < archive_strlen(fn); i++) {
+		if (fn->s[i] == '\\')
+			fn->s[i] = '/';
+		else if (fn->s[i] & 0x80)
+			/* Are there any multibyte characters in fn ? */
+			break;
+	}
+	if (i == archive_strlen(fn))
 		return;
 
-	archive_wstring_empty(&cab->ws);
-	if ((attr & ATTR_NAME_IS_UTF) != 0 ||
-	    archive_wstring_append_from_mbs(&a->archive, &(cab->ws), pathname->s, pathname->length) != 0) {
-		for (l = 0; pathname->s[l] != '\0'; l++) {
-			if (pathname->s[l] == '\\')
-				pathname->s[l] = '/';
+	/*
+	 * Try to replace a character in wide character.
+	 */
+
+	/* If a conversion to wide character failed, force a replacement. */
+	if (!archive_wstring_append_from_mbs(&a->archive, &(cab->ws),
+	    fn->s, fn->length)) {
+		for (i = 0; i < archive_strlen(fn); i++) {
+			if (fn->s[i] == '\\')
+				fn->s[i] = '/';
 		}
 		return;
 	}
 
-	r = 0;
-	for (l = 0; cab->ws.s[l] != L'\0'; l++) {
-		if (cab->ws.s[l] == L'\\') {
-			cab->ws.s[l] = L'/';
-			r = 1;
-		}
+	for (i = 0; i < archive_strlen(&(cab->ws)); i++) {
+		if (cab->ws.s[i] == L'\\')
+			cab->ws.s[i] = L'/';
 	}
-	if (r) {
-		archive_string_empty(&cab->mbs);
-		archive_string_append_from_unicode_to_mbs(&a->archive, &cab->mbs, cab->ws.s, cab->ws.length);
-		/* If mbs length is different to pathname, we broke the
-		 * pathname. We shouldn't use it. */
-		if (archive_strlen(&cab->mbs) == archive_strlen(pathname))
-			archive_string_copy(pathname, &cab->mbs);
-	}
+
+	/*
+	 * Sanity check that we surely did not break a filename.
+	 */
+	archive_string_empty(&(cab->mbs));
+	archive_string_append_from_unicode_to_mbs(&a->archive, &(cab->mbs),
+	    cab->ws.s, cab->ws.length);
+	/* If mbs length is different to fn, we broke the
+	 * filename and we shouldn't use it. */
+	if (archive_strlen(&(cab->mbs)) == archive_strlen(fn))
+		archive_string_copy(fn, &(cab->mbs));
 }
 
 /*
@@ -753,7 +795,16 @@ cab_read_header(struct archive_read *a)
 		if ((len = cab_strnlen(p, avail-1)) <= 0)
 			goto invalid;
 		archive_string_init(&(file->pathname));
-		archive_strncpy(&(file->pathname),  p, len);
+		if ((file->attr & ATTR_NAME_IS_UTF) && cab->sconv == NULL) {
+			if (cab->sconv_utf8 == NULL)
+				cab->sconv_utf8 =
+				    archive_string_conversion_from_charset(
+					&(a->archive), "UTF-8", 1);
+			archive_strncpy_in_locale(&(file->pathname), p, len,
+			    cab->sconv_utf8);
+		} else
+			archive_strncpy_in_locale(&(file->pathname), p,
+			    len, cab->sconv);
 		__archive_read_consume(a, len + 1);
 		cab->cab_offset += len + 1;
 		/* Convert a path separator '\' -> '/' */
@@ -885,8 +936,6 @@ archive_read_format_cab_read_header(struct archive_read *a,
 	 * Set a default value and common data
 	 */
 	archive_entry_set_pathname(entry, file->pathname.s);
-	if (file->attr & ATTR_NAME_IS_UTF)
-		archive_entry_update_pathname_utf8(entry, file->pathname.s);
 
 	archive_entry_set_size(entry, file->uncompressed_size);
 	if (file->attr & ATTR_RDONLY)

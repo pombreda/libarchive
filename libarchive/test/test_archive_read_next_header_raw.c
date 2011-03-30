@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2003-2007 Tim Kientzle
+ * Copyright (c) 2011 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,42 +22,44 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_pax_filename_encoding.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD$");
 
-#include <locale.h>
+#define DATA "random garbage for testing purposes"
 
-/*
- * Pax interchange is supposed to encode filenames into
- * UTF-8.  This verifies that behavior on FreeBSD using
- * the KOI8-R locale.
- */
+static const char data[sizeof(DATA)] = DATA;
 
-DEFINE_TEST(test_pax_filename_encoding_freebsd)
+static void
+test(int skip_explicitely)
 {
-  	struct archive *a;
-  	struct archive_entry *entry;
-	char buff[4096];
-	size_t used;
+	struct archive* a = archive_read_new();
+	struct archive_entry* e;
 
-	if (NULL == setlocale(LC_ALL, "ru_RU.KOI8-R")) {
-		skipping("KOI8-R locale not available on this system.");
-		return;
-	}
+	assertEqualInt(ARCHIVE_OK, archive_read_support_format_raw(a));
+	assertEqualInt(0, archive_errno(a));
+	assertEqualString(NULL, archive_error_string(a));
 
-	a = archive_write_new();
-	assertEqualInt(ARCHIVE_OK, archive_write_set_format_pax(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_open_memory(a, buff, sizeof(buff), &used));
+	assertEqualInt(ARCHIVE_OK, archive_read_open_memory(a, (void*) data,
+	    sizeof(data)));
+	assertEqualString(NULL, archive_error_string(a));
 
-	entry = archive_entry_new();
-	archive_entry_set_pathname(entry, "\xD0\xD2\xC9");
-	archive_entry_set_filetype(entry, AE_IFREG);
-	archive_entry_set_size(entry, 0);
-	assertEqualInt(ARCHIVE_OK, archive_write_header(a, entry));
-	archive_entry_free(entry);
-	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_next_header(a, &e));
+	assertEqualInt(0, archive_errno(a));
+	assertEqualString(NULL, archive_error_string(a));
 
-	/* Above three characters in KOI8-R should translate to the following
-	 * three characters (two bytes each) in UTF-8. */
-	assertEqualMem(buff + 512, "15 path=\xD0\xBF\xD1\x80\xD0\xB8\x0A", 15);
+	if (skip_explicitely)
+		assertEqualInt(ARCHIVE_OK, archive_read_data_skip(a));
+
+	assertEqualInt(ARCHIVE_EOF, archive_read_next_header(a, &e));
+	assertEqualInt(0, archive_errno(a));
+	assertEqualString(NULL, archive_error_string(a));
+
+	archive_read_free(a);
+}
+
+DEFINE_TEST(test_archive_read_next_header_raw)
+{
+	test(1);
+	test(0);
 }

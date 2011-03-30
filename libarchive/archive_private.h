@@ -83,6 +83,8 @@ struct archive_vtable {
 	const char * (*archive_filter_name)(struct archive *, int);
 };
 
+struct archive_string_conv;
+
 struct archive {
 	/*
 	 * The magic/state values are used to sanity-check the
@@ -112,11 +114,9 @@ struct archive {
 	const char	 *error;
 	struct archive_string	error_string;
 
-#if HAVE_ICONV
-	iconv_t		 unicode_to_current;
-	iconv_t		 current_to_unicode;
 	char *current_code;
-#endif
+	unsigned current_codepage;
+	struct archive_string_conv *sconv;
 };
 
 /* Check magic value and state; return(ARCHIVE_FATAL) if it isn't valid. */
@@ -131,9 +131,6 @@ int	__archive_check_magic(struct archive *, unsigned int magic,
 	} while (0)
 
 void	__archive_errx(int retvalue, const char *msg) __LA_DEAD;
-
-int	__archive_parse_options(const char *p, const char *fn,
-	    int keysize, char *key, int valsize, char *val);
 
 int	__archive_mktemp(const char *tmpdir);
 

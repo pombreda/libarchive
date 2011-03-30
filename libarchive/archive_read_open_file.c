@@ -121,11 +121,12 @@ file_skip(struct archive *a, void *client_data, int64_t request)
 	struct read_FILE_data *mine = (struct read_FILE_data *)client_data;
 #if HAVE_FSEEKO
 	off_t skip = (off_t)request;
+#elif HAVE__FSEEKI64
+	int64_t skip = request;
 #else
 	long skip = (long)request;
 #endif
 	int skip_bits = sizeof(skip) * 8 - 1;
-	int64_t max_skip = (((int64_t)1 << (skip_bits - 1)) - 1) * 2 + 1;
 
 	(void)a; /* UNUSED */
 
@@ -139,11 +140,17 @@ file_skip(struct archive *a, void *client_data, int64_t request)
 		return (0);
 
 	/* If request is too big for a long or an off_t, reduce it. */
-	if ((sizeof(request) > sizeof(skip)) && (request > max_skip))
-		skip = max_skip;
+	if (sizeof(request) > sizeof(skip)) {
+		int64_t max_skip =
+		    (((int64_t)1 << (skip_bits - 1)) - 1) * 2 + 1;
+		if (request > max_skip)
+			skip = max_skip;
+	}
 
 #if HAVE_FSEEKO
 	if (fseeko(mine->f, skip, SEEK_CUR) != 0)
+#elif HAVE__FSEEKI64
+	if (_fseeki64(mine->f, skip, SEEK_CUR) != 0)
 #else
 	if (fseek(mine->f, skip, SEEK_CUR) != 0)
 #endif

@@ -357,6 +357,8 @@ struct xar {
 	enum enctype 		 entry_encoding;
 	struct chksumval	 entry_a_sum;
 	struct chksumval	 entry_e_sum;
+
+	struct archive_string_conv *sconv;
 };
 
 struct xmlattr {
@@ -371,6 +373,7 @@ struct xmlattr_list {
 };
 
 static int	xar_bid(struct archive_read *);
+static int	xar_options(struct archive_read *, const char *, const char *);
 static int	xar_read_header(struct archive_read *,
 		    struct archive_entry *);
 static int	xar_read_data(struct archive_read *,
@@ -448,7 +451,7 @@ archive_read_support_format_xar(struct archive *_a)
 	    xar,
 	    "xar",
 	    xar_bid,
-	    NULL,
+	    xar_options,
 	    xar_read_header,
 	    xar_read_data,
 	    xar_read_data_skip,
@@ -501,6 +504,38 @@ xar_bid(struct archive_read *a)
 	}
 
 	return (bid);
+}
+
+static int
+xar_options(struct archive_read *a, const char *key, const char *val)
+{
+	struct xar *xar;
+	int ret = ARCHIVE_FAILED;
+
+	xar = (struct xar *)(a->format->data);
+	if (strcmp(key, "charset")  == 0) {
+		if (val == NULL || val[0] == 0)
+			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+			    "xar: charset option needs a character-set name");
+		else {
+			struct archive_string_conv *sc;
+
+			/*
+			 * TODO: Should we allow UTF-8-MAC only ? 
+			 */
+			sc = archive_string_conversion_from_charset(
+			    &a->archive, val, 0);
+			if (sc != NULL) {
+				xar->sconv = sc;
+				ret = ARCHIVE_OK;
+			} else
+				ret = ARCHIVE_FATAL;
+		}
+	} else
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+		    "xar: unknown keyword ``%s''", key);
+
+	return (ret);
 }
 
 static int
@@ -646,6 +681,11 @@ xar_read_header(struct archive_read *a, struct archive_entry *entry)
 	xar = (struct xar *)(a->format->data);
 
 	if (xar->offset == 0) {
+		/* Create a character conversion object. */
+		if (xar->sconv == NULL)
+			xar->sconv = archive_string_conversion_from_charset(
+			    &(a->archive), "UTF-8", 1);
+
 		/* Read TOC. */
 		r = read_toc(a);
 		if (r != ARCHIVE_OK)
@@ -673,14 +713,14 @@ xar_read_header(struct archive_read *a, struct archive_entry *entry)
 	archive_entry_set_mtime(entry, file->mtime, 0);
 	archive_entry_set_gid(entry, file->gid);
 	if (file->gname.length > 0)
-		archive_entry_update_gname_utf8(entry, file->gname.s);
+		archive_entry_set_gname(entry, file->gname.s);
 	archive_entry_set_uid(entry, file->uid);
 	if (file->uname.length > 0)
-		archive_entry_update_uname_utf8(entry, file->uname.s);
+		archive_entry_set_uname(entry, file->uname.s);
 	archive_entry_set_mode(entry, file->mode);
-	archive_entry_update_pathname_utf8(entry, file->pathname.s);
+	archive_entry_set_pathname(entry, file->pathname.s);
 	if (file->symlink.length > 0)
-		archive_entry_update_symlink_utf8(entry, file->symlink.s);
+		archive_entry_set_symlink(entry, file->symlink.s);
 	/* Set proper nlink. */
 	if ((file->mode & AE_IFMT) == AE_IFDIR)
 		archive_entry_set_nlink(entry, file->subdirs + 2);
@@ -688,8 +728,7 @@ xar_read_header(struct archive_read *a, struct archive_entry *entry)
 		archive_entry_set_nlink(entry, file->nlink);
 	archive_entry_set_size(entry, file->size);
 	if (archive_strlen(&(file->hardlink)) > 0)
-		archive_entry_update_hardlink_utf8(entry,
-			file->hardlink.s);
+		archive_entry_set_hardlink(entry, file->hardlink.s);
 	archive_entry_set_ino64(entry, file->ino64);
 	if (file->has & HAS_DEV)
 		archive_entry_set_dev(entry, file->dev);
@@ -2493,7 +2532,8 @@ static const int base64[256] = {
 };
 
 static void
-strappend_base64(struct archive_string *as, const char *s, size_t l)
+strappend_base64(struct archive_read *a, struct xar *xar,
+    struct archive_string *as, const char *s, size_t l)
 {
 	unsigned char buff[256];
 	unsigned char *out;
@@ -2538,7 +2578,8 @@ strappend_base64(struct archive_string *as, const char *s, size_t l)
 		}
 	}
 	if (len > 0)
-		archive_strncat(as, (const char *)buff, len);
+		archive_strncat_in_locale(as, (const char *)buff, len,
+		    xar->sconv);
 }
 
 static void
@@ -2582,13 +2623,16 @@ xml_data(void *userData, const char *s, int len)
 		}
 		xar->file->has |= HAS_PATHNAME;
 		if (xar->base64text)
-			strappend_base64(&(xar->file->pathname), s, len);
+			strappend_base64(a, xar,
+			    &(xar->file->pathname), s, len);
 		else
-			archive_strncat(&(xar->file->pathname), s, len);
+			archive_strncat_in_locale(&(xar->file->pathname),
+			    s, len, xar->sconv);
 		break;
 	case FILE_LINK:
 		xar->file->has |= HAS_SYMLINK;
-		archive_strncpy(&(xar->file->symlink), s, len);
+		archive_strncpy_in_locale(&(xar->file->symlink), s, len,
+		    xar->sconv);
 		break;
 	case FILE_TYPE:
 		if (strncmp("file", s, len) == 0 ||
@@ -2639,7 +2683,8 @@ xml_data(void *userData, const char *s, int len)
 		break;
 	case FILE_GROUP:
 		xar->file->has |= HAS_GID;
-		archive_strncpy(&(xar->file->gname), s, len);
+		archive_strncpy_in_locale(&(xar->file->gname), s, len,
+		    xar->sconv);
 		break;
 	case FILE_GID:
 		xar->file->has |= HAS_GID;
@@ -2647,7 +2692,8 @@ xml_data(void *userData, const char *s, int len)
 		break;
 	case FILE_USER:
 		xar->file->has |= HAS_UID;
-		archive_strncpy(&(xar->file->uname), s, len);
+		archive_strncpy_in_locale(&(xar->file->uname), s, len,
+		    xar->sconv);
 		break;
 	case FILE_UID:
 		xar->file->has |= HAS_UID;

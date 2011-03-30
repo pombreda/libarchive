@@ -60,12 +60,6 @@ dist-hook:
 	-rm -f $(distdir)/*/Makefile $(distdir)/*/*/Makefile
 	cd $(distdir)/doc && /bin/sh update.sh
 
-# Verify cmake builds as part of the acceptance
-distcheck-hook:
-	mkdir $(distdir)/_build/cmtest
-	cd $(distdir)/_build/cmtest && cmake ../.. && make && make test
-	rm -rf $(distdir)/_build/cmtest
-
 #
 # Extra rules for cleanup
 #
@@ -109,6 +103,8 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_entry_strmode.c			\
 	libarchive/archive_entry_xattr.c			\
 	libarchive/archive_hash.h				\
+	libarchive/archive_options.c				\
+	libarchive/archive_options_private.h			\
 	libarchive/archive_platform.h				\
 	libarchive/archive_private.h				\
 	libarchive/archive_rb.c					\
@@ -126,15 +122,16 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_read_open_filename.c			\
 	libarchive/archive_read_open_memory.c			\
 	libarchive/archive_read_private.h			\
-	libarchive/archive_read_support_compression_all.c	\
-	libarchive/archive_read_support_compression_bzip2.c	\
-	libarchive/archive_read_support_compression_compress.c	\
-	libarchive/archive_read_support_compression_gzip.c	\
-	libarchive/archive_read_support_compression_none.c	\
-	libarchive/archive_read_support_compression_program.c	\
-	libarchive/archive_read_support_compression_rpm.c	\
-	libarchive/archive_read_support_compression_uu.c	\
-	libarchive/archive_read_support_compression_xz.c	\
+	libarchive/archive_read_set_options.c			\
+	libarchive/archive_read_support_filter_all.c		\
+	libarchive/archive_read_support_filter_bzip2.c		\
+	libarchive/archive_read_support_filter_compress.c	\
+	libarchive/archive_read_support_filter_gzip.c		\
+	libarchive/archive_read_support_filter_none.c		\
+	libarchive/archive_read_support_filter_program.c	\
+	libarchive/archive_read_support_filter_rpm.c		\
+	libarchive/archive_read_support_filter_uu.c		\
+	libarchive/archive_read_support_filter_xz.c		\
 	libarchive/archive_read_support_format_all.c		\
 	libarchive/archive_read_support_format_ar.c		\
 	libarchive/archive_read_support_format_cab.c		\
@@ -208,6 +205,7 @@ libarchive_man_MANS=						\
 	libarchive/archive_entry_time.3				\
 	libarchive/archive_read.3				\
 	libarchive/archive_read_disk.3				\
+	libarchive/archive_read_set_options.3			\
 	libarchive/archive_util.3				\
 	libarchive/archive_write.3				\
 	libarchive/archive_write_disk.3				\
@@ -251,7 +249,17 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_archive_read_close_twice.c		\
 	libarchive/test/test_archive_read_close_twice_open_fd.c	\
 	libarchive/test/test_archive_read_close_twice_open_filename.c	\
+	libarchive/test/test_archive_read_next_header_empty.c	\
+	libarchive/test/test_archive_read_next_header_raw.c	\
+	libarchive/test/test_archive_read_set_filter_option.c	\
+	libarchive/test/test_archive_read_set_format_option.c	\
+	libarchive/test/test_archive_read_set_option.c		\
+	libarchive/test/test_archive_read_set_options.c		\
 	libarchive/test/test_archive_set_error.c		\
+	libarchive/test/test_archive_write_set_filter_option.c	\
+	libarchive/test/test_archive_write_set_format_option.c	\
+	libarchive/test/test_archive_write_set_option.c		\
+	libarchive/test/test_archive_write_set_options.c	\
 	libarchive/test/test_bad_fd.c				\
 	libarchive/test/test_compat_bzip2.c			\
 	libarchive/test/test_compat_cpio.c			\
@@ -266,17 +274,16 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_compat_zip.c			\
 	libarchive/test/test_empty_write.c			\
 	libarchive/test/test_entry.c				\
-	libarchive/test/test_extattr_freebsd.c			\
-	libarchive/test/test_filter_count.c		\
-	libarchive/test/test_fuzz.c				\
 	libarchive/test/test_entry_strmode.c			\
+	libarchive/test/test_extattr_freebsd.c			\
+	libarchive/test/test_filter_count.c			\
+	libarchive/test/test_fuzz.c				\
 	libarchive/test/test_link_resolver.c			\
 	libarchive/test/test_open_failure.c			\
 	libarchive/test/test_open_fd.c				\
 	libarchive/test/test_open_file.c			\
 	libarchive/test/test_open_filename.c			\
 	libarchive/test/test_pax_filename_encoding.c		\
-	libarchive/test/test_pax_filename_encoding_freebsd.c	\
 	libarchive/test/test_read_compress_program.c		\
 	libarchive/test/test_read_data_large.c			\
 	libarchive/test/test_read_disk.c			\
@@ -286,6 +293,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_read_file_nonexistent.c		\
 	libarchive/test/test_read_format_ar.c			\
 	libarchive/test/test_read_format_cab.c			\
+	libarchive/test/test_read_format_cab_filename.c		\
 	libarchive/test/test_read_format_cpio_afio.c		\
 	libarchive/test/test_read_format_cpio_bin.c		\
 	libarchive/test/test_read_format_cpio_bin_Z.c		\
@@ -317,6 +325,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_read_format_isorr_rr_moved.c	\
 	libarchive/test/test_read_format_isozisofs_bz2.c	\
 	libarchive/test/test_read_format_lha.c			\
+	libarchive/test/test_read_format_lha_filename.c		\
 	libarchive/test/test_read_format_mtree.c		\
 	libarchive/test/test_read_format_pax_bz2.c		\
 	libarchive/test/test_read_format_raw.c			\
@@ -329,6 +338,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_read_format_tz.c			\
 	libarchive/test/test_read_format_xar.c			\
 	libarchive/test/test_read_format_zip.c			\
+	libarchive/test/test_read_format_zip_filename.c		\
 	libarchive/test/test_read_large.c			\
 	libarchive/test/test_read_pax_truncated.c		\
 	libarchive/test/test_read_position.c			\
@@ -357,8 +367,8 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_write_format_ar.c			\
 	libarchive/test/test_write_format_cpio.c		\
 	libarchive/test/test_write_format_cpio_empty.c		\
-	libarchive/test/test_write_format_cpio_odc.c		\
 	libarchive/test/test_write_format_cpio_newc.c		\
+	libarchive/test/test_write_format_cpio_odc.c		\
 	libarchive/test/test_write_format_gnutar.c		\
 	libarchive/test/test_write_format_iso9660.c		\
 	libarchive/test/test_write_format_iso9660_boot.c	\
@@ -366,6 +376,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_write_format_iso9660_filename.c	\
 	libarchive/test/test_write_format_iso9660_zisofs.c	\
 	libarchive/test/test_write_format_mtree.c		\
+	libarchive/test/test_write_format_mtree_fflags.c	\
 	libarchive/test/test_write_format_pax.c			\
 	libarchive/test/test_write_format_shar_empty.c		\
 	libarchive/test/test_write_format_tar.c			\
@@ -414,6 +425,7 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_read_format_cab_1.cab.uu			\
 	libarchive/test/test_read_format_cab_2.cab.uu			\
 	libarchive/test/test_read_format_cab_3.cab.uu			\
+	libarchive/test/test_read_format_cab_cp932.cab.uu		\
 	libarchive/test/test_read_format_cpio_bin_be.cpio.uu		\
 	libarchive/test/test_read_format_cpio_svr4_bzip2_rpm.rpm.uu	\
 	libarchive/test/test_read_format_cpio_svr4_gzip_rpm.rpm.uu	\
@@ -438,16 +450,20 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_read_format_lha_header0.lzh.uu		\
 	libarchive/test/test_read_format_lha_header1.lzh.uu		\
 	libarchive/test/test_read_format_lha_header2.lzh.uu		\
+	libarchive/test/test_read_format_lha_header3.lzh.uu		\
 	libarchive/test/test_read_format_lha_lh0.lzh.uu			\
 	libarchive/test/test_read_format_lha_lh6.lzh.uu			\
 	libarchive/test/test_read_format_lha_lh7.lzh.uu			\
 	libarchive/test/test_read_format_lha_withjunk.lzh.uu		\
+	libarchive/test/test_read_format_lha_cp932.lzh.uu		\
 	libarchive/test/test_read_format_mtree.mtree.uu			\
 	libarchive/test/test_read_format_mtree_nomagic.mtree.uu		\
 	libarchive/test/test_read_format_raw.data.Z.uu			\
 	libarchive/test/test_read_format_raw.data.uu			\
 	libarchive/test/test_read_format_tar_empty_filename.tar.uu	\
 	libarchive/test/test_read_format_zip.zip.uu			\
+	libarchive/test/test_read_format_zip_cp932.zip.uu		\
+	libarchive/test/test_read_format_zip_utf8.zip.uu		\
 	libarchive/test/CMakeLists.txt					\
 	libarchive/test/README
 

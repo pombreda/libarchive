@@ -61,9 +61,9 @@ test_write_format_mtree_sub(int use_set, int dironly)
 	assert((a = archive_write_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_format_mtree(a));
 	if (use_set)
-		assertEqualIntA(a, ARCHIVE_OK, archive_write_set_options(a, "use-set"));
+		assertEqualIntA(a, ARCHIVE_OK, archive_write_set_format_option(a, NULL, "use-set", "1"));
 	if (dironly)
-		assertEqualIntA(a, ARCHIVE_OK, archive_write_set_options(a, "dironly"));
+		assertEqualIntA(a, ARCHIVE_OK, archive_write_set_format_option(a, NULL, "dironly", "1"));
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_open_memory(a, buff, sizeof(buff)-1, &used));
 
 	/* Write entries */
@@ -116,7 +116,7 @@ test_write_format_mtree_sub(int use_set, int dironly)
 	 */
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_memory(a, buff, used));
 
 	/* Read entries */

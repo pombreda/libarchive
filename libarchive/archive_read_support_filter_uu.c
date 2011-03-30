@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_uu.c 201248 2009-12-30 06:12:03Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -62,6 +62,16 @@ static int	uudecode_bidder_init(struct archive_read_filter *);
 static ssize_t	uudecode_filter_read(struct archive_read_filter *,
 		    const void **);
 static int	uudecode_filter_close(struct archive_read_filter *);
+
+#if ARCHIVE_VERSION_NUMBER >= 4000000
+#warning archive_read_support_compression_uu
+#endif
+
+int
+archive_read_support_filter_uu(struct archive *a)
+{
+	return archive_read_support_compression_uu(a);
+}
 
 int
 archive_read_support_compression_uu(struct archive *_a)

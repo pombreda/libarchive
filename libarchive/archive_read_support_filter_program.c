@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_program.c 201112 2009-12-28 06:59:35Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_WAIT_H
 #  include <sys/wait.h>
@@ -55,6 +55,25 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_program
 #include "archive_private.h"
 #include "archive_read_private.h"
 
+#if ARCHIVE_VERSION_NUMBER >= 4000000
+#warning archive_read_support_compression_program
+#endif
+
+int
+archive_read_support_filter_program(struct archive *a, const char *cmd)
+{
+	return archive_read_support_compression_program(a, cmd);
+}
+
+int
+archive_read_support_filter_program_signature(struct archive *a,
+    const char *cmd, const void *signature, size_t signature_len)
+{
+	return archive_read_support_compression_program_signature(a,
+	    cmd, signature, signature_len);
+}
+
+
 int
 archive_read_support_compression_program(struct archive *a, const char *cmd)
 {
@@ -72,7 +91,7 @@ archive_read_support_compression_program(struct archive *a, const char *cmd)
  */
 int
 archive_read_support_compression_program_signature(struct archive *_a,
-    const char *cmd, void *signature, size_t signature_len)
+    const char *cmd, const void *signature, size_t signature_len)
 {
 	(void)_a; /* UNUSED */
 	(void)cmd; /* UNUSED */

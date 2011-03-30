@@ -85,13 +85,13 @@ DEFINE_TEST(test_write_compress_lzip)
 
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	r = archive_read_support_compression_lzip(a);
+	r = archive_read_support_filter_lzip(a);
 	if (r == ARCHIVE_WARN) {
 		skipping("Can't verify lzip writing by reading back;"
 		    " lzip reading not fully supported on this platform");
 	} else {
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_read_support_compression_all(a));
+		    archive_read_support_filter_all(a));
 		assertEqualIntA(a, ARCHIVE_OK,
 		    archive_read_open_memory(a, buff, used1));
 		for (i = 0; i < 100; i++) {
@@ -115,14 +115,14 @@ DEFINE_TEST(test_write_compress_lzip)
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_write_set_bytes_per_block(a, 10));
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_compression_lzip(a));
-	assertEqualIntA(a, ARCHIVE_WARN,
-	    archive_write_set_compressor_options(a, "nonexistent-option=0"));
-	assertEqualIntA(a, ARCHIVE_WARN,
-	    archive_write_set_compressor_options(a, "compression-level=abc"));
-	assertEqualIntA(a, ARCHIVE_WARN,
-	    archive_write_set_compressor_options(a, "compression-level=99"));
+	assertEqualIntA(a, ARCHIVE_FAILED,
+	    archive_write_set_filter_option(a, NULL, "nonexistent-option", "0"));
+	assertEqualIntA(a, ARCHIVE_FAILED,
+	    archive_write_set_filter_option(a, NULL, "compression-level", "abc"));
+	assertEqualIntA(a, ARCHIVE_FAILED,
+	    archive_write_set_filter_option(a, NULL, "compression-level", "99"));
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_set_compressor_options(a, "compression-level=9"));
+	    archive_write_set_filter_option(a, NULL, "compression-level", "9"));
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_open_memory(a, buff, buffsize, &used2));
 	for (i = 0; i < 100; i++) {
 		sprintf(path, "file%03d", i);
@@ -140,12 +140,12 @@ DEFINE_TEST(test_write_compress_lzip)
 
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	r = archive_read_support_compression_lzip(a);
+	r = archive_read_support_filter_lzip(a);
 	if (r == ARCHIVE_WARN) {
 		skipping("lzip reading not fully supported on this platform");
 	} else {
 		assertEqualIntA(a, ARCHIVE_OK,
-		    archive_read_support_compression_all(a));
+		    archive_read_support_filter_all(a));
 		assertEqualIntA(a, ARCHIVE_OK,
 		    archive_read_open_memory(a, buff, used2));
 		for (i = 0; i < 100; i++) {
@@ -170,7 +170,7 @@ DEFINE_TEST(test_write_compress_lzip)
 	    archive_write_set_bytes_per_block(a, 10));
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_compression_lzip(a));
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_write_set_compressor_options(a, "compression-level=0"));
+	    archive_write_set_filter_option(a, NULL, "compression-level", "0"));
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_open_memory(a, buff, buffsize, &used2));
 	for (i = 0; i < 100; i++) {
 		sprintf(path, "file%03d", i);
@@ -194,8 +194,8 @@ DEFINE_TEST(test_write_compress_lzip)
 
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	r = archive_read_support_compression_lzip(a);
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
+	r = archive_read_support_filter_lzip(a);
 	if (r == ARCHIVE_WARN) {
 		skipping("lzip reading not fully supported on this platform");
 	} else {

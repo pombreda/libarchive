@@ -193,29 +193,29 @@ pax_mode_write(struct bsdpax *bsdpax)
 	archive_write_set_bytes_in_last_block(a, bsdpax->bytes_in_last_block);
 
 	if (bsdpax->compress_program) {
-		archive_write_set_compression_program(a, bsdpax->compress_program);
+		archive_write_add_filter_program(a, bsdpax->compress_program);
 	} else {
 		switch (bsdpax->create_compression) {
 		case 0:
 			r = ARCHIVE_OK;
 			break;
 		case 'j':
-			r = archive_write_set_compression_bzip2(a);
+			r = archive_write_add_filter_bzip2(a);
 			break;
 		case 'J':
-			r = archive_write_set_compression_xz(a);
+			r = archive_write_add_filter_xz(a);
 			break;
 		case OPTION_LZIP:
-			r = archive_write_set_compression_lzip(a);
+			r = archive_write_add_filter_lzip(a);
 			break;
 		case OPTION_LZMA:
-			r = archive_write_set_compression_lzma(a);
+			r = archive_write_add_filter_lzma(a);
 			break;
 		case 'z':
-			r = archive_write_set_compression_gzip(a);
+			r = archive_write_add_filter_gzip(a);
 			break;
 		case OPTION_COMPRESS:
-			r = archive_write_set_compression_compress(a);
+			r = archive_write_add_filter_compress(a);
 			break;
 		default:
 			lafe_errc(1, 0,
@@ -261,7 +261,7 @@ pax_mode_append(struct bsdpax *bsdpax)
 		    "Cannot open %s", bsdpax->filename);
 
 	a = archive_read_new();
-	archive_read_support_compression_all(a);
+	archive_read_support_filter_all(a);
 	archive_read_support_format_tar(a);
 	archive_read_support_format_gnutar(a);
 	if (archive_read_open_fd(a, bsdpax->fd, bsdpax->bytes_per_block)
@@ -449,7 +449,7 @@ append_archive_filename(struct bsdpax *bsdpax, struct archive *a,
 
 	ina = archive_read_new();
 	archive_read_support_format_all(ina);
-	archive_read_support_compression_all(ina);
+	archive_read_support_filter_all(ina);
 	if (archive_read_open_file(ina, filename, bsdpax->bytes_per_block)) {
 		lafe_warnc(0, "%s", archive_error_string(ina));
 		bsdpax->return_value = 1;

@@ -498,7 +498,7 @@ xar_options(struct archive_write *a, const char *key, const char *value)
 		return (ARCHIVE_OK);
 	}
 
-	return (ARCHIVE_WARN);
+	return (ARCHIVE_FAILED);
 }
 
 static int
@@ -1098,6 +1098,13 @@ make_file_entry(struct archive_write *a, xmlTextWriterPtr writer,
 	r = UTF8Toisolat1(tmp, &l, BAD_CAST(file->basename.s), &ll);
 	free(tmp);
 	if (r < 0) {
+		r = xmlTextWriterStartElement(writer, BAD_CAST("name"));
+		if (r < 0) {
+			archive_set_error(&a->archive,
+			    ARCHIVE_ERRNO_MISC,
+			    "xmlTextWriterStartElement() failed: %d", r);
+			return (ARCHIVE_FATAL);
+		}
 		r = xmlTextWriterWriteAttribute(writer,
 		    BAD_CAST("enctype"), BAD_CAST("base64"));
 		if (r < 0) {
@@ -1112,6 +1119,13 @@ make_file_entry(struct archive_write *a, xmlTextWriterPtr writer,
 			archive_set_error(&a->archive,
 			    ARCHIVE_ERRNO_MISC,
 			    "xmlTextWriterWriteBase64() failed: %d", r);
+			return (ARCHIVE_FATAL);
+		}
+		r = xmlTextWriterEndElement(writer);
+		if (r < 0) {
+			archive_set_error(&a->archive,
+			    ARCHIVE_ERRNO_MISC,
+			    "xmlTextWriterEndElement() failed: %d", r);
 			return (ARCHIVE_FATAL);
 		}
 	} else {
@@ -1940,11 +1954,11 @@ file_add_child_tail(struct file *parent, struct file *child)
 static struct file *
 file_find_child(struct file *parent, const char *child_name)
 {
-        struct file *np;
+	struct file *np;
 
-        np = (struct file *)__archive_rb_tree_find_node(
-            &(parent->rbtree), child_name);
-        return (np);
+	np = (struct file *)__archive_rb_tree_find_node(
+	    &(parent->rbtree), child_name);
+	return (np);
 }
 
 #if defined(_WIN32) || defined(__CYGWIN__)
@@ -1953,12 +1967,12 @@ cleanup_backslash(char *utf8, size_t len)
 {
 
 	/* Convert a path-separator from '\' to  '/' */
-        while (*utf8 != '\0' && len) {
-                if (*utf8 == '\\')
-                        *utf8 = '/';
+	while (*utf8 != '\0' && len) {
+		if (*utf8 == '\\')
+			*utf8 = '/';
 		++utf8;
-                --len;
-        }
+		--len;
+	}
 }
 #else
 #define cleanup_backslash(p, len)	/* nop */

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2003-2007 Tim Kientzle
+ * Copyright (c) 2011 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,18 +23,47 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_none.c 185679 2008-12-06 06:45:15Z kientzle $");
+#include "test.h"
+__FBSDID("$FreeBSD$");
 
-#include "archive.h"
+#define should(__a, __code, __m, __o, __v) \
+assertEqualInt(__code, archive_read_set_option(__a, __m, __o, __v))
 
-/*
- * Uncompressed streams are handled implicitly by the read core,
- * so this is now a no-op.
- */
-int
-archive_read_support_compression_none(struct archive *a)
+static void
+test(int pristine)
 {
-	(void)a; /* UNUSED */
-	return (ARCHIVE_OK);
+	struct archive* a = archive_read_new();
+	int known_option_rv = pristine ? ARCHIVE_FAILED : ARCHIVE_OK;
+
+	if (!pristine) {
+		archive_read_support_filter_all(a);
+		archive_read_support_format_all(a);
+        }
+
+	/* NULL and "" denote `no option', so they're ok no matter
+	 * what, if any, formats are registered */
+	should(a, ARCHIVE_OK, NULL, NULL, NULL);
+	should(a, ARCHIVE_OK, "", "", "");
+
+	/* unknown modules and options */
+	should(a, ARCHIVE_FAILED, "fubar", "snafu", NULL);
+	should(a, ARCHIVE_FAILED, "fubar", "snafu", "betcha");
+
+	/* unknown modules and options */
+	should(a, ARCHIVE_FAILED, NULL, "snafu", NULL);
+	should(a, ARCHIVE_FAILED, NULL, "snafu", "betcha");
+
+	/* ARCHIVE_OK with iso9660 loaded, ARCHIVE_WARN otherwise */
+	should(a, known_option_rv, "iso9660", "joliet", NULL);
+	should(a, known_option_rv, "iso9660", "joliet", NULL);
+	should(a, known_option_rv, NULL, "joliet", NULL);
+	should(a, known_option_rv, NULL, "joliet", NULL);
+
+	archive_read_finish(a);
+}
+
+DEFINE_TEST(test_archive_read_set_option)
+{
+	test(1);
+	test(0);
 }

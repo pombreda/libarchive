@@ -1677,22 +1677,31 @@ cleanup_pathname_win(struct archive_write_disk *a)
 	wchar_t wc;
 	char *p;
 	size_t alen, l;
+	int mb, dos;
 
 	alen = 0;
-	l = 0;
+	mb = dos = 0;
 	for (p = a->name; *p != '\0'; p++) {
 		++alen;
-		if (*p == '\\')
-			l = 1;
+		if (*(unsigned char *)p > 127)
+			mb = 1;
+		if (*p == '\\') {
+			/* If we have not met any multi-byte characters,
+			 * we can replace '\' with '/'. */
+			if (!mb)
+				*p = '/';
+			dos = 1;
+		}
 		/* Rewrite the path name if its character is a unusable. */
 		if (*p == ':' || *p == '*' || *p == '?' || *p == '"' ||
 		    *p == '<' || *p == '>' || *p == '|')
 			*p = '_';
 	}
-	if (alen == 0 || l == 0)
+	if (!mb || !dos)
 		return;
+
 	/*
-	 * Convert path separator.
+	 * Convert path separator in wide-character.
 	 */
 	p = a->name;
 	while (*p != '\0' && alen) {
@@ -2682,7 +2691,7 @@ set_acl(struct archive_write_disk *a, int fd, const char *name,
 	if (entries == 0)
 		return (ARCHIVE_OK);
 	acl = acl_init(entries);
-	while (archive_acl_next((struct archive *)a, abstract_acl,
+	while (archive_acl_next(&a->archive, abstract_acl,
 	    ae_requested_type, &ae_type, &ae_permset, &ae_tag, &ae_id,
 	    &ae_name) == ARCHIVE_OK) {
 		acl_create_entry(&acl, &acl_entry);

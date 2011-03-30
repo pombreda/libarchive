@@ -17,7 +17,17 @@ IF(ENABLE_TEST)
     test_archive_read_close_twice.c
     test_archive_read_close_twice_open_fd.c
     test_archive_read_close_twice_open_filename.c
+    test_archive_read_next_header_empty.c
+    test_archive_read_next_header_raw.c
+    test_archive_read_set_filter_option.c
+    test_archive_read_set_format_option.c
+    test_archive_read_set_option.c
+    test_archive_read_set_options.c
     test_archive_set_error.c
+    test_archive_write_set_filter_option.c
+    test_archive_write_set_format_option.c
+    test_archive_write_set_option.c
+    test_archive_write_set_options.c
     test_bad_fd.c
     test_compat_bzip2.c
     test_compat_cpio.c
@@ -42,7 +52,6 @@ IF(ENABLE_TEST)
     test_open_file.c
     test_open_filename.c
     test_pax_filename_encoding.c
-    test_pax_filename_encoding_freebsd.c
     test_read_compress_program.c
     test_read_data_large.c
     test_read_disk.c
@@ -52,6 +61,7 @@ IF(ENABLE_TEST)
     test_read_file_nonexistent.c
     test_read_format_ar.c
     test_read_format_cab.c
+    test_read_format_cab_filename.c
     test_read_format_cpio_afio.c
     test_read_format_cpio_bin.c
     test_read_format_cpio_bin_Z.c
@@ -83,6 +93,7 @@ IF(ENABLE_TEST)
     test_read_format_isorr_rr_moved.c
     test_read_format_isozisofs_bz2.c
     test_read_format_lha.c
+    test_read_format_lha_filename.c
     test_read_format_mtree.c
     test_read_format_pax_bz2.c
     test_read_format_raw.c
@@ -95,6 +106,7 @@ IF(ENABLE_TEST)
     test_read_format_tz.c
     test_read_format_xar.c
     test_read_format_zip.c
+    test_read_format_zip_filename.c
     test_read_large.c
     test_read_pax_truncated.c
     test_read_position.c
@@ -123,8 +135,8 @@ IF(ENABLE_TEST)
     test_write_format_ar.c
     test_write_format_cpio.c
     test_write_format_cpio_empty.c
-    test_write_format_cpio_odc.c
     test_write_format_cpio_newc.c
+    test_write_format_cpio_odc.c
     test_write_format_gnutar.c
     test_write_format_iso9660.c
     test_write_format_iso9660_boot.c
@@ -132,6 +144,7 @@ IF(ENABLE_TEST)
     test_write_format_iso9660_filename.c
     test_write_format_iso9660_zisofs.c
     test_write_format_mtree.c
+    test_write_format_mtree_fflags.c
     test_write_format_pax.c
     test_write_format_shar_empty.c
     test_write_format_tar.c

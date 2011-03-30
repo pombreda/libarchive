@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2003-2007 Tim Kientzle
+ * Copyright (c) 2003-2011 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,7 +55,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read.c 201157 2009-12-29 05:30:2
 
 #define minimum(a, b) (a < b ? a : b)
 
-static int	build_stream(struct archive_read *);
+static int	choose_filters(struct archive_read *);
 static int	choose_format(struct archive_read *);
 static void	free_filters(struct archive_read *);
 static int	close_filters(struct archive_read *);
@@ -138,118 +138,6 @@ archive_read_extract_set_skip_file(struct archive *_a, int64_t d, int64_t i)
 }
 
 /*
- * Set read options for the format.
- */
-int
-archive_read_set_format_options(struct archive *_a, const char *s)
-{
-	struct archive_read *a;
-	struct archive_format_descriptor *format;
-	char key[64], val[64];
-	char *valp;
-	size_t i;
-	int len, r;
-
-	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
-	    "archive_read_set_format_options");
-
-	if (s == NULL || *s == '\0')
-		return (ARCHIVE_OK);
-	a = (struct archive_read *)_a;
-	len = 0;
-	for (i = 0; i < sizeof(a->formats)/sizeof(a->formats[0]); i++) {
-		format = &a->formats[i];
-		if (format == NULL || format->options == NULL ||
-		    format->name == NULL)
-			/* This format does not support option. */
-			continue;
-
-		while ((len = __archive_parse_options(s, format->name,
-		    sizeof(key), key, sizeof(val), val)) > 0) {
-			valp = val[0] == '\0' ? NULL : val;
-			a->format = format;
-			r = format->options(a, key, valp);
-			a->format = NULL;
-			if (r == ARCHIVE_FATAL)
-				return (r);
-			s += len;
-		}
-	}
-	if (len < 0) {
-		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-		    "Illegal format options.");
-		return (ARCHIVE_WARN);
-	}
-	return (ARCHIVE_OK);
-}
-
-/*
- * Set read options for the filter.
- */
-int
-archive_read_set_filter_options(struct archive *_a, const char *s)
-{
-	struct archive_read *a;
-	struct archive_read_filter *filter;
-	struct archive_read_filter_bidder *bidder;
-	char key[64], val[64];
-	int len, r;
-
-	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
-	    "archive_read_set_filter_options");
-
-	if (s == NULL || *s == '\0')
-		return (ARCHIVE_OK);
-	a = (struct archive_read *)_a;
-	len = 0;
-	for (filter = a->filter; filter != NULL; filter = filter->upstream) {
-		bidder = filter->bidder;
-		if (bidder == NULL)
-			continue;
-		if (bidder->options == NULL)
-			/* This bidder does not support option */
-			continue;
-		while ((len = __archive_parse_options(s, filter->name,
-		    sizeof(key), key, sizeof(val), val)) > 0) {
-			if (val[0] == '\0')
-				r = bidder->options(bidder, key, NULL);
-			else
-				r = bidder->options(bidder, key, val);
-			if (r == ARCHIVE_FATAL)
-				return (r);
-			s += len;
-		}
-	}
-	if (len < 0) {
-		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-		    "Illegal format options.");
-		return (ARCHIVE_WARN);
-	}
-	return (ARCHIVE_OK);
-}
-
-/*
- * Set read options for the format and the filter.
- */
-int
-archive_read_set_options(struct archive *_a, const char *s)
-{
-	int r;
-
-	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
-	    "archive_read_set_options");
-	archive_clear_error(_a);
-
-	r = archive_read_set_format_options(_a, s);
-	if (r != ARCHIVE_OK)
-		return (r);
-	r = archive_read_set_filter_options(_a, s);
-	if (r != ARCHIVE_OK)
-		return (r);
-	return (ARCHIVE_OK);
-}
-
-/*
  * Open the archive
  */
 int
@@ -318,7 +206,7 @@ archive_read_open2(struct archive *_a, void *client_data,
 {
 	struct archive_read *a = (struct archive_read *)_a;
 	struct archive_read_filter *filter;
-	int e;
+	int slot, e;
 
 	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
 	    "archive_read_open");
@@ -359,10 +247,21 @@ archive_read_open2(struct archive *_a, void *client_data,
 	a->filter = filter;
 
 	/* Build out the input pipeline. */
-	e = build_stream(a);
-	if (e == ARCHIVE_OK)
-		a->archive.state = ARCHIVE_STATE_HEADER;
+	e = choose_filters(a);
+	if (e < ARCHIVE_WARN) {
+		a->archive.state = ARCHIVE_STATE_FATAL;
+		return (ARCHIVE_FATAL);
+	}
 
+	slot = choose_format(a);
+	if (slot < 0) {
+		close_filters(a);
+		a->archive.state = ARCHIVE_STATE_FATAL;
+		return (ARCHIVE_FATAL);
+	}
+	a->format = &(a->formats[slot]);
+
+	a->archive.state = ARCHIVE_STATE_HEADER;
 	return (e);
 }
 
@@ -372,7 +271,7 @@ archive_read_open2(struct archive *_a, void *client_data,
  * building the pipeline.
  */
 static int
-build_stream(struct archive_read *a)
+choose_filters(struct archive_read *a)
 {
 	int number_bidders, i, bid, best_bid;
 	struct archive_read_filter_bidder *bidder, *best_bidder;
@@ -435,7 +334,7 @@ static int
 _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 {
 	struct archive_read *a = (struct archive_read *)_a;
-	int slot, ret;
+	int ret;
 
 	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
 	    ARCHIVE_STATE_HEADER | ARCHIVE_STATE_DATA,
@@ -444,18 +343,6 @@ _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 	++_a->file_count;
 	archive_entry_clear(entry);
 	archive_clear_error(&a->archive);
-
-	/*
-	 * If no format has yet been chosen, choose one.
-	 */
-	if (a->format == NULL) {
-		slot = choose_format(a);
-		if (slot < 0) {
-			a->archive.state = ARCHIVE_STATE_FATAL;
-			return (ARCHIVE_FATAL);
-		}
-		a->format = &(a->formats[slot]);
-	}
 
 	/*
 	 * If client didn't consume entire data, skip any remainder
@@ -745,8 +632,9 @@ close_filters(struct archive_read *a)
 	/* Close each filter in the pipeline. */
 	while (f != NULL) {
 		struct archive_read_filter *t = f->upstream;
-		if (f->close != NULL) {
+		if (!f->closed && f->close != NULL) {
 			int r1 = (f->close)(f);
+			f->closed = 1;
 			if (r1 < r)
 				r = r1;
 		}

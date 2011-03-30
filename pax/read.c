@@ -167,10 +167,10 @@ read_archive(struct bsdpax *bsdpax, char mode, struct archive *writer)
 
 	a = archive_read_new();
 	if (bsdpax->compress_program != NULL)
-		archive_read_support_compression_program(a,
+		archive_read_support_filter_program(a,
 		    bsdpax->compress_program);
 	else
-		archive_read_support_compression_all(a);
+		archive_read_support_filter_all(a);
 	archive_read_support_format_all(a);
 	if (ARCHIVE_OK != archive_read_set_options(a, bsdpax->option_options))
 		lafe_errc(1, 0, "%s", archive_error_string(a));

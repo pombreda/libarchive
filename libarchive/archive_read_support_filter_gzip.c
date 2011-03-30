@@ -25,7 +25,7 @@
 
 #include "archive_platform.h"
 
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_compression_gzip.c 201082 2009-12-28 02:05:28Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 
 #ifdef HAVE_ERRNO_H
@@ -77,6 +77,16 @@ static int	gzip_filter_close(struct archive_read_filter *);
 static int	gzip_bidder_bid(struct archive_read_filter_bidder *,
 		    struct archive_read_filter *);
 static int	gzip_bidder_init(struct archive_read_filter *);
+
+#if ARCHIVE_VERSION_NUMBER >= 4000000
+#warning archive_read_support_compression_gzip
+#endif
+
+int
+archive_read_support_filter_gzip(struct archive *a)
+{
+	return archive_read_support_compression_gzip(a);
+}
 
 int
 archive_read_support_compression_gzip(struct archive *_a)

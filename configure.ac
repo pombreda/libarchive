@@ -285,7 +285,7 @@ AC_ARG_WITH([iconv],
 
 if test "x$with_iconv" != "xno"; then
   AC_CHECK_HEADERS([iconv.h])
-  AC_CHECK_LIB(iconv, iconv)
+  AM_ICONV
 fi
 
 AC_ARG_WITH([lzma],
@@ -483,14 +483,16 @@ AC_CHECK_FUNCS([chflags chown chroot ctime_r])
 AC_CHECK_FUNCS([fchdir fchflags fchmod fchown fcntl fdopendir fork])
 AC_CHECK_FUNCS([fstat fstatat fstatfs fstatvfs ftruncate futimens futimes])
 AC_CHECK_FUNCS([geteuid getpid getgrgid_r getgrnam_r])
-AC_CHECK_FUNCS([getpwnam_r getpwuid_r getvfsbyname gmtime_r iconv])
-AC_CHECK_FUNCS([lchflags lchmod lchown link localtime_r lstat])
-AC_CHECK_FUNCS([lutimes mbrtowc memmove memset mkdir mkfifo mknod mkstemp])
+AC_CHECK_FUNCS([getpwnam_r getpwuid_r getvfsbyname gmtime_r])
+AC_CHECK_FUNCS([lchflags lchmod lchown link localtime_r lstat lutimes])
+AC_CHECK_FUNCS([mbrtowc mbsnrtowcs memmove memset])
+AC_CHECK_FUNCS([mkdir mkfifo mknod mkstemp])
 AC_CHECK_FUNCS([nl_langinfo openat pipe poll readlink readlinkat])
 AC_CHECK_FUNCS([select setenv setlocale sigaction statfs statvfs])
 AC_CHECK_FUNCS([strchr strdup strerror strncpy_s strrchr symlink timegm])
 AC_CHECK_FUNCS([tzset unsetenv utime utimensat utimes vfork])
 AC_CHECK_FUNCS([wcrtomb wcscmp wcscpy wcslen wctomb wmemcmp wmemcpy])
+AC_CHECK_FUNCS([_ctime64_s _fseeki64 _get_timezone _localtime64_s _mkgmtime64])
 # detects cygwin-1.7, as opposed to older versions
 AC_CHECK_FUNCS([cygwin_conv_path])
 

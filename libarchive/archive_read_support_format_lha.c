@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2008-2010 Michihiro NAKAJIMA
+ * Copyright (c) 2008-2011 Michihiro NAKAJIMA
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -168,6 +168,8 @@ struct lha {
 	struct archive_string 	 gname;
 	uint16_t		 header_crc;
 	uint16_t		 crc;
+	struct archive_string_conv *sconv;
+	struct archive_string_conv *opt_sconv;
 
 	struct archive_string 	 dirname;
 	struct archive_string 	 filename;
@@ -239,6 +241,8 @@ static const uint16_t crc16tbl[256] = {
 };
 
 static int      archive_read_format_lha_bid(struct archive_read *);
+static int      archive_read_format_lha_options(struct archive_read *,
+		    const char *, const char *);
 static int	archive_read_format_lha_read_header(struct archive_read *,
 		    struct archive_entry *);
 static int	archive_read_format_lha_read_data(struct archive_read *,
@@ -246,6 +250,8 @@ static int	archive_read_format_lha_read_data(struct archive_read *,
 static int	archive_read_format_lha_read_data_skip(struct archive_read *);
 static int	archive_read_format_lha_cleanup(struct archive_read *);
 
+static void	lha_replace_path_separator(struct archive_read *, struct lha *,
+		    struct archive_string *);
 static int	lha_read_file_header_0(struct archive_read *, struct lha *);
 static int	lha_read_file_header_1(struct archive_read *, struct lha *);
 static int	lha_read_file_header_2(struct archive_read *, struct lha *);
@@ -299,7 +305,7 @@ archive_read_support_format_lha(struct archive *_a)
 	    lha,
 	    "lha",
 	    archive_read_format_lha_bid,
-	    NULL,
+	    archive_read_format_lha_options,
 	    archive_read_format_lha_read_header,
 	    archive_read_format_lha_read_data,
 	    archive_read_format_lha_read_data_skip,
@@ -401,6 +407,34 @@ archive_read_format_lha_bid(struct archive_read *a)
 		}
 	}
 	return (0);
+}
+
+static int
+archive_read_format_lha_options(struct archive_read *a,
+    const char *key, const char *val)
+{
+	struct lha *lha;
+	int ret = ARCHIVE_FAILED;
+
+	lha = (struct lha *)(a->format->data);
+	if (strcmp(key, "charset")  == 0) {
+		if (val == NULL || val[0] == 0)
+			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+			    "lha: charset option needs a character-set name");
+		else {
+			lha->opt_sconv =
+			    archive_string_conversion_from_charset(
+				&a->archive, val, 0);
+			if (lha->opt_sconv != NULL)
+				ret = ARCHIVE_OK;
+			else
+				ret = ARCHIVE_FATAL;
+		}
+	} else
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+		    "lha: unknown keyword ``%s''", key);
+
+	return (ret);
 }
 
 static int
@@ -545,6 +579,10 @@ archive_read_format_lha_read_header(struct archive_read *a,
 	archive_string_empty(&lha->dirname);
 	archive_string_empty(&lha->filename);
 	lha->dos_attr = 0;
+	if (lha->opt_sconv != NULL)
+		lha->sconv = lha->opt_sconv;
+	else
+		lha->sconv = NULL;
 
 	switch (p[H_LEVEL_OFFSET]) {
 	case 0:
@@ -576,9 +614,18 @@ archive_read_format_lha_read_header(struct archive_read *a,
 	/*
 	 * Make a pathname from a dirname and a filename.
 	 */
+	archive_string_concat(&lha->dirname, &lha->filename);
 	archive_string_init(&pathname);
-	archive_string_copy(&pathname, &lha->dirname);
-	archive_string_concat(&pathname, &lha->filename);
+	archive_strncpy_in_locale(&pathname, lha->dirname.s,
+	    lha->dirname.length, lha->sconv);
+
+	/*
+	 * When a header level is 0, there is a possibilty that
+	 * a pathname has '\' character, a directory separator in
+	 * DOS/Windows. So we should convert it to '/'.
+	 */
+	if (p[H_LEVEL_OFFSET] == 0)
+		lha_replace_path_separator(a, lha, &pathname);
 
 	if ((lha->mode & AE_IFMT) == AE_IFLNK) {
 		/*
@@ -669,7 +716,8 @@ archive_read_format_lha_read_header(struct archive_read *a,
  * set for a filename in an archive.
  */
 static void
-lha_replace_path_separator(struct archive_read *a, struct lha *lha, struct archive_string *fn)
+lha_replace_path_separator(struct archive_read *a, struct lha *lha,
+    struct archive_string *fn)
 {
 	size_t i;
 
@@ -687,8 +735,9 @@ lha_replace_path_separator(struct archive_read *a, struct lha *lha, struct archi
 	 * Try to replace a character in wide character.
 	 */
 
-	/* If converting to wide character failed, force a replacement. */
-	if (!archive_wstring_append_from_mbs(&a->archive, &(lha->ws), fn->s, fn->length)) {
+	/* If a conversion to wide character failed, force a replacement. */
+	if (!archive_wstring_append_from_mbs(&a->archive, &(lha->ws),
+	    fn->s, fn->length)) {
 		for (i = 0; i < archive_strlen(fn); i++) {
 			if (fn->s[i] == '\\')
 				fn->s[i] = '/';
@@ -705,7 +754,8 @@ lha_replace_path_separator(struct archive_read *a, struct lha *lha, struct archi
 	 * Sanity check that we surely did not break a filename.
 	 */
 	archive_string_empty(&(lha->mbs));
-	archive_string_append_from_unicode_to_mbs(&a->archive, &(lha->mbs), lha->ws.s, lha->ws.length);
+	archive_string_append_from_unicode_to_mbs(&a->archive, &(lha->mbs),
+	    lha->ws.s, lha->ws.length);
 	/* If mbs length is different to fn, we broke the
 	 * filename and we shouldn't use it. */
 	if (archive_strlen(&(lha->mbs)) == archive_strlen(fn))
@@ -768,7 +818,6 @@ lha_read_file_header_0(struct archive_read *a, struct lha *lha)
 		return (truncated_error(a));
 
 	archive_strncpy(&lha->filename, p + H0_FILE_NAME_OFFSET, namelen);
-	lha_replace_path_separator(a, lha, &lha->filename);
 	lha->crc = archive_le16dec(p + H0_FILE_NAME_OFFSET + namelen);
 	sum_calculated = lha_calcsum(0, p, 2, lha->header_size - 2);
 
@@ -1089,7 +1138,6 @@ lha_read_file_extended_header(struct archive_read *a, struct lha *lha,
 #define EXT_OS2_NEW_ATTR	0x7f		/* new attribute(OS/2 only) */
 #define EXT_NEW_ATTR		0xff		/* new attribute	    */
 
-	extdsize = 0;
 	*total_size = sizefield_length;
 
 	for (;;) {
@@ -1207,6 +1255,30 @@ lha_read_file_extended_header(struct archive_read *a, struct lha *lha,
 				lha->origsize = archive_le64dec(extdheader);
 			}
 			break;
+		case EXT_CODEPAGE:
+			/* Get a archived filename charset from codepage,
+			 * but you cannot overwrite a specified charset. */
+			if (datasize == sizeof(uint32_t) &&
+			    lha->sconv == NULL) {
+				const char *charset;
+				switch (archive_le32dec(extdheader)) {
+				case 932:
+					charset = "CP932";
+					break;
+				case 65001: /* UTF-8 */
+					charset = "UTF-8";
+					break;
+				default:
+					charset = NULL;
+					break;
+				}
+				if (charset != NULL) {
+					lha->sconv =
+					    archive_string_conversion_from_charset(
+						&(a->archive), charset, 1);
+				}
+			}
+			break;
 		case EXT_UNIX_MODE:
 			if (datasize == sizeof(uint16_t)) {
 				lha->mode = archive_le16dec(extdheader);
@@ -1261,7 +1333,6 @@ lha_read_file_extended_header(struct archive_read *a, struct lha *lha,
 		case EXT_TIMEZONE:		/* Not supported */
 		case EXT_UTF16_FILENAME:	/* Not supported */
 		case EXT_UTF16_DIRECTORY:	/* Not supported */
-		case EXT_CODEPAGE:		/* Not supported */
 		default:
 			break;
 		}

@@ -34,6 +34,14 @@ SET(LIBARCHIVE_VERSION_STRING  "${VERSION}")
 # Shared library number
 SET(SOVERSION                   8)
 
+# Especially for early development, we want to be a little
+# aggressive about diagnosing build problems; this can get
+# relaxed somewhat in final shipping versions.
+IF ("CMAKE_C_COMPILER_ID" MATCHES "^GNU$")
+  ADD_DEFINITIONS(-Wall -Werror)
+  SET(CMAKE_REQUIRED_FLAGS "-Wall -Werror")
+ENDIF ("CMAKE_C_COMPILER_ID" MATCHES "^GNU$")
+
 # Enable CTest/CDash support
 include(CTest)
 
@@ -270,10 +278,6 @@ LA_CHECK_INCLUDE_FILE("winioctl.h" HAVE_WINIOCTL_H)
 
 
 #
-# Some headers require extra includes when they're available.
-#
-
-#
 # Find OpenSSL
 #
 IF(ENABLE_OPENSSL)
@@ -447,22 +451,68 @@ CHECK_HASH_WIN("MD5;SHA1;SHA256;SHA384;SHA512")
 
 #
 # Find iconv
+# POSIX defines the second arg as const char **
+# and requires it to be in libc.  But we can accept
+# a non-const argument here and can support iconv()
+# being in libiconv.
 #
 LA_CHECK_INCLUDE_FILE("iconv.h" HAVE_ICONV_H)   
 IF(HAVE_ICONV_H)
   FIND_PATH(ICONV_INCLUDE_DIR iconv.h) 
+
+  # Try POSIX-conforming iconv() in libc
+ CHECK_C_SOURCE_COMPILES(
+    "#include <iconv.h>
+     int main() {const char *ccp; iconv_t cd;
+     iconv(cd, &ccp, (size_t *)0, (char **)0, (size_t *)0);
+     return 0;}"
+  HAVE_POSIX_ICONV_IN_LIBC)
+  IF(HAVE_POSIX_ICONV_IN_LIBC)
+    SET(HAVE_ICONV true)
+    SET(ICONV_CONST "const")
+  ELSE(HAVE_POSIX_ICONV_IN_LIBC)
+
+    # Try non-POSIX-conforming iconv() in libc
+    CHECK_C_SOURCE_COMPILES(
+      "#include <iconv.h>
+       int main() {char *ccp; iconv_t cd;
+       iconv(cd, &ccp, (size_t *)0, (char **)0, (size_t *)0);
+       return 0;}"
+  HAVE_NONPOSIX_ICONV_IN_LIBC)
+    IF(HAVE_NONPOSIX_ICONV_IN_LIBC)
+      SET(HAVE_ICONV true)
+      SET(ICONV_CONST "") 
+    ELSE(HAVE_NONPOSIX_ICONV_IN_LIBC)
+
+      # iconv isn't in libc, try libiconv
+      SET(CMAKE_REQUIRED_LIBRARIES "iconv")
+      CHECK_C_SOURCE_COMPILES(
+          "#include <iconv.h>
+           int main() {const char *ccp; iconv_t cd;
+           iconv(cd, &ccp, (size_t *)0, (char **)0, (size_t *)0);
+           return 0;}"
+       HAVE_POSIX_ICONV_IN_LIBICONV)
+      IF(HAVE_POSIX_ICONV_IN_LIBICONV)
+        SET(HAVE_ICONV true) 
+        SET(ICONV_CONST "const") 
+        LIST(APPEND ADDITIONAL_LIBS "iconv")
+      ELSE(HAVE_POSIX_ICONV_IN_LIBICONV)
+
+        CHECK_C_SOURCE_COMPILES(
+            "#include <iconv.h>
+             int main() {char *ccp; iconv_t cd;
+             iconv(cd, &ccp, (size_t *)0, (char **)0, (size_t *)0);
+             return 0;}"
+         HAVE_NONPOSIX_ICONV_IN_LIBICONV)
+        IF(HAVE_NONPOSIX_ICONV_IN_LIBICONV)
+          SET(HAVE_ICONV true) 
+          SET(ICONV_CONST "") 
+          LIST(APPEND ADDITIONAL_LIBS "iconv")
+        ENDIF(HAVE_NONPOSIX_ICONV_IN_LIBICONV)
+      ENDIF(HAVE_POSIX_ICONV_IN_LIBICONV)
+    ENDIF(HAVE_NONPOSIX_ICONV_IN_LIBC)
+  ENDIF(HAVE_POSIX_ICONV_IN_LIBC)
 ENDIF(HAVE_ICONV_H)
-CHECK_FUNCTION_EXISTS(iconv HAVE_ICONV_IN_LIBC) 
-IF(HAVE_ICONV_IN_LIBC)
-  SET(HAVE_ICONV true)
-ELSE(HAVE_ICONV_IN_LIBC)
-  # iconv isn't in libc, try libiconv
-  CHECK_LIBRARY_EXISTS(iconv iconv "" HAVE_ICONV_IN_LIBICONV)
-  IF(HAVE_ICONV_IN_LIBICONV)
-    SET(HAVE_ICONV true) 
-    LIST(APPEND ADDITIONAL_LIBS "iconv")
-  ENDIF(HAVE_ICONV_IN_LIBICONV)
-ENDIF(HAVE_ICONV_IN_LIBC)
 
 #
 # Find Libxml2
@@ -528,6 +578,7 @@ CHECK_FUNCTION_EXISTS_GLIBC(localtime_r HAVE_LOCALTIME_R)
 CHECK_FUNCTION_EXISTS_GLIBC(lstat HAVE_LSTAT)
 CHECK_FUNCTION_EXISTS_GLIBC(lutimes HAVE_LUTIMES)
 CHECK_FUNCTION_EXISTS_GLIBC(mbrtowc HAVE_MBRTOWC)
+CHECK_FUNCTION_EXISTS_GLIBC(mbsnrtowcs HAVE_MBSNRTOWCS)
 CHECK_FUNCTION_EXISTS_GLIBC(memmove HAVE_MEMMOVE)
 CHECK_FUNCTION_EXISTS_GLIBC(mkdir HAVE_MKDIR)
 CHECK_FUNCTION_EXISTS_GLIBC(mkfifo HAVE_MKFIFO)
@@ -564,6 +615,7 @@ CHECK_FUNCTION_EXISTS_GLIBC(wcscpy HAVE_WCSCPY)
 CHECK_FUNCTION_EXISTS_GLIBC(wcslen HAVE_WCSLEN)
 CHECK_FUNCTION_EXISTS_GLIBC(wctomb HAVE_WCTOMB)
 CHECK_FUNCTION_EXISTS_GLIBC(_ctime64_s HAVE__CTIME64_S)
+CHECK_FUNCTION_EXISTS_GLIBC(_fseeki64 HAVE__FSEEKI64)
 CHECK_FUNCTION_EXISTS_GLIBC(_get_timezone HAVE__GET_TIMEZONE)
 CHECK_FUNCTION_EXISTS_GLIBC(_localtime64_s HAVE__LOCALTIME64_S)
 CHECK_FUNCTION_EXISTS_GLIBC(_mkgmtime64 HAVE__MKGMTIME64)
@@ -889,12 +941,6 @@ INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/libarchive)
 IF(MSVC)
   ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
 ENDIF(MSVC)
-# Especially for early development, we want to be a little
-# aggressive about diagnosing build problems; this can get
-# relaxed somewhat in final shipping versions.
-IF ("CMAKE_C_COMPILER_ID" MATCHES "^GNU$")
-  ADD_DEFINITIONS(-Wall -Werror)
-ENDIF ("CMAKE_C_COMPILER_ID" MATCHES "^GNU$")
 
 IF(ENABLE_TEST)
 ADD_CUSTOM_TARGET(run_all_tests)
