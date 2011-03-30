@@ -10,6 +10,7 @@ In addition, they are available here for online browsing:
  * [ManPageBsdcpio1 bsdcpio.1] - The bsdcpio command-line program
  * [ManPageLibarchive3 libarchive.3] - An overview of libarchive (Also see the [Examples], FormatDetection, and ZeroCopy articles.)
  * [ManPageLibarchiveFormats5 libarchive_formats.5] - An overview of the formats supported by libarchive
+ * [ManPageLibarchiveChanges3.wiki libarchive_changes.3] - Differences from past releases
  * [ManPageArchiveEntry3 archive_entry.3] - The archive_entry API used to represent entries in archives
  * [ManPageArchiveEntryAcl3 archive_entry_acl.3] - Details of the ACL handling for archive entries (Also see the [TarNFS4ACLs] and [TarPosix1eACLs] articles.)
  * [ManPageArchiveEntryLinkify3 archive_entry_linkify.3] - Details of the utility functions for detecting and managing hardlinked files
@@ -18,9 +19,28 @@ In addition, they are available here for online browsing:
  * [ManPageArchiveEntryStat3 archive_entry_stat.3] - Details of using `struct stat` with archive entries
  * [ManPageArchiveEntryTime3 archive_entry_time.3] - Details of the time values that can appear in archive entries
  * [ManPageArchiveRead3 archive_read.3] - The archive_read API used for reading from streaming archives
+  * [ManPageArchiveReadData3.wiki archive_read_data.3] - Read archive entry payload
+  * [ManPageArchiveReadExtract3.wiki archive_read_extract.3] - Recreate archive entries on disk
+  * [ManPageArchiveReadFilter3.wiki archive_read_filter.3] - Configure a readable archive object with decompression filters
+  * [ManPageArchiveReadFormat3.wiki archive_read_format.3] - Configure a readable archive object with an archive format
+  * [ManPageArchiveReadFree3.wiki archive_read_free.3] - Detach and deallocate a readable archive object
+  * [ManPageArchiveReadHeader3.wiki archive_read_header.3] - Read entry metadata
+  * [ManPageArchiveReadNew3.wiki archive_read_new.3] - Allocate a readable archive object
+  * [ManPageArchiveReadOpen3.wiki archive_read_open.3] - Attach a readable archive object to a data source (file, descriptor, memory ...)
+  * [ManPageArchiveReadSetOptions3.wiki archive_read_set_options.3] - Configure filter or format driver behavior
  * [ManPageArchiveReadDisk3 archive_read_disk.3] - The archive_read_disk API used for getting information about files (and other objects) from disk
  * [ManPageArchiveUtil3 archive_util.3] - Miscellaneous libarchive utility functions
  * [ManPageArchiveWrite3 archive_write.3] - The archive_write API used to create streaming archives
+  * [ManPageArchiveWriteBlocksize3.wiki archive_write_blocksize.3] - Configure block sizes for a writable archive object
+  * [ManPageArchiveWriteData3.wiki archive_write_data.3] - Write archive entry payload
+  * [ManPageArchiveWriteFilter3.wiki archive_write_filter.3] - Configure a writable archive with compression filters
+  * [ManPageArchiveWriteFinishEntry3.wiki archive_write_finish_entry.3] - Finalize a writable archive entry
+  * [ManPageArchiveWriteFormat3.wiki archive_write_format.3] - Configure a writable archive with an archive format
+  * [ManPageArchiveWriteFree3.wiki archive_write_free.3] - Detach and deallocate a writable archive object
+  * [ManPageArchiveWriteHeader3.wiki archive_write_header.3] - Write entry metadata
+  * [ManPageArchiveWriteNew3.wiki archive_write_new.3] - Allocate a writable archive object
+  * [ManPageArchiveWriteOpen3.wiki archive_write_open.3] - Attach a writable archive object to a data sink
+  * [ManPageArchiveWriteSetOptions3.wiki archive_write_set_options.3] - Configure filter or format driver behavior
  * [ManPageArchiveWriteDisk3 archive_write_disk.3] - The archive_write_disk API used to create files (and other objects) on disk
  * [ManPageTar5 tar.5] - The tar file format ("... best man page I have read in years." -- Russ Cox)
  * [ManPageMtree5 mtree.5] - The mtree file format
@@ -35,7 +55,7 @@ Any help in improving these scripts is greatly appreciated.
 
 Maintainers:  To update the Wiki manpages (assuming you have a checkout of the full source tree):
 {{{
- $ cd trunk/docs
+ $ cd trunk/doc
  $ /bin/sh update.sh
  $ cp wiki/*.wiki ../../wiki
  $ svn commit ../../wiki

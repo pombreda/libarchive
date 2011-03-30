@@ -69,9 +69,9 @@ Path name manipulation
 </dd><dt>*archive_entry_perms*(3)</dt><dd>
 User, group and mode manipulation
 </dd><dt>*archive_entry_stat*(3)</dt><dd>
-Files not in the other groups and copying to/from
+Functions not in the other groups and copying to/from
 Vt struct stat.
-</dd><dt>*archive_entry*(time)3</dt><dd>
+</dd><dt>*archive_entry_time*(3)</dt><dd>
 Time field manipulation
 </dd></dl>
 

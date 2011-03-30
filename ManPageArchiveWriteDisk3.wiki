@@ -277,12 +277,6 @@ for operations that might succeed if retried,
 for unusual conditions that do not prevent further operations, and
 *ARCHIVE_FATAL*
 for serious errors that make remaining operations impossible.
-The
-*archive_errno*()
-and
-*archive_error_string*()
-functions can be used to retrieve an appropriate error code and a
-textual error message.
 
 *archive_write_disk_new*()
 returns a pointer to a newly-allocated
@@ -290,12 +284,18 @@ returns a pointer to a newly-allocated
 object.
 
 *archive_write_data*()
-returns a count of the number of bytes actually written.
-On error, -1 is returned and the
+returns a count of the number of bytes actually written,
+or
+{{{
+-1
+}}}
+on error.
+== ERRORS ==
+Detailed error codes and textual descriptions are available from the
 *archive_errno*()
 and
 *archive_error_string*()
-functions will return appropriate values.
+functions.
 == SEE ALSO ==
 *archive_read*(3),
 *archive_write*(3),

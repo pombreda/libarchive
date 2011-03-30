@@ -1,0 +1,114 @@
+#summary archive_read_format 3 manual page
+== NAME ==
+*archive_read_support_format_all*,
+*archive_read_support_format_ar*,
+*archive_read_support_format_cpio*,
+*archive_read_support_format_empty*,
+*archive_read_support_format_iso9660*,
+*archive_read_support_format_mtree,*
+*archive_read_support_format_raw,*
+*archive_read_support_format_tar*,
+*archive_read_support_format_zip*
+- functions for reading streaming archives
+== SYNOPSIS ==
+*#include <archive.h>*
+<br>
+*int*
+<br>
+*archive_read_support_format_all*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_read_support_format_ar*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_read_support_format_cpio*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_read_support_format_empty*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_read_support_format_iso9660*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_read_support_format_mtree*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_read_support_format_raw*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_read_support_format_tar*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_read_support_format_zip*(_struct archive `*`_);
+== DESCRIPTION ==
+<dl>
+<dt>
+*archive_read_support_format_all*(),
+*archive_read_support_format_ar*(),
+*archive_read_support_format_cpio*(),
+*archive_read_support_format_empty*(),
+*archive_read_support_format_iso9660*(),
+*archive_read_support_format_mtree*(),
+*archive_read_support_format_tar*(),
+*archive_read_support_format_zip*()
+</dt> <dd>
+Enables support---including auto-detection code---for the
+specified archive format.
+For example,
+*archive_read_support_format_tar*()
+enables support for a variety of standard tar formats, old-style tar,
+ustar, pax interchange format, and many common variants.
+For convenience,
+*archive_read_support_format_all*()
+enables support for all available formats.
+Only empty archives are supported by default.
+</dd><dt>*archive_read_support_format_raw*()</dt><dd>
+The
+"raw"
+format handler allows libarchive to be used to read arbitrary data.
+It treats any data stream as an archive with a single entry.
+The pathname of this entry is
+"data ;"
+all other entry fields are unset.
+This is not enabled by
+*archive_read_support_format_all*()
+in order to avoid erroneous handling of damaged archives.
+</dd></dl>
+== RETURN VALUES ==
+These functions return
+*ARCHIVE_OK*
+on success, or
+*ARCHIVE_FATAL*.
+== ERRORS ==
+Detailed error codes and textual descriptions are available from the
+*archive_errno*()
+and
+*archive_error_string*()
+functions.
+== SEE ALSO ==
+*tar*(1),
+*libarchive*(3),
+*archive_read_data*(3),
+*archive_read_filter*(3),
+*archive_read_set_options*(3),
+*archive_util*(3),
+*tar*(5)
+== BUGS ==
+Many traditional archiver programs treat
+empty files as valid empty archives.
+For example, many implementations of
+*tar*(1)
+allow you to append entries to an empty file.
+Of course, it is impossible to determine the format of an empty file
+by inspecting the contents, so this library treats empty files as
+having a special
+"empty"
+format.

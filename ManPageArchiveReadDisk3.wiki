@@ -219,15 +219,6 @@ for operations that might succeed if retried,
 for unusual conditions that do not prevent further operations, and
 *ARCHIVE_FATAL*
 for serious errors that make remaining operations impossible.
-The
-*archive_errno*(3)
-and
-*archive_error_string*(3)
-functions can be used to retrieve an appropriate error code and a
-textual error message.
-(See
-*archive_util*(3)
-for details.)
 
 *archive_read_disk_new*()
 returns a pointer to a newly-allocated
@@ -243,9 +234,15 @@ pointers to the textual name or NULL if the lookup failed for any reason.
 The returned pointer points to internal storage that
 may be reused on the next call to either of these functions;
 callers should copy the string if they need to continue accessing it.
-
+== ERRORS ==
+Detailed error codes and textual descriptions are available from the
+*archive_errno*()
+and
+*archive_error_string*()
+functions.
 == SEE ALSO ==
 *archive_read*(3),
+*archive_util*(3),
 *archive_write*(3),
 *archive_write_disk*(3),
 *tar*(1),
