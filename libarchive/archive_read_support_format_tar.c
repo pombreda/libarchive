@@ -150,14 +150,25 @@ struct tar {
 
 static int	archive_block_is_null(const unsigned char *p);
 static char	*base64_decode(const char *, size_t, size_t *);
-static void	 gnu_add_sparse_entry(struct tar *,
+static int	_gnu_add_sparse_entry(struct tar *,
 		    int64_t offset, int64_t remaining);
+#define gnu_add_sparse_entry(__a, __tar, __off, __rem) \
+	do { \
+		int r = _gnu_add_sparse_entry(__tar, __off, __rem); \
+		if (r != ARCHIVE_OK) { \
+			archive_set_error(&(__a)->archive, \
+			    ENOMEM, "Out of memory"); \
+			return (ARCHIVE_FATAL); \
+		} \
+	} while (0)
+
 static void	gnu_clear_sparse_list(struct tar *);
 static int	gnu_sparse_old_read(struct archive_read *, struct tar *,
 		    const struct archive_entry_header_gnutar *header, size_t *);
-static void	gnu_sparse_old_parse(struct tar *,
+static int	gnu_sparse_old_parse(struct archive_read *, struct tar *,
 		    const struct gnu_sparse *sparse, int length);
-static int	gnu_sparse_01_parse(struct tar *, const char *);
+static int	gnu_sparse_01_parse(struct archive_read *a, struct tar *,
+		    const char *);
 static ssize_t	gnu_sparse_10_read(struct archive_read *, struct tar *,
 			size_t *);
 static int	header_Solaris_ACL(struct archive_read *,  struct tar *,
@@ -210,6 +221,32 @@ static int	tar_read_header(struct archive_read *, struct tar *,
 static int	tohex(int c);
 static char	*url_decode(const char *);
 static void	tar_flush_unconsumed(struct archive_read *, size_t *);
+
+/*
+ * PAX hdrcharset.
+ */
+static const struct {
+	const char *isoname;
+	const char *cnvname;
+} pax_charset[] = {
+	{ "BINARY", NULL },
+	{ "ISO-IR 10646 2000 UTF-8", "UTF-8" },
+	{ "ISO-IR 8859 1 1998", "ISO-8859-1" },
+	{ "ISO-IR 8859 1 1998", "ISO-8859-1" },
+	{ "ISO-IR 8859 2 1999", "ISO-8859-2" },
+	{ "ISO-IR 8859 3 1999", "ISO-8859-3" },
+	{ "ISO-IR 8859 4 1998", "ISO-8859-4" },
+	{ "ISO-IR 8859 5 1999", "ISO-8859-5" },
+	{ "ISO-IR 8859 6 1999", "ISO-8859-6" },
+	{ "ISO-IR 8859 7 1987", "ISO-8859-7" },
+	{ "ISO-IR 8859 8 1999", "ISO-8859-8" },
+	{ "ISO-IR 8859 9 1999", "ISO-8859-9" },
+	{ "ISO-IR 8859 10 1998", "ISO-8859-10" },
+	{ "ISO-IR 8859 13 1998", "ISO-8859-13" },
+	{ "ISO-IR 8859 14 1998", "ISO-8859-14" },
+	{ "ISO-IR 8859 15 1999", "ISO-8859-15" },
+	{ NULL, NULL}
+};
 
 
 int
@@ -459,7 +496,7 @@ archive_read_format_tar_read_header(struct archive_read *a,
 	 * a single block.
 	 */
 	if (tar->sparse_list == NULL)
-		gnu_add_sparse_entry(tar, 0, tar->entry_bytes_remaining);
+		gnu_add_sparse_entry(a, tar, 0, tar->entry_bytes_remaining);
 	else {
 		struct sparse_block *sb;
 
@@ -1597,7 +1634,7 @@ pax_attribute(struct archive_read *a, struct tar *tar,
 		if (strcmp(key, "GNU.sparse.offset") == 0) {
 			tar->sparse_offset = tar_atol10(value, strlen(value));
 			if (tar->sparse_numbytes != -1) {
-				gnu_add_sparse_entry(tar,
+				gnu_add_sparse_entry(a, tar,
 				    tar->sparse_offset, tar->sparse_numbytes);
 				tar->sparse_offset = -1;
 				tar->sparse_numbytes = -1;
@@ -1606,7 +1643,7 @@ pax_attribute(struct archive_read *a, struct tar *tar,
 		if (strcmp(key, "GNU.sparse.numbytes") == 0) {
 			tar->sparse_numbytes = tar_atol10(value, strlen(value));
 			if (tar->sparse_numbytes != -1) {
-				gnu_add_sparse_entry(tar,
+				gnu_add_sparse_entry(a, tar,
 				    tar->sparse_offset, tar->sparse_numbytes);
 				tar->sparse_offset = -1;
 				tar->sparse_numbytes = -1;
@@ -1621,7 +1658,7 @@ pax_attribute(struct archive_read *a, struct tar *tar,
 		if (strcmp(key, "GNU.sparse.map") == 0) {
 			tar->sparse_gnu_major = 0;
 			tar->sparse_gnu_minor = 1;
-			if (gnu_sparse_01_parse(tar, value) != ARCHIVE_OK)
+			if (gnu_sparse_01_parse(a, tar, value) != ARCHIVE_OK)
 				return (ARCHIVE_WARN);
 		}
 
@@ -1746,18 +1783,21 @@ pax_attribute(struct archive_read *a, struct tar *tar,
 		break;
 	case 'h':
 		if (strcmp(key, "hdrcharset") == 0 && tar->sconv == NULL) {
-			if (strcmp(value, "BINARY") == 0)
-				tar->pax_hdrcharset_binary = 1;
-			else if (strcmp(value, "ISO-IR 10646 2000 UTF-8") == 0) {
-				tar->pax_hdrcharset_binary = 0;
-				tar->sconv =
-				    archive_string_conversion_from_charset(
-					&(a->archive), "UTF-8", 1);
-			} else {
-				tar->pax_hdrcharset_binary = 0;
-				tar->sconv =
-				    archive_string_conversion_from_charset(
-					&(a->archive), value, 1);
+			int i;
+			for (i = 0; pax_charset[i].isoname != NULL; i++) {
+				if (strcmp(pax_charset[i].isoname, value) == 0) {
+					if (pax_charset[i].cnvname == NULL) {
+						/* Binary  mode. */
+						tar->pax_hdrcharset_binary = 1;
+						break;
+					}
+					tar->pax_hdrcharset_binary = 0;
+					tar->sconv =
+					    archive_string_conversion_from_charset(
+						&(a->archive),
+						pax_charset[i].cnvname, 1);
+					break;
+				}
 			}
 		}
 		break;
@@ -1948,14 +1988,14 @@ header_gnutar(struct archive_read *a, struct tar *tar,
 	return (err);
 }
 
-static void
-gnu_add_sparse_entry(struct tar *tar, int64_t offset, int64_t remaining)
+static int
+_gnu_add_sparse_entry(struct tar *tar, int64_t offset, int64_t remaining)
 {
 	struct sparse_block *p;
 
 	p = (struct sparse_block *)malloc(sizeof(*p));
 	if (p == NULL)
-		__archive_errx(1, "Out of memory");
+		return (ARCHIVE_FATAL);
 	memset(p, 0, sizeof(*p));
 	if (tar->sparse_last != NULL)
 		tar->sparse_last->next = p;
@@ -1964,6 +2004,7 @@ gnu_add_sparse_entry(struct tar *tar, int64_t offset, int64_t remaining)
 	tar->sparse_last = p;
 	p->offset = offset;
 	p->remaining = remaining;
+	return (ARCHIVE_OK);
 }
 
 static void
@@ -2004,7 +2045,8 @@ gnu_sparse_old_read(struct archive_read *a, struct tar *tar,
 	};
 	const struct extended *ext;
 
-	gnu_sparse_old_parse(tar, header->sparse, 4);
+	if (gnu_sparse_old_parse(a, tar, header->sparse, 4))
+		return (ARCHIVE_FATAL);
 	if (header->isextended[0] == 0)
 		return (ARCHIVE_OK);
 
@@ -2021,24 +2063,26 @@ gnu_sparse_old_read(struct archive_read *a, struct tar *tar,
 		}
 		*unconsumed = 512;
 		ext = (const struct extended *)data;
-		gnu_sparse_old_parse(tar, ext->sparse, 21);
+		if (gnu_sparse_old_parse(a, tar, ext->sparse, 21))
+			return (ARCHIVE_FATAL);
 	} while (ext->isextended[0] != 0);
 	if (tar->sparse_list != NULL)
 		tar->entry_offset = tar->sparse_list->offset;
 	return (ARCHIVE_OK);
 }
 
-static void
-gnu_sparse_old_parse(struct tar *tar,
+static int
+gnu_sparse_old_parse(struct archive_read *a, struct tar *tar,
     const struct gnu_sparse *sparse, int length)
 {
 	while (length > 0 && sparse->offset[0] != 0) {
-		gnu_add_sparse_entry(tar,
+		gnu_add_sparse_entry(a, tar,
 		    tar_atol(sparse->offset, sizeof(sparse->offset)),
 		    tar_atol(sparse->numbytes, sizeof(sparse->numbytes)));
 		sparse++;
 		length--;
 	}
+	return (ARCHIVE_OK);
 }
 
 /*
@@ -2068,7 +2112,7 @@ gnu_sparse_old_parse(struct tar *tar,
  */
 
 static int
-gnu_sparse_01_parse(struct tar *tar, const char *p)
+gnu_sparse_01_parse(struct archive_read *a, struct tar *tar, const char *p)
 {
 	const char *e;
 	int64_t offset = -1, size = -1;
@@ -2088,7 +2132,7 @@ gnu_sparse_01_parse(struct tar *tar, const char *p)
 			size = tar_atol10(p, e - p);
 			if (size < 0)
 				return (ARCHIVE_WARN);
-			gnu_add_sparse_entry(tar, offset, size);
+			gnu_add_sparse_entry(a, tar, offset, size);
 			offset = -1;
 		}
 		if (*e == '\0')
@@ -2192,7 +2236,7 @@ gnu_sparse_10_read(struct archive_read *a, struct tar *tar, size_t *unconsumed)
 		if (size < 0)
 			return (ARCHIVE_FATAL);
 		/* Add a new sparse entry. */
-		gnu_add_sparse_entry(tar, offset, size);
+		gnu_add_sparse_entry(a, tar, offset, size);
 	}
 	/* Skip rest of block... */
 	tar_flush_unconsumed(a, unconsumed);
