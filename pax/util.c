@@ -719,7 +719,9 @@ int
 disk_new_enough(struct bsdpax *bsdpax, const char *path,
     struct archive_entry *entry, int after)
 {
+#if !defined(_WIN32) || defined(__CYGWIN__)
 	struct stat st;
+#endif
 	time_t t1, t2;
 	long n1, n2;
 	int c, m, r, use_diskobj;
@@ -745,6 +747,11 @@ disk_new_enough(struct bsdpax *bsdpax, const char *path,
 	} else
 		archive_entry_clear(bsdpax->entryenough);
 
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	/* On Windows we always use a disk object to get timestamps of
+	 * the path since Win32 version of stat() is insufficient. */
+	use_diskobj = 1;
+#else
 	/*
 	 * First, simply use stat() to get the file status.
 	 * If it fails becaous of its path length, use
@@ -760,23 +767,15 @@ disk_new_enough(struct bsdpax *bsdpax, const char *path,
 		use_diskobj = 0;
 	} else if (errno == ENAMETOOLONG) {
 		use_diskobj = 1;
-#if defined(_WIN32) && !defined(__CYGWIN__)
-	} else if (GetLastError() == ERROR_PATH_NOT_FOUND) {
-		use_diskobj = 1;
-#endif
 	} else
 		return (1);
+#endif /* _WIN32 && ! __CYGWIN__ */
 
 	if (use_diskobj) {
-		r = archive_read_disk_open(bsdpax->diskenough, path);
-		if (r != ARCHIVE_OK) {
-			/* Do not mind whenever any error happen. */
-			archive_clear_error(bsdpax->diskenough);
-			return (1);
-		}
-		r = archive_read_next_header2(bsdpax->diskenough,
-		    bsdpax->entryenough);
-		archive_read_close(bsdpax->diskenough);
+		archive_entry_set_pathname(bsdpax->entryenough, path);
+		archive_entry_copy_sourcepath(bsdpax->entryenough, path);
+		r = archive_read_disk_entry_from_file(bsdpax->diskenough,
+		    bsdpax->entryenough, -1, NULL);
 		if (r != ARCHIVE_OK) {
 			/* Do not mind whenever any error happen. */
 			archive_clear_error(bsdpax->diskenough);
@@ -791,6 +790,7 @@ disk_new_enough(struct bsdpax *bsdpax, const char *path,
 			return (1);
 		if (t1 > t2)
 			return (0);
+		/* Win32 stat() does not set nsec. */
 		n1 = archive_entry_mtime_nsec(bsdpax->entryenough);
 		n2 = archive_entry_mtime_nsec(entry);
 		if (n1 >= n2)
@@ -803,6 +803,7 @@ disk_new_enough(struct bsdpax *bsdpax, const char *path,
 			return (1);
 		if (t1 > t2)
 			return (0);
+		/* Win32 stat() does not set nsec. */
 		n1 = archive_entry_ctime_nsec(bsdpax->entryenough);
 		n2 = archive_entry_ctime_nsec(entry);
 		if (n1 >= n2)
