@@ -24,7 +24,11 @@ IF(ENABLE_TEST)
     test_archive_read_set_format_option.c
     test_archive_read_set_option.c
     test_archive_read_set_options.c
+    test_archive_read_support_filter_torture.c
+    test_archive_read_support_format_torture.c
     test_archive_set_error.c
+    test_archive_string.c
+    test_archive_string_conversion.c
     test_archive_write_set_filter_option.c
     test_archive_write_set_format_option.c
     test_archive_write_set_option.c
@@ -37,6 +41,7 @@ IF(ENABLE_TEST)
     test_compat_lzip.c
     test_compat_lzma.c
     test_compat_mac_gnutar.c
+    test_compat_pax_libarchive_2x.c
     test_compat_solaris_tar_acl.c
     test_compat_tar_hardlink.c
     test_compat_xz.c
@@ -47,6 +52,7 @@ IF(ENABLE_TEST)
     test_extattr_freebsd.c
     test_filter_count.c
     test_fuzz.c
+    test_gnutar_filename_encoding.c
     test_link_resolver.c
     test_open_failure.c
     test_open_fd.c
@@ -72,12 +78,14 @@ IF(ENABLE_TEST)
     test_read_format_cpio_bin_lzip.c
     test_read_format_cpio_bin_lzma.c
     test_read_format_cpio_bin_xz.c
+    test_read_format_cpio_filename.c
     test_read_format_cpio_odc.c
     test_read_format_cpio_svr4_bzip2_rpm.c
     test_read_format_cpio_svr4_gzip.c
     test_read_format_cpio_svr4_gzip_rpm.c
     test_read_format_cpio_svr4c_Z.c
     test_read_format_empty.c
+    test_read_format_gtar_filename.c
     test_read_format_gtar_gz.c
     test_read_format_gtar_lzma.c
     test_read_format_gtar_sparse.c
@@ -100,11 +108,13 @@ IF(ENABLE_TEST)
     test_read_format_raw.c
     test_read_format_tar.c
     test_read_format_tar_empty_filename.c
+    test_read_format_tar_filename.c
     test_read_format_tbz.c
     test_read_format_tgz.c
     test_read_format_tlz.c
     test_read_format_txz.c
     test_read_format_tz.c
+    test_read_format_ustar_filename.c
     test_read_format_xar.c
     test_read_format_zip.c
     test_read_format_zip_filename.c
@@ -118,6 +128,7 @@ IF(ENABLE_TEST)
     test_tar_filenames.c
     test_tar_large.c
     test_ustar_filenames.c
+    test_ustar_filename_encoding.c
     test_write_compress.c
     test_write_compress_bzip2.c
     test_write_compress_gzip.c
@@ -157,6 +168,7 @@ IF(ENABLE_TEST)
     test_write_format_zip_empty.c
     test_write_format_zip_no_compression.c
     test_write_open_memory.c
+    test_zip_filename_encoding.c
   )
 
   #

@@ -47,6 +47,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_iso9660.c 20
 #include "archive.h"
 #include "archive_endian.h"
 #include "archive_entry.h"
+#include "archive_entry_locale.h"
 #include "archive_private.h"
 #include "archive_read_private.h"
 #include "archive_string.h"
@@ -281,6 +282,8 @@ struct file_info {
 	int64_t		 number;
 	int		 nlinks;
 	struct archive_string name; /* Pathname */
+	unsigned char	*utf16be_name;
+	size_t		 utf16be_bytes;
 	char		 name_continues; /* Non-zero if name continues */
 	struct archive_string symlink;
 	char		 symlink_continues; /* Non-zero if link continues */
@@ -355,6 +358,14 @@ struct iso9660 {
 	struct zisofs	 entry_zisofs;
 	struct content	*entry_content;
 	struct archive_string_conv *sconv_utf16be;
+	/*
+	 * Buffers for a full pathname in UTF-16BE in Joliet extensions.
+	 */
+#define UTF16_NAME_MAX	1024
+	unsigned char *utf16be_path;
+	size_t		 utf16be_path_len;
+	unsigned char *utf16be_previous_path;
+	size_t		 utf16be_previous_path_len;
 };
 
 static int	archive_read_format_iso9660_bid(struct archive_read *);
@@ -367,6 +378,8 @@ static int	archive_read_format_iso9660_read_data_skip(struct archive_read *);
 static int	archive_read_format_iso9660_read_header(struct archive_read *,
 		    struct archive_entry *);
 static const char *build_pathname(struct archive_string *, struct file_info *);
+static int	build_pathname_utf16be(unsigned char *, size_t, size_t *,
+		    struct file_info *);
 #if DEBUG
 static void	dump_isodirrec(FILE *, const unsigned char *isodirrec);
 #endif
@@ -409,12 +422,12 @@ static inline void cache_add_entry(struct iso9660 *iso9660,
 static inline void cache_add_to_next_of_parent(struct iso9660 *iso9660,
 		    struct file_info *file);
 static inline struct file_info *cache_get_entry(struct iso9660 *iso9660);
-static int	heap_add_entry(struct heap_queue *heap,
+static int	heap_add_entry(struct archive_read *a, struct heap_queue *heap,
 		    struct file_info *file, uint64_t key);
 static struct file_info *heap_get_entry(struct heap_queue *heap);
 
-#define add_entry(iso9660, file)	\
-	heap_add_entry(&((iso9660)->pending_files), file, file->offset)
+#define add_entry(arch, iso9660, file)	\
+	heap_add_entry(arch, &((iso9660)->pending_files), file, file->offset)
 #define next_entry(iso9660)		\
 	heap_get_entry(&((iso9660)->pending_files))
 
@@ -428,12 +441,12 @@ archive_read_support_format_iso9660(struct archive *_a)
 	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
 	    ARCHIVE_STATE_NEW, "archive_read_support_format_iso9660");
 
-	iso9660 = (struct iso9660 *)malloc(sizeof(*iso9660));
+	iso9660 = (struct iso9660 *)calloc(1, sizeof(*iso9660));
 	if (iso9660 == NULL) {
-		archive_set_error(&a->archive, ENOMEM, "Can't allocate iso9660 data");
+		archive_set_error(&a->archive, ENOMEM,
+		    "Can't allocate iso9660 data");
 		return (ARCHIVE_FATAL);
 	}
-	memset(iso9660, 0, sizeof(*iso9660));
 	iso9660->magic = ISO9660_MAGIC;
 	iso9660->cache_files.first = NULL;
 	iso9660->cache_files.last = &(iso9660->cache_files.first);
@@ -984,13 +997,9 @@ read_children(struct archive_read *a, struct file_info *parent)
 				return (ARCHIVE_FATAL);
 			}
 			if (child->cl_offset) {
-				if (heap_add_entry(&(iso9660->cl_files),
+				if (heap_add_entry(a, &(iso9660->cl_files),
 				    child, child->cl_offset) != ARCHIVE_OK)
-				{
-					archive_set_error(&a->archive,
-					    ENOMEM, "heap_add_entry");
 					return (ARCHIVE_FATAL);
-				}
 			} else {
 				if (child->multi_extent || multi != NULL) {
 					struct content *con;
@@ -1015,15 +1024,19 @@ read_children(struct archive_read *a, struct file_info *parent)
 					con->next = NULL;
 					*multi->contents.last = con;
 					multi->contents.last = &(con->next);
-					if (multi == child)
-						add_entry(iso9660, child);
-					else {
+					if (multi == child) {
+						if (add_entry(a, iso9660, child)
+						    != ARCHIVE_OK)
+							return (ARCHIVE_FATAL);
+					} else {
 						multi->size += child->size;
 						if (!child->multi_extent)
 							multi = NULL;
 					}
 				} else
-					add_entry(iso9660, child);
+					if (add_entry(a, iso9660, child)
+					    != ARCHIVE_OK)
+						return (ARCHIVE_FATAL);
 			}
 		}
 	}
@@ -1061,12 +1074,9 @@ relocate_dir(struct archive_read *a, struct iso9660 *iso9660,
 		return (ARCHIVE_OK);
 	} else
 		/* This case is wrong pattern. */
-		if (heap_add_entry(&(iso9660->re_dirs), re, re->offset)
-		    != ARCHIVE_OK) {
-			archive_set_error(&a->archive,
-			    ENOMEM, "heap_add_entry");
+		if (heap_add_entry(a, &(iso9660->re_dirs), re, re->offset)
+		    != ARCHIVE_OK)
 			return (ARCHIVE_FATAL);
-		}
 	return (ARCHIVE_OK);
 }
 
@@ -1092,21 +1102,24 @@ read_entries(struct archive_read *a)
 		    (strcmp(file->name.s, "rr_moved") == 0 ||
 		     strcmp(file->name.s, ".rr_moved") == 0)) {
 			iso9660->rr_moved = file;
-		} else if (file->re)
-			heap_add_entry(&(iso9660->re_dirs), file,
-			    file->offset);
-		else
+		} else if (file->re) {
+			if (heap_add_entry(a, &(iso9660->re_dirs), file,
+			    file->offset) != ARCHIVE_OK)
+				return (ARCHIVE_FATAL);
+		} else
 			cache_add_entry(iso9660, file);
 	}
 	if (file != NULL)
-		add_entry(iso9660, file);
+		if (add_entry(a, iso9660, file) != ARCHIVE_OK)
+			return (ARCHIVE_FATAL);
 
 	if (iso9660->rr_moved != NULL) {
 		/*
 		 * Relocate directory which rr_moved has.
 		 */
 		while ((file = heap_get_entry(&(iso9660->cl_files))) != NULL)
-			relocate_dir(a, iso9660, file);
+			if (relocate_dir(a, iso9660, file) != ARCHIVE_OK)
+				return (ARCHIVE_FATAL);
 
 		/* If rr_moved directory still has children,
 		 * Add rr_moved into pending_files to show
@@ -1221,7 +1234,8 @@ archive_read_format_iso9660_read_header(struct archive_read *a,
 			iso9660->seenJoliet = seenJoliet;
 		}
 		/* Store the root directory in the pending list. */
-		add_entry(iso9660, file);
+		if (add_entry(a, iso9660, file) != ARCHIVE_OK)
+			return (ARCHIVE_FATAL);
 		if (iso9660->seenRockridge) {
 			a->archive.archive_format =
 			    ARCHIVE_FORMAT_ISO9660_ROCKRIDGE;
@@ -1240,12 +1254,76 @@ archive_read_format_iso9660_read_header(struct archive_read *a,
 	if (r != ARCHIVE_OK)
 		return (r);
 
+	if (iso9660->seenJoliet) {
+		/*
+		 * Convert UTF-16BE of a filename to local locale MBS
+		 * and store the result into a filename field.
+		 */
+		if (iso9660->sconv_utf16be == NULL) {
+			iso9660->sconv_utf16be =
+			    archive_string_conversion_from_charset(
+				&(a->archive), "UTF-16BE", 1);
+			if (iso9660->sconv_utf16be == NULL)
+				/* Coundn't allocate memory */
+				return (ARCHIVE_FATAL);
+		}
+		if (iso9660->utf16be_path == NULL) {
+			iso9660->utf16be_path = malloc(UTF16_NAME_MAX);
+			if (iso9660->utf16be_path == NULL) {
+				archive_set_error(&a->archive, ENOMEM,
+				    "No memory");
+				return (ARCHIVE_FATAL);
+			}
+		}
+		if (iso9660->utf16be_previous_path == NULL) {
+			iso9660->utf16be_previous_path = malloc(UTF16_NAME_MAX);
+			if (iso9660->utf16be_previous_path == NULL) {
+				archive_set_error(&a->archive, ENOMEM,
+				    "No memory");
+				return (ARCHIVE_FATAL);
+			}
+		}
+
+		iso9660->utf16be_path_len = 0;
+		if (build_pathname_utf16be(iso9660->utf16be_path,
+		    UTF16_NAME_MAX, &(iso9660->utf16be_path_len), file) != 0) {
+			archive_set_error(&a->archive,
+			    ARCHIVE_ERRNO_FILE_FORMAT,
+			    "Pathname is too long");
+		}
+
+		r = archive_entry_copy_pathname_l(entry,
+		    (const char *)iso9660->utf16be_path,
+		    iso9660->utf16be_path_len,
+		    iso9660->sconv_utf16be);
+		if (r != 0) {
+			if (errno == ENOMEM) {
+				archive_set_error(&a->archive, ENOMEM,
+				    "No memory for Pathname");
+				return (ARCHIVE_FATAL);
+			}
+			archive_set_error(&a->archive,
+			    ARCHIVE_ERRNO_FILE_FORMAT,
+			    "Pathname cannot be converted "
+			    "from %s to current locale.",
+			    archive_string_conversion_charset_name(
+			      iso9660->sconv_utf16be));
+
+			rd_r = ARCHIVE_WARN;
+		}
+	} else {
+		archive_string_empty(&iso9660->pathname);
+		archive_entry_set_pathname(entry,
+		    build_pathname(&iso9660->pathname, file));
+	}
+
 	iso9660->entry_bytes_remaining = file->size;
 	iso9660->entry_sparse_offset = 0; /* Offset for sparse-file-aware clients. */
 
 	if (file->offset + file->size > iso9660->volume_size) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-		    "File is beyond end-of-media: %s", file->name.s);
+		    "File is beyond end-of-media: %s",
+		    archive_entry_pathname(entry));
 		iso9660->entry_bytes_remaining = 0;
 		iso9660->entry_sparse_offset = 0;
 		return (ARCHIVE_WARN);
@@ -1266,9 +1344,6 @@ archive_read_format_iso9660_read_header(struct archive_read *a,
 	/* N.B.: Rock Ridge supports 64-bit device numbers. */
 	archive_entry_set_rdev(entry, (dev_t)file->rdev);
 	archive_entry_set_size(entry, iso9660->entry_bytes_remaining);
-	archive_string_empty(&iso9660->pathname);
-	archive_entry_set_pathname(entry,
-	    build_pathname(&iso9660->pathname, file));
 	if (file->symlink.s != NULL)
 		archive_entry_copy_symlink(entry, file->symlink.s);
 
@@ -1278,12 +1353,32 @@ archive_read_format_iso9660_read_header(struct archive_read *a,
 	 * original entry. */
 	if (file->number != -1 &&
 	    file->number == iso9660->previous_number) {
-		archive_entry_set_hardlink(entry,
-		    iso9660->previous_pathname.s);
+		if (iso9660->seenJoliet) {
+			r = archive_entry_copy_hardlink_l(entry,
+			    (const char *)iso9660->utf16be_previous_path,
+			    iso9660->utf16be_previous_path_len,
+			    iso9660->sconv_utf16be);
+			if (r != 0) {
+				if (errno == ENOMEM) {
+					archive_set_error(&a->archive, ENOMEM,
+					    "No memory for Linkname");
+					return (ARCHIVE_FATAL);
+				}
+				archive_set_error(&a->archive,
+				    ARCHIVE_ERRNO_FILE_FORMAT,
+				    "Linkname cannot be converted "
+				    "from %s to current locale.",
+				    archive_string_conversion_charset_name(
+				      iso9660->sconv_utf16be));
+				rd_r = ARCHIVE_WARN;
+			}
+		} else
+			archive_entry_set_hardlink(entry,
+			    iso9660->previous_pathname.s);
 		archive_entry_unset_size(entry);
 		iso9660->entry_bytes_remaining = 0;
 		iso9660->entry_sparse_offset = 0;
-		return (ARCHIVE_OK);
+		return (rd_r);
 	}
 
 	/* Except for the hardlink case above, if the offset of the
@@ -1333,7 +1428,13 @@ archive_read_format_iso9660_read_header(struct archive_read *a,
 	}
 
 	iso9660->previous_number = file->number;
-	archive_strcpy(&iso9660->previous_pathname, iso9660->pathname.s);
+	if (iso9660->seenJoliet) {
+		memcpy(iso9660->utf16be_previous_path, iso9660->utf16be_path,
+		    iso9660->utf16be_path_len);
+		iso9660->utf16be_previous_path_len = iso9660->utf16be_path_len;
+	} else
+		archive_strcpy(
+		    &iso9660->previous_pathname, iso9660->pathname.s);
 
 	/* Reset entry_bytes_remaining if the file is multi extent. */
 	iso9660->entry_content = file->contents.first;
@@ -1490,7 +1591,7 @@ zisofs_read_data(struct archive_read *a,
 		}
 
 		if (!zisofs->initialized)
-			goto next_data; /* We need more datas. */
+			goto next_data; /* We need more data. */
 	}
 
 	/*
@@ -1501,21 +1602,26 @@ zisofs_read_data(struct archive_read *a,
 
 		if (zisofs->block_off + 4 >= zisofs->block_pointers_size) {
 			/* There isn't a pair of offsets. */
-			archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+			archive_set_error(&a->archive,
+			    ARCHIVE_ERRNO_FILE_FORMAT,
 			    "Illegal zisofs block pointers");
 			return (ARCHIVE_FATAL);
 		}
-		bst = archive_le32dec(zisofs->block_pointers + zisofs->block_off);
+		bst = archive_le32dec(
+		    zisofs->block_pointers + zisofs->block_off);
 		if (bst != zisofs->pz_offset + (bytes_read - avail)) {
-			/* TODO: Should we seek offset of current file by bst ? */
-			archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+			/* TODO: Should we seek offset of current file
+			 * by bst ? */
+			archive_set_error(&a->archive,
+			    ARCHIVE_ERRNO_FILE_FORMAT,
 			    "Illegal zisofs block pointers(cannot seek)");
 			return (ARCHIVE_FATAL);
 		}
 		bed = archive_le32dec(
 		    zisofs->block_pointers + zisofs->block_off + 4);
 		if (bed < bst) {
-			archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+			archive_set_error(&a->archive,
+			    ARCHIVE_ERRNO_FILE_FORMAT,
 			    "Illegal zisofs block pointers");
 			return (ARCHIVE_FATAL);
 		}
@@ -1538,7 +1644,7 @@ zisofs_read_data(struct archive_read *a,
 	}
 
 	/*
-	 * Make uncompressed datas.
+	 * Make uncompressed data.
 	 */
 	if (zisofs->block_avail == 0) {
 		memset(zisofs->uncompressed_buffer, 0,
@@ -1695,6 +1801,8 @@ archive_read_format_iso9660_cleanup(struct archive_read *a)
 		}
 	}
 #endif
+	free(iso9660->utf16be_path);
+	free(iso9660->utf16be_previous_path);
 	free(iso9660);
 	(a->format->data) = NULL;
 	return (r);
@@ -1751,13 +1859,12 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 	}
 
 	/* Create a new file entry and copy data from the ISO dir record. */
-	file = (struct file_info *)malloc(sizeof(*file));
+	file = (struct file_info *)calloc(1, sizeof(*file));
 	if (file == NULL) {
 		archive_set_error(&a->archive, ENOMEM,
 		    "No memory for file entry");
 		return (NULL);
 	}
-	memset(file, 0, sizeof(*file));
 	file->parent = parent;
 	file->offset = iso9660->logical_block_size * (uint64_t)location;
 	file->size = fsize;
@@ -1799,15 +1906,13 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 		if (name_len > 2 && p[name_len-2] == 0 && p[name_len-1] == '.')
 			name_len -= 2;
 #endif
-
-		/* Convert UTF-16BE of a filename to local locale MBS and store
-		 * the result into a filename field. */
-		if (iso9660->sconv_utf16be == NULL)
-			iso9660->sconv_utf16be =
-			    archive_string_conversion_from_charset(
-				&(a->archive), "UTF-16BE", 1);
-		archive_strncpy_in_locale(&file->name,
-		    (const char *)p, name_len, iso9660->sconv_utf16be);
+		if ((file->utf16be_name = malloc(name_len)) == NULL) {
+			archive_set_error(&a->archive, ENOMEM,
+			    "No memory for file name");
+			return (NULL);
+		}
+		memcpy(file->utf16be_name, p, name_len);
+		file->utf16be_bytes = name_len;
 	} else {
 		/* Chop off trailing ';1' from files. */
 		if (name_len > 2 && p[name_len - 2] == ';' &&
@@ -2289,12 +2394,14 @@ parse_rockridge_NM1(struct file_info *file,
 	case 0:
 		if (data_length < 2)
 			return;
-		archive_strncat(&file->name, (const char *)data + 1, data_length - 1);
+		archive_strncat(&file->name,
+		    (const char *)data + 1, data_length - 1);
 		break;
 	case 1:
 		if (data_length < 2)
 			return;
-		archive_strncat(&file->name, (const char *)data + 1, data_length - 1);
+		archive_strncat(&file->name,
+		    (const char *)data + 1, data_length - 1);
 		file->name_continues = 1;
 		break;
 	case 2:
@@ -2505,6 +2612,7 @@ release_files(struct iso9660 *iso9660)
 
 		archive_string_free(&file->name);
 		archive_string_free(&file->symlink);
+		free(file->utf16be_name);
 		con = file->contents.first;
 		while (con != NULL) {
 			connext = con->next;
@@ -2532,7 +2640,8 @@ next_entry_seek(struct archive_read *a, struct iso9660 *iso9660,
 	if (file->size == 0)
 		file->offset = iso9660->current_position;
 
-	/* flush any remaining bytes from the last round to ensure we're positioned */
+	/* flush any remaining bytes from the last round to ensure
+	 * we're positioned */
 	if (iso9660->entry_bytes_unconsumed) {
 		__archive_read_consume(a, iso9660->entry_bytes_unconsumed);
 		iso9660->entry_bytes_unconsumed = 0;
@@ -2690,14 +2799,16 @@ cache_get_entry(struct iso9660 *iso9660)
 	if ((file = iso9660->cache_files.first) != NULL) {
 		iso9660->cache_files.first = file->next;
 		if (iso9660->cache_files.first == NULL)
-			iso9660->cache_files.last = &(iso9660->cache_files.first);
+			iso9660->cache_files.last =
+			    &(iso9660->cache_files.first);
 		iso9660->cache_files.count--;
 	}
 	return (file);
 }
 
 static int
-heap_add_entry(struct heap_queue *heap, struct file_info *file, uint64_t key)
+heap_add_entry(struct archive_read *a, struct heap_queue *heap,
+    struct file_info *file, uint64_t key)
 {
 	uint64_t file_key, parent_key;
 	int hole, parent;
@@ -2711,11 +2822,15 @@ heap_add_entry(struct heap_queue *heap, struct file_info *file, uint64_t key)
 			new_size = 1024;
 		/* Overflow might keep us from growing the list. */
 		if (new_size <= heap->allocated) {
+			archive_set_error(&a->archive,
+			    ENOMEM, "Out of memory");
 			return (ARCHIVE_FATAL);
 		}
 		new_pending_files = (struct file_info **)
 		    malloc(new_size * sizeof(new_pending_files[0]));
 		if (new_pending_files == NULL) {
+			archive_set_error(&a->archive,
+			    ENOMEM, "Out of memory");
 			return (ARCHIVE_FATAL);
 		}
 		memcpy(new_pending_files, heap->files,
@@ -2883,6 +2998,32 @@ build_pathname(struct archive_string *as, struct file_info *file)
 	else
 		archive_string_concat(as, &file->name);
 	return (as->s);
+}
+
+static int
+build_pathname_utf16be(unsigned char *p, size_t max, size_t *len,
+    struct file_info *file)
+{
+	if (file->parent != NULL && file->parent->utf16be_bytes > 0) {
+		if (build_pathname_utf16be(p, max, len, file->parent) != 0)
+			return (-1);
+		p[*len] = 0;
+		p[*len + 1] = '/';
+		*len += 2;
+	}
+	if (file->utf16be_bytes == 0) {
+		if (*len + 2 > max)
+			return (-1);/* Path is too long! */
+		p[*len] = 0;
+		p[*len + 1] = '.';
+		*len += 2;
+	} else {
+		if (*len + file->utf16be_bytes > max)
+			return (-1);/* Path is too long! */
+		memcpy(p + *len, file->utf16be_name, file->utf16be_bytes);
+		*len += file->utf16be_bytes;
+	}
+	return (0);
 }
 
 #if DEBUG

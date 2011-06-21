@@ -117,9 +117,11 @@ struct archive_read_filter {
  * so should be deferred at least until libarchive 3.0.
  */
 struct archive_read_client {
+	archive_open_callback	*opener;
 	archive_read_callback	*reader;
 	archive_skip_callback	*skipper;
 	archive_close_callback	*closer;
+	void *data;
 };
 
 struct archive_read {
@@ -192,15 +194,6 @@ int	__archive_read_register_format(struct archive_read *a,
 
 int __archive_read_get_bidder(struct archive_read *a,
     struct archive_read_filter_bidder **bidder);
-
-#define archive_read_get_bidder(__a, __b) \
-	do { \
-		int r = __archive_read_get_bidder(__a, &(__b)); \
-		if (r != ARCHIVE_OK) \
-			return (r); \
-		if ((__b) == NULL) \
-			return (ARCHIVE_FATAL); \
-	} while (0)
 
 const void *__archive_read_ahead(struct archive_read *, size_t, ssize_t *);
 const void *__archive_read_filter_ahead(struct archive_read_filter *,

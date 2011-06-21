@@ -49,7 +49,7 @@ test_read_format_lha_filename_CP932_eucJP(const char *refname)
 	 */
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	if (ARCHIVE_OK != archive_read_set_options(a, "charset=CP932")) {
+	if (ARCHIVE_OK != archive_read_set_options(a, "hdrcharset=CP932")) {
 		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 		skipping("This system cannot convert character-set"
 		    " from CP932 to eucJP.");
@@ -94,10 +94,10 @@ test_read_format_lha_filename_CP932_UTF8(const char *refname)
 	struct archive_entry *ae;
 
 	/*
-	 * Read LHA filename in ja_JP.UTF-8.
+	 * Read LHA filename in en_US.UTF-8.
 	 */
-	if (NULL == setlocale(LC_ALL, "ja_JP.UTF-8")) {
-		skipping("ja_JP.UTF-8 locale not available on this system.");
+	if (NULL == setlocale(LC_ALL, "en_US.UTF-8")) {
+		skipping("en_US.UTF-8 locale not available on this system.");
 		return;
 	}
 	/*
@@ -108,7 +108,7 @@ test_read_format_lha_filename_CP932_UTF8(const char *refname)
 	 */
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	if (ARCHIVE_OK != archive_read_set_options(a, "charset=CP932")) {
+	if (ARCHIVE_OK != archive_read_set_options(a, "hdrcharset=CP932")) {
 		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 		skipping("This system cannot convert character-set"
 		    " from CP932 to UTF-8.");
@@ -168,10 +168,6 @@ test_read_format_lha_filename_CP932_Windows(const char *refname)
 	 * want to test that it works well. 
 	 */
 	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
-
-	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
 	assertEqualIntA(a, ARCHIVE_OK,
@@ -212,7 +208,7 @@ test_read_format_lha_filename_CP932_Windows(const char *refname)
 DEFINE_TEST(test_read_format_lha_filename)
 {
 	/* A sample file was created with LHA32.EXE through UNLHA.DLL. */
-	const char *refname = "test_read_format_lha_cp932.lzh";
+	const char *refname = "test_read_format_lha_filename_cp932.lzh";
 
 	extract_reference_file(refname);
 

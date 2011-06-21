@@ -239,6 +239,13 @@ case $host in
   ;;
 esac
 
+# We need CoreServices on Mac OS.
+case $host in
+  *darwin* )
+  LIBS="${LIBS} -framework CoreServices"
+  ;;
+esac
+
 # Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_SYS_WAIT
@@ -253,7 +260,7 @@ AC_CHECK_HEADERS([sys/mkdev.h sys/mount.h])
 AC_CHECK_HEADERS([sys/param.h sys/poll.h sys/select.h sys/statfs.h sys/statvfs.h])
 AC_CHECK_HEADERS([sys/time.h sys/utime.h sys/utsname.h sys/vfs.h])
 AC_CHECK_HEADERS([time.h unistd.h utime.h wchar.h wctype.h])
-AC_CHECK_HEADERS([windows.h winioctl])
+AC_CHECK_HEADERS([windows.h winioctl.h])
 
 # Checks for libraries.
 AC_ARG_WITH([zlib],
@@ -284,8 +291,19 @@ AC_ARG_WITH([iconv],
   AS_HELP_STRING([--without-iconv], [Don't try to link against iconv]))
 
 if test "x$with_iconv" != "xno"; then
-  AC_CHECK_HEADERS([iconv.h])
+  AC_CHECK_HEADERS([iconv.h],[],[],[#include <stdlib.h>])
   AM_ICONV
+  if test "x$am_cv_lib_iconv" != "xno"; then
+    AC_CHECK_HEADERS([localcharset.h])
+    am_save_LIBS="$LIBS"
+    LIBS="${LIBS} ${LIBICONV}"
+    AC_CHECK_FUNCS([locale_charset])
+    LIBS="${am_save_LIBS}"
+    if test "x$ac_cv_func_locale_charset" != "xyes"; then
+      # If locale_charset() is not in libiconv, we have to find libcharset. 
+      AC_CHECK_LIB(charset,locale_charset)
+    fi
+  fi
 fi
 
 AC_ARG_WITH([lzma],
@@ -447,7 +465,12 @@ AC_TYPE_UINT32_T
 AC_TYPE_INT16_T
 AC_TYPE_UINT16_T
 
-AC_CHECK_DECLS([SIZE_MAX, SSIZE_MAX, INT64_MAX, INT64_MIN, UINT64_MAX, UINT32_MAX])
+AC_CHECK_DECLS([SIZE_MAX, INT64_MAX, INT64_MIN, UINT64_MAX, UINT32_MAX])
+
+AC_CHECK_DECL([SSIZE_MAX],
+		[AC_DEFINE(HAVE_DECL_SSIZE_MAX, 1, [Define to 1 if you have the declaration of `SSIZE_MAX', and to 0 if you don't.])],
+		[],
+		[#include <limits.h>])
 
 AC_CHECK_DECL([EFTYPE],
 		[AC_DEFINE(HAVE_EFTYPE, 1, [A possible errno value for invalid file format errors])],
@@ -492,8 +515,9 @@ AC_CHECK_FUNCS([nl_langinfo openat pipe poll readlink readlinkat])
 AC_CHECK_FUNCS([select setenv setlocale sigaction statfs statvfs])
 AC_CHECK_FUNCS([strchr strdup strerror strncpy_s strrchr symlink timegm])
 AC_CHECK_FUNCS([tzset unsetenv utime utimensat utimes vfork])
-AC_CHECK_FUNCS([wcrtomb wcscmp wcscpy wcslen wctomb wmemcmp wmemcpy])
-AC_CHECK_FUNCS([_ctime64_s _fseeki64 _get_timezone _localtime64_s _mkgmtime64])
+AC_CHECK_FUNCS([wcrtomb wcscmp wcscpy wcslen wcsnrtombs wctomb wmemcmp wmemcpy])
+AC_CHECK_FUNCS([_ctime64_s _fseeki64])
+AC_CHECK_FUNCS([_get_timezone _localtime64_s _mkgmtime64])
 # detects cygwin-1.7, as opposed to older versions
 AC_CHECK_FUNCS([cygwin_conv_path])
 

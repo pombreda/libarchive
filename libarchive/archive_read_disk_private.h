@@ -53,31 +53,17 @@ struct archive_read_disk {
 	 */
 	char	follow_symlinks;  /* Either 'L' or 'P'. */
 
+	/* Directory traversals. */
 	struct tree *tree;
 
-	/* Restore time if user want. */
+	/* Set 1 if users request to restore atime . */
 	int		 restore_time;
-
 	int		 entry_wd_fd;
-	int		 entry_fd;
-	int		 entry_eof;
-	int64_t		 entry_remaining_bytes;
-	int64_t		 entry_total;
-	unsigned char	*entry_buff;
-	size_t		 entry_buff_size;
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-	const char * (*lookup_gname)(void *private, gid_t gid);
-#else
 	const char * (*lookup_gname)(void *private, int64_t gid);
-#endif
 	void	(*cleanup_gname)(void *private);
 	void	 *lookup_gname_data;
-#if ARCHIVE_VERSION_NUMBER < 3000000
-	const char * (*lookup_uname)(void *private, uid_t uid);
-#else
 	const char * (*lookup_uname)(void *private, int64_t uid);
-#endif
 	void	(*cleanup_uname)(void *private);
 	void	 *lookup_uname_data;
 };

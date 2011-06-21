@@ -33,7 +33,7 @@ __FBSDID("$FreeBSD$");
 #endif
 
 static void
-test_basic()
+test_basic(void)
 {
 	struct archive *a;
 	struct archive_entry *ae;
@@ -73,7 +73,7 @@ test_basic()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 10);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "0123456789", 10), 0);
+			assertEqualMem(p, "0123456789", 10);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -86,7 +86,7 @@ test_basic()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 11);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "hello world", 11), 0);
+			assertEqualMem(p, "hello world", 11);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -102,7 +102,7 @@ test_basic()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 10);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "0123456789", 10), 0);
+			assertEqualMem(p, "0123456789", 10);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -118,7 +118,7 @@ test_basic()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 10);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "0123456789", 10), 0);
+			assertEqualMem(p, "0123456789", 10);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -131,7 +131,7 @@ test_basic()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 10);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "0123456789", 10), 0);
+			assertEqualMem(p, "0123456789", 10);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -153,7 +153,7 @@ test_basic()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 3);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "xyz", 3), 0);
+			assertEqualMem(p, "xyz", 3);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -185,7 +185,7 @@ test_basic()
 	    archive_read_data_block(a, &p, &size, &offset));
 	assertEqualInt((int)size, 10);
 	assertEqualInt((int)offset, 0);
-	assertEqualInt(memcmp(p, "0123456789", 10), 0);
+	assertEqualMem(p, "0123456789", 10);
 
 	/* There is no entry. */
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header2(a, ae));
@@ -209,7 +209,7 @@ test_basic()
 	    archive_read_data_block(a, &p, &size, &offset));
 	assertEqualInt((int)size, 10);
 	assertEqualInt((int)offset, 0);
-	assertEqualInt(memcmp(p, "0123456789", 10), 0);
+	assertEqualMem(p, "0123456789", 10);
 
 	/* dir1/sub1 */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header2(a, ae));
@@ -228,7 +228,7 @@ test_basic()
 	    archive_read_data_block(a, &p, &size, &offset));
 	assertEqualInt((int)size, 10);
 	assertEqualInt((int)offset, 0);
-	assertEqualInt(memcmp(p, "0123456789", 10), 0);
+	assertEqualMem(p, "0123456789", 10);
 
 	/* There is no entry. */
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header2(a, ae));
@@ -289,7 +289,7 @@ test_basic()
 }
 
 static void
-test_symlink_hybrid()
+test_symlink_hybrid(void)
 {
 	struct archive *a;
 	struct archive_entry *ae;
@@ -341,7 +341,7 @@ test_symlink_hybrid()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 8);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "d1/file1", 8), 0);
+			assertEqualMem(p, "d1/file1", 8);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -354,7 +354,7 @@ test_symlink_hybrid()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 8);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "d1/file2", 8), 0);
+			assertEqualMem(p, "d1/file2", 8);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -397,7 +397,7 @@ test_symlink_hybrid()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 8);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "d1/file1", 8), 0);
+			assertEqualMem(p, "d1/file1", 8);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -410,7 +410,7 @@ test_symlink_hybrid()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 8);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "d1/file2", 8), 0);
+			assertEqualMem(p, "d1/file2", 8);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -446,7 +446,7 @@ test_symlink_hybrid()
 }
 
 static void
-test_symlink_logical()
+test_symlink_logical(void)
 {
 	struct archive *a;
 	struct archive_entry *ae;
@@ -498,7 +498,7 @@ test_symlink_logical()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 8);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "d1/file1", 8), 0);
+			assertEqualMem(p, "d1/file1", 8);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -511,7 +511,7 @@ test_symlink_logical()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 8);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "d1/file2", 8), 0);
+			assertEqualMem(p, "d1/file2", 8);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -525,7 +525,7 @@ test_symlink_logical()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 8);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "d1/file1", 8), 0);
+			assertEqualMem(p, "d1/file1", 8);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -565,7 +565,7 @@ test_symlink_logical()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 8);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "d1/file1", 8), 0);
+			assertEqualMem(p, "d1/file1", 8);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -578,7 +578,7 @@ test_symlink_logical()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 8);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "d1/file2", 8), 0);
+			assertEqualMem(p, "d1/file2", 8);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -591,7 +591,7 @@ test_symlink_logical()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 8);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "d1/file1", 8), 0);
+			assertEqualMem(p, "d1/file1", 8);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -609,7 +609,7 @@ test_symlink_logical()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 8);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "d1/file1", 8), 0);
+			assertEqualMem(p, "d1/file1", 8);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -622,7 +622,7 @@ test_symlink_logical()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 8);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "d1/file2", 8), 0);
+			assertEqualMem(p, "d1/file2", 8);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -635,7 +635,7 @@ test_symlink_logical()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 8);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "d1/file1", 8), 0);
+			assertEqualMem(p, "d1/file1", 8);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -651,7 +651,7 @@ test_symlink_logical()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 8);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "d1/file2", 8), 0);
+			assertEqualMem(p, "d1/file2", 8);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -676,7 +676,7 @@ test_symlink_logical()
 }
 
 static void
-test_symlink_logical_loop()
+test_symlink_logical_loop(void)
 {
 	struct archive *a;
 	struct archive_entry *ae;
@@ -735,7 +735,7 @@ test_symlink_logical_loop()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 8);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "d2/file1", 8), 0);
+			assertEqualMem(p, "d2/file1", 8);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -755,7 +755,7 @@ test_symlink_logical_loop()
 }
 
 static void
-test_restore_atime()
+test_restore_atime(void)
 {
 	struct archive *a;
 	struct archive_entry *ae;
@@ -793,7 +793,7 @@ test_restore_atime()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 10);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "0123456789", 10), 0);
+			assertEqualMem(p, "0123456789", 10);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -805,7 +805,7 @@ test_restore_atime()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 11);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "hello world", 11), 0);
+			assertEqualMem(p, "hello world", 11);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -857,7 +857,7 @@ test_restore_atime()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 10);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "0123456789", 10), 0);
+			assertEqualMem(p, "0123456789", 10);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);
@@ -869,7 +869,7 @@ test_restore_atime()
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 11);
 			assertEqualInt((int)offset, 0);
-			assertEqualInt(memcmp(p, "hello world", 11), 0);
+			assertEqualMem(p, "hello world", 11);
 			assertEqualInt(ARCHIVE_EOF,
 			    archive_read_data_block(a, &p, &size, &offset));
 			assertEqualInt((int)size, 0);

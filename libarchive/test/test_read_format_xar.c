@@ -83,11 +83,7 @@ static void verify0(struct archive *a, struct archive_entry *ae)
 {
 	const void *p;
 	size_t size;
-#if ARCHIVE_VERSION_NUMBER < 3000000
-	off_t offset;
-#else
 	int64_t offset;
-#endif
 
 	assert(archive_entry_filetype(ae) == AE_IFREG);
 	assertEqualInt(archive_entry_mode(ae) & 0777, 0644);
@@ -103,7 +99,7 @@ static void verify0(struct archive *a, struct archive_entry *ae)
 	assertEqualInt(archive_read_data_block(a, &p, &size, &offset), 0);
 	assertEqualInt((int)size, 16);
 	assertEqualInt((int)offset, 0);
-	assertEqualInt(memcmp(p, "hellohellohello\n", 16), 0);
+	assertEqualMem(p, "hellohellohello\n", 16);
 }
 
 static void verify1(struct archive *a, struct archive_entry *ae)

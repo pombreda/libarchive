@@ -130,7 +130,11 @@ archive_read_support_compression_xz(struct archive *_a)
 	struct archive_read *a = (struct archive_read *)_a;
 	struct archive_read_filter_bidder *bidder;
 
-	archive_read_get_bidder(a, bidder);
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
+	    ARCHIVE_STATE_NEW, "archive_read_support_filter_xz");
+
+	if (__archive_read_get_bidder(a, &bidder) != ARCHIVE_OK)
+		return (ARCHIVE_FATAL);
 
 	bidder->data = NULL;
 	bidder->bid = xz_bidder_bid;
@@ -162,7 +166,11 @@ archive_read_support_compression_lzma(struct archive *_a)
 	struct archive_read *a = (struct archive_read *)_a;
 	struct archive_read_filter_bidder *bidder;
 
-	archive_read_get_bidder(a, bidder);
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
+	    ARCHIVE_STATE_NEW, "archive_read_support_filter_lzma");
+
+	if (__archive_read_get_bidder(a, &bidder) != ARCHIVE_OK)
+		return (ARCHIVE_FATAL);
 
 	bidder->data = NULL;
 	bidder->bid = lzma_bidder_bid;
@@ -196,7 +204,11 @@ archive_read_support_compression_lzip(struct archive *_a)
 	struct archive_read *a = (struct archive_read *)_a;
 	struct archive_read_filter_bidder *bidder;
 
-	archive_read_get_bidder(a, bidder);
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
+	    ARCHIVE_STATE_NEW, "archive_read_support_filter_lzip");
+
+	if (__archive_read_get_bidder(a, &bidder) != ARCHIVE_OK)
+		return (ARCHIVE_FATAL);
 
 	bidder->data = NULL;
 	bidder->bid = lzip_bidder_bid;

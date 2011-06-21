@@ -22,10 +22,10 @@ STRING(REGEX REPLACE
 STRING(REGEX REPLACE
  "^[0-9][0-9][0-9][0-9][0-9][0-9][0-9]([a-z]?)$" "\\1" _quality ${_version})
 SET(_version_number ${_major}${_minor}${_revision})
-STRING(REGEX REPLACE "[0]*([^0][0-9]*)$" "\\1" _minor ${_minor})
-STRING(REGEX REPLACE "[0]*([^0][0-9]*)$" "\\1" _revision ${_revision})
+STRING(REGEX REPLACE "[0]*([^0]*[0-9])$" "\\1" _trimmed_minor ${_minor})
+STRING(REGEX REPLACE "[0]*([^0]*[0-9])$" "\\1" _trimmed_revision ${_revision})
 #
-SET(VERSION                    "${_major}.${_minor}.${_revision}${_quality}")
+SET(VERSION                    "${_major}.${_trimmed_minor}.${_trimmed_revision}${_quality}")
 SET(BSDCPIO_VERSION_STRING     "${VERSION}")
 SET(BSDPAX_VERSION_STRING      "${VERSION}")
 SET(BSDTAR_VERSION_STRING      "${VERSION}")
@@ -49,26 +49,43 @@ include(CTest)
 # TODO: Require CMake 2.8 and drop this workaround (perhaps late 2010).
 INCLUDE(AddTest28)
 
+# Set default value for option.
+# Do not use SET() to option variables. it doest not correctly work on GUI.
+IF(WIN32 AND NOT CYGWIN)
+  # Currently, dynamic build only.
+  SET(TAR_DEFAULT OFF)
+  SET(TAR_SHARED_DEFAULT ON)
+  SET(CPIO_DEFAULT OFF)
+  SET(CPIO_SHARED_DEFAULT ON)
+  SET(PAX_DEFAULT OFF)
+  SET(PAX_SHARED_DEFAULT ON)
+  # Not tested.
+  SET(ICONV_DEFAULT OFF)
+ELSE(WIN32 AND NOT CYGWIN)
+  SET(TAR_DEFAULT ON)
+  SET(TAR_SHARED_DEFAULT FALSE)
+  SET(CPIO_DEFAULT ON)
+  SET(CPIO_SHARED_DEFAULT FALSE)
+  SET(PAX_DEFAULT ON)
+  SET(PAX_SHARED_DEFAULT FALSE)
+  SET(ICONV_DEFAULT ON)
+ENDIF(WIN32 AND NOT CYGWIN)
+
 OPTION(ENABLE_OPENSSL "Enable use of OpenSSL" ON)
-OPTION(ENABLE_TAR "Enable tar building" ON)
-OPTION(ENABLE_TAR_SHARED "Enable dynamic build of tar" OFF)
-OPTION(ENABLE_CPIO "Enable cpio building" ON)
-OPTION(ENABLE_CPIO_SHARED "Enable dynamic build of cpio" OFF)
-OPTION(ENABLE_PAX "Enable pax building" ON)
-OPTION(ENABLE_PAX_SHARED "Enable dynamic build of pax" OFF)
+OPTION(ENABLE_TAR "Enable tar building" ${TAR_DEFAULT})
+OPTION(ENABLE_TAR_SHARED "Enable dynamic build of tar" ${TAR_SHARED_DEFAULT})
+OPTION(ENABLE_CPIO "Enable cpio building" ${CPIO_DEFAULT})
+OPTION(ENABLE_CPIO_SHARED "Enable dynamic build of cpio" ${CPIO_SHARED_DEFAULT})
+OPTION(ENABLE_PAX "Enable pax building" ${PAX_DEFAULT})
+OPTION(ENABLE_PAX_SHARED "Enable dynamic build of pax" ${PAX_SHARED_DEFAULT})
 OPTION(ENABLE_XATTR "Enable extended attribute support" ON)
 OPTION(ENABLE_ACL "Enable ACL support" ON)
+OPTION(ENABLE_ICONV "Enable iconv support" ${ICONV_DEFAULT})
 OPTION(ENABLE_TEST "Enable unit and regression tests" ON)
 
 IF(ENABLE_TEST)
 	ENABLE_TESTING()
 ENDIF(ENABLE_TEST)
-IF(WIN32 AND NOT CYGWIN)
-  # Currently, dynamic build only.
-  SET(ENABLE_TAR_SHARED ON)
-  SET(ENABLE_CPIO_SHARED ON)
-  SET(ENABLE_PAX_SHARED ON)
-ENDIF(WIN32 AND NOT CYGWIN)
 
 IF(WIN32)
   SET(_WIN32_WINNT 0x0500 CACHE INTERNAL "Setting _WIN32_WINNT to 0x0500 for Windows 2000 APIs")
@@ -276,12 +293,28 @@ LA_CHECK_INCLUDE_FILE("wctype.h" HAVE_WCTYPE_H)
 LA_CHECK_INCLUDE_FILE("windows.h" HAVE_WINDOWS_H)
 LA_CHECK_INCLUDE_FILE("winioctl.h" HAVE_WINIOCTL_H)
 
+#
+# Check whether use of __EXTENSIONS__ is safe.
+# We need some macro such as _GNU_SOURCE to use extension functions.
+#
+SET(_INCLUDE_FILES)
+FOREACH (it ${_HEADER})
+   SET(_INCLUDE_FILES "${_INCLUDE_FILES}#include <${it}>\n")
+ENDFOREACH (it)
+
+CHECK_C_SOURCE_COMPILES(
+  "#define __EXTENSIONS__ 1
+   ${_INCLUDE_FILES}
+   int main() { return 0;}"
+ SAFE_TO_DEFINE_EXTENSIONS)
 
 #
 # Find OpenSSL
 #
 IF(ENABLE_OPENSSL)
   FIND_PACKAGE(OpenSSL)
+ELSE()
+  SET(OPENSSL_FOUND FALSE) # Override cached value
 ENDIF()
 
 #
@@ -300,6 +333,9 @@ MACRO(CHECK_MD HASH IMPLEMENTATIONS)
     STRING(TOUPPER "${HASH}" hash)
 
     FOREACH(IMPLEMENTATION ${IMPLEMENTATIONS})
+      IF ("${IMPLEMENTATION}" MATCHES "^OPENSSL$" AND NOT OPENSSL_FOUND)
+        SET(ARCHIVE_HASH_${HASH}_${IMPLEMENTATION} FALSE)
+      ENDIF ("${IMPLEMENTATION}" MATCHES "^OPENSSL$" AND NOT OPENSSL_FOUND)
       IF(NOT DEFINED ARCHIVE_HASH_${HASH}_${IMPLEMENTATION})
         # Probe the local implementation for whether this
 	# hash implementation is available on this platform.
@@ -456,63 +492,96 @@ CHECK_HASH_WIN("MD5;SHA1;SHA256;SHA384;SHA512")
 # a non-const argument here and can support iconv()
 # being in libiconv.
 #
-LA_CHECK_INCLUDE_FILE("iconv.h" HAVE_ICONV_H)   
-IF(HAVE_ICONV_H)
-  FIND_PATH(ICONV_INCLUDE_DIR iconv.h) 
+IF(ENABLE_ICONV)
+  FIND_PATH(ICONV_INCLUDE_DIR iconv.h)
+  IF(ICONV_INCLUDE_DIR)
+    INCLUDE_DIRECTORIES(${ICONV_INCLUDE_DIR})
+    SET(CMAKE_REQUIRED_INCLUDES ${ICONV_INCLUDE_DIR})
+    #SET(INCLUDES ${INCLUDES} "iconv.h")
+    SET(HAVE_ICONV_H 1)
 
-  # Try POSIX-conforming iconv() in libc
- CHECK_C_SOURCE_COMPILES(
-    "#include <iconv.h>
-     int main() {const char *ccp; iconv_t cd;
-     iconv(cd, &ccp, (size_t *)0, (char **)0, (size_t *)0);
-     return 0;}"
-  HAVE_POSIX_ICONV_IN_LIBC)
-  IF(HAVE_POSIX_ICONV_IN_LIBC)
-    SET(HAVE_ICONV true)
-    SET(ICONV_CONST "const")
-  ELSE(HAVE_POSIX_ICONV_IN_LIBC)
-
-    # Try non-POSIX-conforming iconv() in libc
+    # Try POSIX-conforming iconv() in libc
     CHECK_C_SOURCE_COMPILES(
-      "#include <iconv.h>
-       int main() {char *ccp; iconv_t cd;
+      "#include <stdlib.h>
+#include <iconv.h>
+       int main() {const char *ccp; iconv_t cd = iconv_open(\"\", \"\");
        iconv(cd, &ccp, (size_t *)0, (char **)0, (size_t *)0);
+       iconv_close(cd);
        return 0;}"
-  HAVE_NONPOSIX_ICONV_IN_LIBC)
-    IF(HAVE_NONPOSIX_ICONV_IN_LIBC)
+     HAVE_POSIX_ICONV_IN_LIBC)
+    IF(HAVE_POSIX_ICONV_IN_LIBC)
       SET(HAVE_ICONV true)
-      SET(ICONV_CONST "") 
-    ELSE(HAVE_NONPOSIX_ICONV_IN_LIBC)
+      SET(ICONV_CONST "const")
+    ELSE(HAVE_POSIX_ICONV_IN_LIBC)
 
-      # iconv isn't in libc, try libiconv
-      SET(CMAKE_REQUIRED_LIBRARIES "iconv")
+      # Try non-POSIX-conforming iconv() in libc
       CHECK_C_SOURCE_COMPILES(
-          "#include <iconv.h>
-           int main() {const char *ccp; iconv_t cd;
-           iconv(cd, &ccp, (size_t *)0, (char **)0, (size_t *)0);
-           return 0;}"
-       HAVE_POSIX_ICONV_IN_LIBICONV)
-      IF(HAVE_POSIX_ICONV_IN_LIBICONV)
-        SET(HAVE_ICONV true) 
-        SET(ICONV_CONST "const") 
-        LIST(APPEND ADDITIONAL_LIBS "iconv")
-      ELSE(HAVE_POSIX_ICONV_IN_LIBICONV)
+        "#include <stdlib.h>
+#include <iconv.h>
+         int main() {char *ccp; iconv_t cd = iconv_open(\"\", \"\");
+         iconv(cd, &ccp, (size_t *)0, (char **)0, (size_t *)0);
+         iconv_close(cd);
+         return 0;}"
+       HAVE_NONPOSIX_ICONV_IN_LIBC)
+      IF(HAVE_NONPOSIX_ICONV_IN_LIBC)
+        SET(HAVE_ICONV true)
+        SET(ICONV_CONST "") 
+      ELSE(HAVE_NONPOSIX_ICONV_IN_LIBC)
 
+        # iconv isn't in libc, try libiconv
+        FIND_LIBRARY(LIBICONV_PATH iconv)
+        IF(LIBICONV_PATH)
+          SET(CMAKE_REQUIRED_LIBRARIES ${LIBICONV_PATH})
+        ENDIF(LIBICONV_PATH)
         CHECK_C_SOURCE_COMPILES(
-            "#include <iconv.h>
-             int main() {char *ccp; iconv_t cd;
+            "#include <stdlib.h>
+#include <iconv.h>
+             int main() {const char *ccp; iconv_t cd = iconv_open(\"\", \"\");
              iconv(cd, &ccp, (size_t *)0, (char **)0, (size_t *)0);
+             iconv_close(cd);
              return 0;}"
-         HAVE_NONPOSIX_ICONV_IN_LIBICONV)
-        IF(HAVE_NONPOSIX_ICONV_IN_LIBICONV)
+         HAVE_POSIX_ICONV_IN_LIBICONV)
+        IF(HAVE_POSIX_ICONV_IN_LIBICONV)
           SET(HAVE_ICONV true) 
-          SET(ICONV_CONST "") 
-          LIST(APPEND ADDITIONAL_LIBS "iconv")
-        ENDIF(HAVE_NONPOSIX_ICONV_IN_LIBICONV)
-      ENDIF(HAVE_POSIX_ICONV_IN_LIBICONV)
-    ENDIF(HAVE_NONPOSIX_ICONV_IN_LIBC)
-  ENDIF(HAVE_POSIX_ICONV_IN_LIBC)
-ENDIF(HAVE_ICONV_H)
+          SET(ICONV_CONST "const") 
+          LIST(APPEND ADDITIONAL_LIBS ${LIBICONV_PATH})
+        ELSE(HAVE_POSIX_ICONV_IN_LIBICONV)
+
+          CHECK_C_SOURCE_COMPILES(
+              "#include <stdlib.h>
+#include <iconv.h>
+               int main() {char *ccp; iconv_t cd = iconv_open(\"\", \"\");
+               iconv(cd, &ccp, (size_t *)0, (char **)0, (size_t *)0);
+               iconv_close(cd);
+               return 0;}"
+           HAVE_NONPOSIX_ICONV_IN_LIBICONV)
+          IF(HAVE_NONPOSIX_ICONV_IN_LIBICONV)
+            SET(HAVE_ICONV true) 
+            SET(ICONV_CONST "") 
+            LIST(APPEND ADDITIONAL_LIBS ${LIBICONV_PATH})
+          ENDIF(HAVE_NONPOSIX_ICONV_IN_LIBICONV)
+        ENDIF(HAVE_POSIX_ICONV_IN_LIBICONV)
+      ENDIF(HAVE_NONPOSIX_ICONV_IN_LIBC)
+    ENDIF(HAVE_POSIX_ICONV_IN_LIBC)
+  ENDIF(ICONV_INCLUDE_DIR)
+  #
+  # Find locale_charset() for libiconv.
+  #
+  IF(LIBICONV_PATH)
+    CHECK_INCLUDE_FILES("localcharset.h" HAVE_LOCALCHARSET_H)
+    CHECK_FUNCTION_EXISTS_GLIBC(locale_charset HAVE_LOCALE_CHARSET)
+    IF(NOT HAVE_LOCALE_CHARSET)
+      FIND_LIBRARY(LIBCHARSET_PATH charset)
+      IF(LIBCHARSET_PATH)
+        SET(CMAKE_REQUIRED_LIBRARIES ${LIBCHARSET_PATH})
+        CHECK_FUNCTION_EXISTS_GLIBC(locale_charset HAVE_LOCALE_CHARSET)
+        IF(HAVE_LOCALE_CHARSET)
+          LIST(APPEND ADDITIONAL_LIBS ${LIBCHARSET_PATH})
+        ENDIF(HAVE_LOCALE_CHARSET)
+      ENDIF(LIBCHARSET_PATH)
+    ENDIF(NOT HAVE_LOCALE_CHARSET)
+  ENDIF(LIBICONV_PATH)
+ENDIF(ENABLE_ICONV)
 
 #
 # Find Libxml2
@@ -535,7 +604,7 @@ ELSE(LIBXML2_FOUND)
   IF(EXPAT_FOUND)
     INCLUDE_DIRECTORIES(${EXPAT_INCLUDE_DIR})
     LIST(APPEND ADDITIONAL_LIBS ${EXPAT_LIBRARIES})
-   SET(HAVE_LIBEXPAT 1)
+    SET(HAVE_LIBEXPAT 1)
     LA_CHECK_INCLUDE_FILE("expat.h" HAVE_EXPAT_H)
   ENDIF(EXPAT_FOUND)
 ENDIF(LIBXML2_FOUND)
@@ -543,6 +612,15 @@ ENDIF(LIBXML2_FOUND)
 #
 # Check functions
 #
+IF ("CMAKE_C_COMPILER_ID" MATCHES "^GNU$")
+  #
+  # During checking functions, we should use -fno-builtin to avoid the
+  # failure of function detection which failure is an error "conflicting
+  # types for built-in function" caused by using -Werror option.
+  #
+  SET(SAVE_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+  SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fno-builtin")
+ENDIF ("CMAKE_C_COMPILER_ID" MATCHES "^GNU$")
 CHECK_SYMBOL_EXISTS(_CrtSetReportMode "crtdbg.h" HAVE__CrtSetReportMode)
 CHECK_FUNCTION_EXISTS_GLIBC(chflags HAVE_CHFLAGS)
 CHECK_FUNCTION_EXISTS_GLIBC(chown HAVE_CHOWN)
@@ -590,7 +668,6 @@ CHECK_FUNCTION_EXISTS_GLIBC(openat HAVE_OPENAT)
 CHECK_FUNCTION_EXISTS_GLIBC(pipe HAVE_PIPE)
 CHECK_FUNCTION_EXISTS_GLIBC(poll HAVE_POLL)
 CHECK_FUNCTION_EXISTS_GLIBC(readlink HAVE_READLINK)
-CHECK_FUNCTION_EXISTS_GLIBC(readlinkat HAVE_READLINKAT)
 CHECK_FUNCTION_EXISTS_GLIBC(select HAVE_SELECT)
 CHECK_FUNCTION_EXISTS_GLIBC(setenv HAVE_SETENV)
 CHECK_FUNCTION_EXISTS_GLIBC(setlocale HAVE_SETLOCALE)
@@ -614,6 +691,7 @@ CHECK_FUNCTION_EXISTS_GLIBC(wcrtomb HAVE_WCRTOMB)
 CHECK_FUNCTION_EXISTS_GLIBC(wcscmp HAVE_WCSCMP)
 CHECK_FUNCTION_EXISTS_GLIBC(wcscpy HAVE_WCSCPY)
 CHECK_FUNCTION_EXISTS_GLIBC(wcslen HAVE_WCSLEN)
+CHECK_FUNCTION_EXISTS_GLIBC(wcsnrtombs HAVE_WCSNRTOMBS)
 CHECK_FUNCTION_EXISTS_GLIBC(wctomb HAVE_WCTOMB)
 CHECK_FUNCTION_EXISTS_GLIBC(_ctime64_s HAVE__CTIME64_S)
 CHECK_FUNCTION_EXISTS_GLIBC(_fseeki64 HAVE__FSEEKI64)
@@ -630,11 +708,24 @@ CHECK_FUNCTION_EXISTS(vprintf HAVE_VPRINTF)
 CHECK_FUNCTION_EXISTS(wmemcmp HAVE_WMEMCMP)
 CHECK_FUNCTION_EXISTS(wmemcpy HAVE_WMEMCPY)
 
+# Restore CMAKE_REQUIRED_FLAGS
+IF ("CMAKE_C_COMPILER_ID" MATCHES "^GNU$")
+  SET(CMAKE_REQUIRED_FLAGS ${SAVE_CMAKE_REQUIRED_FLAGS})
+ENDIF ("CMAKE_C_COMPILER_ID" MATCHES "^GNU$")
+
 # Make sure we have the POSIX version of readdir_r, not the
 # older 2-argument version.
 CHECK_C_SOURCE_COMPILES(
-  "#include <dirent.h>\nint main() {DIR *d; struct dirent e,*r; return readdir_r(d,&e,&r);}"
+  "#include <dirent.h>\nint main() {DIR *d = opendir(\".\"); struct dirent e,*r; return readdir_r(d,&e,&r);}"
   HAVE_READDIR_R)
+
+
+# Only detect readlinkat() if we also have AT_FDCWD in unistd.h.
+# NOTE: linux requires fcntl.h for AT_FDCWD.
+CHECK_C_SOURCE_COMPILES(
+  "#include <fcntl.h>\n#include <unistd.h>\nint main() {char buf[10]; return readlinkat(AT_FDCWD, \"\", buf, 0);}"
+  HAVE_READLINKAT)
+
 
 # To verify major(), we need to both include the header
 # of interest and verify that the result can be linked.
@@ -847,10 +938,10 @@ IF(ENABLE_XATTR)
   LA_CHECK_INCLUDE_FILE(attr/xattr.h     HAVE_ATTR_XATTR_H)
   LA_CHECK_INCLUDE_FILE(sys/xattr.h      HAVE_SYS_XATTR_H)
   LA_CHECK_INCLUDE_FILE(sys/extattr.h      HAVE_SYS_EXTATTR_H)
-  CHECK_LIBRARY_EXISTS(attr "setxattr" "" HAVE_ATTR_LIB)
- IF(HAVE_ATTR_LIB)
+  CHECK_LIBRARY_EXISTS(attr "setxattr" "" HAVE_LIBATTR)
+  IF(HAVE_LIBATTR)
     SET(CMAKE_REQUIRED_LIBRARIES "attr")
-  ENDIF(HAVE_ATTR_LIB)
+  ENDIF(HAVE_LIBATTR)
   CHECK_SYMBOL_EXISTS(EXTATTR_NAMESPACE_USER "sys/types.h;sys/extattr.h" HAVE_DECL_EXTATTR_NAMESPACE_USER)
   CHECK_FUNCTION_EXISTS_GLIBC(extattr_get_file HAVE_EXTATTR_GET_FILE)
   CHECK_FUNCTION_EXISTS_GLIBC(extattr_list_file HAVE_EXTATTR_LIST_FILE)
@@ -872,6 +963,32 @@ IF(ENABLE_XATTR)
   CHECK_FUNCTION_EXISTS_GLIBC(listea HAVE_LISTEA)
   CHECK_FUNCTION_EXISTS_GLIBC(llistea HAVE_LLISTEA)
   CHECK_FUNCTION_EXISTS_GLIBC(lsetea HAVE_LSETEA)
+ELSE(ENABLE_XATTR)
+  SET(HAVE_ATTR_LIB FALSE)
+  SET(HAVE_ATTR_XATTR_H FALSE)
+  SET(HAVE_DECL_EXTATTR_NAMESPACE_USER FALSE)
+  SET(HAVE_EXTATTR_GET_FILE FALSE)
+  SET(HAVE_EXTATTR_LIST_FILE FALSE)
+  SET(HAVE_EXTATTR_SET_FD FALSE)
+  SET(HAVE_EXTATTR_SET_FILE FALSE)
+  SET(HAVE_FGETEA FALSE)
+  SET(HAVE_FGETXATTR FALSE)
+  SET(HAVE_FLISTEA FALSE)
+  SET(HAVE_FLISTXATTR FALSE)
+  SET(HAVE_FSETEA FALSE)
+  SET(HAVE_FSETXATTR FALSE)
+  SET(HAVE_GETEA FALSE)
+  SET(HAVE_GETXATTR FALSE)
+  SET(HAVE_LGETEA FALSE)
+  SET(HAVE_LGETXATTR FALSE)
+  SET(HAVE_LISTEA FALSE)
+  SET(HAVE_LISTXATTR FALSE)
+  SET(HAVE_LLISTEA FALSE)
+  SET(HAVE_LLISTXATTR FALSE)
+  SET(HAVE_LSETEA FALSE)
+  SET(HAVE_LSETXATTR FALSE)
+  SET(HAVE_SYS_EXTATTR_H FALSE)
+  SET(HAVE_SYS_XATTR_H FALSE)
 ENDIF(ENABLE_XATTR)
 
 #
@@ -883,12 +1000,12 @@ ENDIF(ENABLE_XATTR)
 # which makes the following checks rather more complex than I would like.
 #
 IF(ENABLE_ACL)
-  CHECK_LIBRARY_EXISTS(acl "acl_get_file" "" HAVE_ACL_LIB)
-  IF(HAVE_ACL_LIB)
+  CHECK_LIBRARY_EXISTS(acl "acl_get_file" "" HAVE_LIBACL)
+  IF(HAVE_LIBACL)
     SET(CMAKE_REQUIRED_LIBRARIES "acl")
     FIND_LIBRARY(ACL_LIBRARY NAMES acl)
     LIST(APPEND ADDITIONAL_LIBS ${ACL_LIBRARY})
-  ENDIF(HAVE_ACL_LIB)
+  ENDIF(HAVE_LIBACL)
   #
   CHECK_FUNCTION_EXISTS_GLIBC(acl_create_entry HAVE_ACL_CREATE_ENTRY)
   CHECK_FUNCTION_EXISTS_GLIBC(acl_init HAVE_ACL_INIT)
@@ -910,6 +1027,21 @@ IF(ENABLE_ACL)
   # MacOS has an acl.h that isn't POSIX.  It can be detected by
   # checking for ACL_USER
   CHECK_SYMBOL_EXISTS(ACL_USER "${INCLUDES}" HAVE_ACL_USER)
+ELSE(ENABLE_ACL)
+  # If someone runs cmake, then disables ACL support, we need
+  # to forcibly override the cached values for these.
+  SET(HAVE_ACL_CREATE_ENTRY FALSE)
+  SET(HAVE_ACL_GET_LINK FALSE)
+  SET(HAVE_ACL_GET_LINK_NP FALSE)
+  SET(HAVE_ACL_GET_PERM FALSE)
+  SET(HAVE_ACL_GET_PERM_NP FALSE)
+  SET(HAVE_ACL_INIT FALSE)
+  SET(HAVE_ACL_LIB FALSE)
+  SET(HAVE_ACL_PERMSET_T FALSE)
+  SET(HAVE_ACL_SET_FD FALSE)
+  SET(HAVE_ACL_SET_FD_NP FALSE)
+  SET(HAVE_ACL_SET_FILE FALSE)
+  SET(HAVE_ACL_USER FALSE)
 ENDIF(ENABLE_ACL)
 
 # Generate "config.h" from "build/cmake/config.h.in"
@@ -943,11 +1075,17 @@ IF(MSVC)
   ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
 ENDIF(MSVC)
 
+# We need CoreServices on Mac OS.
+IF(APPLE)
+  LIST(APPEND ADDITIONAL_LIBS "-framework CoreServices")
+ENDIF(APPLE)
+
 IF(ENABLE_TEST)
-ADD_CUSTOM_TARGET(run_all_tests)
+  ADD_CUSTOM_TARGET(run_all_tests)
 ENDIF(ENABLE_TEST)
 
 add_subdirectory(libarchive)
 add_subdirectory(tar)
 add_subdirectory(cpio)
 add_subdirectory(pax)
+

@@ -20,6 +20,7 @@ SET(libarchive_SOURCES
   archive_entry.h
   archive_entry_copy_stat.c
   archive_entry_link_resolver.c
+  archive_entry_locale.h
   archive_entry_private.h
   archive_entry_sparse.c
   archive_entry_stat.c
@@ -38,7 +39,6 @@ SET(libarchive_SOURCES
   archive_read_disk_posix.c
   archive_read_disk_private.h
   archive_read_disk_set_standard_lookup.c
-  archive_read_disk_windows.c
   archive_read_extract.c
   archive_read_open_fd.c
   archive_read_open_file.c
@@ -69,11 +69,12 @@ SET(libarchive_SOURCES
   archive_read_support_format_zip.c
   archive_string.c
   archive_string.h
+  archive_string_composition.h
   archive_string_sprintf.c
   archive_util.c
   archive_virtual.c
   archive_write.c
-  archive_write_disk.c
+  archive_write_disk_posix.c
   archive_write_disk_private.h
   archive_write_disk_set_standard_lookup.c
   archive_write_private.h
@@ -131,8 +132,10 @@ SET(libarchive_MANS
 
 IF(WIN32 AND NOT CYGWIN)
   LIST(APPEND libarchive_SOURCES archive_entry_copy_bhfi.c)
+  LIST(APPEND libarchive_SOURCES archive_read_disk_windows.c)
   LIST(APPEND libarchive_SOURCES archive_windows.c)
   LIST(APPEND libarchive_SOURCES archive_windows.h)
+  LIST(APPEND libarchive_SOURCES archive_write_disk_windows.c)
   LIST(APPEND libarchive_SOURCES filter_fork_windows.c)
 ENDIF(WIN32 AND NOT CYGWIN)
 

@@ -33,7 +33,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_zip.c 189482 2009-
  */
 
 static void
-test_basic()
+test_basic(void)
 {
 	const char *refname = "test_read_format_zip.zip";
 	struct archive_entry *ae;
@@ -41,11 +41,7 @@ test_basic()
 	char *buff[128];
 	const void *pv;
 	size_t s;
-#if ARCHIVE_VERSION_NUMBER < 3000000
-	off_t o;
-#else
 	int64_t o;
-#endif
 	int r;
 
 	extract_reference_file(refname);
@@ -75,7 +71,7 @@ test_basic()
 		}
 	}
 	assertEqualInt(18, r);
-	assert(0 == memcmp(buff, "hello\nhello\nhello\n", 18));
+	assertEqualMem(buff, "hello\nhello\nhello\n", 18);
 	assertA(0 == archive_read_next_header(a, &ae));
 	assertEqualString("file2", archive_entry_pathname(ae));
 	assertEqualInt(1179605932, archive_entry_mtime(ae));
@@ -83,7 +79,7 @@ test_basic()
 	assertEqualInt(0, archive_entry_size_is_set(ae));
 	failure("file2 has a bad CRC, so reading to end should fail");
 	assertEqualInt(ARCHIVE_WARN, archive_read_data(a, buff, 19));
-	assert(0 == memcmp(buff, "hello\nhello\nhello\n", 18));
+	assertEqualMem(buff, "hello\nhello\nhello\n", 18);
 	assertA(archive_compression(a) == ARCHIVE_COMPRESSION_NONE);
 	assertA(archive_format(a) == ARCHIVE_FORMAT_ZIP);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
@@ -96,7 +92,7 @@ finish:
  *  Currently sotres Unix UID/GID up to 32 bits.
  */
 static void
-test_info_zip_ux()
+test_info_zip_ux(void)
 {
 	const char *refname = "test_read_format_zip_ux.zip";
 	struct archive_entry *ae;
@@ -128,7 +124,7 @@ test_info_zip_ux()
 		}
 	}
 	assertEqualInt(18, r);
-	assert(0 == memcmp(buff, "hello\nhello\nhello\n", 18));
+	assertEqualMem(buff, "hello\nhello\nhello\n", 18);
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 
 	assertA(archive_compression(a) == ARCHIVE_COMPRESSION_NONE);

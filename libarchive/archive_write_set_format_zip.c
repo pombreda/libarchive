@@ -70,6 +70,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_format_zip.c 201168 20
 #include "archive.h"
 #include "archive_endian.h"
 #include "archive_entry.h"
+#include "archive_entry_locale.h"
 #include "archive_private.h"
 #include "archive_write_private.h"
 
@@ -188,10 +189,11 @@ struct zip {
 	int64_t offset;
 	int64_t written_bytes;
 	int64_t remaining_data_bytes;
-	struct archive_string l_name;
 	enum compression compression;
 	int flags;
 	struct archive_string_conv *opt_sconv;
+	struct archive_string_conv *sconv_default;
+	int	init_default_conversion;
 
 #ifdef HAVE_ZLIB_H
 	z_stream stream;
@@ -235,10 +237,10 @@ archive_write_zip_options(struct archive_write *a, const char *key,
 			zip->compression = COMPRESSION_STORE;
 			ret = ARCHIVE_OK;
 		}
-	} else if (strcmp(key, "charset")  == 0) {
+	} else if (strcmp(key, "hdrcharset")  == 0) {
 		if (val == NULL || val[0] == 0) {
 			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-			    "%s: charset option needs a character-set name",
+			    "%s: hdrcharset option needs a character-set name",
 			    a->format_name);
 		} else {
 			zip->opt_sconv = archive_string_conversion_to_charset(
@@ -327,6 +329,7 @@ archive_write_zip_header(struct archive_write *a, struct archive_entry *entry)
 	struct zip_extra_data_local e;
 	struct zip_data_descriptor *d;
 	struct zip_file_header_link *l;
+	struct archive_string_conv *sconv;
 	int ret, ret2 = ARCHIVE_OK;
 	int64_t size;
 	mode_t type;
@@ -344,6 +347,13 @@ archive_write_zip_header(struct archive_write *a, struct archive_entry *entry)
 		archive_entry_set_size(entry, 0);
 
 	zip = a->format_data;
+	/* Setup default conversion. */
+	if (zip->opt_sconv == NULL && !zip->init_default_conversion) {
+		zip->sconv_default =
+		    archive_string_default_conversion_for_write(&(a->archive));
+		zip->init_default_conversion = 1;
+	}
+
 	if (zip->flags == 0) {
 		/* Initialize the general purpose flags. */
 		zip->flags = ZIP_FLAGS;
@@ -370,17 +380,29 @@ archive_write_zip_header(struct archive_write *a, struct archive_entry *entry)
 	}
 	l->entry = archive_entry_clone(entry);
 	l->flags = zip->flags;
-	if (zip->opt_sconv != NULL) {
-		if (archive_strcpy_in_locale(&(zip->l_name),
-		    archive_entry_pathname(entry), zip->opt_sconv) != 0) {
+	if (zip->opt_sconv != NULL)
+		sconv = zip->opt_sconv;
+	else
+		sconv = zip->sconv_default;
+	if (sconv != NULL) {
+		const char *p;
+		size_t len;
+
+		if (archive_entry_pathname_l(entry, &p, &len, sconv) != 0) {
+			if (errno == ENOMEM) {
+				archive_set_error(&a->archive, ENOMEM,
+				    "Can't allocate memory for Pathname");
+				return (ARCHIVE_FATAL);
+			}
 			archive_set_error(&a->archive,
 			    ARCHIVE_ERRNO_FILE_FORMAT,
 			    "Can't translate pathname '%s' to %s",
 			    archive_entry_pathname(entry),
-			    archive_string_conversion_charset_name(zip->opt_sconv));
+			    archive_string_conversion_charset_name(sconv));
 			ret2 = ARCHIVE_WARN;
 		}
-		archive_entry_set_pathname(l->entry, zip->l_name.s);
+		if (len > 0)
+			archive_entry_set_pathname(l->entry, p);
 	}
 	/* If all character of a filename is ASCII, Reset UTF-8 Name flag. */
 	if ((l->flags & ZIP_FLAGS_UTF8_NAME) != 0 &&
@@ -682,7 +704,6 @@ archive_write_zip_free(struct archive_write *a)
 #ifdef HAVE_ZLIB_H
 	free(zip->buf);
 #endif
-	archive_string_free(&(zip->l_name));
 	free(zip);
 	a->format_data = NULL;
 	return (ARCHIVE_OK);

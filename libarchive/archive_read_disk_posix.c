@@ -225,6 +225,13 @@ struct tree {
 	int			 current_filesystem_id;
 	int			 max_filesystem_id;
 	int			 allocated_filesytem;
+
+	int			 entry_fd;
+	int			 entry_eof;
+	int64_t			 entry_remaining_bytes;
+	int64_t			 entry_total;
+	unsigned char		*entry_buff;
+	size_t			 entry_buff_size;
 };
 
 /* Definitions for tree.flags bitmap. */
@@ -329,13 +336,8 @@ static int	_archive_read_data_block(struct archive *,
 		    const void **, size_t *, int64_t *);
 static int	_archive_read_next_header2(struct archive *,
 		    struct archive_entry *);
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static const char *trivial_lookup_gname(void *, gid_t gid);
-static const char *trivial_lookup_uname(void *, uid_t uid);
-#else
 static const char *trivial_lookup_gname(void *, int64_t gid);
 static const char *trivial_lookup_uname(void *, int64_t uid);
-#endif
 static int	setup_sparse(struct archive_read_disk *, struct archive_entry *);
 static int	close_and_restore_time(int fd, struct tree *,
 		    struct restore_time *);
@@ -357,13 +359,8 @@ archive_read_disk_vtable(void)
 	return (&av);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-const char *
-archive_read_disk_gname(struct archive *_a, gid_t gid)
-#else
 const char *
 archive_read_disk_gname(struct archive *_a, int64_t gid)
-#endif
 {
 	struct archive_read_disk *a = (struct archive_read_disk *)_a;
 	if (ARCHIVE_OK != __archive_check_magic(_a, ARCHIVE_READ_DISK_MAGIC,
@@ -374,13 +371,8 @@ archive_read_disk_gname(struct archive *_a, int64_t gid)
 	return ((*a->lookup_gname)(a->lookup_gname_data, gid));
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-const char *
-archive_read_disk_uname(struct archive *_a, uid_t uid)
-#else
 const char *
 archive_read_disk_uname(struct archive *_a, int64_t uid)
-#endif
 {
 	struct archive_read_disk *a = (struct archive_read_disk *)_a;
 	if (ARCHIVE_OK != __archive_check_magic(_a, ARCHIVE_READ_DISK_MAGIC,
@@ -391,19 +383,11 @@ archive_read_disk_uname(struct archive *_a, int64_t uid)
 	return ((*a->lookup_uname)(a->lookup_uname_data, uid));
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-int
-archive_read_disk_set_gname_lookup(struct archive *_a,
-    void *private_data,
-    const char * (*lookup_gname)(void *private, gid_t gid),
-    void (*cleanup_gname)(void *private))
-#else
 int
 archive_read_disk_set_gname_lookup(struct archive *_a,
     void *private_data,
     const char * (*lookup_gname)(void *private, int64_t gid),
     void (*cleanup_gname)(void *private))
-#endif
 {
 	struct archive_read_disk *a = (struct archive_read_disk *)_a;
 	archive_check_magic(&a->archive, ARCHIVE_READ_DISK_MAGIC,
@@ -418,19 +402,11 @@ archive_read_disk_set_gname_lookup(struct archive *_a,
 	return (ARCHIVE_OK);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-int
-archive_read_disk_set_uname_lookup(struct archive *_a,
-    void *private_data,
-    const char * (*lookup_uname)(void *private, uid_t uid),
-    void (*cleanup_uname)(void *private))
-#else
 int
 archive_read_disk_set_uname_lookup(struct archive *_a,
     void *private_data,
     const char * (*lookup_uname)(void *private, int64_t uid),
     void (*cleanup_uname)(void *private))
-#endif
 {
 	struct archive_read_disk *a = (struct archive_read_disk *)_a;
 	archive_check_magic(&a->archive, ARCHIVE_READ_DISK_MAGIC,
@@ -463,7 +439,6 @@ archive_read_disk_new(void)
 	a->lookup_uname = trivial_lookup_uname;
 	a->lookup_gname = trivial_lookup_gname;
 	a->entry_wd_fd = -1;
-	a->entry_fd = -1;
 	return (&a->archive);
 }
 
@@ -506,16 +481,7 @@ _archive_read_close(struct archive *_a)
 	if (a->archive.state != ARCHIVE_STATE_FATAL)
 		a->archive.state = ARCHIVE_STATE_CLOSED;
 
-	if (a->entry_fd >= 0) {
-		if (a->tree != NULL)
-			close_and_restore_time(a->entry_fd, a->tree,
-			    &a->tree->restore_time);
-		else
-			close(a->entry_fd);
-		a->entry_fd = -1;
-	}
-	if (a->tree != NULL)
-		tree_close(a->tree);
+	tree_close(a->tree);
 
 	return (ARCHIVE_OK);
 }
@@ -593,26 +559,16 @@ archive_read_disk_set_atime_restored(struct archive *_a)
  * These are normally overridden by the client, but these stub
  * versions ensure that we always have something that works.
  */
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static const char *
-trivial_lookup_gname(void *private_data, gid_t gid)
-#else
 static const char *
 trivial_lookup_gname(void *private_data, int64_t gid)
-#endif
 {
 	(void)private_data; /* UNUSED */
 	(void)gid; /* UNUSED */
 	return (NULL);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static const char *
-trivial_lookup_uname(void *private_data, uid_t uid)
-#else
 static const char *
 trivial_lookup_uname(void *private_data, int64_t uid)
-#endif
 {
 	(void)private_data; /* UNUSED */
 	(void)uid; /* UNUSED */
@@ -698,7 +654,7 @@ _archive_read_data_block(struct archive *_a, const void **buff,
 	archive_check_magic(_a, ARCHIVE_READ_DISK_MAGIC, ARCHIVE_STATE_DATA,
 	    "archive_read_data_block");
 
-	if (a->entry_eof || a->entry_remaining_bytes <= 0) {
+	if (t->entry_eof || t->entry_remaining_bytes <= 0) {
 		r = ARCHIVE_EOF;
 		goto abort_read_data;
 	}
@@ -706,7 +662,7 @@ _archive_read_data_block(struct archive *_a, const void **buff,
 	/*
 	 * Open the current file.
 	 */
-	if (a->entry_fd < 0) {
+	if (t->entry_fd < 0) {
 		int flags = O_RDONLY | O_BINARY;
 
 		/*
@@ -729,11 +685,11 @@ _archive_read_data_block(struct archive *_a, const void **buff,
 		do {
 #endif
 #ifdef HAVE_OPENAT
-			a->entry_fd = openat(tree_current_dir_fd(t),
+			t->entry_fd = openat(tree_current_dir_fd(t),
 			    tree_current_access_path(t), flags);
 #else
 			tree_enter_working_dir(t);
-			a->entry_fd = open(tree_current_access_path(t), flags);
+			t->entry_fd = open(tree_current_access_path(t), flags);
 #endif
 #if defined(O_NOATIME)
 			/*
@@ -743,7 +699,7 @@ _archive_read_data_block(struct archive *_a, const void **buff,
 			 * if failed by EPERM, retry it without O_NOATIME flag.
 			 */
 			if (flags & O_NOATIME) {
-				if (a->entry_fd >= 0)
+				if (t->entry_fd >= 0)
 					t->restore_time.noatime = 1;
 				else if (errno == EPERM) {
 					flags &= ~O_NOATIME;
@@ -752,7 +708,7 @@ _archive_read_data_block(struct archive *_a, const void **buff,
 			}
 		} while (0);
 #endif
-		if (a->entry_fd < 0) {
+		if (t->entry_fd < 0) {
 			archive_set_error(&a->archive, errno,
 			    "Couldn't open %s", tree_current_path(t));
 			r = ARCHIVE_FAILED;
@@ -772,10 +728,10 @@ _archive_read_data_block(struct archive *_a, const void **buff,
 			goto abort_read_data;
 		}
 	}
-	a->entry_buff = t->current_filesystem->buff;
-	a->entry_buff_size = t->current_filesystem->buff_size;
+	t->entry_buff = t->current_filesystem->buff;
+	t->entry_buff_size = t->current_filesystem->buff_size;
 
-	buffbytes = a->entry_buff_size;
+	buffbytes = t->entry_buff_size;
 	if (buffbytes > t->current_sparse->length)
 		buffbytes = t->current_sparse->length;
 
@@ -783,24 +739,24 @@ _archive_read_data_block(struct archive *_a, const void **buff,
 	 * Skip hole.
 	 * TODO: Should we consider t->current_filesystem->xfer_align?
 	 */
-	if (t->current_sparse->offset > a->entry_total) {
-		if (lseek(a->entry_fd,
+	if (t->current_sparse->offset > t->entry_total) {
+		if (lseek(t->entry_fd,
 		    (off_t)t->current_sparse->offset, SEEK_SET) < 0) {
 			archive_set_error(&a->archive, errno, "Seek error");
 			r = ARCHIVE_FATAL;
 			a->archive.state = ARCHIVE_STATE_FATAL;
 			goto abort_read_data;
 		}
-		bytes = t->current_sparse->offset - a->entry_total;
-		a->entry_remaining_bytes -= bytes;
-		a->entry_total += bytes;
+		bytes = t->current_sparse->offset - t->entry_total;
+		t->entry_remaining_bytes -= bytes;
+		t->entry_total += bytes;
 	}
 
 	/*
 	 * Read file contents.
 	 */
 	if (buffbytes > 0) {
-		bytes = read(a->entry_fd, a->entry_buff, buffbytes);
+		bytes = read(t->entry_fd, t->entry_buff, buffbytes);
 		if (bytes < 0) {
 			archive_set_error(&a->archive, errno, "Read error");
 			r = ARCHIVE_FATAL;
@@ -811,35 +767,35 @@ _archive_read_data_block(struct archive *_a, const void **buff,
 		bytes = 0;
 	if (bytes == 0) {
 		/* Get EOF */
-		a->entry_eof = 1;
+		t->entry_eof = 1;
 		r = ARCHIVE_EOF;
 		goto abort_read_data;
 	}
-	*buff = a->entry_buff;
+	*buff = t->entry_buff;
 	*size = bytes;
-	*offset = a->entry_total;
-	a->entry_total += bytes;
-	a->entry_remaining_bytes -= bytes;
-	if (a->entry_remaining_bytes == 0) {
+	*offset = t->entry_total;
+	t->entry_total += bytes;
+	t->entry_remaining_bytes -= bytes;
+	if (t->entry_remaining_bytes == 0) {
 		/* Close the current file descriptor */
-		close_and_restore_time(a->entry_fd, t, &t->restore_time);
-		a->entry_fd = -1;
-		a->entry_eof = 1;
+		close_and_restore_time(t->entry_fd, t, &t->restore_time);
+		t->entry_fd = -1;
+		t->entry_eof = 1;
 	}
 	t->current_sparse->offset += bytes;
 	t->current_sparse->length -= bytes;
-	if (t->current_sparse->length == 0 && !a->entry_eof)
+	if (t->current_sparse->length == 0 && !t->entry_eof)
 		t->current_sparse++;
 	return (ARCHIVE_OK);
 
 abort_read_data:
 	*buff = NULL;
 	*size = 0;
-	*offset = a->entry_total;
-	if (a->entry_fd >= 0) {
+	*offset = t->entry_total;
+	if (t->entry_fd >= 0) {
 		/* Close the current file descriptor */
-		close_and_restore_time(a->entry_fd, t, &t->restore_time);
-		a->entry_fd = -1;
+		close_and_restore_time(t->entry_fd, t, &t->restore_time);
+		t->entry_fd = -1;
 	}
 	return (r);
 }
@@ -858,9 +814,9 @@ _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 	    "archive_read_next_header2");
 
 	t = a->tree;
-	if (a->entry_fd >= 0) {
-		close_and_restore_time(a->entry_fd, t, &a->tree->restore_time);
-		a->entry_fd = -1;
+	if (t->entry_fd >= 0) {
+		close_and_restore_time(t->entry_fd, t, &t->restore_time);
+		t->entry_fd = -1;
 	}
 #if !(defined(HAVE_OPENAT) && defined(HAVE_FSTATAT) && defined(HAVE_FDOPENDIR))
 	/* Restore working directory. */
@@ -999,17 +955,17 @@ _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 		break;
 	case ARCHIVE_OK:
 	case ARCHIVE_WARN:
-		a->entry_total = 0;
+		t->entry_total = 0;
 		if (archive_entry_filetype(entry) == AE_IFREG) {
 			t->nlink = archive_entry_nlink(entry);
-			a->entry_remaining_bytes = archive_entry_size(entry);
-			a->entry_eof = (a->entry_remaining_bytes == 0)? 1: 0;
-			if (!a->entry_eof &&
+			t->entry_remaining_bytes = archive_entry_size(entry);
+			t->entry_eof = (t->entry_remaining_bytes == 0)? 1: 0;
+			if (!t->entry_eof &&
 			    setup_sparse(a, entry) != ARCHIVE_OK)
 				return (ARCHIVE_FATAL);
 		} else {
-			a->entry_remaining_bytes = 0;
-			a->entry_eof = 1;
+			t->entry_remaining_bytes = 0;
+			t->entry_eof = 1;
 		}
 		a->archive.state = ARCHIVE_STATE_DATA;
 		break;
@@ -1115,9 +1071,6 @@ archive_read_disk_open(struct archive *_a, const char *pathname)
 		return (ARCHIVE_FATAL);
 	}
 	a->archive.state = ARCHIVE_STATE_HEADER;
-	a->entry_eof = 0;
-	a->entry_fd = -1;
-	a->entry_remaining_bytes = 0;
 
 	return (ARCHIVE_OK);
 }
@@ -1337,6 +1290,7 @@ setup_current_filesystem(struct archive_read_disk *a)
 	else
 		t->current_filesystem->noatime = 0;
 
+#if defined(HAVE_READDIR_R)
 	/* Set maximum filename length. */
 #if defined(HAVE_STRUCT_STATFS_F_NAMEMAX)
 	t->current_filesystem->name_max = sfs.f_namemax;
@@ -1351,6 +1305,7 @@ setup_current_filesystem(struct archive_read_disk *a)
 	else
 		t->current_filesystem->name_max = nm;
 #endif
+#endif /* HAVE_READDIR_R */
 	return (ARCHIVE_OK);
 }
 
@@ -1431,7 +1386,7 @@ setup_current_filesystem(struct archive_read_disk *a)
 	struct tree *t = a->tree;
 	struct statfs sfs;
 	struct statvfs svfs;
-	int r, vr = 0, xr;
+	int r, vr = 0, xr = 0;
 
 	if (tree_current_is_symblic_link_target(t)) {
 #if defined(HAVE_OPENAT) && defined(HAVE_FSTATAT) && defined(HAVE_FDOPENDIR)
@@ -1656,6 +1611,9 @@ close_and_restore_time(int fd, struct tree *t, struct restore_time *rt)
 	(void)a; /* UNUSED */
 	return (close(fd));
 #else
+#if defined(HAVE_FUTIMENS) && !defined(__CYGWIN__)
+	struct timespec timespecs[2];
+#endif
 	struct timeval times[2];
 
 	if ((t->flags & needsRestoreTimes) == 0 || rt->noatime) {
@@ -1665,17 +1623,24 @@ close_and_restore_time(int fd, struct tree *t, struct restore_time *rt)
 			return (0);
 	}
 
+#if defined(HAVE_FUTIMENS) && !defined(__CYGWIN__)
+	timespecs[1].tv_sec = rt->mtime;
+	timespecs[1].tv_nsec = rt->mtime_nsec;
+
+	timespecs[0].tv_sec = rt->atime;
+	timespecs[0].tv_nsec = rt->atime_nsec;
+	/* futimens() is defined in POSIX.1-2008. */
+	if (futimens(fd, timespecs) == 0)
+		return (close(fd));
+#endif
+
 	times[1].tv_sec = rt->mtime;
 	times[1].tv_usec = rt->mtime_nsec / 1000;
 
 	times[0].tv_sec = rt->atime;
 	times[0].tv_usec = rt->atime_nsec / 1000;
 
-#if defined(HAVE_FUTIMENS) && !defined(__CYGWIN__)
-	/* futimens() is defined in POSIX.1-2008. */
-	if (futimens(fd, times) == 0)
-		return (close(fd));
-#elif defined(HAVE_FUTIMES) && !defined(__CYGWIN__)
+#if !defined(HAVE_FUTIMENS) && defined(HAVE_FUTIMES) && !defined(__CYGWIN__)
 	if (futimes(fd, times) == 0)
 		return (close(fd));
 #endif
@@ -1784,6 +1749,9 @@ tree_reopen(struct tree *t, const char *path, int restore_time)
 	t->d = INVALID_DIR_HANDLE;
 	t->symlink_mode = t->initial_symlink_mode;
 	archive_string_empty(&t->path);
+	t->entry_fd = -1;
+	t->entry_eof = 0;
+	t->entry_remaining_bytes = 0;
 
 	/* First item is set up a lot like a symlink traversal. */
 	tree_push(t, path, 0, 0, 0, NULL);
@@ -2066,12 +2034,19 @@ tree_dir_next_posix(struct tree *t)
 		r = readdir_r(t->d, t->dirent, &t->de);
 		if (r != 0 || t->de == NULL) {
 #else
+		errno = 0;
 		t->de = readdir(t->d);
 		if (t->de == NULL) {
+			r = errno;
 #endif
 			closedir(t->d);
 			t->d = INVALID_DIR_HANDLE;
-			return (0);
+			if (r != 0) {
+				t->tree_errno = r;
+				t->visit_type = TREE_ERROR_DIR;
+				return (t->visit_type);
+			} else
+				return (0);
 		}
 		name = t->de->d_name;
 		namelen = D_NAMELEN(t->de);
@@ -2246,6 +2221,13 @@ tree_current_path(struct tree *t)
 static void
 tree_close(struct tree *t)
 {
+
+	if (t == NULL)
+		return;
+	if (t->entry_fd >= 0) {
+		close_and_restore_time(t->entry_fd, t, &t->restore_time);
+		t->entry_fd = -1;
+	}
 	/* Close the handle of readdir(). */
 	if (t->d != INVALID_DIR_HANDLE) {
 		closedir(t->d);

@@ -25,7 +25,9 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_disk.c 201159 2009-12-29 05:35:40Z kientzle $");
+__FBSDID("$FreeBSD$");
+
+#if !defined(_WIN32) || defined(__CYGWIN__)
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -69,6 +71,9 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_disk.c 201159 2009-12-29 0
 #ifdef HAVE_GRP_H
 #include <grp.h>
 #endif
+#ifdef HAVE_LANGINFO_H
+#include <langinfo.h>
+#endif
 #ifdef HAVE_LINUX_FS_H
 #include <linux/fs.h>	/* for Linux file flags */
 #endif
@@ -100,9 +105,6 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_write_disk.c 201159 2009-12-29 0
 #endif
 #ifdef HAVE_UTIME_H
 #include <utime.h>
-#endif
-#if defined(HAVE_WINIOCTL_H) && !defined(__CYGWIN__)
-#include <winioctl.h>
 #endif
 #ifdef F_GETTIMES /* Tru64 specific */
 #include <sys/fcntl1.h>
@@ -189,18 +191,10 @@ struct archive_write_disk {
 	ino_t			 skip_file_ino;
 	time_t			 start_time;
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-	gid_t (*lookup_gid)(void *private, const char *gname, gid_t gid);
-#else
 	int64_t (*lookup_gid)(void *private, const char *gname, int64_t gid);
-#endif
 	void  (*cleanup_gid)(void *private);
 	void			*lookup_gid_data;
-#if ARCHIVE_VERSION_NUMBER < 3000000
-	uid_t (*lookup_uid)(void *private, const char *uname, uid_t uid);
-#else
 	int64_t (*lookup_uid)(void *private, const char *uname, int64_t uid);
-#endif
 	void  (*cleanup_uid)(void *private);
 	void			*lookup_uid_data;
 
@@ -286,20 +280,13 @@ static int	set_fflags_platform(struct archive_write_disk *, int fd,
 		    unsigned long fflags_set, unsigned long fflags_clear);
 static int	set_ownership(struct archive_write_disk *);
 static int	set_mode(struct archive_write_disk *, int mode);
-#if !defined(_WIN32) || defined(__CYGWIN__)
 static int	set_time(int, int, const char *, time_t, long, time_t, long);
-#endif
 static int	set_times(struct archive_write_disk *, int, int, const char *,
 		    time_t, long, time_t, long, time_t, long, time_t, long);
 static int	set_times_from_entry(struct archive_write_disk *);
 static struct fixup_entry *sort_dir_list(struct fixup_entry *p);
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static gid_t	trivial_lookup_gid(void *, const char *, gid_t);
-static uid_t	trivial_lookup_uid(void *, const char *, uid_t);
-#else
 static int64_t	trivial_lookup_gid(void *, const char *, int64_t);
 static int64_t	trivial_lookup_uid(void *, const char *, int64_t);
-#endif
 static ssize_t	write_data_block(struct archive_write_disk *,
 		    const char *, size_t);
 
@@ -483,10 +470,8 @@ _archive_write_disk_header(struct archive *_a, struct archive_entry *entry)
 		a->mode &= ~S_ISVTX;
 		a->mode &= ~a->user_umask;
 	}
-#if !defined(_WIN32) || defined(__CYGWIN__)
 	if (a->flags & ARCHIVE_EXTRACT_OWNER)
 		a->todo |= TODO_OWNER;
-#endif
 	if (a->flags & ARCHIVE_EXTRACT_TIME)
 		a->todo |= TODO_TIMES;
 	if (a->flags & ARCHIVE_EXTRACT_ACL) {
@@ -610,33 +595,6 @@ _archive_write_disk_header(struct archive *_a, struct archive_entry *entry)
 		/* TODO: Complete this.. defer fflags from below. */
 	}
 
-#if defined(_WIN32) && !defined(__CYGWIN__)
-	/*
-	 * On Windows, A creating sparse file requires a special mark.
-	 */
-	if (a->fd >= 0 && archive_entry_sparse_count(entry) > 0) {
-		int64_t base = 0, offset, length;
-		int i, cnt = archive_entry_sparse_reset(entry);
-		int sparse = 0;
-
-		for (i = 0; i < cnt; i++) {
-			archive_entry_sparse_next(entry, &offset, &length);
-			if (offset - base >= 4096) {
-				sparse = 1;/* we have a hole. */
-				break;
-			}
-			base = offset + length;
-		}
-		if (sparse) {
-			HANDLE h = (HANDLE)_get_osfhandle(a->fd);
-			DWORD dmy;
-			/* Mark this file as sparse. */
-			DeviceIoControl(h, FSCTL_SET_SPARSE,
-			    NULL, 0, NULL, 0, &dmy, NULL);
-		}
-	}
-#endif
-
 	/* We've created the object and are ready to pour data into it. */
 	if (ret >= ARCHIVE_WARN)
 		a->archive.state = ARCHIVE_STATE_DATA;
@@ -652,13 +610,8 @@ _archive_write_disk_header(struct archive *_a, struct archive_entry *entry)
 	return (ret);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-int
-archive_write_disk_set_skip_file(struct archive *_a, dev_t d, ino_t i)
-#else
 int
 archive_write_disk_set_skip_file(struct archive *_a, int64_t d, int64_t i)
-#endif
 {
 	struct archive_write_disk *a = (struct archive_write_disk *)_a;
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
@@ -945,19 +898,11 @@ _archive_write_disk_finish_entry(struct archive *_a)
 	return (ret);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-int
-archive_write_disk_set_group_lookup(struct archive *_a,
-    void *private_data,
-    gid_t (*lookup_gid)(void *private, const char *gname, gid_t gid),
-    void (*cleanup_gid)(void *private))
-#else
 int
 archive_write_disk_set_group_lookup(struct archive *_a,
     void *private_data,
     int64_t (*lookup_gid)(void *private, const char *gname, int64_t gid),
     void (*cleanup_gid)(void *private))
-#endif
 {
 	struct archive_write_disk *a = (struct archive_write_disk *)_a;
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
@@ -969,19 +914,11 @@ archive_write_disk_set_group_lookup(struct archive *_a,
 	return (ARCHIVE_OK);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-int
-archive_write_disk_set_user_lookup(struct archive *_a,
-    void *private_data,
-    uid_t (*lookup_uid)(void *private, const char *uname, uid_t uid),
-    void (*cleanup_uid)(void *private))
-#else
 int
 archive_write_disk_set_user_lookup(struct archive *_a,
     void *private_data,
     int64_t (*lookup_uid)(void *private, const char *uname, int64_t uid),
     void (*cleanup_uid)(void *private))
-#endif
 {
 	struct archive_write_disk *a = (struct archive_write_disk *)_a;
 	archive_check_magic(&a->archive, ARCHIVE_WRITE_DISK_MAGIC,
@@ -1270,7 +1207,7 @@ create_filesystem_object(struct archive_write_disk *a)
 		if (r == 0 && a->filesize <= 0) {
 			a->todo = 0;
 			a->deferred = 0;
-		} if (r == 0 && a->filesize > 0) {
+		} else if (r == 0 && a->filesize > 0) {
 			a->fd = open(a->name, O_WRONLY | O_TRUNC | O_BINARY);
 			if (a->fd < 0)
 				r = errno;
@@ -1662,10 +1599,10 @@ check_symlinks(struct archive_write_disk *a)
 #endif
 }
 
-#if defined(_WIN32) || defined(__CYGWIN__)
+#if defined(__CYGWIN__)
 /*
  * 1. Convert a path separator from '\' to '/' .
- *    We shouldn't check multi-byte character directly because some
+ *    We shouldn't check multibyte character directly because some
  *    character-set have been using the '\' character for a part of
  *    its multibyte character code.
  * 2. Replace unusable characters in Windows with underscore('_').
@@ -1677,27 +1614,32 @@ cleanup_pathname_win(struct archive_write_disk *a)
 	wchar_t wc;
 	char *p;
 	size_t alen, l;
-	int mb, dos;
+	int mb, complete, utf8;
 
 	alen = 0;
-	mb = dos = 0;
+	mb = 0;
+	complete = 1;
+	utf8 = (strcmp(nl_langinfo(CODESET), "UTF-8") == 0)? 1: 0;
 	for (p = a->name; *p != '\0'; p++) {
 		++alen;
-		if (*(unsigned char *)p > 127)
-			mb = 1;
 		if (*p == '\\') {
-			/* If we have not met any multi-byte characters,
-			 * we can replace '\' with '/'. */
-			if (!mb)
+			/* If previous byte is smaller than 128,
+			 * this is not second byte of multibyte characters,
+			 * so we can replace '\' with '/'. */
+			if (utf8 || !mb)
 				*p = '/';
-			dos = 1;
-		}
+			else
+				complete = 0;/* uncompleted. */
+		} else if (*(unsigned char *)p > 127)
+			mb = 1;
+		else
+			mb = 0;
 		/* Rewrite the path name if its character is a unusable. */
 		if (*p == ':' || *p == '*' || *p == '?' || *p == '"' ||
 		    *p == '<' || *p == '>' || *p == '|')
 			*p = '_';
 	}
-	if (!mb || !dos)
+	if (complete)
 		return;
 
 	/*
@@ -1741,7 +1683,7 @@ cleanup_pathname(struct archive_write_disk *a)
 		return (ARCHIVE_FAILED);
 	}
 
-#if defined(_WIN32) || defined(__CYGWIN__)
+#if defined(__CYGWIN__)
 	cleanup_pathname_win(a);
 #endif
 	/* Skip leading '/'. */
@@ -1997,74 +1939,6 @@ set_ownership(struct archive_write_disk *a)
 	return (ARCHIVE_WARN);
 }
 
-#if defined(_WIN32) && !defined(__CYGWIN__)
-
-static int
-set_times(struct archive_write_disk *a,
-    int fd, int mode, const char *name,
-    time_t atime, long atime_nanos,
-    time_t birthtime, long birthtime_nanos,
-    time_t mtime, long mtime_nanos,
-    time_t ctime, long ctime_nanos)
-{
-#define EPOC_TIME ARCHIVE_LITERAL_ULL(116444736000000000)
-#define WINTIME(sec, nsec) ((Int32x32To64(sec, 10000000) + EPOC_TIME)\
-	 + (((nsec)/1000)*10))
-
-	HANDLE h, hw;
-	ULARGE_INTEGER wintm;
-	wchar_t *ws;
-	FILETIME *pfbtime;
-	FILETIME fatime, fbtime, fmtime;
-
-	if (fd >= 0) {
-		h = (HANDLE)_get_osfhandle(fd);
-		hw = NULL;
-		ws = NULL;
-	} else {
-		if (S_ISLNK(mode))
-			return (ARCHIVE_OK);
-		ws = __la_win_permissive_name(name);
-		if (ws == NULL)
-			goto settimes_failed;
-		hw = CreateFileW(ws, FILE_WRITE_ATTRIBUTES,
-		    0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
-		if (hw == INVALID_HANDLE_VALUE)
-			goto settimes_failed;
-		h = hw;
-	}
-
-	wintm.QuadPart = WINTIME(atime, atime_nanos);
-	fatime.dwLowDateTime = wintm.LowPart;
-	fatime.dwHighDateTime = wintm.HighPart;
-	wintm.QuadPart = WINTIME(mtime, mtime_nanos);
-	fmtime.dwLowDateTime = wintm.LowPart;
-	fmtime.dwHighDateTime = wintm.HighPart;
-	/*
-	 * SetFileTime() supports birthtime.
-	 */
-	if (birthtime > 0 || birthtime_nanos > 0) {
-		wintm.QuadPart = WINTIME(birthtime, birthtime_nanos);
-		fbtime.dwLowDateTime = wintm.LowPart;
-		fbtime.dwHighDateTime = wintm.HighPart;
-		pfbtime = &fbtime;
-	} else
-		pfbtime = NULL;
-	if (SetFileTime(h, pfbtime, &fatime, &fmtime) == 0)
-		goto settimes_failed;
-	free(ws);
-	CloseHandle(hw);
-	return (ARCHIVE_OK);
-
-settimes_failed:
-	free(ws);
-	CloseHandle(hw);
-	archive_set_error(&a->archive, EINVAL, "Can't restore time");
-	return (ARCHIVE_WARN);
-}
-
-#else /* defined(_WIN32) && !defined(__CYGWIN__) */
-
 /*
  * Note: Returns 0 on success, non-zero on failure.
  */
@@ -2216,8 +2090,6 @@ set_times(struct archive_write_disk *a,
 	return (ARCHIVE_OK);
 }
 
-#endif /* defined(_WIN32) && !defined(__CYGWIN__) */
-
 static int
 set_times_from_entry(struct archive_write_disk *a)
 {
@@ -2277,7 +2149,6 @@ set_mode(struct archive_write_disk *a, int mode)
 			return (r);
 		if (a->pst->st_gid != a->gid) {
 			mode &= ~ S_ISGID;
-#if !defined(_WIN32) || defined(__CYGWIN__)
 			if (a->flags & ARCHIVE_EXTRACT_OWNER) {
 				/*
 				 * This is only an error if you
@@ -2290,19 +2161,16 @@ set_mode(struct archive_write_disk *a, int mode)
 				    "Can't restore SGID bit");
 				r = ARCHIVE_WARN;
 			}
-#endif
 		}
 		/* While we're here, double-check the UID. */
 		if (a->pst->st_uid != a->uid
 		    && (a->todo & TODO_SUID)) {
 			mode &= ~ S_ISUID;
-#if !defined(_WIN32) || defined(__CYGWIN__)
 			if (a->flags & ARCHIVE_EXTRACT_OWNER) {
 				archive_set_error(&a->archive, -1,
 				    "Can't restore SUID bit");
 				r = ARCHIVE_WARN;
 			}
-#endif
 		}
 		a->todo &= ~TODO_SGID_CHECK;
 		a->todo &= ~TODO_SUID_CHECK;
@@ -2314,13 +2182,11 @@ set_mode(struct archive_write_disk *a, int mode)
 		 */
 		if (a->user_uid != a->uid) {
 			mode &= ~ S_ISUID;
-#if !defined(_WIN32) || defined(__CYGWIN__)
 			if (a->flags & ARCHIVE_EXTRACT_OWNER) {
 				archive_set_error(&a->archive, -1,
 				    "Can't make file SUID");
 				r = ARCHIVE_WARN;
 			}
-#endif
 		}
 		a->todo &= ~TODO_SUID_CHECK;
 	}
@@ -2912,26 +2778,16 @@ set_xattrs(struct archive_write_disk *a)
  * These are normally overridden by the client, but these stub
  * versions ensure that we always have something that works.
  */
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static gid_t
-trivial_lookup_gid(void *private_data, const char *gname, gid_t gid)
-#else
 static int64_t
 trivial_lookup_gid(void *private_data, const char *gname, int64_t gid)
-#endif
 {
 	(void)private_data; /* UNUSED */
 	(void)gname; /* UNUSED */
 	return (gid);
 }
 
-#if ARCHIVE_VERSION_NUMBER < 3000000
-static uid_t
-trivial_lookup_uid(void *private_data, const char *uname, uid_t uid)
-#else
 static int64_t
 trivial_lookup_uid(void *private_data, const char *uname, int64_t uid)
-#endif
 {
 	(void)private_data; /* UNUSED */
 	(void)uname; /* UNUSED */
@@ -2978,3 +2834,6 @@ older(struct stat *st, struct archive_entry *entry)
 	/* Same age or newer, so not older. */
 	return (0);
 }
+
+#endif /* !_WIN32 || __CYGWIN__ */
+

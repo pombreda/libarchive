@@ -25,6 +25,9 @@
 #include "test.h"
 __FBSDID("$FreeBSD$");
 
+#ifdef HAVE_SYS_IOCTL_H
+#include <sys/ioctl.h>
+#endif
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
@@ -40,6 +43,12 @@ __FBSDID("$FreeBSD$");
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+#ifdef HAVE_LINUX_FIEMAP_H
+#include <linux/fiemap.h>
+#endif
+#ifdef HAVE_LINUX_FS_H
+#include <linux/fs.h>
+#endif
 
 /*
  * NOTE: On FreeBSD and Solaris, this test needs ZFS.
@@ -51,6 +60,8 @@ struct sparse {
 	enum { DATA, HOLE, END } type;
 	size_t	size;
 };
+
+static void create_sparse_file(const char *, const struct sparse *);
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #include <winioctl.h>
@@ -142,10 +153,7 @@ is_sparse_supported(const char *path)
 	return (pathconf(path, _PC_MIN_HOLE_SIZE) > 0);
 }
 
-#elif defined(__linux__) && 0 /* DISABLED FOR NOW */
-
-/* TODO: When setup_sparse is fixed for Linux in
- * archive_read_disk_entry_from_file, re-enable this. */
+#elif defined(__linux__)&& defined(HAVE_LINUX_FIEMAP_H)
 
 /*
  * FIEMAP, which can detect 'hole' of a sparse file, has
@@ -155,9 +163,19 @@ is_sparse_supported(const char *path)
 static int
 is_sparse_supported(const char *path)
 {
+	const struct sparse sparse_file[] = {
+ 		/* This hole size is too small to create a sparse
+		 * files for almost filesystem. */
+		{ HOLE,	 1024 }, { DATA, 10240 },
+		{ END,	0 }
+	};
 	struct utsname ut;
 	char *p, *e;
 	long d;
+	int fd, r;
+	struct fiemap *fm;
+	char buff[1024];
+	const char *testfile = "can_sparse";
 
 	memset(&ut, 0, sizeof(ut));
 	assertEqualInt(uname(&ut), 0);
@@ -171,7 +189,24 @@ is_sparse_supported(const char *path)
 		return (0);
 	p = e + 1;
 	d = strtol(p, NULL, 10);
-	return (d >= 28);
+	if (d < 28)
+		return (0);
+	create_sparse_file(testfile, sparse_file);
+	fd = open(testfile,  O_RDWR);
+	if (fd < 0)
+		return (0);
+	fm = (struct fiemap *)buff;
+	fm->fm_start = 0;
+	fm->fm_length = ~0ULL;;
+	fm->fm_flags = FIEMAP_FLAG_SYNC;
+	fm->fm_extent_count = (sizeof(buff) - sizeof(*fm))/
+		sizeof(struct fiemap_extent);
+	r = ioctl(fd, FS_IOC_FIEMAP, fm);
+	if (r < 0 && (errno == ENOTTY || errno == EOPNOTSUPP))
+		return (0);/* Not supported. */
+	close(fd);
+	unlink(testfile);
+	return (1);
 }
 
 #else
@@ -281,6 +316,7 @@ verify_sparse_file2(struct archive *a, const char *path,
 	struct archive_entry *ae;
 	int fd;
 
+	(void)sparse; /* UNUSED */
 	assert((ae = archive_entry_new()) != NULL);
 	archive_entry_set_pathname(ae, path);
 	if (preopen)
@@ -301,8 +337,6 @@ verify_sparse_file2(struct archive *a, const char *path,
 DEFINE_TEST(test_sparse_basic)
 {
 	char cwd[PATH_MAX+1];
-	char path[PATH_MAX+1];
-	char *p;
 	struct archive *a;
 	/*
 	 * The alignment of the hole of sparse files deeply depends
@@ -354,38 +388,26 @@ DEFINE_TEST(test_sparse_basic)
 		{ END,	0 }
 	};
 
-	/* Make a filename template. */
+	/* Check if the filesystem where CWD on can
+	 * report the number of the holes of a sparse file. */
 	if (!assert(getcwd(cwd, sizeof(cwd)-1) != NULL))
 		return;
-	while (cwd[strlen(cwd) - 1] == '\n')
-		cwd[strlen(cwd) - 1] = '\0';
-	strncpy(path, cwd,  sizeof(path)-1);
-	if (!assert(strlen(path) + 7 <= sizeof(path)))
-		return;/* a filename is too long */
-	if (!is_sparse_supported(path)) {
+	if (!is_sparse_supported(cwd)) {
 		skipping("This filesystem or platform do not support "
 		    "the reporting of the holes of a sparse file through "
 		    "API such as lseek(HOLE)");
 		return;
 	}
-	p = path + strlen(path);
 
 	/*
 	 * Get sparse data through directory traversals.
 	 */
 	assert((a = archive_read_disk_new()) != NULL);
 
-	strcpy(p, "/file0");
-	verify_sparse_file(a, path, sparse_file0, 5);
-
-	strcpy(p, "/file1");
-	verify_sparse_file(a, path, sparse_file1, 2);
-
-	strcpy(p, "/file2");
-	verify_sparse_file(a, path, sparse_file2, 20);
-
-	strcpy(p, "/file3");
-	verify_sparse_file(a, path, sparse_file3, 0);
+	verify_sparse_file(a, "file0", sparse_file0, 5);
+	verify_sparse_file(a, "file1", sparse_file1, 2);
+	verify_sparse_file(a, "file2", sparse_file2, 20);
+	verify_sparse_file(a, "file3", sparse_file3, 0);
 
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 
@@ -394,9 +416,8 @@ DEFINE_TEST(test_sparse_basic)
 	 */
 	assert((a = archive_read_disk_new()) != NULL);
 
-	strcpy(p, "/file0");
-	verify_sparse_file2(a, path, sparse_file0, 5, 0);
-	verify_sparse_file2(a, path, sparse_file0, 5, 1);
+	verify_sparse_file2(a, "file0", sparse_file0, 5, 0);
+	verify_sparse_file2(a, "file0", sparse_file0, 5, 1);
 
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }

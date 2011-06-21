@@ -44,6 +44,7 @@
 
 #include "archive.h"
 #include "archive_entry.h"
+#include "archive_entry_locale.h"
 #include "archive_private.h"
 #include "archive_read_private.h"
 #include "archive_endian.h"
@@ -174,7 +175,6 @@ struct lha {
 	struct archive_string 	 dirname;
 	struct archive_string 	 filename;
 	struct archive_wstring	 ws;
-	struct archive_string	 mbs;
 
 	unsigned char		 dos_attr;
 
@@ -250,8 +250,8 @@ static int	archive_read_format_lha_read_data(struct archive_read *,
 static int	archive_read_format_lha_read_data_skip(struct archive_read *);
 static int	archive_read_format_lha_cleanup(struct archive_read *);
 
-static void	lha_replace_path_separator(struct archive_read *, struct lha *,
-		    struct archive_string *);
+static void	lha_replace_path_separator(struct lha *,
+		    struct archive_entry *);
 static int	lha_read_file_header_0(struct archive_read *, struct lha *);
 static int	lha_read_file_header_1(struct archive_read *, struct lha *);
 static int	lha_read_file_header_2(struct archive_read *, struct lha *);
@@ -299,7 +299,6 @@ archive_read_support_format_lha(struct archive *_a)
 		return (ARCHIVE_FATAL);
 	}
 	archive_string_init(&lha->ws);
-	archive_string_init(&lha->mbs);
 
 	r = __archive_read_register_format(a,
 	    lha,
@@ -417,10 +416,10 @@ archive_read_format_lha_options(struct archive_read *a,
 	int ret = ARCHIVE_FAILED;
 
 	lha = (struct lha *)(a->format->data);
-	if (strcmp(key, "charset")  == 0) {
+	if (strcmp(key, "hdrcharset")  == 0) {
 		if (val == NULL || val[0] == 0)
 			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-			    "lha: charset option needs a character-set name");
+			    "lha: hdrcharset option needs a character-set name");
 		else {
 			lha->opt_sconv =
 			    archive_string_conversion_from_charset(
@@ -616,22 +615,13 @@ archive_read_format_lha_read_header(struct archive_read *a,
 	 */
 	archive_string_concat(&lha->dirname, &lha->filename);
 	archive_string_init(&pathname);
-	archive_strncpy_in_locale(&pathname, lha->dirname.s,
-	    lha->dirname.length, lha->sconv);
-
-	/*
-	 * When a header level is 0, there is a possibilty that
-	 * a pathname has '\' character, a directory separator in
-	 * DOS/Windows. So we should convert it to '/'.
-	 */
-	if (p[H_LEVEL_OFFSET] == 0)
-		lha_replace_path_separator(a, lha, &pathname);
+	archive_string_init(&linkname);
+	archive_string_copy(&pathname, &lha->dirname);
 
 	if ((lha->mode & AE_IFMT) == AE_IFLNK) {
 		/*
 	 	 * Extract the symlink-name if it's included in the pathname.
 	 	 */
-		archive_string_init(&linkname);
 		if (!lha_parse_linkname(&linkname, &pathname)) {
 			/* We couldn't get the symlink-name. */
 			archive_set_error(&a->archive,
@@ -641,10 +631,7 @@ archive_read_format_lha_read_header(struct archive_read *a,
 			archive_string_free(&linkname);
 			return (ARCHIVE_FAILED);
 		}
-		archive_entry_set_symlink(entry, linkname.s);
-		archive_string_free(&linkname);
 	} else {
-		archive_entry_set_symlink(entry, NULL);
 		/*
 		 * Make sure a file-type is set.
 		 * The mode has been overridden if it is in the extended data.
@@ -659,8 +646,47 @@ archive_read_format_lha_read_header(struct archive_read *a,
 	/*
 	 * Set basic file parameters.
 	 */
-	archive_entry_set_pathname(entry, pathname.s);
+	if (archive_entry_copy_pathname_l(entry, pathname.s,
+	    pathname.length, lha->sconv) != 0) {
+		if (errno == ENOMEM) {
+			archive_set_error(&a->archive, ENOMEM,
+			    "Can't allocate memory for Pathname");
+			return (ARCHIVE_FATAL);
+		}
+		archive_set_error(&a->archive,
+		    ARCHIVE_ERRNO_FILE_FORMAT,
+		    "Pathname cannot be converted "
+		    "from %s to current locale.",
+		    archive_string_conversion_charset_name(lha->sconv));
+		err = ARCHIVE_WARN;
+	}
 	archive_string_free(&pathname);
+	if (archive_strlen(&linkname) > 0) {
+		if (archive_entry_copy_symlink_l(entry, linkname.s,
+		    linkname.length, lha->sconv) != 0) {
+			if (errno == ENOMEM) {
+				archive_set_error(&a->archive, ENOMEM,
+				    "Can't allocate memory for Linkname");
+				return (ARCHIVE_FATAL);
+			}
+			archive_set_error(&a->archive,
+			    ARCHIVE_ERRNO_FILE_FORMAT,
+			    "Linkname cannot be converted "
+			    "from %s to current locale.",
+			    archive_string_conversion_charset_name(lha->sconv));
+			err = ARCHIVE_WARN;
+		}
+	} else
+		archive_entry_set_symlink(entry, NULL);
+	archive_string_free(&linkname);
+	/*
+	 * When a header level is 0, there is a possibilty that
+	 * a pathname and a symlink has '\' character, a directory
+	 * separator in DOS/Windows. So we should convert it to '/'.
+	 */
+	if (p[H_LEVEL_OFFSET] == 0)
+		lha_replace_path_separator(lha, entry);
+
 	archive_entry_set_mode(entry, lha->mode);
 	archive_entry_set_uid(entry, lha->uid);
 	archive_entry_set_gid(entry, lha->gid);
@@ -713,57 +739,28 @@ archive_read_format_lha_read_header(struct archive_read *a,
  * Some multi-byte character set have  a character '\' in its second byte.
  */
 static void
-lha_replace_path_separator(struct archive_read *a, struct lha *lha,
-    struct archive_string *fn)
+lha_replace_path_separator(struct lha *lha, struct archive_entry *entry)
 {
+	const wchar_t *wp;
 	size_t i;
-	int mb;
 
-	/* Easy check if we have '\' in multi-byte string. */
-	mb = 0;
-	for (i = 0; i < archive_strlen(fn); i++) {
-		if (fn->s[i] == '\\') {
-			if (mb)
-				break;/* This may be second byte of multi-byte character. */
-			fn->s[i] = '/';
-			mb = 0;
-		} else if (fn->s[i] & 0x80)
-			mb = 1;
-		else
-			mb = 0;
-	}
-	if (i == archive_strlen(fn))
-		return;
-
-	/*
-	 * Try to replace a character '\' with '/' in wide character.
-	 */
-
-	/* If a conversion to wide character failed, force the replacement. */
-	archive_string_empty(&(lha->ws));
-	if (archive_wstring_append_from_mbs(&a->archive, &(lha->ws),
-	    fn->s, fn->length) != 0) {
-		for (i = 0; i < archive_strlen(fn); i++) {
-			if (fn->s[i] == '\\')
-				fn->s[i] = '/';
+	if ((wp = archive_entry_pathname_w(entry)) != NULL) {
+		archive_wstrcpy(&(lha->ws), wp);
+		for (i = 0; i < archive_strlen(&(lha->ws)); i++) {
+			if (lha->ws.s[i] == L'\\')
+				lha->ws.s[i] = L'/';
 		}
-		return;
+		archive_entry_copy_pathname_w(entry, lha->ws.s);
 	}
 
-	for (i = 0; i < archive_strlen(&(lha->ws)); i++) {
-		if (lha->ws.s[i] == L'\\')
-			lha->ws.s[i] = L'/';
+	if ((wp = archive_entry_symlink_w(entry)) != NULL) {
+		archive_wstrcpy(&(lha->ws), wp);
+		for (i = 0; i < archive_strlen(&(lha->ws)); i++) {
+			if (lha->ws.s[i] == L'\\')
+				lha->ws.s[i] = L'/';
+		}
+		archive_entry_copy_symlink_w(entry, lha->ws.s);
 	}
-	archive_string_empty(&(lha->mbs));
-	archive_string_append_from_unicode_to_mbs(&a->archive, &(lha->mbs),
-	    lha->ws.s, lha->ws.length);
-	/*
-	 * Sanity check that we surely did not break a filename.
-	 * If MBS length is different to fn, we broke the
-	 * filename, and so we shouldn't use it.
-	 */
-	if (archive_strlen(&(lha->mbs)) == archive_strlen(fn))
-		archive_string_copy(fn, &(lha->mbs));
 }
 
 /*
@@ -1260,27 +1257,30 @@ lha_read_file_extended_header(struct archive_read *a, struct lha *lha,
 			}
 			break;
 		case EXT_CODEPAGE:
-			/* Get a archived filename charset from codepage,
-			 * but you cannot overwrite a specified charset. */
-			if (datasize == sizeof(uint32_t) &&
-			    lha->sconv == NULL) {
+			/* Get an archived filename charset from codepage.
+			 * This overwrites the charset specified by
+			 * hdrcharset option. */
+			if (datasize == sizeof(uint32_t)) {
+				struct archive_string cp;
 				const char *charset;
+
+				archive_string_init(&cp);
 				switch (archive_le32dec(extdheader)) {
-				case 932:
-					charset = "CP932";
-					break;
 				case 65001: /* UTF-8 */
 					charset = "UTF-8";
 					break;
 				default:
-					charset = NULL;
+					archive_string_sprintf(&cp, "CP%d",
+					    (int)archive_le32dec(extdheader));
+					charset = cp.s;
 					break;
 				}
-				if (charset != NULL) {
-					lha->sconv =
-					    archive_string_conversion_from_charset(
-						&(a->archive), charset, 1);
-				}
+				lha->sconv =
+				    archive_string_conversion_from_charset(
+					&(a->archive), charset, 1);
+				archive_string_free(&cp);
+				if (lha->sconv == NULL)
+					return (ARCHIVE_FATAL);
 			}
 			break;
 		case EXT_UNIX_MODE:
@@ -1589,7 +1589,6 @@ archive_read_format_lha_cleanup(struct archive_read *a)
 	archive_string_free(&(lha->uname));
 	archive_string_free(&(lha->gname));
 	archive_wstring_free(&(lha->ws));
-	archive_string_free(&(lha->mbs));
 	free(lha);
 	(a->format->data) = NULL;
 	return (ARCHIVE_OK);

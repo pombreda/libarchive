@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2003-2007 Tim Kientzle
- * Copyright (c) 2010 Michihiro NAKAJIMA
+ * Copyright (c) 2010-2011 Michihiro NAKAJIMA
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_cpio.c 20116
 
 #include "archive.h"
 #include "archive_entry.h"
+#include "archive_entry_locale.h"
 #include "archive_private.h"
 #include "archive_read_private.h"
 
@@ -131,17 +132,21 @@ struct cpio {
 	int			(*read_header)(struct archive_read *, struct cpio *,
 				     struct archive_entry *, size_t *, size_t *);
 	struct links_entry	 *links_head;
-	struct archive_string	  entry_name;
-	struct archive_string	  entry_linkname;
 	int64_t			  entry_bytes_remaining;
 	int64_t			  entry_bytes_unconsumed;
 	int64_t			  entry_offset;
 	int64_t			  entry_padding;
+
+	struct archive_string_conv *opt_sconv;
+	struct archive_string_conv *sconv_default;
+	int			  init_default_conversion;
 };
 
 static int64_t	atol16(const char *, unsigned);
 static int64_t	atol8(const char *, unsigned);
 static int	archive_read_format_cpio_bid(struct archive_read *);
+static int	archive_read_format_cpio_options(struct archive_read *,
+		    const char *, const char *);
 static int	archive_read_format_cpio_cleanup(struct archive_read *);
 static int	archive_read_format_cpio_read_data(struct archive_read *,
 		    const void **, size_t *, int64_t *);
@@ -164,7 +169,8 @@ static int	header_afiol(struct archive_read *, struct cpio *,
 static int	is_octal(const char *, size_t);
 static int	is_hex(const char *, size_t);
 static int	le4(const unsigned char *);
-static int	record_hardlink(struct cpio *cpio, struct archive_entry *entry);
+static int	record_hardlink(struct archive_read *a,
+		    struct cpio *cpio, struct archive_entry *entry);
 
 int
 archive_read_support_format_cpio(struct archive *_a)
@@ -176,19 +182,18 @@ archive_read_support_format_cpio(struct archive *_a)
 	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
 	    ARCHIVE_STATE_NEW, "archive_read_support_format_cpio");
 
-	cpio = (struct cpio *)malloc(sizeof(*cpio));
+	cpio = (struct cpio *)calloc(1, sizeof(*cpio));
 	if (cpio == NULL) {
 		archive_set_error(&a->archive, ENOMEM, "Can't allocate cpio data");
 		return (ARCHIVE_FATAL);
 	}
-	memset(cpio, 0, sizeof(*cpio));
 	cpio->magic = CPIO_MAGIC;
 
 	r = __archive_read_register_format(a,
 	    cpio,
 	    "cpio",
 	    archive_read_format_cpio_bid,
-	    NULL,
+	    archive_read_format_cpio_options,
 	    archive_read_format_cpio_read_header,
 	    archive_read_format_cpio_read_data,
 	    archive_read_format_cpio_skip,
@@ -265,16 +270,60 @@ archive_read_format_cpio_bid(struct archive_read *a)
 }
 
 static int
+archive_read_format_cpio_options(struct archive_read *a,
+    const char *key, const char *val)
+{
+	struct cpio *cpio;
+	int ret = ARCHIVE_FAILED;
+
+	cpio = (struct cpio *)(a->format->data);
+	if (strcmp(key, "compat-2x")  == 0) {
+		/* Handle filnames as libarchive 2.x */
+		cpio->init_default_conversion = (val != NULL)?1:0;
+		ret = ARCHIVE_OK;
+	} else if (strcmp(key, "hdrcharset")  == 0) {
+		if (val == NULL || val[0] == 0)
+			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+			    "cpio: hdrcharset option needs a character-set name");
+		else {
+			cpio->opt_sconv =
+			    archive_string_conversion_from_charset(
+				&a->archive, val, 0);
+			if (cpio->opt_sconv != NULL)
+				ret = ARCHIVE_OK;
+			else
+				ret = ARCHIVE_FATAL;
+		}
+	} else
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+		    "cpio: unknown keyword ``%s''", key);
+
+	return (ret);
+}
+
+static int
 archive_read_format_cpio_read_header(struct archive_read *a,
     struct archive_entry *entry)
 {
 	struct cpio *cpio;
 	const void *h;
+	struct archive_string_conv *sconv;
 	size_t namelength;
 	size_t name_pad;
 	int r;
 
 	cpio = (struct cpio *)(a->format->data);
+	sconv = cpio->opt_sconv;
+	if (sconv == NULL) {
+		if (!cpio->init_default_conversion) {
+			cpio->sconv_default =
+			    archive_string_default_conversion_for_read(
+			      &(a->archive));
+			cpio->init_default_conversion = 1;
+		}
+		sconv = cpio->sconv_default;
+	}
+	
 	r = (cpio->read_header(a, cpio, entry, &namelength, &name_pad));
 
 	if (r < ARCHIVE_WARN)
@@ -284,8 +333,18 @@ archive_read_format_cpio_read_header(struct archive_read *a,
 	h = __archive_read_ahead(a, namelength + name_pad, NULL);
 	if (h == NULL)
 	    return (ARCHIVE_FATAL);
-	archive_strncpy(&cpio->entry_name, (const char *)h, namelength);
-	archive_entry_set_pathname(entry, cpio->entry_name.s);
+	if (archive_entry_copy_pathname_l(entry,
+	    (const char *)h, namelength, sconv) != 0) {
+		if (errno == ENOMEM) {
+			archive_set_error(&a->archive, ENOMEM,
+			    "Can't allocate memory for Pathname");
+			return (ARCHIVE_FATAL);
+		}
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+		    "Pathname can't be converted from %s to current locale.",
+		    archive_string_conversion_charset_name(sconv));
+		r = ARCHIVE_WARN;
+	}
 	cpio->entry_offset = 0;
 
 	__archive_read_consume(a, namelength + name_pad);
@@ -295,10 +354,21 @@ archive_read_format_cpio_read_header(struct archive_read *a,
 		h = __archive_read_ahead(a, cpio->entry_bytes_remaining, NULL);
 		if (h == NULL)
 			return (ARCHIVE_FATAL);
-		archive_strncpy(&cpio->entry_linkname, (const char *)h,
-		    cpio->entry_bytes_remaining);
+		if (archive_entry_copy_symlink_l(entry, (const char *)h,
+		    cpio->entry_bytes_remaining, sconv) != 0) {
+			if (errno == ENOMEM) {
+				archive_set_error(&a->archive, ENOMEM,
+				    "Can't allocate memory for Linkname");
+				return (ARCHIVE_FATAL);
+			}
+			archive_set_error(&a->archive,
+			    ARCHIVE_ERRNO_FILE_FORMAT,
+			    "Linkname can't be converted from %s to "
+			    "current locale.",
+			    archive_string_conversion_charset_name(sconv));
+			r = ARCHIVE_WARN;
+		}
 		__archive_read_consume(a, cpio->entry_bytes_remaining);
-		archive_entry_set_symlink(entry, cpio->entry_linkname.s);
 		cpio->entry_bytes_remaining = 0;
 	}
 
@@ -315,9 +385,7 @@ archive_read_format_cpio_read_header(struct archive_read *a,
 	}
 
 	/* Detect and record hardlinks to previously-extracted entries. */
-	if (record_hardlink(cpio, entry) != ARCHIVE_OK) {
-		archive_set_error(&a->archive,
-		    ENOMEM, "Out of memory adding file to list");
+	if (record_hardlink(a, cpio, entry) != ARCHIVE_OK) {
 		return (ARCHIVE_FATAL);
 	}
 
@@ -809,7 +877,6 @@ archive_read_format_cpio_cleanup(struct archive_read *a)
                 free(cpio->links_head);
                 cpio->links_head = lp;
         }
-	archive_string_free(&cpio->entry_name);
 	free(cpio);
 	(a->format->data) = NULL;
 	return (ARCHIVE_OK);
@@ -876,7 +943,8 @@ atol16(const char *p, unsigned char_cnt)
 }
 
 static int
-record_hardlink(struct cpio *cpio, struct archive_entry *entry)
+record_hardlink(struct archive_read *a,
+    struct cpio *cpio, struct archive_entry *entry)
 {
 	struct links_entry      *le;
 	dev_t dev;
@@ -912,8 +980,11 @@ record_hardlink(struct cpio *cpio, struct archive_entry *entry)
 	}
 
 	le = (struct links_entry *)malloc(sizeof(struct links_entry));
-	if (le == NULL)
+	if (le == NULL) {
+		archive_set_error(&a->archive,
+		    ENOMEM, "Out of memory adding file to list");
 		return (ARCHIVE_FATAL);
+	}
 	if (cpio->links_head != NULL)
 		cpio->links_head->previous = le;
 	le->next = cpio->links_head;
@@ -923,8 +994,11 @@ record_hardlink(struct cpio *cpio, struct archive_entry *entry)
 	le->ino = ino;
 	le->links = archive_entry_nlink(entry) - 1;
 	le->name = strdup(archive_entry_pathname(entry));
-	if (le->name == NULL)
+	if (le->name == NULL) {
+		archive_set_error(&a->archive,
+		    ENOMEM, "Out of memory adding file to list");
 		return (ARCHIVE_FATAL);
+	}
 
 	return (ARCHIVE_OK);
 }

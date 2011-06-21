@@ -41,6 +41,7 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_zip.c 201102
 
 #include "archive.h"
 #include "archive_entry.h"
+#include "archive_entry_locale.h"
 #include "archive_private.h"
 #include "archive_read_private.h"
 #include "archive_endian.h"
@@ -91,10 +92,11 @@ struct zip {
 	char			stream_valid;
 #endif
 
-	struct archive_string	pathname;
 	struct archive_string	extra;
 	struct archive_string_conv *sconv;
+	struct archive_string_conv *sconv_default;
 	struct archive_string_conv *sconv_utf8;
+	int			init_default_conversion;
 	char	format_name[64];
 };
 
@@ -157,7 +159,8 @@ archive_read_support_format_zip(struct archive *_a)
 
 	zip = (struct zip *)malloc(sizeof(*zip));
 	if (zip == NULL) {
-		archive_set_error(&a->archive, ENOMEM, "Can't allocate zip data");
+		archive_set_error(&a->archive, ENOMEM,
+		    "Can't allocate zip data");
 		return (ARCHIVE_FATAL);
 	}
 	memset(zip, 0, sizeof(*zip));
@@ -250,10 +253,14 @@ archive_read_format_zip_options(struct archive_read *a,
 	int ret = ARCHIVE_FAILED;
 
 	zip = (struct zip *)(a->format->data);
-	if (strcmp(key, "charset")  == 0) {
+	if (strcmp(key, "compat-2x")  == 0) {
+		/* Handle filnames as libarchive 2.x */
+		zip->init_default_conversion = (val != NULL)?1:0;
+		ret = ARCHIVE_OK;
+	} else if (strcmp(key, "hdrcharset")  == 0) {
 		if (val == NULL || val[0] == 0)
 			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-			    "zip: charset option needs a character-set name");
+			    "zip: hdrcharset option needs a character-set name");
 		else {
 			zip->sconv = archive_string_conversion_from_charset(
 			    &a->archive, val, 0);
@@ -361,7 +368,8 @@ archive_read_format_zip_read_header(struct archive_read *a,
 	if (signature[0] != 'P' || signature[1] != 'K') {
 		r = search_next_signature(a);
 		if (r != ARCHIVE_OK) {
-			archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+			archive_set_error(&a->archive,
+			    ARCHIVE_ERRNO_FILE_FORMAT,
 			    "Bad ZIP file");
 			return (ARCHIVE_FATAL);
 		}
@@ -381,7 +389,8 @@ archive_read_format_zip_read_header(struct archive_read *a,
 			return (ARCHIVE_FATAL);
 		signature = (const char *)h;
 		if (signature[0] != 'P' || signature[1] != 'K') {
-			archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+			archive_set_error(&a->archive,
+			    ARCHIVE_ERRNO_FILE_FORMAT,
 			    "Bad ZIP file");
 			return (ARCHIVE_FATAL);
 		}
@@ -463,7 +472,18 @@ zip_read_file_header(struct archive_read *a, struct archive_entry *entry,
 {
 	const struct zip_file_header *p;
 	const void *h;
+	const wchar_t *wp;
+	const char *cp;
+	size_t len;
+	struct archive_string_conv *sconv;
 	int ret = ARCHIVE_OK;
+
+	/* Setup default conversion. */
+	if (zip->sconv == NULL && !zip->init_default_conversion) {
+		zip->sconv_default =
+		    archive_string_default_conversion_for_read(&(a->archive));
+		zip->init_default_conversion = 1;
+	}
 
 	if ((p = __archive_read_ahead(a, sizeof *p, NULL)) == NULL) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
@@ -501,38 +521,52 @@ zip_read_file_header(struct archive_read *a, struct archive_entry *entry,
 		    "Truncated ZIP file header");
 		return (ARCHIVE_FATAL);
 	}
-	if (zip->sconv == NULL && (zip->flags & ZIP_UTF8_NAME) != 0) {
+	if (zip->flags & ZIP_UTF8_NAME) {
 		/* The filename is stored to be UTF-8. */
-		if (zip->sconv_utf8 == NULL)
+		if (zip->sconv_utf8 == NULL) {
 			zip->sconv_utf8 =
 			    archive_string_conversion_from_charset(
 				&a->archive, "UTF-8", 1);
-		if (archive_strncpy_in_locale(&zip->pathname,
-		    h, zip->filename_length, zip->sconv_utf8) != 0) {
-			archive_set_error(&a->archive,
-			    ARCHIVE_ERRNO_FILE_FORMAT,
-			    "Pathname cannot be converted "
-			    "from UTF-8 to current locale.");
-			ret = ARCHIVE_WARN;
+			if (zip->sconv_utf8 == NULL)
+				return (ARCHIVE_FATAL);
 		}
-	} else {
-		if (archive_strncpy_in_locale(&zip->pathname,
-		    h, zip->filename_length, zip->sconv) != 0) {
-			archive_set_error(&a->archive,
-			    ARCHIVE_ERRNO_FILE_FORMAT,
-			    "Pathname cannot be converted "
-			    "from %s to current locale.",
-			    archive_string_conversion_charset_name(zip->sconv));
-			ret = ARCHIVE_WARN;
+		sconv = zip->sconv_utf8;
+	} else if (zip->sconv != NULL)
+		sconv = zip->sconv;
+	else
+		sconv = zip->sconv_default;
+
+	if (archive_entry_copy_pathname_l(entry,
+	    h, zip->filename_length, sconv) != 0) {
+		if (errno == ENOMEM) {
+			archive_set_error(&a->archive, ENOMEM,
+			    "Can't allocate memory for Pathname");
+			return (ARCHIVE_FATAL);
 		}
+		archive_set_error(&a->archive,
+		    ARCHIVE_ERRNO_FILE_FORMAT,
+		    "Pathname cannot be converted "
+		    "from %s to current locale.",
+		    archive_string_conversion_charset_name(sconv));
+		ret = ARCHIVE_WARN;
 	}
 	__archive_read_consume(a, zip->filename_length);
-	archive_entry_set_pathname(entry, zip->pathname.s);
 
-	if (zip->pathname.s[archive_strlen(&zip->pathname) - 1] == '/')
-		zip->mode = AE_IFDIR | 0777;
-	else
-		zip->mode = AE_IFREG | 0777;
+	wp = archive_entry_pathname_w(entry);
+	if (wp != NULL) {
+		len = wcslen(wp);
+		if (len > 0 && wp[len - 1] == L'/')
+			zip->mode = AE_IFDIR | 0777;
+		else
+			zip->mode = AE_IFREG | 0777;
+	} else {
+		cp = archive_entry_pathname(entry);
+		len = (cp != NULL)?strlen(cp):0;
+		if (len > 0 && cp[len - 1] == '/')
+			zip->mode = AE_IFDIR | 0777;
+		else
+			zip->mode = AE_IFREG | 0777;
+	}
 
 	/* Read the extra data. */
 	if ((h = __archive_read_ahead(a, zip->extra_length, NULL)) == NULL) {
@@ -662,18 +696,23 @@ archive_read_format_zip_read_data(struct archive_read *a,
 		if (zip->flags & ZIP_LENGTH_AT_END) {
 			const char *p;
 
-			/* since we're screwing with the exposed window, it's possible this will cross 
-			 * a forced move/realloc w/in that layer... in other words, the previous read_ahead's
-			 * returned pointer isn't trustable.  thus we redo the window, and reset buff if needed.
-			 * note that decompression sidesteps this via the flushing of entry_bytes_unconsumed
+			/* since we're screwing with the exposed window,
+			 * it's possible this will cross a forced move/realloc
+			 * w/in that layer... in other words, the previous
+			 * read_ahead's returned pointer isn't trustable.
+			 * thus we redo the window, and reset buff if needed.
+			 * note that decompression sidesteps this via the
+			 * flushing of entry_bytes_unconsumed
 			 */
-			if (!(p = __archive_read_ahead(a, zip->entry_bytes_unconsumed + 16, NULL))) {
+			if (NULL == (p = __archive_read_ahead(a,
+			    zip->entry_bytes_unconsumed + 16, NULL))) {
 				archive_set_error(&a->archive,
 				    ARCHIVE_ERRNO_FILE_FORMAT,
 				    "Truncated ZIP end-of-file record");
 				return (ARCHIVE_FATAL);
 			}
-			/* update the ptr, and set p to just the 16 bytes we care about */
+			/* update the ptr, and set p to just the 16 bytes
+			 * we care about */
 			if (reset_buff) {
 				*buff = p;
 				p += zip->entry_bytes_unconsumed;
@@ -689,7 +728,8 @@ archive_read_format_zip_read_data(struct archive_read *a,
 			    "ZIP compressed data is wrong size");
 			return (ARCHIVE_WARN);
 		}
-		/* Size field only stores the lower 32 bits of the actual size. */
+		/* Size field only stores the lower 32 bits of the actual
+		 * size. */
 		if ((zip->uncompressed_size & UINT32_MAX)
 		    != (zip->entry_uncompressed_bytes_read & UINT32_MAX)) {
 			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
@@ -940,7 +980,6 @@ archive_read_format_zip_cleanup(struct archive_read *a)
 		inflateEnd(&zip->stream);
 #endif
 	free(zip->uncompressed_buffer);
-	archive_string_free(&(zip->pathname));
 	archive_string_free(&(zip->extra));
 	free(zip);
 	(a->format->data) = NULL;
@@ -972,9 +1011,11 @@ process_extra(const void* extra, struct zip* zip)
 		case 0x0001:
 			/* Zip64 extended information extra field. */
 			if (datasize >= 8)
-				zip->uncompressed_size = archive_le64dec(p + offset);
+				zip->uncompressed_size =
+				    archive_le64dec(p + offset);
 			if (datasize >= 16)
-				zip->compressed_size = archive_le64dec(p + offset + 8);
+				zip->compressed_size =
+				    archive_le64dec(p + offset + 8);
 			break;
 		case 0x5455:
 		{

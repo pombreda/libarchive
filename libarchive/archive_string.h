@@ -27,7 +27,9 @@
  */
 
 #ifndef __LIBARCHIVE_BUILD
+#ifndef __LIBARCHIVE_TEST
 #error This header is only to be used internally to libarchive.
+#endif
 #endif
 
 #ifndef ARCHIVE_STRING_H_INCLUDED
@@ -82,19 +84,32 @@ archive_wstrappend_wchar(struct archive_wstring *, wchar_t);
 /* Convert a Unicode string to current locale and append the result. */
 /* Returns -1 if conversion fails. */
 int
-archive_string_append_from_unicode_to_mbs(struct archive *, struct archive_string *, const wchar_t *, size_t);
+archive_string_append_from_wcs(struct archive_string *, const wchar_t *, size_t);
 
 
-/* Test that platform support a character-set conversion.
- * Return -1 and set a error message if the conversion is not supported. */
+/* Create a string conversion object.
+ * Return NULL and set a error message if the conversion is not supported
+ * on the platform. */
 struct archive_string_conv *
 archive_string_conversion_to_charset(struct archive *, const char *, int);
 struct archive_string_conv *
 archive_string_conversion_from_charset(struct archive *, const char *, int);
+/* Create the default string conversion object for reading/writing an archive.
+ * Return NULL if the conversion is unneeded.
+ * Note: On non Windows platform this always returns NULL.
+ */
+struct archive_string_conv *
+archive_string_default_conversion_for_read(struct archive *);
+struct archive_string_conv *
+archive_string_default_conversion_for_write(struct archive *);
+/* Dispose of a string conversion object. */
 void
 archive_string_conversion_free(struct archive *);
 const char *
 archive_string_conversion_charset_name(struct archive_string_conv *);
+void
+archive_string_conversion_set_opt(struct archive_string_conv *, int);
+#define SCONV_SET_OPT_UTF8_LIBARCHIVE2X	1
 
 
 /* Copy one archive_string to another in locale conversion.
@@ -176,8 +191,8 @@ void	archive_string_sprintf(struct archive_string *, const char *, ...)
 
 /* Translates from MBS to Unicode. */
 /* Returns non-zero if conversion failed in any way. */
-int archive_wstring_append_from_mbs(struct archive *,
-    struct archive_wstring *dest, const char *, size_t);
+int archive_wstring_append_from_mbs(struct archive_wstring *dest,
+    const char *, size_t);
 
 
 /* A "multistring" can hold Unicode, UTF8, or MBS versions of
@@ -189,6 +204,7 @@ struct archive_mstring {
 	struct archive_string aes_mbs;
 	struct archive_string aes_utf8;
 	struct archive_wstring aes_wcs;
+	struct archive_string aes_mbs_in_locale;
 	/* Bitmap of which of the above are valid.  Because we're lazy
 	 * about malloc-ing and reusing the underlying storage, we
 	 * can't rely on NULL pointers to indicate whether a string
@@ -201,15 +217,20 @@ struct archive_mstring {
 
 void	archive_mstring_clean(struct archive_mstring *);
 void	archive_mstring_copy(struct archive_mstring *dest, struct archive_mstring *src);
-const char *	archive_mstring_get_mbs(struct archive *, struct archive_mstring *);
-const char *	archive_mstring_get_utf8(struct archive *, struct archive_mstring *);
-const wchar_t *	archive_mstring_get_wcs(struct archive *, struct archive_mstring *);
+int archive_mstring_get_mbs(struct archive *, struct archive_mstring *, const char **);
+int archive_mstring_get_utf8(struct archive *, struct archive_mstring *, const char **);
+int archive_mstring_get_wcs(struct archive *, struct archive_mstring *, const wchar_t **);
+int	archive_mstring_get_mbs_l(struct archive_mstring *, const char **,
+	    size_t *, struct archive_string_conv *);
 int	archive_mstring_copy_mbs(struct archive_mstring *, const char *mbs);
 int	archive_mstring_copy_mbs_len(struct archive_mstring *, const char *mbs,
 	    size_t);
 int	archive_mstring_copy_utf8(struct archive_mstring *, const char *utf8);
 int	archive_mstring_copy_wcs(struct archive_mstring *, const wchar_t *wcs);
-int	archive_mstring_copy_wcs_len(struct archive_mstring *, const wchar_t *wcs, size_t);
+int	archive_mstring_copy_wcs_len(struct archive_mstring *,
+	    const wchar_t *wcs, size_t);
+int	archive_mstring_copy_mbs_len_l(struct archive_mstring *,
+	    const char *mbs, size_t, struct archive_string_conv *);
 int     archive_mstring_update_utf8(struct archive *, struct archive_mstring *aes, const char *utf8);
 
 
