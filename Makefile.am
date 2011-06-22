@@ -828,6 +828,7 @@ bsdpax_test_SOURCES=						\
 	pax/test/test_help.c					\
 	pax/test/test_option_D_upper.c				\
 	pax/test/test_option_H_upper.c				\
+	pax/test/test_option_J_upper.c				\
 	pax/test/test_option_L_upper.c				\
 	pax/test/test_option_T_upper.c				\
 	pax/test/test_option_Y_upper.c				\
@@ -835,14 +836,18 @@ bsdpax_test_SOURCES=						\
 	pax/test/test_option_a.c				\
 	pax/test/test_option_b.c				\
 	pax/test/test_option_c.c				\
+	pax/test/test_option_compress.c				\
 	pax/test/test_option_d.c				\
+	pax/test/test_option_j.c				\
 	pax/test/test_option_k.c				\
 	pax/test/test_option_l.c				\
+	pax/test/test_option_lzma.c				\
 	pax/test/test_option_n.c				\
 	pax/test/test_option_null.c				\
 	pax/test/test_option_s.c				\
 	pax/test/test_option_t.c				\
 	pax/test/test_option_u.c				\
+	pax/test/test_option_z.c				\
 	pax/test/test_version.c
 
 bsdpax_test_CPPFLAGS= \

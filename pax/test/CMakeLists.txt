@@ -12,6 +12,7 @@ IF(ENABLE_PAX AND ENABLE_TEST)
     test_help.c
     test_option_D_upper.c
     test_option_H_upper.c
+    test_option_J_upper.c
     test_option_L_upper.c
     test_option_T_upper.c
     test_option_Y_upper.c
@@ -19,14 +20,18 @@ IF(ENABLE_PAX AND ENABLE_TEST)
     test_option_a.c
     test_option_b.c
     test_option_c.c
+    test_option_compress.c
     test_option_d.c
+    test_option_j.c
     test_option_k.c
     test_option_l.c
+    test_option_lzma.c
     test_option_n.c
     test_option_null.c
     test_option_s.c
     test_option_t.c
     test_option_u.c
+    test_option_z.c
     test_version.c
   )
   IF(WIN32 AND NOT CYGWIN)
