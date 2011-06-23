@@ -74,7 +74,7 @@ DEFINE_TEST(test_option_s)
 	/*
 	 * Test 3: Files with empty names shouldn't be archived.
 	 */
-	systemf("%s -w -s ,in/d1/foo,, in/d1/foo | %s -v > in.lst",
+	systemf("%s -w -s ,in/d1/foo,, in/d1/foo | %s -v > in.lst 2>NUL",
 	    testprog, testprog);
 	assertEmptyFile("in.lst");
 
