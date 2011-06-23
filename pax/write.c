@@ -422,9 +422,22 @@ write_archive(struct archive *a, struct bsdpax *bsdpax)
 	archive_read_free(bsdpax->diskreader);
 	bsdpax->diskreader = NULL;
 
-	if (bsdpax->option_totals) {
-		fprintf(stderr, "Total bytes written: %s\n",
-		    pax_i64toa(archive_position_compressed(a)));
+	if (bsdpax->verbose) {
+		int i;
+
+		fprintf(stderr, "%s: %s,", lafe_progname, archive_format_name(a));
+		for (i = 0; archive_filter_code(a, i) > 0; i++) {
+			if (i > 0)
+				fprintf(stderr, "/%s", archive_filter_name(a, i));
+			else
+				fprintf(stderr, " %s", archive_filter_name(a, i));
+		}
+		if (i > 0)
+			fprintf(stderr, " filters,");
+		fprintf(stderr,
+		    " %d files, 0 bytes read, %s bytes written\n",
+		    archive_file_count(a),
+		    pax_i64toa(archive_filter_bytes(a, -1)));
 	}
 
 	archive_write_free(a);

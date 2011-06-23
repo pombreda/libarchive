@@ -97,7 +97,6 @@ struct bsdpax {
 	const char	 *option_options; /* --options */
 	char		  option_restore_atime; /* -t */
 	char		  option_stdout; /* -O */
-	char		  option_totals; /* --totals */
 	char		  option_unlink_first; /* -U */
 	char		  option_warn_links; /* --check-links */
 	char		  day_first; /* show day before month in -v output */

@@ -347,9 +347,21 @@ read_archive(struct bsdpax *bsdpax, char mode, struct archive *writer)
 	if (r <= ARCHIVE_WARN)
 		bsdpax->return_value = 1;
 
-	if (bsdpax->verbose > 2)
-		fprintf(stdout, "Archive Format: %s,  Compression: %s\n",
-		    archive_format_name(a), archive_compression_name(a));
+	if (bsdpax->verbose) {
+		int i;
+
+		fprintf(stderr, "%s: %s,", lafe_progname, archive_format_name(a));
+		for (i = 0; archive_filter_code(a, i) > 0; i++)
+			if (i > 0)
+				fprintf(stderr, "/%s", archive_filter_name(a, i));
+			else
+				fprintf(stderr, " %s", archive_filter_name(a, i));
+		if (i > 0)
+			fprintf(stderr, " filters,");
+		fprintf(stderr,
+		    " %d files, %s bytes read, 0 bytes written\n",
+		    archive_file_count(a), pax_i64toa(archive_filter_bytes(a, 0)));
+	}
 	if (mode == PAXMODE_READ)
 		archive_read_free(bsdpax->diskenough);
 

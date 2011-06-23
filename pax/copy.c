@@ -215,11 +215,6 @@ copy_disk(struct archive *a, struct bsdpax *bsdpax)
 	archive_read_free(bsdpax->diskreader);
 	bsdpax->diskreader = NULL;
 
-	if (bsdpax->option_totals) {
-		fprintf(stderr, "Total bytes written: %s\n",
-		    pax_i64toa(archive_position_compressed(a)));
-	}
-
 	archive_write_free(a);
 }
 
