@@ -26,12 +26,11 @@
 __FBSDID("$FreeBSD: src/usr.bin/tar/test/test_getdate.c,v 1.2 2008/05/26 17:10:10 kientzle Exp $");
 
 #include <time.h>
+#include "getdate.h"
 
 /*
  * Verify that the getdate() function works.
  */
-
-time_t get_date(time_t, const char *);
 
 DEFINE_TEST(test_getdate)
 {

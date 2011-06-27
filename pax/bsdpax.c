@@ -69,6 +69,7 @@ __FBSDID("$FreeBSD$");
 
 #include "bsdpax.h"
 #include "err.h"
+#include "getdate.h"
 
 #ifdef __MINGW32__
 int _CRT_glob = 0; /* Disable broken CRT globbing. */
@@ -98,9 +99,6 @@ need_report(void)
 	return (0);
 }
 #endif
-
-/* External function to parse a date/time string */
-time_t get_date(time_t, const char *);
 
 static void	 long_help(void);
 static void	 only_mode(struct bsdpax *, const char *opt, char valid);

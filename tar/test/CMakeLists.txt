@@ -5,7 +5,7 @@
 ############################################
 IF(ENABLE_TAR AND ENABLE_TEST)
   SET(bsdtar_test_SOURCES
-    ../getdate.c
+    ../../libarchive_fe/getdate.c
     main.c
     test.h
     test_0.c

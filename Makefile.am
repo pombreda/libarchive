@@ -511,6 +511,8 @@ libarchive_test_EXTRA_DIST=\
 libarchive_fe_la_SOURCES=			\
 	libarchive_fe/err.c			\
 	libarchive_fe/err.h			\
+	libarchive_fe/getdate.c			\
+	libarchive_fe/getdate.h			\
 	libarchive_fe/lafe_platform.h		\
 	libarchive_fe/line_reader.c		\
 	libarchive_fe/line_reader.h		\
@@ -532,7 +534,6 @@ bsdtar_SOURCES=				\
 		tar/bsdtar.h		\
 		tar/bsdtar_platform.h	\
 		tar/cmdline.c		\
-		tar/getdate.c		\
 		tar/read.c		\
 		tar/subst.c		\
 		tar/tree.c		\
@@ -582,7 +583,7 @@ endif
 #
 
 bsdtar_test_SOURCES=						\
-	tar/getdate.c						\
+	libarchive_fe/getdate.c					\
 	tar/test/main.c						\
 	tar/test/test.h						\
 	tar/test/test_0.c					\
@@ -780,7 +781,6 @@ bsdpax_SOURCES=				\
 		pax/bsdpax_platform.h	\
 		pax/cmdline.c		\
 		pax/copy.c		\
-		pax/getdate.c		\
 		pax/read.c		\
 		pax/subst.c		\
 		pax/util.c		\

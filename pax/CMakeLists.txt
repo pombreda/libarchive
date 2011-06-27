@@ -11,13 +11,14 @@ IF (ENABLE_PAX)
     bsdpax_platform.h
     cmdline.c
     copy.c
-    getdate.c
     read.c
     subst.c
     util.c
     write.c
     ../libarchive_fe/err.c
     ../libarchive_fe/err.h
+    ../libarchive_fe/getdate.c
+    ../libarchive_fe/getdate.h
     ../libarchive_fe/lafe_platform.h
     ../libarchive_fe/line_reader.c
     ../libarchive_fe/line_reader.h

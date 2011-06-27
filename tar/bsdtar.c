@@ -69,6 +69,7 @@ __FBSDID("$FreeBSD: src/usr.bin/tar/bsdtar.c,v 1.93 2008/11/08 04:43:24 kientzle
 
 #include "bsdtar.h"
 #include "err.h"
+#include "getdate.h"
 
 /*
  * Per POSIX.1-1988, tar defaults to reading/writing archives to/from
@@ -117,9 +118,6 @@ need_report(void)
 	return (0);
 }
 #endif
-
-/* External function to parse a date/time string */
-time_t get_date(time_t, const char *);
 
 static void		 long_help(void);
 static void		 only_mode(struct bsdtar *, const char *opt,
