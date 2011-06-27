@@ -229,8 +229,7 @@ pax_mode_write(struct bsdpax *bsdpax)
 		}
 	}
 
-	if (ARCHIVE_OK != archive_write_set_options(a, bsdpax->option_options))
-		lafe_errc(1, 0, "%s", archive_error_string(a));
+	lafe_set_options(bsdpax->options, archive_write_set_options, a);
 	if (ARCHIVE_OK != archive_write_open_file(a, bsdpax->filename))
 		lafe_errc(1, 0, "%s", archive_error_string(a));
 	write_archive(a, bsdpax);
@@ -304,8 +303,7 @@ pax_mode_append(struct bsdpax *bsdpax)
 
 	if (lseek(bsdpax->fd, end_offset, SEEK_SET) < 0)
 		lafe_errc(1, errno, "Could not seek to archive end");
-	if (ARCHIVE_OK != archive_write_set_options(a, bsdpax->option_options))
-		lafe_errc(1, 0, "%s", archive_error_string(a));
+	lafe_set_options(bsdpax->options, archive_write_set_options, a);
 	if (ARCHIVE_OK != archive_write_open_fd(a, bsdpax->fd))
 		lafe_errc(1, 0, "%s", archive_error_string(a));
 

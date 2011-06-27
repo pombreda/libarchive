@@ -29,6 +29,7 @@
 #include <stdio.h>
 
 #include "matching.h"
+#include "options.h"
 
 #define	DEFAULT_BYTES_PER_BLOCK	(20*512)
 
@@ -94,7 +95,6 @@ struct bsdpax {
 	char		  option_null; /* --null */
 	char		  option_no_atime;/* -p a */
 	char		  option_no_mtime;/* -p m */
-	const char	 *option_options; /* --options */
 	char		  option_restore_atime; /* -t */
 	char		  option_stdout; /* -O */
 	char		  option_unlink_first; /* -U */
@@ -134,6 +134,7 @@ struct bsdpax {
 	struct name_cache	*uname_cache;	/* for write.c */
 	struct siginfo_data	*siginfo;	/* for siginfo.c */
 	struct substitution	*substitution;	/* for subst.c */
+	struct lafe_options	*options;	/* for read.c or write.c */
 };
 
 /* Fake short equivalents for long options that otherwise lack them. */

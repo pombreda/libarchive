@@ -23,6 +23,8 @@ IF (ENABLE_PAX)
     ../libarchive_fe/line_reader.h
     ../libarchive_fe/matching.c
     ../libarchive_fe/matching.h
+    ../libarchive_fe/options.c
+    ../libarchive_fe/options.h
     ../libarchive_fe/pathmatch.c
     ../libarchive_fe/pathmatch.h
   )

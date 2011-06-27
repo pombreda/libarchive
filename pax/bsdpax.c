@@ -133,6 +133,7 @@ main(int argc, char **argv)
 	bsdpax->mode = PAXMODE_LIST;
 	bsdpax->fd = -1; /* Mark as "unused" */
 	option_a = 0;
+	lafe_init_options(&(bsdpax->options));
 
 #if defined(HAVE_SIGACTION) && (defined(SIGINFO) || defined(SIGUSR1))
 	{ /* Catch SIGINFO and SIGUSR1, if they exist. */
@@ -312,7 +313,7 @@ main(int argc, char **argv)
 			bsdpax->option_fast_read = 1;
 			break;
 		case 'o':
-			bsdpax->option_options = bsdpax->argument;
+			lafe_add_options(bsdpax->options, bsdpax->argument);
 			break;
 		case 'P':
 			bsdpax->symlink_mode = opt;
@@ -512,6 +513,7 @@ main(int argc, char **argv)
 #if HAVE_REGEX_H
 	cleanup_substitution(bsdpax);
 #endif
+	lafe_free_options(bsdpax->options);
 
 	if (bsdpax->return_value != 0)
 		lafe_warnc(0,

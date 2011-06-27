@@ -172,8 +172,7 @@ read_archive(struct bsdpax *bsdpax, char mode, struct archive *writer)
 	else
 		archive_read_support_filter_all(a);
 	archive_read_support_format_all(a);
-	if (ARCHIVE_OK != archive_read_set_options(a, bsdpax->option_options))
-		lafe_errc(1, 0, "%s", archive_error_string(a));
+	lafe_set_options(bsdpax->options, archive_read_set_options, a);
 	if (archive_read_open_file(a, bsdpax->filename, bsdpax->bytes_per_block))
 		lafe_errc(1, 0, "Error opening archive: %s",
 		    archive_error_string(a));
@@ -255,7 +254,13 @@ read_archive(struct bsdpax *bsdpax, char mode, struct archive *writer)
 			if (bsdpax->verbose < 2)
 				safe_fprintf(out, "%s",
 				    archive_entry_pathname(entry));
-			else
+			else if (lafe_has_listopt(bsdpax->options)) {
+				r = lafe_entry_fprintf(
+				    bsdpax->options, out, entry);
+				if (r != 0)
+					lafe_errc(1, 0,
+					    "listopt:invalid format string");
+			} else
 				list_item_verbose(bsdpax, out, entry);
 			fflush(out);
 			r = archive_read_data_skip(a);

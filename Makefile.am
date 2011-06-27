@@ -502,7 +502,7 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/README
 
 #
-# Common code for libarchive frontends (cpio, tar)
+# Common code for libarchive frontends (cpio, tar and pax)
 #
 libarchive_fe_la_SOURCES=			\
 	libarchive_fe/err.c			\
@@ -512,6 +512,8 @@ libarchive_fe_la_SOURCES=			\
 	libarchive_fe/line_reader.h		\
 	libarchive_fe/matching.c		\
 	libarchive_fe/matching.h		\
+	libarchive_fe/options.h			\
+	libarchive_fe/options.c			\
 	libarchive_fe/pathmatch.c		\
 	libarchive_fe/pathmatch.h
 
@@ -848,6 +850,7 @@ bsdpax_test_SOURCES=						\
 	pax/test/test_option_t.c				\
 	pax/test/test_option_u.c				\
 	pax/test/test_option_z.c				\
+	pax/test/test_options_listopt.c				\
 	pax/test/test_version.c
 
 bsdpax_test_CPPFLAGS= \
@@ -869,4 +872,5 @@ endif
 
 bsdpax_test_EXTRA_DIST=			\
 	pax/test/test_option_T_upper.pax.uu	\
+	pax/test/test_options_listopt.pax.Z.uu	\
 	pax/test/CMakeLists.txt
