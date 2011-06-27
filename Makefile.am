@@ -140,6 +140,7 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_read_support_format_iso9660.c	\
 	libarchive/archive_read_support_format_lha.c		\
 	libarchive/archive_read_support_format_mtree.c		\
+	libarchive/archive_read_support_format_rar.c		\
 	libarchive/archive_read_support_format_raw.c		\
 	libarchive/archive_read_support_format_tar.c		\
 	libarchive/archive_read_support_format_xar.c		\
@@ -259,8 +260,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_archive_read_set_format_option.c	\
 	libarchive/test/test_archive_read_set_option.c		\
 	libarchive/test/test_archive_read_set_options.c		\
-	libarchive/test/test_archive_read_support_filter_torture.c	\
-	libarchive/test/test_archive_read_support_format_torture.c	\
+	libarchive/test/test_archive_read_support.c		\
 	libarchive/test/test_archive_set_error.c		\
 	libarchive/test/test_archive_string.c			\
 	libarchive/test/test_archive_string_conversion.c	\
@@ -275,7 +275,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_compat_gzip.c			\
 	libarchive/test/test_compat_lzip.c			\
 	libarchive/test/test_compat_lzma.c			\
-	libarchive/test/test_compat_mac_gnutar.c		\
+	libarchive/test/test_compat_mac.c			\
 	libarchive/test/test_compat_pax_libarchive_2x.c		\
 	libarchive/test/test_compat_solaris_tar_acl.c		\
 	libarchive/test/test_compat_tar_hardlink.c		\
@@ -340,6 +340,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_read_format_lha_filename.c		\
 	libarchive/test/test_read_format_mtree.c		\
 	libarchive/test/test_read_format_pax_bz2.c		\
+	libarchive/test/test_read_format_rar.c			\
 	libarchive/test/test_read_format_raw.c			\
 	libarchive/test/test_read_format_tar.c			\
 	libarchive/test/test_read_format_tar_empty_filename.c	\
@@ -484,6 +485,9 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_read_format_lha_withjunk.lzh.uu		\
 	libarchive/test/test_read_format_mtree.mtree.uu			\
 	libarchive/test/test_read_format_mtree_nomagic.mtree.uu		\
+	libarchive/test/test_read_format_rar.rar.uu			\
+	libarchive/test/test_read_format_rar_noeof.rar.uu		\
+	libarchive/test/test_read_format_rar_subblock.rar.uu		\
 	libarchive/test/test_read_format_raw.data.Z.uu			\
 	libarchive/test/test_read_format_raw.data.uu			\
 	libarchive/test/test_read_format_tar_empty_filename.tar.uu	\
