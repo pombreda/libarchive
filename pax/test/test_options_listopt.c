@@ -40,7 +40,7 @@ DEFINE_TEST(test_options_listopt)
 	    "test.out");
 	assertTextFileContents(
 	    "bsdpax: POSIX pax interchange format,"
-	    " compress (.Z) filters, 5 files,"
+	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
@@ -59,7 +59,7 @@ DEFINE_TEST(test_options_listopt)
 	    "test.out");
 	assertTextFileContents(
 	    "bsdpax: POSIX pax interchange format,"
-	    " compress (.Z) filters, 5 files,"
+	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
@@ -74,7 +74,7 @@ DEFINE_TEST(test_options_listopt)
 	    "test.out");
 	assertTextFileContents(
 	    "bsdpax: POSIX pax interchange format,"
-	    " compress (.Z) filters, 5 files,"
+	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
@@ -93,7 +93,7 @@ DEFINE_TEST(test_options_listopt)
 	    "test.out");
 	assertTextFileContents(
 	    "bsdpax: POSIX pax interchange format,"
-	    " compress (.Z) filters, 5 files,"
+	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
@@ -112,7 +112,7 @@ DEFINE_TEST(test_options_listopt)
 	    "test.out");
 	assertTextFileContents(
 	    "bsdpax: POSIX pax interchange format,"
-	    " compress (.Z) filters, 5 files,"
+	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
@@ -132,7 +132,7 @@ DEFINE_TEST(test_options_listopt)
 	    "test.out");
 	assertTextFileContents(
 	    "bsdpax: POSIX pax interchange format,"
-	    " compress (.Z) filters, 5 files,"
+	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
@@ -152,7 +152,7 @@ DEFINE_TEST(test_options_listopt)
 	    "test.out");
 	assertTextFileContents(
 	    "bsdpax: POSIX pax interchange format,"
-	    " compress (.Z) filters, 5 files,"
+	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
@@ -172,7 +172,7 @@ DEFINE_TEST(test_options_listopt)
 	    "test.out");
 	assertTextFileContents(
 	    "bsdpax: POSIX pax interchange format,"
-	    " compress (.Z) filters, 5 files,"
+	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
@@ -193,7 +193,7 @@ DEFINE_TEST(test_options_listopt)
 	    "test.out");
 	assertTextFileContents(
 	    "bsdpax: POSIX pax interchange format,"
-	    " compress (.Z) filters, 5 files,"
+	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
@@ -214,7 +214,7 @@ DEFINE_TEST(test_options_listopt)
 	    "test.out");
 	assertTextFileContents(
 	    "bsdpax: POSIX pax interchange format,"
-	    " compress (.Z) filters, 5 files,"
+	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
@@ -233,7 +233,7 @@ DEFINE_TEST(test_options_listopt)
 	    "test.out");
 	assertTextFileContents(
 	    "bsdpax: POSIX pax interchange format,"
-	    " compress (.Z) filters, 5 files,"
+	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
@@ -253,7 +253,7 @@ DEFINE_TEST(test_options_listopt)
 	    "test.out");
 	assertTextFileContents(
 	    "bsdpax: POSIX pax interchange format,"
-	    " compress (.Z) filters, 5 files,"
+	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
@@ -274,7 +274,7 @@ DEFINE_TEST(test_options_listopt)
 	    "test.out");
 	assertTextFileContents(
 	    "bsdpax: POSIX pax interchange format,"
-	    " compress (.Z) filters, 5 files,"
+	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
@@ -295,7 +295,7 @@ DEFINE_TEST(test_options_listopt)
 	    "test.out");
 	assertTextFileContents(
 	    "bsdpax: POSIX pax interchange format,"
-	    " compress (.Z) filters, 5 files,"
+	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 }
