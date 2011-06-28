@@ -383,6 +383,11 @@ copy_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 		if (archive_entry_filetype(entry) != AE_IFREG)
 			archive_entry_set_size(entry, 0);
 
+		/*
+		 * Overrite attributes.
+		 */
+		lafe_edit_entry(bsdpax->options, entry);
+
 		archive_entry_linkify(bsdpax->resolver, &entry, &spare_entry);
 
 		while (entry != NULL) {

@@ -51,7 +51,7 @@ __FBSDID("$FreeBSD$");
 /*
  * Short options for bsdpax.  Please keep this sorted.
  */
-static const char *short_options = "ab:cDdf:G:HiJjkLlnoPp:rs:T:tU:uvW:wXxYZz";
+static const char *short_options = "ab:cDdf:G:HiJjkLlno:Pp:rs:T:tU:uvW:wXxYZz";
 
 /*
  * Long options for bsdpax.  Please keep this sorted.

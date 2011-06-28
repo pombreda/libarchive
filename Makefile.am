@@ -850,6 +850,7 @@ bsdpax_test_SOURCES=						\
 	pax/test/test_option_lzma.c				\
 	pax/test/test_option_n.c				\
 	pax/test/test_option_null.c				\
+	pax/test/test_option_o.c				\
 	pax/test/test_option_s.c				\
 	pax/test/test_option_t.c				\
 	pax/test/test_option_u.c				\

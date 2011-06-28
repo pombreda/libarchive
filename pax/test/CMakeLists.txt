@@ -28,6 +28,7 @@ IF(ENABLE_PAX AND ENABLE_TEST)
     test_option_lzma.c
     test_option_n.c
     test_option_null.c
+    test_option_o.c
     test_option_s.c
     test_option_t.c
     test_option_u.c

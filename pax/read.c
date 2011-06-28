@@ -317,6 +317,11 @@ read_archive(struct bsdpax *bsdpax, char mode, struct archive *writer)
 				fflush(stderr);
 			}
 
+			/*
+			 * Overrite attributes.
+			 */
+			lafe_edit_entry(bsdpax->options, entry);
+
 			if (bsdpax->option_no_atime)
 				archive_entry_unset_atime(entry);
 			if (bsdpax->option_no_mtime)

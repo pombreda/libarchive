@@ -527,6 +527,11 @@ append_archive(struct bsdpax *bsdpax, struct archive *a, struct archive *ina)
 		if (need_report())
 			report_write(bsdpax, a, in_entry, 0);
 
+		/*
+		 * Overrite attributes.
+		 */
+		lafe_edit_entry(bsdpax->options, in_entry);
+
 		e = archive_write_header(a, in_entry);
 		if (e != ARCHIVE_OK) {
 			if (!bsdpax->verbose)
@@ -701,6 +706,11 @@ write_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 		/* Non-regular files get archived with zero size. */
 		if (archive_entry_filetype(entry) != AE_IFREG)
 			archive_entry_set_size(entry, 0);
+
+		/*
+		 * Overrite attributes.
+		 */
+		lafe_edit_entry(bsdpax->options, entry);
 
 		archive_entry_linkify(bsdpax->resolver, &entry, &spare_entry);
 

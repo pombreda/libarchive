@@ -64,6 +64,7 @@ __FBSDID("$FreeBSD$");
 #endif
 
 #include "err.h"
+#include "getdate.h"
 #include "options.h"
 
 struct lafe_options {
@@ -78,11 +79,19 @@ struct lafe_options {
 #define E_UNAME		(1U<<1)
 #define E_GID		(1U<<2)
 #define E_GNAME		(1U<<3)
+#define E_ATIME		(1U<<4)
+#define E_CTIME		(1U<<5)
+#define E_MTIME		(1U<<6)
+#define E_MODE		(1U<<7)
 
 	int64_t		 uid;
 	int64_t		 gid;
-	char		 *uname;
-	char		 *gname;
+	char		*uname;
+	char		*gname;
+	time_t		 atime;
+	time_t		 ctime;
+	time_t		 mtime;
+	mode_t		 mode;
 };
 
 #define	HALF_YEAR (time_t)(365 * 86400 / 2)
@@ -817,6 +826,30 @@ lafe_entry_fprintf(struct lafe_options *lafe_opt, FILE *f,
 	return (0);
 }
 
+/*
+ * Note that this implementation does not (and should not!) obey
+ * locale settings; you cannot simply substitute strtol here, since
+ * it does obey locale.
+ */
+static int64_t
+lafe_atol8(const char *p)
+{
+	int64_t l;
+	int digit;
+
+	l = 0;
+	while (*p) {
+		if (*p >= '0' && *p <= '7')
+			digit = *p - '0';
+		else
+			return (l);
+		p++;
+		l <<= 3;
+		l |= digit;
+	}
+	return (l);
+}
+
 static int64_t
 lafe_atoi(const char *p)
 {
@@ -842,16 +875,45 @@ lafe_atoi(const char *p)
 	return (v);
 }
 
+static const char opt_true[] = "1";
 static int
 use_option(struct lafe_options *lafe_opt, const char *opt, const char *val)
 {
+	time_t now;
+
 	switch (*opt) {
+	case 'a':
+		if (strcmp(opt, "atime") == 0 && val != NULL &&
+		    val != opt_true) {
+			lafe_opt->entry_set |= E_ATIME;
+			time(&now);
+			lafe_opt->atime = get_date(now, val);
+			if (lafe_opt->atime == (time_t)-1)
+				lafe_errc(1, 0, "invalid atime format");
+			return (0);
+		}
+		break;
+	case 'c':
+		if (strcmp(opt, "ctime") == 0 && val != NULL &&
+		    val != opt_true) {
+			lafe_opt->entry_set |= E_CTIME;
+			time(&now);
+			lafe_opt->ctime = get_date(now, val);
+			if (lafe_opt->ctime == (time_t)-1)
+				lafe_errc(1, 0, "invalid ctime format");
+			return (0);
+		}
+		break;
 	case 'g':
-		if (strcmp(opt, "gid") == 0 && val != NULL) {
+		if (strcmp(opt, "gid") == 0 && val != NULL &&
+		    val != opt_true) {
 			lafe_opt->entry_set |= E_GID;
 			lafe_opt->gid = lafe_atoi(val);
+			if (lafe_opt->gid < 0)
+				lafe_errc(1, 0, "gid must be positive");
 			return (0);
-		} else if (strcmp(opt, "gname") == 0 && val != NULL) {
+		} else if (strcmp(opt, "gname") == 0 &&
+		    val != NULL && val != opt_true) {
 			lafe_opt->entry_set |= E_GNAME;
 			lafe_opt->gname = strdup(val);
 			if (lafe_opt->gname == NULL)
@@ -860,7 +922,8 @@ use_option(struct lafe_options *lafe_opt, const char *opt, const char *val)
 		}
 		break;
 	case 'l':
-		if (strcmp(opt, "listopt") == 0 && val != NULL) {
+		if (strcmp(opt, "listopt") == 0 && val != NULL &&
+		    val != opt_true) {
 			char *np, *p = lafe_opt->listopt;
 			if (p != NULL) {
 				np = malloc(strlen(p) + strlen(val) +1);
@@ -877,12 +940,32 @@ use_option(struct lafe_options *lafe_opt, const char *opt, const char *val)
 			return (0);
 		}
 		break;
+	case 'm':
+		if (strcmp(opt, "mode") == 0 && val != NULL &&
+		    val != opt_true) {
+			lafe_opt->entry_set |= E_MODE;
+			lafe_opt->mode = (mode_t)(lafe_atol8(val) & 0777);
+			return (0);
+		} else if (strcmp(opt, "mtime") == 0 && val != NULL &&
+		    val != opt_true) {
+			lafe_opt->entry_set |= E_MTIME;
+			time(&now);
+			lafe_opt->mtime = get_date(now, val);
+			if (lafe_opt->mtime == (time_t)-1)
+				lafe_errc(1, 0, "invalid mtime format");
+			return (0);
+		}
+		break;
 	case 'u':
-		if (strcmp(opt, "uid") == 0 && val != NULL) {
+		if (strcmp(opt, "uid") == 0 && val != NULL &&
+		    val != opt_true) {
 			lafe_opt->entry_set |= E_UID;
 			lafe_opt->uid = lafe_atoi(val);
+			if (lafe_opt->uid < 0)
+				lafe_errc(1, 0, "uid must be positive");
 			return (0);
-		} else if (strcmp(opt, "uname") == 0 && val != NULL) {
+		} else if (strcmp(opt, "uname") == 0 && val != NULL &&
+		    val != opt_true) {
 			lafe_opt->entry_set |= E_UNAME;
 			lafe_opt->uname = strdup(val);
 			if (lafe_opt->uname == NULL)
@@ -903,7 +986,7 @@ parse_option(const char **s, const char **m, const char **o, const char **v)
 	end = NULL;
 	mod = NULL;
 	opt = *s;
-	val = "1";
+	val = opt_true;
 
 	p = strchr(opt, ',');
 
@@ -1154,12 +1237,28 @@ lafe_edit_entry(struct lafe_options *lafe_opt, struct archive_entry *e)
 	if (lafe_opt->entry_set == 0)
 		return;
 
-	if (lafe_opt->entry_set & E_UID)
+	if (lafe_opt->entry_set & E_UID) {
 		archive_entry_set_uid(e, lafe_opt->uid);
+		if ((lafe_opt->entry_set & E_UNAME) == 0)
+			archive_entry_set_uname(e, NULL);
+	}
 	if (lafe_opt->entry_set & E_UNAME)
 		archive_entry_set_uname(e, lafe_opt->uname);
-	if (lafe_opt->entry_set & E_GID)
+	if (lafe_opt->entry_set & E_GID) {
 		archive_entry_set_gid(e, lafe_opt->gid);
+		if ((lafe_opt->entry_set & E_GNAME) == 0)
+			archive_entry_set_gname(e, NULL);
+	}
 	if (lafe_opt->entry_set & E_GNAME)
 		archive_entry_set_gname(e, lafe_opt->gname);
+	if (lafe_opt->entry_set & E_ATIME)
+		archive_entry_set_atime(e, lafe_opt->atime, 0);
+	if (lafe_opt->entry_set & E_CTIME)
+		archive_entry_set_ctime(e, lafe_opt->ctime, 0);
+	if (lafe_opt->entry_set & E_MTIME)
+		archive_entry_set_mtime(e, lafe_opt->mtime, 0);
+	if (lafe_opt->entry_set & E_MODE) {
+		mode_t ft = archive_entry_filetype(e);
+		archive_entry_set_mode(e, ft | (lafe_opt->mode & ~AE_IFMT));
+	}
 }
