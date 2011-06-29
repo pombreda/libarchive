@@ -430,19 +430,24 @@ copy_file(struct bsdpax *bsdpax, struct archive *to,
 		archive_entry_set_size(t, 0);
 		r = archive_write_header(to, t);
 		archive_entry_free(t);
-		if (r != ARCHIVE_OK)
-			lafe_warnc(archive_errno(to),
+		if (r == ARCHIVE_FATAL) {
+			lafe_errc(1, archive_errno(to),
 			    "%s", archive_error_string(to));
-		if (r == ARCHIVE_FATAL)
-			exit(1);
+		}
 #ifdef EXDEV
 		if (r != ARCHIVE_OK && archive_errno(to) == EXDEV) {
 			/* Cross-device link:  Just fall through and use
-			 * the original entry to copy the file over. */
-			lafe_warnc(0, "Copying file instead");
+			 * the original entry to copy the file over without
+			 * an error message. */
+			archive_clear_error(to);
 		} else
 #endif
-		return;
+		{
+			if (r != ARCHIVE_OK)
+				lafe_warnc(archive_errno(to),
+				    "%s", archive_error_string(to));
+			return;
+		}
 	}
 	copy_entry(bsdpax, to, entry);
 }
