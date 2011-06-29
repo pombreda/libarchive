@@ -201,7 +201,7 @@ lafe_entry_fprintf(struct lafe_options *lafe_opt, FILE *f,
 
 	for (p = lafe_opt->listopt; *p != '\0'; p++) {
 		const char *_p, *tfmt, *str;
-		unsigned long v;
+		unsigned long v = 0;
 		enum {
 			P_NONE = 0,
 			P_PATHNAME,
