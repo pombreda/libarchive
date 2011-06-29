@@ -66,6 +66,7 @@ static struct {
 	{0, "test_read_format_cpio_bin_be.cpio"},
 	{0, "test_read_format_cpio_svr4_gzip_rpm.rpm"}, /* Test RPM unwrapper */
 	{0, "test_read_format_rar.rar"}, /* Uncompressed RAR test */
+	{0, "test_read_format_rar_noeof.rar"}, /* RAR with no EOF header */
 	{0, "test_read_format_rar_subblock.rar"}, /* RAR with subblocks */
 	{0, "test_read_format_gtar_sparse_1_17_posix10_modified.tar"},
 	{0, "test_read_format_mtree.mtree"},
@@ -88,7 +89,7 @@ DEFINE_TEST(test_fuzz)
 		struct archive *a;
 		char *rawimage, *image;
 		size_t size;
-		int i;
+		int i, q;
 
 		extract_reference_file(filename);
 		if (files[n].uncompress) {
@@ -135,7 +136,9 @@ DEFINE_TEST(test_fuzz)
 
 			/* Fuzz < 1% of the bytes in the archive. */
 			memcpy(image, rawimage, size);
-			numbytes = (int)(rand() % (size / 100));
+			q = size / 100;
+			if (!q) q = 1;
+			numbytes = (int)(rand() % q);
 			for (j = 0; j < numbytes; ++j)
 				image[rand() % size] = (char)rand();
 
