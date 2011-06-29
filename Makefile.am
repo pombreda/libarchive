@@ -523,6 +523,10 @@ libarchive_fe_la_SOURCES=			\
 	libarchive_fe/pathmatch.c		\
 	libarchive_fe/pathmatch.h
 
+libarchive_fe_la_CPPFLAGS=\
+	-I$(top_srcdir)/libarchive \
+	$(PLATFORMCPPFLAGS)
+
 #
 #
 # bsdtar source, docs, etc.
