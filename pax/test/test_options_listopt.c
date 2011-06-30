@@ -63,10 +63,10 @@ DEFINE_TEST(test_options_listopt)
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
-	/* Test3: with -v option and listopt.
+	/* Test3: with listopt.
 	 * Make bsdpax print only filenames. */
 	assertEqualInt(0, systemf(
-	    "%s -v --options listopt=%%F < %s >test.out 2>test.err",
+	    "%s -o listopt=%%F < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
 	failure("Output should be only a filename");
@@ -78,10 +78,10 @@ DEFINE_TEST(test_options_listopt)
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
-	/* Test4: with -v option and listopt.
+	/* Test4: with listopt.
 	 * Make bsdpax print a mode and a filename. */
 	assertEqualInt(0, systemf(
-	    "%s -v --options listopt=%%M%%F < %s >test.out 2>test.err",
+	    "%s -o listopt=%%M%%F < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
 	failure("Output should be only filenames");
@@ -97,10 +97,10 @@ DEFINE_TEST(test_options_listopt)
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
-	/* Test5: with -v option and listopt.
+	/* Test5: with listopt.
 	 * Make bsdpax print a date and a filename. */
 	assertEqualInt(0, systemf(
-	    "%s -v --options listopt=%%T_%%F < %s >test.out 2>test.err",
+	    "%s -o listopt=%%T_%%F < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
 	failure("Output should be only filenames");
@@ -116,10 +116,10 @@ DEFINE_TEST(test_options_listopt)
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
-	/* Test6: with -v option and listopt.
+	/* Test6: with listopt.
 	 * Make bsdpax print a date specified atime, and a filename . */
 	assertEqualInt(0, systemf(
-	    "%s -v --options listopt=%%\\(atime\\)T_%%F"
+	    "%s -o listopt=%%\\(atime\\)T_%%F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
@@ -136,10 +136,10 @@ DEFINE_TEST(test_options_listopt)
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
-	/* Test7: with -v option and listopt.
+	/* Test7: with listopt.
 	 * Make bsdpax print a date specified ctime, and a filename . */
 	assertEqualInt(0, systemf(
-	    "%s -v --options listopt=%%\\(ctime\\)T_%%F"
+	    "%s -o listopt=%%\\(ctime\\)T_%%F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
@@ -156,10 +156,10 @@ DEFINE_TEST(test_options_listopt)
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
-	/* Test8: with -v option and listopt.
+	/* Test8: with listopt.
 	 * Make bsdpax print a date specified mtime, and a filename . */
 	assertEqualInt(0, systemf(
-	    "%s -v --options listopt=%%\\(mtime\\)T_%%F"
+	    "%s -o listopt=%%\\(mtime\\)T_%%F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
@@ -176,11 +176,11 @@ DEFINE_TEST(test_options_listopt)
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
-	/* Test9: with -v option and listopt.
+	/* Test9: with listopt.
 	 * Make bsdpax print a date specified its time format
 	 * like "yyyy-mm-dd", and a filename . */
 	assertEqualInt(0, systemf(
-	    "%s -v --options listopt=%%\\(mtime=%%Y-%%m-%%d\\)T_%%F"
+	    "%s -o listopt=%%\\(mtime=%%Y-%%m-%%d\\)T_%%F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
@@ -197,11 +197,11 @@ DEFINE_TEST(test_options_listopt)
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
-	/* Test10: with -v option and listopt.
+	/* Test10: with listopt.
 	 * Make bsdpax print a date specified its time format
 	 * like "HH:MM", and a filename . */
 	assertEqualInt(0, systemf(
-	    "%s -v --options listopt=%%\\(mtime=%%H:%%M\\)T_%%F"
+	    "%s -o listopt=%%\\(mtime=%%H:%%M\\)T_%%F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
@@ -218,10 +218,10 @@ DEFINE_TEST(test_options_listopt)
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
-	/* Test11: with -v option and listopt.
+	/* Test11: with listopt.
 	 * Make bsdpax print a filename and a linkname. */
 	assertEqualInt(0, systemf(
-	    "%s -v --options listopt=%%L < %s >test.out 2>test.err",
+	    "%s -o listopt=%%L < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
 	failure("Output should be only a filename");
@@ -237,10 +237,10 @@ DEFINE_TEST(test_options_listopt)
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
-	/* Test12: with -v option and listopt.
+	/* Test12: with listopt.
 	 * Make bsdpax print a file size and a filename. */
 	assertEqualInt(0, systemf(
-	    "%s -v --options listopt=%%4\\(size\\)u%%10F"
+	    "%s -o listopt=%%4\\(size\\)u%%10F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
@@ -257,11 +257,11 @@ DEFINE_TEST(test_options_listopt)
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
-	/* Test13: with -v option and listopt.
+	/* Test13: with listopt.
 	 * Make bsdpax print a file size with zero-padding
 	 * and a filename in left alignment. */
 	assertEqualInt(0, systemf(
-	    "%s -v --options listopt=%%04\\(size\\)u%%-10F"
+	    "%s -o listopt=%%04\\(size\\)u%%-10F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
@@ -278,11 +278,11 @@ DEFINE_TEST(test_options_listopt)
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
 
-	/* Test14: with -v option and listopt.
+	/* Test14: with listopt.
 	 * Make bsdpax print a file size in hex and a mode in oct
 	 * and a filename. */
 	assertEqualInt(0, systemf(
-	    "%s -v --options listopt=%%04\\(size\\)x%%7\\(mode\\)o%%10F"
+	    "%s -o listopt=%%04\\(size\\)x%%7\\(mode\\)o%%10F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 

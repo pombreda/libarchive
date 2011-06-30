@@ -155,7 +155,7 @@ read_archive(struct bsdpax *bsdpax, char mode, struct archive *writer)
 	struct archive		 *a;
 	struct archive_entry	 *entry;
 	int			  r;
-	int			  rename = 0;
+	int			  listopt, rename = 0;
 
 	while (*bsdpax->argv) {
 		if (bsdpax->option_exclude)
@@ -198,6 +198,8 @@ read_archive(struct bsdpax *bsdpax, char mode, struct archive *writer)
 		    "chroot isn't supported on this platform");
 #endif
 	}
+
+	listopt = lafe_has_listopt(bsdpax->options);
 
 	for (;;) {
 		/* Support --fast-read option */
@@ -251,15 +253,15 @@ read_archive(struct bsdpax *bsdpax, char mode, struct archive *writer)
 			 * the unedited path in -t output, which means
 			 * you cannot easily preview rewrites.
 			 */
-			if (bsdpax->verbose < 2)
-				safe_fprintf(out, "%s",
-				    archive_entry_pathname(entry));
-			else if (lafe_has_listopt(bsdpax->options)) {
+			if (listopt) {
 				r = lafe_entry_fprintf(
 				    bsdpax->options, out, entry);
 				if (r != 0)
 					lafe_errc(1, 0,
 					    "listopt:invalid format string");
+			} else if (bsdpax->verbose < 2) {
+				safe_fprintf(out, "%s",
+				    archive_entry_pathname(entry));
 			} else
 				list_item_verbose(bsdpax, out, entry);
 			fflush(out);
