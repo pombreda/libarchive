@@ -24,7 +24,7 @@
 .\"
 .\" $FreeBSD$
 .\"
-.Dd Jan 14, 2011
+.Dd Jun 30, 2011
 .Dt BSDPAX 1
 .Os
 .Sh NAME
@@ -53,9 +53,9 @@
 .Sh DESCRIPTION
 .Nm
 copies files between archives and directories.
-This implementation can extract from tar, pax, cpio, zip, jar, ar,
-and ISO 9660 cdrom images and can create tar, pax, cpio, ar,
-and shar archives.
+This implementation can extract from tar, pax, cpio, zip, jar, xar, lha,
+ar, cab, mtree, and ISO 9660 cdrom images and can create tar, pax, cpio,
+zip, xar ar, ISO, mtree, and shar archives.
 .Bl -tag -width 6n
 .It <none>
 .Em List mode.
@@ -68,6 +68,7 @@ Extract to disk from stdin.
 Write archive contents to stdout.
 .It Fl r Fl w
 .Em Copy mode.
+Copy the file operands to the destination directory.
 .El
 .Pp
 .Sh OPTIONS
@@ -95,6 +96,8 @@ pax-format archive on stdout.
 In this way,
 .Nm
 can be used to convert archives from one format to another.
+.It Fl a
+Append files to the end of an archive that was previously written.
 .It Fl b Ar blocksize , Fl Fl block-size Ar blocksize
 Specify the block size, in 512-byte records, for tape drive I/O.
 As a rule, this argument is only needed when reading from or writing
@@ -283,6 +286,31 @@ Use
 .Ar type
 as compression method.
 Supported values are store (uncompressed) and deflate (gzip algorithm).
+.It Cm listopt Ns = Ns Ar format
+(list mode only)
+Specify the output format of archive contents.
+You can specified flags that can be used in printf.
+Following flags can be also specified:
+.Bl -tag -compact -width indent
+.It Cm \&%T
+The contents of its times is printed in the strftime style `\&%b \&%e  \&%Y'
+or `\&%b \&%e \&%H:\&%M'. You can specify
+.Fa subformat
+as strftime format in the style '\&%(mtime=subformat)T'.
+.It Cm \&%D
+The contents of its device number is printed in the style '\&%lu.\&%lu'.
+.It Cm \&%M
+The contents of its mode is printed in the style like 'ls -l'.
+.It Cm \&%F
+The contents of its pathname is printed.
+.It Cm \&%L
+The contents of its linkname is printed in the style `\&%s -> \&%s'.
+.El
+.It Ns Ar keyword Ns = Ns Ar value
+Overwrite archive contents by
+.Ar value
+Supported keywords include:
+.Cm atime , Cm ctime , Cm mtime, Cm mode , Cm gid , Cm gname , Cm uid , Cm uname .
 .El
 If a provided option is not supported by any module, that
 is a fatal error.
