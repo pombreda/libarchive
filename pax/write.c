@@ -223,9 +223,21 @@ pax_mode_write(struct bsdpax *bsdpax)
 			    bsdpax->create_compression);
 		}
 		if (r != ARCHIVE_OK) {
-			lafe_errc(1, 0,
-			    "Unsupported compression option -%c",
-			    bsdpax->create_compression);
+			const char *zname;
+			switch (bsdpax->create_compression) {
+			case OPTION_LZIP: zname = "lzip"; break;
+			case OPTION_LZMA: zname = "lzma"; break;
+			case OPTION_COMPRESS: zname = "compress"; break;
+			default: zname = NULL; break;
+			}
+			if (zname == NULL)
+				lafe_errc(1, 0,
+				    "Unsupported compression option -%c",
+				    bsdpax->create_compression);
+			else
+				lafe_errc(1, 0,
+				    "Unsupported compression option --%s",
+				    zname);
 		}
 	}
 
