@@ -40,7 +40,7 @@ DEFINE_TEST(test_option_j)
 	p = slurpfile(&s, "archive.err");
 	p[s] = '\0';
 	if (r != 0) {
-		if (strstr(p, "compression not available") != NULL) {
+		if (strstr(p, "Unsupported compression option") != NULL) {
 			skipping("This version of bsdpax was compiled "
 			    "without bzip2 support");
 			return;
