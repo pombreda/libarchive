@@ -320,9 +320,11 @@ main(int argc, char **argv)
 			for (arg = bsdpax->argument; *arg; arg++) {
 				switch (*arg) {
 				case 'a':
+					/* Do not preserve the atime. */
 					bsdpax->option_no_atime = 1;
 					break;
 				case 'e':
+					/* Preserve evertything. */
 					bsdpax->extract_flags |=
 					    ARCHIVE_EXTRACT_TIME;
 					bsdpax->extract_flags |=
@@ -339,19 +341,22 @@ main(int argc, char **argv)
 					bsdpax->option_no_mtime = 0;
 					break;
 				case 'm':
+					/* Do not preserve the mtime. */
 					bsdpax->option_no_mtime = 1;
 					break;
 				case 'o':
+					/* Preserve the user id and group id. */
 					bsdpax->extract_flags |=
 					    ARCHIVE_EXTRACT_OWNER;
 					break;
 				case 'p':
+					/* Preserve the file mode. */
 					bsdpax->extract_flags |=
 					    ARCHIVE_EXTRACT_PERM;
 					break;
 				default:
 					lafe_errc(1, 0,
-					    "'%c' is invalid character for -p",
+					    "'%c' is an invalid sub-option for -p",
 					    *arg);
 					break;
 				}
