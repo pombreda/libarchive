@@ -100,6 +100,7 @@ need_report(void)
 }
 #endif
 
+static void	 compression_conflict_error(struct bsdpax *, int compression);
 static void	 long_help(void);
 static void	 only_mode(struct bsdpax *, const char *opt, char valid);
 static void	 version(void);
@@ -246,9 +247,7 @@ main(int argc, char **argv)
 			break;
 		case OPTION_COMPRESS:
 			if (bsdpax->create_compression != '\0')
-				lafe_errc(1, 0,
-				    "Can't specify both -%c and -%c", opt,
-				    bsdpax->create_compression);
+				compression_conflict_error(bsdpax, opt);
 			bsdpax->create_compression = opt;
 			break;
 		case 'c':
@@ -290,9 +289,7 @@ main(int argc, char **argv)
 		case OPTION_LZIP:
 		case OPTION_LZMA:
 			if (bsdpax->create_compression != '\0')
-				lafe_errc(1, 0,
-				    "Can't specify both -%c and -%c", opt,
-				    bsdpax->create_compression);
+				compression_conflict_error(bsdpax, opt);
 			bsdpax->create_compression = opt;
 			break;
 		case 'k':
@@ -417,9 +414,7 @@ main(int argc, char **argv)
 			break;
 		case 'z':
 			if (bsdpax->create_compression != '\0')
-				lafe_errc(1, 0,
-				    "Can't specify both -%c and -%c", opt,
-				    bsdpax->create_compression);
+				compression_conflict_error(bsdpax, opt);
 			bsdpax->create_compression = opt;
 			break;
 		case OPTION_USE_COMPRESS_PROGRAM:
@@ -522,6 +517,40 @@ main(int argc, char **argv)
 		lafe_warnc(0,
 		    "Error exit delayed from previous errors.");
 	return (bsdpax->return_value);
+}
+
+static void
+compression_name(char *name, size_t name_size, int compression)
+{
+	switch (compression) {
+	case OPTION_COMPRESS:
+		strncpy(name, "--compress", name_size-1);
+		name[name_size-1] = '\0';
+		break;
+	case OPTION_LZIP:
+		strncpy(name, "--lzip", name_size-1);
+		name[name_size-1] = '\0';
+		break;
+	case OPTION_LZMA:
+		strncpy(name, "--lzma", name_size-1);
+		name[name_size-1] = '\0';
+		break;
+	case 'j':
+	case 'J':
+	case 'z':
+		name[0] = '-'; name[1] = compression; name[2] = '\0';
+		break;
+	}
+}
+
+static void
+compression_conflict_error(struct bsdpax *bsdpax, int compression)
+{
+	char name1[16], name2[16];
+
+	compression_name(name1, sizeof(name1), bsdpax->create_compression);
+	compression_name(name2, sizeof(name2), compression);
+	lafe_errc(1, 0, "Can't specify both %s and %s", name1, name2);
 }
 
 /*
