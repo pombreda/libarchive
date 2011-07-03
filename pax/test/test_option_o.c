@@ -25,6 +25,16 @@
 #include "test.h"
 __FBSDID("$FreeBSD$");
 
+#if defined(_WIN32) && !defined(__CYGWIN__)
+#define BSDPAX	"bsdpax.exe"
+#define LARC	"("
+#define RARC	")"
+#else
+#define BSDPAX	"bsdpax"
+#define LARC	"\\("
+#define RARC	"\\)"
+#endif
+
 DEFINE_TEST(test_option_o)
 {
 
@@ -42,15 +52,16 @@ DEFINE_TEST(test_option_o)
 	/* Test1: Check the explicit file attributes. */
 	assertEqualInt(0,
 	    systemf("%s -vf archive.pax "
-	 	" -o listopt=%%5\\(uid\\)d:%%8\\(uname\\)s:%%5\\(gid\\)d:"
-		            "%%8\\(gname\\)s:%%\\(mode\\)o:"
-			    "%%\\(mtime=%%Y-%%m-%%d\\)T"
+	 	" -o listopt=%%5" LARC "uid" RARC "d:%%8"
+		LARC "uname" RARC "s:%%5" LARC "gid" RARC "d:"
+		"%%8" LARC "gname" RARC "s:%%" LARC "mode" RARC "o:"
+		"%%" LARC "mtime=%%Y-%%m-%%d" RARC "T"
 		" > test1.out 2>test1.err", testprog));
 	assertTextFileContents(
 	    " 1010: testor1: 6554:    test:100666:1999-09-30\n",
 	    "test1.out");
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " 1 files,"
 	    " 3072 bytes read, 0 bytes written\n",
 	    "test1.err");
@@ -67,15 +78,16 @@ DEFINE_TEST(test_option_o)
 	/* Test3: Check the explicit file attributes. */
 	assertEqualInt(0,
 	    systemf("%s -vf archive2.pax "
-	 	" -o listopt=%%5\\(uid\\)d:%%8\\(uname\\)s:%%5\\(gid\\)d:"
-		            "%%8\\(gname\\)s:%%\\(mode\\)o:"
-			    "%%\\(mtime=%%Y-%%m-%%d\\)T"
+	 	" -o listopt=%%5" LARC "uid" RARC "d:%%8"
+		LARC "uname" RARC "s:%%5" LARC "gid" RARC "d:"
+		"%%8" LARC "gname" RARC "s:%%" LARC "mode" RARC "o:"
+		"%%" LARC "mtime=%%Y-%%m-%%d" RARC "T"
 		" > test1.out 2>test1.err", testprog));
 	assertTextFileContents(
 	    " 1021:  user99:  777:    user:100600:2004-11-21\n",
 	    "test1.out");
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " 1 files,"
 	    " 3072 bytes read, 0 bytes written\n",
 	    "test1.err");
@@ -89,7 +101,7 @@ DEFINE_TEST(test_option_o)
 		" > test4.out 2>test4.err", testprog));
 	assertEmptyFile("test4.out");
 	assertTextFileContents(
-	    "file1\nbsdpax: POSIX pax interchange format,"
+	    "file1\n" BSDPAX ": POSIX pax interchange format,"
 	    " 1 files,"
 	    " 3072 bytes read, 0 bytes written\n",
 	    "test4.err");
