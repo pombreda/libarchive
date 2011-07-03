@@ -402,6 +402,7 @@ copy_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 	}
 	archive_entry_free(entry);
 	archive_read_close(disk);
+	free(bsdpax->destpath);
 
 	return (rename);
 }
