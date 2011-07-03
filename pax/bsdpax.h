@@ -128,7 +128,7 @@ struct bsdpax {
 	char			*buff;		/* for write.c */
 	size_t			 buff_size;	/* for write.c */
 	char			*destpath;	/* for copy.c */
-	size_t			 destpath_size;	/* for write.c */
+	size_t			 destpath_size;	/* for copy.c */
 	struct lafe_matching	*matching;	/* for matching.c */
 	struct security		*security;	/* for read.c */
 	struct name_cache	*uname_cache;	/* for write.c */
