@@ -94,11 +94,6 @@ __FBSDID("$FreeBSD$");
 #include "err.h"
 #include "line_reader.h"
 
-#ifndef O_BINARY
-#define	O_BINARY 0
-#endif
-
-
 static void		 copy_entry(struct bsdpax *, struct archive *,
 			     struct archive_entry *);
 static void		 copy_disk(struct archive *, struct bsdpax *);
@@ -109,12 +104,6 @@ static int		 copy_file_data_block(struct bsdpax *, struct archive *,
 static int		 copy_hierarchy(struct bsdpax *, struct archive *,
 			     const char *);
 static char *		 make_destpath(struct bsdpax *, const char *);
-
-#if defined(_WIN32) && !defined(__CYGWIN__)
-#define	open _open
-#define	close _close
-#define	read _read
-#endif
 
 void
 pax_mode_copy(struct bsdpax *bsdpax)

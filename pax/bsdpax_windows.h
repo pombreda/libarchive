@@ -27,12 +27,8 @@
 
 #ifndef BSDPAX_WINDOWS_H
 #define	BSDPAX_WINDOWS_H 1
-#include <direct.h>
 #include <windows.h>
 
-#ifndef PRId64
-#define	PRId64 "I64"
-#endif
 #define	geteuid()	0
 
 #ifndef S_IFIFO

@@ -67,6 +67,10 @@ __FBSDID("$FreeBSD$");
 #include "getdate.h"
 #include "options.h"
 
+#if defined(_WIN32) && !defined(__CYGWIN__)
+#define strdup(_s)	_strdup(_s)
+#endif
+
 struct lafe_options {
 	char		*options;
 	char		*listopt;
@@ -225,12 +229,12 @@ lafe_entry_fprintf(struct lafe_options *lafe_opt, FILE *f,
 			P_INO,
 		} property = P_NONE;
 		int flag = 0;
-#define ALTERNATE_FORM	1
-#define LEFT_ADJUST	(1<<1)
-#define SIGN_PLACED	(1<<2)
-#define BLANK		(1<<3)
-#define ZERO_PADDING	(1<<4)
-#define SET_WIDTH	(1<<5)
+#define FL_ALTERNATE_FORM	1
+#define FL_LEFT_ADJUST	(1<<1)
+#define FL_SIGN_PLACED	(1<<2)
+#define FL_BLANK		(1<<3)
+#define FL_ZERO_PADDING	(1<<4)
+#define FL_SET_WIDTH	(1<<5)
 
 		if (*p == '\\') {
 			switch (p[1]) {
@@ -263,23 +267,23 @@ lafe_entry_fprintf(struct lafe_options *lafe_opt, FILE *f,
 			_p = p;
 			switch (*p) {
 			case '#':
-				flag |= ALTERNATE_FORM;
+				flag |= FL_ALTERNATE_FORM;
 				*fs++ = *p++;
 				break;
 			case '-':
-				flag |= LEFT_ADJUST;
+				flag |= FL_LEFT_ADJUST;
 				*fs++ = *p++;
 				break;
 			case '+':
-				flag |= SIGN_PLACED;
+				flag |= FL_SIGN_PLACED;
 				*fs++ = *p++;
 				break;
 			case ' ':
-				flag |= BLANK;
+				flag |= FL_BLANK;
 				*fs++ = *p++;
 				break;
 			case '0':
-				flag |= ZERO_PADDING;
+				flag |= FL_ZERO_PADDING;
 				*fs++ = *p++;
 				break;
 			default:
@@ -293,7 +297,7 @@ lafe_entry_fprintf(struct lafe_options *lafe_opt, FILE *f,
 		 * Read a field width.
 		 */
 		if (*p >= '0' && *p <= '9') {
-			flag |= SET_WIDTH;
+			flag |= FL_SET_WIDTH;
 			*fs++ = *p++;
 			while (*p >= '0' && *p <= '9') {
 				if (fs >= fe)
@@ -306,7 +310,7 @@ lafe_entry_fprintf(struct lafe_options *lafe_opt, FILE *f,
 		 * Read a precision.
 		 */
 		if (*p == '.') {
-			flag |= SET_WIDTH;
+			flag |= FL_SET_WIDTH;
 			*fs++ = *p++;
 			while (*p >= '0' && *p <= '9') {
 				if (fs >= fe)

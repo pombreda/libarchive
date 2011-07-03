@@ -25,6 +25,10 @@
 #include "test.h"
 __FBSDID("$FreeBSD$");
 
+#if defined(_WIN32) && !defined(__CYGWIN__)
+#define setenv(_name, _value, f)	_putenv_s(_name, _value)
+#endif
+
 DEFINE_TEST(test_options_listopt)
 {
 	const char *reffile1 = "test_options_listopt.pax.Z";

@@ -163,7 +163,6 @@ seek_file(int fd, int64_t offset, int whence)
 }
 #define	open _open
 #define	close _close
-#define	read _read
 #define	lseek seek_file
 #endif
 
