@@ -203,6 +203,9 @@ copy_disk(struct archive *a, struct bsdpax *bsdpax)
 	archive_read_free(bsdpax->diskenough);
 	archive_read_free(bsdpax->diskreader);
 	bsdpax->diskreader = NULL;
+	free(bsdpax->destpath);
+	bsdpax->destpath = NULL;
+	bsdpax->destpath_size = 0;
 
 	archive_write_free(a);
 }
@@ -391,7 +394,6 @@ copy_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 	}
 	archive_entry_free(entry);
 	archive_read_close(disk);
-	free(bsdpax->destpath);
 
 	return (rename);
 }
