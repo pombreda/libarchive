@@ -108,7 +108,7 @@ static int		 copy_file_data_block(struct bsdpax *, struct archive *,
 			     struct archive_entry *);
 static int		 copy_hierarchy(struct bsdpax *, struct archive *,
 			     const char *);
-static char *		 destpath(struct bsdpax *, const char *);
+static char *		 make_destpath(struct bsdpax *, const char *);
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #define	open _open
@@ -280,7 +280,7 @@ copy_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 		 * which has the same name. (-u, -D option.)
 		 */
 		if (!disk_new_enough(bsdpax,
-		      destpath(bsdpax, archive_entry_pathname(entry)),
+		      make_destpath(bsdpax, archive_entry_pathname(entry)),
 		      entry, 0))
 			continue;
 
@@ -365,7 +365,7 @@ copy_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 		 * has the same name. (-Z, -Y option.)
 		 */
 		if (!disk_new_enough(bsdpax,
-		      destpath(bsdpax, archive_entry_pathname(entry)),
+		      make_destpath(bsdpax, archive_entry_pathname(entry)),
 		      entry, 1))
 			continue;
 		archive_entry_copy_pathname(entry, bsdpax->destpath);
@@ -515,19 +515,24 @@ copy_file_data_block(struct bsdpax *bsdpax, struct archive *a,
 	return (0);
 }
 
+/*
+ * Make a destination path from the destination directory and
+ * a source path.
+ */
 static char *
-destpath(struct bsdpax *bsdpax, const char *path)
+make_destpath(struct bsdpax *bsdpax, const char *path)
 {
 	size_t len = strlen(path);
 	size_t size = bsdpax->destdir_len + 1 + len + 1;
 
+	/* Make sure we have enough buffer to copy a destination path. */
 	if (bsdpax->destpath_size < size) {
 		free(bsdpax->destpath);
 		size = ((size + 1023) / 1024) * 1024;
 		bsdpax->destpath = malloc(size);
 		if (bsdpax->destpath == NULL)
 			lafe_errc(1, ENOMEM,
-			    "Failed to make dist filename");
+			    "Failed to make a dist filename by no memory");
 		bsdpax->destpath_size = size;
 	}
 
