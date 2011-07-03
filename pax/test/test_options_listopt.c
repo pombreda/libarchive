@@ -27,6 +27,13 @@ __FBSDID("$FreeBSD$");
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #define setenv(_name, _value, f)	_putenv_s(_name, _value)
+#define BSDPAX	"bsdpax.exe"
+#define LARC	"("
+#define RARC	")"
+#else
+#define BSDPAX	"bsdpax"
+#define LARC	"\\("
+#define RARC	"\\)"
 #endif
 
 DEFINE_TEST(test_options_listopt)
@@ -43,7 +50,7 @@ DEFINE_TEST(test_options_listopt)
 	assertTextFileContents("file1\nhardlink1\noldfile\nsymlink1\n",
 	    "test.out");
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
@@ -55,14 +62,23 @@ DEFINE_TEST(test_options_listopt)
 	    "%s -v < %s >test.out 2>test.err", testprog, reffile1));
 
 	failure("Output should be default value");
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	assertTextFileContents(
+"-rw-r--r--  0 cue    cue        17 6 23 14:07 file1\n"
+"hrw-r--r--  0 cue    cue         0 6 23 14:07 hardlink1 link to file1\n"
+"-rw-r--r--  0 cue    cue         4 1 01  1980 oldfile\n"
+"lrwxr-xr-x  0 cue    cue         0 6 23 14:08 symlink1 -> file1\n",
+	    "test.out");
+#else
 	assertTextFileContents(
 "-rw-r--r--  0 cue    cue        17 Jun 23 14:07 file1\n"
 "hrw-r--r--  0 cue    cue         0 Jun 23 14:07 hardlink1 link to file1\n"
 "-rw-r--r--  0 cue    cue         4 Jan  1  1980 oldfile\n"
 "lrwxr-xr-x  0 cue    cue         0 Jun 23 14:08 symlink1 -> file1\n",
 	    "test.out");
+#endif
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
@@ -77,7 +93,7 @@ DEFINE_TEST(test_options_listopt)
 	assertTextFileContents("file1\nhardlink1\noldfile\nsymlink1\n",
 	    "test.out");
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
@@ -96,7 +112,7 @@ DEFINE_TEST(test_options_listopt)
 	    "lrwxr-xr-x symlink1\n",
 	    "test.out");
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
@@ -108,14 +124,23 @@ DEFINE_TEST(test_options_listopt)
 	    testprog, reffile1));
 
 	failure("Output should be only filenames");
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	assertTextFileContents(
+	    "6 23 14:07_file1\n"
+	    "6 23 14:07_hardlink1\n"
+	    "1 01  1980_oldfile\n"
+	    "6 23 14:08_symlink1\n",
+	    "test.out");
+#else
 	assertTextFileContents(
 	    "Jun 23 14:07_file1\n"
 	    "Jun 23 14:07_hardlink1\n"
 	    "Jan  1  1980_oldfile\n"
 	    "Jun 23 14:08_symlink1\n",
 	    "test.out");
+#endif
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
@@ -123,19 +148,28 @@ DEFINE_TEST(test_options_listopt)
 	/* Test6: with listopt.
 	 * Make bsdpax print a date specified atime, and a filename . */
 	assertEqualInt(0, systemf(
-	    "%s -o listopt=%%\\(atime\\)T_%%F"
+	    "%s -o listopt=%%" LARC "atime" RARC "T_%%F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
 	failure("Output should be only filenames");
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	assertTextFileContents(
+	    "6 26 06:30_file1\n"
+	    "6 26 06:32_hardlink1\n"
+	    "6 26 06:30_oldfile\n"
+	    "6 23 14:08_symlink1\n",
+	    "test.out");
+#else
 	assertTextFileContents(
 	    "Jun 26 06:30_file1\n"
 	    "Jun 26 06:32_hardlink1\n"
 	    "Jun 26 06:30_oldfile\n"
 	    "Jun 23 14:08_symlink1\n",
 	    "test.out");
+#endif
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
@@ -143,19 +177,28 @@ DEFINE_TEST(test_options_listopt)
 	/* Test7: with listopt.
 	 * Make bsdpax print a date specified ctime, and a filename . */
 	assertEqualInt(0, systemf(
-	    "%s -o listopt=%%\\(ctime\\)T_%%F"
+	    "%s -o listopt=%%" LARC "ctime" RARC "T_%%F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
 	failure("Output should be only filenames");
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	assertTextFileContents(
+	    "6 23 14:08_file1\n"
+	    "6 23 14:08_hardlink1\n"
+	    "6 23 14:09_oldfile\n"
+	    "6 23 14:08_symlink1\n",
+	    "test.out");
+#else
 	assertTextFileContents(
 	    "Jun 23 14:08_file1\n"
 	    "Jun 23 14:08_hardlink1\n"
 	    "Jun 23 14:09_oldfile\n"
 	    "Jun 23 14:08_symlink1\n",
 	    "test.out");
+#endif
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
@@ -163,19 +206,28 @@ DEFINE_TEST(test_options_listopt)
 	/* Test8: with listopt.
 	 * Make bsdpax print a date specified mtime, and a filename . */
 	assertEqualInt(0, systemf(
-	    "%s -o listopt=%%\\(mtime\\)T_%%F"
+	    "%s -o listopt=%%" LARC "mtime" RARC "T_%%F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
 	failure("Output should be only filenames");
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	assertTextFileContents(
+	    "6 23 14:07_file1\n"
+	    "6 23 14:07_hardlink1\n"
+	    "1 01  1980_oldfile\n"
+	    "6 23 14:08_symlink1\n",
+	    "test.out");
+#else
 	assertTextFileContents(
 	    "Jun 23 14:07_file1\n"
 	    "Jun 23 14:07_hardlink1\n"
 	    "Jan  1  1980_oldfile\n"
 	    "Jun 23 14:08_symlink1\n",
 	    "test.out");
+#endif
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
@@ -184,7 +236,7 @@ DEFINE_TEST(test_options_listopt)
 	 * Make bsdpax print a date specified its time format
 	 * like "yyyy-mm-dd", and a filename . */
 	assertEqualInt(0, systemf(
-	    "%s -o listopt=%%\\(mtime=%%Y-%%m-%%d\\)T_%%F"
+	    "%s -o listopt=%%" LARC "mtime=%%Y-%%m-%%d" RARC "T_%%F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
@@ -196,7 +248,7 @@ DEFINE_TEST(test_options_listopt)
 	    "2011-06-23_symlink1\n",
 	    "test.out");
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
@@ -205,7 +257,7 @@ DEFINE_TEST(test_options_listopt)
 	 * Make bsdpax print a date specified its time format
 	 * like "HH:MM", and a filename . */
 	assertEqualInt(0, systemf(
-	    "%s -o listopt=%%\\(mtime=%%H:%%M\\)T_%%F"
+	    "%s -o listopt=%%" LARC "mtime=%%H:%%M" RARC "T_%%F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
@@ -217,7 +269,7 @@ DEFINE_TEST(test_options_listopt)
 	    "14:08_symlink1\n",
 	    "test.out");
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
@@ -236,7 +288,7 @@ DEFINE_TEST(test_options_listopt)
 	    "symlink1 -> file1\n",
 	    "test.out");
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
@@ -244,7 +296,7 @@ DEFINE_TEST(test_options_listopt)
 	/* Test12: with listopt.
 	 * Make bsdpax print a file size and a filename. */
 	assertEqualInt(0, systemf(
-	    "%s -o listopt=%%4\\(size\\)u%%10F"
+	    "%s -o listopt=%%4" LARC "size" RARC "u%%10F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
@@ -256,7 +308,7 @@ DEFINE_TEST(test_options_listopt)
 	    "   0  symlink1\n",
 	    "test.out");
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
@@ -265,7 +317,7 @@ DEFINE_TEST(test_options_listopt)
 	 * Make bsdpax print a file size with zero-padding
 	 * and a filename in left alignment. */
 	assertEqualInt(0, systemf(
-	    "%s -o listopt=%%04\\(size\\)u%%-10F"
+	    "%s -o listopt=%%04" LARC "size" RARC "u%%-10F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
@@ -277,7 +329,7 @@ DEFINE_TEST(test_options_listopt)
 	    "0000symlink1  \n",
 	    "test.out");
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
@@ -286,7 +338,8 @@ DEFINE_TEST(test_options_listopt)
 	 * Make bsdpax print a file size in hex and a mode in oct
 	 * and a filename. */
 	assertEqualInt(0, systemf(
-	    "%s -o listopt=%%04\\(size\\)x%%7\\(mode\\)o%%10F"
+	    "%s -o listopt=%%04" LARC "size" RARC "x%%7"
+	    LARC "mode" RARC "o%%10F"
 	    " < %s >test.out 2>test.err",
 	    testprog, reffile1));
 
@@ -298,7 +351,7 @@ DEFINE_TEST(test_options_listopt)
 	    "0000 120755  symlink1\n",
 	    "test.out");
 	assertTextFileContents(
-	    "bsdpax: POSIX pax interchange format,"
+	    BSDPAX ": POSIX pax interchange format,"
 	    " compress (.Z) filters, 4 files,"
 	    " 8192 bytes read, 0 bytes written\n",
 	    "test.err");
