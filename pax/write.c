@@ -105,7 +105,6 @@ __FBSDID("$FreeBSD$");
 static const char * const NO_NAME = "(noname)";
 
 struct archive_dir_entry {
-	struct archive_dir_entry	*next;
 	time_t			 mtime_sec;
 	int			 mtime_nsec;
 	time_t			 ctime_sec;
@@ -114,7 +113,9 @@ struct archive_dir_entry {
 };
 
 struct archive_dir {
-	struct archive_dir_entry *head, *tail;
+	struct archive_dir_entry *list;
+	int			 allocated_size;
+	int			 size;
 };
 
 struct name_cache {
@@ -135,6 +136,12 @@ static int		 append_archive_filename(struct bsdpax *,
 			     struct archive *, const char *fname);
 static int		 copy_file_data_block(struct bsdpax *, struct archive *,
 			     struct archive *, struct archive_entry *);
+static struct archive_dir_entry *find_dir_entry(struct archive_dir *,
+			    const char *);
+static void		 free_dir_list(struct archive_dir *);
+static struct archive_dir_entry *get_dir_entry(struct archive_dir *,
+			    const char *);
+static void		 init_dir_list(struct archive_dir *);
 static int		 new_enough_mtime(struct bsdpax *,
 			     struct archive_entry *entry);
 static int		 new_enough_ctime(struct bsdpax *,
@@ -253,12 +260,11 @@ pax_mode_append(struct bsdpax *bsdpax)
 	struct archive		*a;
 	struct archive_entry	*entry;
 	int			 format;
-	struct archive_dir_entry	*p;
 	struct archive_dir	 archive_dir;
 	char			 need_list;
 
 	bsdpax->archive_dir = &archive_dir;
-	memset(&archive_dir, 0, sizeof(archive_dir));
+	init_dir_list(&archive_dir);
 
 	format = ARCHIVE_FORMAT_TAR_PAX_RESTRICTED;
 
@@ -323,13 +329,8 @@ pax_mode_append(struct bsdpax *bsdpax)
 	close(bsdpax->fd);
 	bsdpax->fd = -1;
 
-	while (bsdpax->archive_dir->head != NULL) {
-		p = bsdpax->archive_dir->head->next;
-		free(bsdpax->archive_dir->head->name);
-		free(bsdpax->archive_dir->head);
-		bsdpax->archive_dir->head = p;
-	}
-	bsdpax->archive_dir->tail = NULL;
+	free_dir_list(&archive_dir);
+	bsdpax->archive_dir = NULL;
 }
 
 /*
@@ -908,12 +909,8 @@ new_enough_mtime(struct bsdpax *bsdpax, struct archive_entry *entry)
 	 * what was already in the archive.
 	 */
 	if (bsdpax->archive_dir != NULL &&
-	    bsdpax->archive_dir->head != NULL) {
-		for (p = bsdpax->archive_dir->head; p != NULL; p = p->next) {
-			if (pathcmp(path, p->name)==0)
-				return (p->mtime_sec < archive_entry_mtime(entry));
-		}
-	}
+	    (p = find_dir_entry(bsdpax->archive_dir, path)) != NULL)
+		return (p->mtime_sec < archive_entry_mtime(entry));
 
 	/* If the file wasn't rejected, include it. */
 	return (1);
@@ -930,66 +927,134 @@ new_enough_ctime(struct bsdpax *bsdpax, struct archive_entry *entry)
 	 * what was already in the archive.
 	 */
 	if (bsdpax->archive_dir != NULL &&
-	    bsdpax->archive_dir->head != NULL) {
-		for (p = bsdpax->archive_dir->head; p != NULL; p = p->next) {
-			if (pathcmp(path, p->name)==0)
-				return (p->ctime_sec < archive_entry_ctime(entry));
-		}
-	}
+	    (p = find_dir_entry(bsdpax->archive_dir, path)) != NULL)
+		return (p->ctime_sec < archive_entry_ctime(entry));
 
 	/* If the file wasn't rejected, include it. */
 	return (1);
 }
 
 /*
- * Add an entry to the dir list for 'u' mode.
- *
- * XXX TODO: Make this fast.
+ * Add an entry to the entry list for 'a' mode.
  */
 static void
 add_dir_list(struct bsdpax *bsdpax, struct archive_entry *entry)
 {
 	struct archive_dir_entry	*p;
 	const char *path = archive_entry_pathname(entry);
-	time_t mtime_sec = archive_entry_mtime(entry);
-	int mtime_nsec = archive_entry_mtime_nsec(entry);
-	time_t ctime_sec = archive_entry_ctime(entry);
-	int ctime_nsec = archive_entry_ctime_nsec(entry);
 
 	/*
 	 * Search entire list to see if this file has appeared before.
 	 * If it has, override the timestamp data.
 	 */
-	p = bsdpax->archive_dir->head;
-	while (p != NULL) {
-		if (strcmp(path, p->name)==0) {
-			p->mtime_sec = mtime_sec;
-			p->mtime_nsec = mtime_nsec;
-			p->ctime_sec = ctime_sec;
-			p->ctime_nsec = ctime_nsec;
-			return;
-		}
-		p = p->next;
+	p = get_dir_entry(bsdpax->archive_dir, path);
+	if (p->name == NULL) {
+		p->name = strdup(path);
+		if (p->name == NULL)
+			lafe_errc(1, ENOMEM, "Cannot allocate memory");
+	}
+	p->mtime_sec = archive_entry_mtime(entry);
+	p->mtime_nsec = archive_entry_mtime_nsec(entry);
+	p->ctime_sec = archive_entry_ctime(entry);
+	p->ctime_nsec = archive_entry_ctime_nsec(entry);
+}
+
+static void
+init_dir_list(struct archive_dir *adir)
+{
+	memset(adir, 0, sizeof(struct archive_dir));
+}
+
+static void
+free_dir_list(struct archive_dir *adir)
+{
+	free(adir->list);
+}
+
+static struct archive_dir_entry *
+find_dir_entry(struct archive_dir *adir, const char *name)
+{
+	int t, m, n, b;
+
+	t = 0;
+	b = adir->size-1;
+	while (b >= t) {
+		m = (t + b) / 2;
+		n = strcmp(adir->list[m].name, name);
+		if (n < 0)
+			t = m + 1;
+		else if (n > 0)
+			b = m - 1;
+		else
+			return (&(adir->list[m]));
+	}
+	return (NULL);
+}
+
+static struct archive_dir_entry *
+get_dir_entry(struct archive_dir *adir, const char *name)
+{
+	int t, m, n, b;
+
+	t = 0;
+	b = adir->size -1;
+	while (b >= t) {
+		m = (t + b) / 2;
+		n = strcmp(adir->list[m].name, name);
+		if (n < 0)
+			t = m + 1;
+		else if (n > 0)
+			b = m - 1;
+		else
+			return (&(adir->list[m]));
 	}
 
-	p = malloc(sizeof(*p));
-	if (p == NULL)
-		lafe_errc(1, ENOMEM, "Can't read archive directory");
-
-	p->name = strdup(path);
-	if (p->name == NULL)
-		lafe_errc(1, ENOMEM, "Can't read archive directory");
-	p->mtime_sec = mtime_sec;
-	p->mtime_nsec = mtime_nsec;
-	p->ctime_sec = ctime_sec;
-	p->ctime_nsec = ctime_nsec;
-	p->next = NULL;
-	if (bsdpax->archive_dir->tail == NULL) {
-		bsdpax->archive_dir->head = bsdpax->archive_dir->tail = p;
-	} else {
-		bsdpax->archive_dir->tail->next = p;
-		bsdpax->archive_dir->tail = p;
+	/*
+	 * Initial allocating memory for archive_dir_entry.
+	 */
+	if (adir->allocated_size <= 0) {
+		adir->list = malloc(32 * sizeof(struct archive_dir_entry));
+		if (adir->list == NULL)
+			lafe_errc(1, ENOMEM, "Cannot allocate memory");
+		adir->allocated_size = 32;
+		adir->size = 1;
+		/* Always return the first entry of archive_dir_entry list. */
+		return (&(adir->list[0]));
 	}
+
+	/*
+	 * If atrchive_dir does not have enough list size, expand the list size.
+	 */
+	if (adir->allocated_size < adir->size + 1) {
+		adir->list = realloc(adir->list, adir->allocated_size * 2 *
+		    sizeof(struct archive_dir_entry));
+		if (adir->list == NULL)
+			lafe_errc(1, ENOMEM, "Cannot allocate memory");
+	}
+
+	/*
+	 * Find out the insert point.
+	 */
+	t --;
+	if (t < 0)
+		t = 0;
+	b ++;
+	if (b >= adir->size)
+		b = adir->size -1;
+	for (m = t; m <= b; m++) {
+		if (strcmp(adir->list[m].name, name) > 0)
+			break;
+	}
+
+	/*
+	 * Shift following archive_dir_entry list for new one.
+	 */
+	if (m < adir->size)
+		memmove(&(adir->list[m+1]), &(adir->list[m]),
+		    (adir->size - m) * sizeof(struct archive_dir_entry));
+	adir->list[m].name = NULL;
+	adir->size ++;
+	return (&(adir->list[m]));
 }
 
 static void
