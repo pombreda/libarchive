@@ -374,6 +374,9 @@ main(int argc, char **argv)
 			usage();
 #endif
 			break;
+		case OPTION_STRIP_COMPONENTS:
+			bsdpax->strip_components = atoi(bsdpax->argument);
+			break;
 		case 'T':
 			parse_option_T(bsdpax, now, bsdpax->argument);
 			break;

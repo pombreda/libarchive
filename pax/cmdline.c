@@ -90,6 +90,7 @@ static const struct bsdpax_option {
 	{ "null",			0, OPTION_NULL },
 	{ "one-file-system",		0, 'X' },
 	{ "options",			1, 'o' },
+	{ "strip-components",		1, OPTION_STRIP_COMPONENTS },
 	{ "uncompress",			0, OPTION_COMPRESS },
 	{ "use-compress-program",	1, OPTION_USE_COMPRESS_PROGRAM },
 	{ "verbose",			0, 'v' },

@@ -674,13 +674,6 @@ write_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 #endif
 
 		/*
-		 * Rewrite the pathname to be archived.  If rewrite
-		 * fails, skip the entry.
-		 */
-		if (edit_pathname(bsdpax, entry))
-			continue;
-
-		/*
 		 * If the user vetoes this file/directory, skip it.
 		 * We want this to be fairly late; if some other
 		 * check would veto this file, we shouldn't bother
@@ -692,6 +685,17 @@ write_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 				break; /* Do not add the following entries. */
 			else if (rename == 0)
 				continue;/* Skip this entry. */
+		}
+
+		/*
+		 * Rewrite the pathname to be archived.  If rewrite
+		 * fails, skip the entry.
+		 */
+		if (edit_pathname(bsdpax, entry)) {
+			/* Note: if user vetoes, we won't descend. */
+			if (!bsdpax->option_no_subdirs)
+				archive_read_disk_descend(disk);
+			continue;
 		}
 
 		/*

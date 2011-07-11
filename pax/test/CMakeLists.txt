@@ -34,6 +34,7 @@ IF(ENABLE_PAX AND ENABLE_TEST)
     test_option_u.c
     test_option_z.c
     test_options_listopt.c
+    test_strip_components.c
     test_version.c
   )
   IF(WIN32 AND NOT CYGWIN)

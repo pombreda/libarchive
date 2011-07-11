@@ -860,6 +860,7 @@ bsdpax_test_SOURCES=						\
 	pax/test/test_option_u.c				\
 	pax/test/test_option_z.c				\
 	pax/test/test_options_listopt.c				\
+	pax/test/test_strip_components.c			\
 	pax/test/test_version.c
 
 bsdpax_test_CPPFLAGS= \
