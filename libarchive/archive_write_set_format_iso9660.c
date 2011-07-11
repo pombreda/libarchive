@@ -987,7 +987,6 @@ static int	isoent_cmp_key(const struct archive_rb_node *,
 static int	isoent_add_child_head(struct isoent *, struct isoent *);
 static int	isoent_add_child_tail(struct isoent *, struct isoent *);
 static void	isoent_remove_child(struct isoent *, struct isoent *);
-static void	isoent_trim_root_directory(struct iso9660 *);
 static void	isoent_setup_directory_location(struct iso9660 *,
 		    int, struct vdd *);
 static void	isoent_setup_file_location(struct iso9660 *, int);
@@ -1557,6 +1556,17 @@ iso9660_write_header(struct archive_write *a, struct archive_entry *entry)
 	}
 	else if (r < ret)
 		ret = r;
+
+	/*
+	 * Ignore a path which looks like the top of directory name
+	 * since we have already made the root directory of an ISO image.
+	 */
+	if (archive_strlen(&(file->parentdir)) == 0 &&
+	    archive_strlen(&(file->basename)) == 0) {
+		isofile_free(file);
+		return (r);
+	}
+
 	isofile_add_entry(iso9660, file);
 	isoent = isoent_new(file);
 	if (isoent == NULL) {
@@ -1645,14 +1655,19 @@ wb_write_to_temp(struct archive_write *a, const void *buff, size_t s)
 	size_t xs = s;
 
 	/*
-	 * If written data size is big enough to system-call
+	 * If a written data size is big enough to use system-call
 	 * and there is no waiting data, this calls write_to_temp() in
 	 * order to reduce a extra memory copy.
 	 */
 	if (wb_remaining(a) == wb_buffmax() && s > (1024 * 16)) {
 		struct iso9660 *iso9660 = (struct iso9660 *)a->format_data;
-		iso9660->wbuff_offset += s;
-		return (write_to_temp(a, buff, s));
+		xs = s % LOGICAL_BLOCK_SIZE;
+		iso9660->wbuff_offset += s - xs;
+		if (write_to_temp(a, buff, s - xs) != ARCHIVE_OK)
+			return (ARCHIVE_FATAL);
+		if (xs == 0)
+			return (ARCHIVE_OK);
+		xp += s - xs;
 	}
 
 	while (xs) {
@@ -1848,7 +1863,6 @@ iso9660_close(struct archive_write *a)
 	if (iso9660->birth_time == 0)
 #endif
 		time(&(iso9660->birth_time));
-	isoent_trim_root_directory(iso9660);
 
 	/*
 	 * Prepare a bootable ISO image.
@@ -4802,22 +4816,24 @@ isofile_gen_utility_names(struct archive_write *a, struct isofile *file)
 	len = file->parentdir.length;
 	p = dirname = file->parentdir.s;
 
-	if (p[0] == '/') {
-		p++;
-		len--;
-	}
 	/*
-	 * Remove leading '../' and './' elements
+	 * Remove leading '/', '../' and './' elements
 	 */
 	while (*p) {
-		if (p[0] != '.')
+		if (p[0] == '/') {
+			p++;
+			len--;
+		} else if (p[0] != '.')
 			break;
-		if (p[1] == '.' && p[2] == '/') {
+		else if (p[1] == '.' && p[2] == '/') {
 			p += 3;
 			len -= 3;
-		} else if (p[1] == '/') {
+		} else if (p[1] == '/' || (p[1] == '.' && p[2] == '\0')) {
 			p += 2;
 			len -= 2;
+		} else if (p[1] == '\0') {
+			p++;
+			len--;
 		} else
 			break;
 	}
@@ -5255,31 +5271,6 @@ isoent_remove_child(struct isoent *parent, struct isoent *child)
 
 	__archive_rb_tree_remove_node(&(parent->rbtree),
 	    (struct archive_rb_node *)child);
-}
-
-/*
- * Trim extra directories.
- * If the root directory is a virtual directory and has one sub-directory
- * only, the sub-direcotry become a new root directory.
- */
-static void
-isoent_trim_root_directory(struct iso9660 *iso9660)
-{
-	struct isoent *rootent, *child;
-
-	rootent = iso9660->primary.rootent;
-	while (rootent->virtual) {
-		if (rootent->children.cnt != 1)
-			break;
-		child = rootent->children.first;
-		if (child->dir) {
-			_isoent_free(rootent);
-			iso9660->primary.rootent = rootent = child;
-			rootent->parent = rootent;
-			iso9660->dircnt_max--;
-		} else
-			break;
-	}
 }
 
 static int
