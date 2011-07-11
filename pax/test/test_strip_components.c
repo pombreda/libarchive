@@ -143,4 +143,41 @@ DEFINE_TEST(test_strip_components)
 	assertFileNotExists("target/l2");
 	failure("d0/d1/d2/f1 is a hardlink to file whose name was too short");
 	assertFileNotExists("target/d2/f1");
+
+	/*
+	 * Test 3: Strip components when copying directories.
+	 */
+	assertMakeDir("target3", 0755);
+	if (canSymlink())
+		assertEqualInt(0,
+		    systemf("%s --strip-components 2 -rw "
+			    "d0/l1 d0/s1 d0/d1 target3", testprog));
+	else
+		assertEqualInt(0,
+		    systemf("%s --strip-components 2 -rw "
+			    "d0/l1 d0/d1 target3", testprog));
+
+	failure("d0/ is too short and should not have been copied");
+	assertFileNotExists("target3/d0");
+	failure("d0/d1/ is too short and should not have been copied");
+	assertFileNotExists("target3/d1");
+	failure("d0/s1 is too short and should not get restored");
+	assertFileNotExists("target/s1");
+	/* If platform supports symlinks, target/s2 is included. */
+	if (canSymlink()) {
+		failure("d0/d1/s2 is a symlink to something copied together");
+		assertIsSymlink("target3/s2", "d2/f1");
+	}
+	failure("d0/d1/d2 should be archived");
+	assertIsDir("target3/d2", -1);
+
+	/*
+	 * Test 3b: Strip components creating archives involving hardlinks.
+	 */
+	failure("d0/l1 is too short and should not have been copied");
+	assertFileNotExists("target/l1");
+	failure("d0/d1/l2 is a hardlink to file whose name was too short");
+	assertFileNotExists("target/l2");
+	failure("d0/d1/d2/f1 is a hardlink to file whose name was too short");
+	assertFileNotExists("target/d2/f1");
 }
