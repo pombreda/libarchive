@@ -24,7 +24,7 @@
 .\"
 .\" $FreeBSD$
 .\"
-.Dd Jun 30, 2011
+.Dd Jul 12, 2011
 .Dt BSDPAX 1
 .Os
 .Sh NAME
@@ -115,8 +115,9 @@ Note that, unlike other
 .Nm pax
 implementations, this implementation recognizes compress compression
 automatically when reading archives.
-.It Fl D
-(Need description.)
+.It Fl D , Fl Fl keep-newer-ctime-files
+Do not overwrite existing files unless files and directories are newer than.
+This compares ctime entries before any pathname modifications.
 .It Fl d , Fl Fl norecurse , Fl Fl no-recursion
 (w and rw mode only)
 Do not recursively archive the contents of directories.
@@ -373,8 +374,9 @@ Multiple
 .Fl U
 options may be supplied.
 (Need more description.)
-.It Fl u
-(Need description.)
+.It Fl u , Fl Fl keep-newer-mtime-files
+Do not overwrite existing files unless files and directories are newer than.
+This compares ctime entries before any pathname modifications.
 .It Fl Fl use-compress-program Ar program
 Pipe the input (in r mode) or the output (in w mode) through
 .Pa program
@@ -415,10 +417,14 @@ Other formats may also be supported; see
 for more information about currently-supported formats.
 In r and u modes, when extending an existing archive, the format specified
 here must be compatible with the format of the existing archive on disk.
-.It Fl Y
-(Need description.)
-.It Fl Z
-(Need description.)
+.It Fl Y , Fl Fl keep-newer-ctime-files2
+Like
+.Fl Fl keep-newer-ctime-files
+, except this is checked after all the pathname modifications have completed.
+.It Fl Z , Fl Fl keep-newer-mtime-files2
+Like
+.Fl Fl keep-newer-mtime-files
+, except this is checked after all the pathname modifications have completed.
 .It Fl z , Fl Fl gunzip , Fl Fl gzip
 (w mode only)
 Compress the resulting archive with
