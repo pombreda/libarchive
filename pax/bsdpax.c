@@ -468,6 +468,9 @@ main(int argc, char **argv)
 		only_mode(bsdpax, "-x", PAXMODE_WRITE);
 	if (bsdpax->extract_flags & ARCHIVE_EXTRACT_NO_OVERWRITE)
 		only_mode(bsdpax, "-k", PAXMODE_READ | PAXMODE_COPY);
+	if (bsdpax->filename != NULL)
+		only_mode(bsdpax, "-f",
+		    PAXMODE_READ | PAXMODE_WRITE | PAXMODE_LIST);
 
 	/* Filename "-" implies stdio. */
 	if (bsdpax->filename != NULL && strcmp(bsdpax->filename, "-") == 0)
