@@ -32,9 +32,6 @@ __FBSDID("$FreeBSD$");
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
-#ifdef HAVE_LANGINFO_H
-#include <langinfo.h>
-#endif
 #include <stdio.h>
 #ifdef HAVE_STDARG_H
 #include <stdarg.h>
@@ -74,8 +71,6 @@ __FBSDID("$FreeBSD$");
 struct lafe_options {
 	char		*options;
 	char		*listopt;
-	const char	*tfmt_recent;
-	const char	*tfmt_default;
 	time_t		 now;
 
 	unsigned	 entry_set;
@@ -110,26 +105,6 @@ lafe_init_options(struct lafe_options **lafe_opt)
 	*lafe_opt = calloc(1, sizeof(struct lafe_options));
 	if (lafe_opt == NULL)
 		lafe_errc(1, errno, "Out of memory");
-
-#if defined(_WIN32) && !defined(__CYGWIN__)
-#define DAY_FMT  "%d"  /* Windows' strftime function does not support %e format. */
-#else
-#define DAY_FMT  "%e"  /* Day number without leading zeros */
-#endif
-
-#if defined(HAVE_NL_LANGINFO) && defined(D_MD_ORDER)
-	if ((*nl_langinfo(D_MD_ORDER) == 'd')) {
-		(*lafe_opt)->tfmt_recent = DAY_FMT "%b %H:%M";
-		(*lafe_opt)->tfmt_default = DAY_FMT "%b  %Y";
-	} else {
-		(*lafe_opt)->tfmt_recent = "%b " DAY_FMT " %H:%M";
-		(*lafe_opt)->tfmt_default = "%b " DAY_FMT "  %Y";
-	}
-#else
-	(*lafe_opt)->tfmt_recent = "%b " DAY_FMT " %H:%M";
-	(*lafe_opt)->tfmt_default = "%b " DAY_FMT "  %Y";
-#endif
-
 }
 
 void
@@ -498,12 +473,13 @@ lafe_entry_fprintf(struct lafe_options *lafe_opt, FILE *f,
 				/* Use a time format specified. */
 				tfmt = subfmt;
 			else {
-				/* Use the default time-format. */
-				if (t < lafe_opt->now - HALF_YEAR ||
-				    t > lafe_opt->now + HALF_YEAR)
-					tfmt = lafe_opt->tfmt_default;
-				else
-					tfmt = lafe_opt->tfmt_recent;
+				/* Use the default time format. */
+#if defined(_WIN32) && !defined(__CYGWIN__)
+#define DAY_FMT  "%d"  /* Windows' strftime function does not support %e format. */
+#else
+#define DAY_FMT  "%e"  /* Day number without leading zeros */
+#endif
+				tfmt = "%b " DAY_FMT " %H:%M %Y";
 			}
 
 			strftime(tmp, sizeof(tmp), tfmt, localtime(&t));

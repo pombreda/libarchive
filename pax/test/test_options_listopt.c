@@ -126,17 +126,17 @@ DEFINE_TEST(test_options_listopt)
 	failure("Output should be only filenames");
 #if defined(_WIN32) && !defined(__CYGWIN__)
 	assertTextFileContents(
-	    "6 23 14:07_file1\n"
-	    "6 23 14:07_hardlink1\n"
-	    "1 01  1980_oldfile\n"
-	    "6 23 14:08_symlink1\n",
+	    "6 23 14:07 2011_file1\n"
+	    "6 23 14:07 2011_hardlink1\n"
+	    "1 01 01:01 1980_oldfile\n"
+	    "6 23 14:08 2011_symlink1\n",
 	    "test.out");
 #else
 	assertTextFileContents(
-	    "Jun 23 14:07_file1\n"
-	    "Jun 23 14:07_hardlink1\n"
-	    "Jan  1  1980_oldfile\n"
-	    "Jun 23 14:08_symlink1\n",
+	    "Jun 23 14:07 2011_file1\n"
+	    "Jun 23 14:07 2011_hardlink1\n"
+	    "Jan  1 01:01 1980_oldfile\n"
+	    "Jun 23 14:08 2011_symlink1\n",
 	    "test.out");
 #endif
 	assertTextFileContents(
@@ -155,17 +155,17 @@ DEFINE_TEST(test_options_listopt)
 	failure("Output should be only filenames");
 #if defined(_WIN32) && !defined(__CYGWIN__)
 	assertTextFileContents(
-	    "6 26 06:30_file1\n"
-	    "6 26 06:32_hardlink1\n"
-	    "6 26 06:30_oldfile\n"
-	    "6 23 14:08_symlink1\n",
+	    "6 26 06:30 2011_file1\n"
+	    "6 26 06:32 2011_hardlink1\n"
+	    "6 26 06:30 2011_oldfile\n"
+	    "6 23 14:08 2011_symlink1\n",
 	    "test.out");
 #else
 	assertTextFileContents(
-	    "Jun 26 06:30_file1\n"
-	    "Jun 26 06:32_hardlink1\n"
-	    "Jun 26 06:30_oldfile\n"
-	    "Jun 23 14:08_symlink1\n",
+	    "Jun 26 06:30 2011_file1\n"
+	    "Jun 26 06:32 2011_hardlink1\n"
+	    "Jun 26 06:30 2011_oldfile\n"
+	    "Jun 23 14:08 2011_symlink1\n",
 	    "test.out");
 #endif
 	assertTextFileContents(
@@ -184,17 +184,17 @@ DEFINE_TEST(test_options_listopt)
 	failure("Output should be only filenames");
 #if defined(_WIN32) && !defined(__CYGWIN__)
 	assertTextFileContents(
-	    "6 23 14:08_file1\n"
-	    "6 23 14:08_hardlink1\n"
-	    "6 23 14:09_oldfile\n"
-	    "6 23 14:08_symlink1\n",
+	    "6 23 14:08 2011_file1\n"
+	    "6 23 14:08 2011_hardlink1\n"
+	    "6 23 14:09 2011_oldfile\n"
+	    "6 23 14:08 2011_symlink1\n",
 	    "test.out");
 #else
 	assertTextFileContents(
-	    "Jun 23 14:08_file1\n"
-	    "Jun 23 14:08_hardlink1\n"
-	    "Jun 23 14:09_oldfile\n"
-	    "Jun 23 14:08_symlink1\n",
+	    "Jun 23 14:08 2011_file1\n"
+	    "Jun 23 14:08 2011_hardlink1\n"
+	    "Jun 23 14:09 2011_oldfile\n"
+	    "Jun 23 14:08 2011_symlink1\n",
 	    "test.out");
 #endif
 	assertTextFileContents(
@@ -213,17 +213,17 @@ DEFINE_TEST(test_options_listopt)
 	failure("Output should be only filenames");
 #if defined(_WIN32) && !defined(__CYGWIN__)
 	assertTextFileContents(
-	    "6 23 14:07_file1\n"
-	    "6 23 14:07_hardlink1\n"
-	    "1 01  1980_oldfile\n"
-	    "6 23 14:08_symlink1\n",
+	    "6 23 14:07 2011_file1\n"
+	    "6 23 14:07 2011_hardlink1\n"
+	    "1 01 01:01 1980_oldfile\n"
+	    "6 23 14:08 2011_symlink1\n",
 	    "test.out");
 #else
 	assertTextFileContents(
-	    "Jun 23 14:07_file1\n"
-	    "Jun 23 14:07_hardlink1\n"
-	    "Jan  1  1980_oldfile\n"
-	    "Jun 23 14:08_symlink1\n",
+	    "Jun 23 14:07 2011_file1\n"
+	    "Jun 23 14:07 2011_hardlink1\n"
+	    "Jan  1 01:01 1980_oldfile\n"
+	    "Jun 23 14:08 2011_symlink1\n",
 	    "test.out");
 #endif
 	assertTextFileContents(
