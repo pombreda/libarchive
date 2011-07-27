@@ -71,7 +71,6 @@ __FBSDID("$FreeBSD$");
 struct lafe_options {
 	char		*options;
 	char		*listopt;
-	time_t		 now;
 
 	unsigned	 entry_set;
 #define E_UID		1U
@@ -174,9 +173,6 @@ lafe_entry_fprintf(struct lafe_options *lafe_opt, FILE *f,
 	char tmp[100];
 	char *fs, *fe;
 	time_t t;
-
-	if (!lafe_opt->now)
-		time(&lafe_opt->now);
 
 	for (p = lafe_opt->listopt; *p != '\0'; p++) {
 		const char *_p, *tfmt, *str;
