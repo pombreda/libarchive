@@ -375,7 +375,13 @@ main(int argc, char **argv)
 #endif
 			break;
 		case OPTION_STRIP_COMPONENTS:
-			bsdpax->strip_components = atoi(bsdpax->argument);
+			errno = 0;
+			bsdpax->strip_components = strtol(bsdpax->argument,
+			    NULL, 0);
+			if (errno)
+				lafe_errc(1, 0,
+				    "Invalid --strip-components argument: %s",
+				    bsdpax->argument);
 			break;
 		case 'T':
 			parse_option_T(bsdpax, now, bsdpax->argument);
