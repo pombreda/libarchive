@@ -10,6 +10,7 @@
 #cmakedefine HAVE_INT64_T
 #cmakedefine HAVE_INTMAX_T
 
+#cmakedefine HAVE_UINT8_T
 #cmakedefine HAVE_UINT16_T
 #cmakedefine HAVE_UINT32_T
 #cmakedefine HAVE_UINT64_T
@@ -154,9 +155,23 @@ typedef unsigned short uint16_t;
 #error No 16-bit unsigned integer type was found.
 #endif
 
+/*
+ * Similarly for uint8_t
+ */
+#if !defined(HAVE_UINT8_T)
+typedef unsigned char uint8_t;
+#define HAVE_UINT8_T
+#endif
+
+#if !defined(HAVE_UINT16_T)
+#error No 8-bit unsigned integer type was found.
+#endif
+
 /* Define intmax_t and uintmax_t if they are not already defined. */
 #if !defined(HAVE_INTMAX_T)
 typedef int64_t intmax_t;
+#define INTMAX_MIN INT64_MIN
+#define INTMAX_MAX INT64_MAX
 #endif
 
 #if !defined(HAVE_UINTMAX_T)
@@ -371,6 +386,9 @@ typedef uint64_t uintmax_t;
 
 /* A possible errno value for invalid file format errors */
 #cmakedefine HAVE_EILSEQ 1
+
+/* Define to 1 if you have the <endian.h> header file. */
+#cmakedefine HAVE_ENDIAN_H 1
 
 /* Define to 1 if you have the <errno.h> header file. */
 #cmakedefine HAVE_ERRNO_H 1
@@ -797,6 +815,9 @@ typedef uint64_t uintmax_t;
 
 /* Define to 1 if you have the <sys/ea.h> header file. */
 #cmakedefine HAVE_SYS_EA_H 1
+
+/* Define to 1 if you have the <sys/endian.h> header file. */
+#cmakedefine HAVE_SYS_ENDIAN_H 1
 
 /* Define to 1 if you have the <sys/extattr.h> header file. */
 #cmakedefine HAVE_SYS_EXTATTR_H 1

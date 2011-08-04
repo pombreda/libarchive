@@ -60,11 +60,14 @@ append_uint(struct archive_string *as, uintmax_t d, unsigned base)
 static void
 append_int(struct archive_string *as, intmax_t d, unsigned base)
 {
+	uintmax_t ud;
+
 	if (d < 0) {
 		archive_strappend_char(as, '-');
-		d = -d;
-	}
-	append_uint(as, d, base);
+		ud = (d == INTMAX_MIN) ? (uintmax_t)(INTMAX_MAX) + 1 : -d;
+	} else
+		ud = d;
+	append_uint(as, ud, base);
 }
 
 
@@ -141,16 +144,22 @@ archive_string_vsprintf(struct archive_string *as, const char *fmt,
 			switch(long_flag) {
 			case 'l':
 				pw = va_arg(ap, wchar_t *);
+				if (pw == NULL)
+					pw = L"(null)";
 				archive_string_append_from_wcs(as, pw, wcslen(pw));
 				break;
 			default:
 				p2 = va_arg(ap, char *);
+				if (p2 == NULL)
+					p2 = "(null)";
 				archive_strcat(as, p2);
 				break;
 			}
 			break;
 		case 'S':
 			pw = va_arg(ap, wchar_t *);
+			if (pw == NULL)
+				pw = L"(null)";
 			archive_string_append_from_wcs(as, pw, wcslen(pw));
 			break;
 		case 'o': case 'u': case 'x': case 'X':

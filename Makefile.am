@@ -278,6 +278,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_compat_mac.c			\
 	libarchive/test/test_compat_pax_libarchive_2x.c		\
 	libarchive/test/test_compat_solaris_tar_acl.c		\
+	libarchive/test/test_compat_solaris_pax_sparse.c	\
 	libarchive/test/test_compat_tar_hardlink.c		\
 	libarchive/test/test_compat_xz.c			\
 	libarchive/test/test_compat_zip.c			\
@@ -432,6 +433,8 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_compat_mac_gnutar.tar.Z.uu			\
 	libarchive/test/test_compat_pax_libarchive_2x.tar.Z.uu		\
 	libarchive/test/test_compat_solaris_tar_acl.tar.uu		\
+	libarchive/test/test_compat_solaris_pax_sparse_1.pax.Z.uu	\
+	libarchive/test/test_compat_solaris_pax_sparse_2.pax.Z.uu	\
 	libarchive/test/test_compat_tar_hardlink_1.tar.uu		\
 	libarchive/test/test_compat_xz_1.txz.uu				\
 	libarchive/test/test_compat_zip_1.zip.uu			\
@@ -486,8 +489,11 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_read_format_mtree.mtree.uu			\
 	libarchive/test/test_read_format_mtree_nomagic.mtree.uu		\
 	libarchive/test/test_read_format_rar.rar.uu			\
+	libarchive/test/test_read_format_rar_compress_normal.rar.uu	\
+	libarchive/test/test_read_format_rar_multi_lzss_blocks.rar.uu	\
 	libarchive/test/test_read_format_rar_noeof.rar.uu		\
 	libarchive/test/test_read_format_rar_subblock.rar.uu		\
+	libarchive/test/test_read_format_rar_unicode.rar.uu		\
 	libarchive/test/test_read_format_raw.data.Z.uu			\
 	libarchive/test/test_read_format_raw.data.uu			\
 	libarchive/test/test_read_format_tar_empty_filename.tar.uu	\

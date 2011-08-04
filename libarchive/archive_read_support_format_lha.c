@@ -25,8 +25,14 @@
 
 #include "archive_platform.h"
 
+#ifdef HAVE_SYS_ENDIAN_H
+#include <sys/endian.h>
+#endif
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
+#endif
+#ifdef HAVE_ENDIAN_H
+#include <endian.h>
 #endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -90,7 +96,7 @@ struct lzh_dec {
 	/*
 	 * Bit stream reader.
 	 */
-	struct {
+	struct lzh_br {
 #define CACHE_TYPE		uint64_t
 #define CACHE_BITS		(8 * sizeof(CACHE_TYPE))
 	 	/* Cache buffer. */
@@ -108,16 +114,24 @@ struct lzh_dec {
 		int		 len_bits;
 		int		 freq[17];
 		unsigned char	*bitlen;
-		short		*skip;
 
 		/*
-		 * Use a index table. It's faster than traversing huffman
-		 * coding tree, which is a binary tree.
-		 * TODO: Reduce the memory used for the index table.
+		 * Use a index table. It's faster than searching a huffman
+		 * coding tree, which is a binary tree. But a use of a large
+		 * index table causes L1 cache read miss many times.
 		 */
+#define HTBL_BITS	10
 		int		 max_bits;
 		int		 tbl_bits;
+		int		 tree_used;
+		int		 tree_avail;
+		/* Direct access table. */
 		uint16_t	*tbl;
+		/* Binary tree table for extra bits over the direct access. */
+		struct htree_t {
+			uint16_t left;
+			uint16_t right;
+		}		*tree;
 	}			 lt, pt;
 
 	int			 blocks_avail;
@@ -128,6 +142,7 @@ struct lzh_dec {
 	int			 reading_position;
 	int			 loop;
 	int			 error;
+	uint16_t		 crc16;
 };
 
 struct lzh_stream {
@@ -273,13 +288,16 @@ static int	lha_read_data_lzh(struct archive_read *, const void **,
 static uint16_t lha_crc16(uint16_t, const void *, size_t);
 static int	lzh_decode_init(struct lzh_stream *, const char *);
 static void	lzh_decode_free(struct lzh_stream *);
+static uint16_t lzh_crc16(struct lzh_stream *);
 static int	lzh_decode(struct lzh_stream *, int);
-static int	lzh_br_fillup(struct lzh_stream *);
-static int	lzh_huffman_init(struct huffman *, size_t, int, int);
+static int	lzh_br_fillup(struct lzh_stream *, struct lzh_br *);
+static int	lzh_huffman_init(struct huffman *, size_t, int);
 static void	lzh_huffman_free(struct huffman *);
 static int	lzh_read_pt_bitlen(struct lzh_stream *, int start, int end);
 static int	lzh_make_fake_table(struct huffman *, uint16_t);
 static int	lzh_make_huffman_table(struct huffman *);
+static int inline lzh_decode_huffman(struct huffman *, unsigned);
+static int	lzh_decode_huffman_tree(struct huffman *, unsigned, int);
 
 
 int
@@ -1532,8 +1550,7 @@ lha_read_data_lzh(struct archive_read *a, const void **buff,
 		*offset = lha->entry_offset;
 		*size = lha->strm.next_out - lha->uncompressed_buffer;
 		*buff = lha->uncompressed_buffer;
-		lha->entry_crc_calculated = lha_crc16(
-		    lha->entry_crc_calculated, lha->uncompressed_buffer, *size);
+		lha->entry_crc_calculated = lzh_crc16(&(lha->strm));
 		lha->entry_offset += *size;
 	} else {
 		*offset = lha->entry_offset;
@@ -1674,13 +1691,47 @@ lha_calcsum(unsigned char sum, const void *pp, int offset, int size)
 	return (sum);
 }
 
+#define CRC16(crc, v)	do {	\
+	(crc) = crc16tbl[((crc) ^ v) & 0xFF] ^ ((crc) >> 8);	\
+} while (0)
+
 static uint16_t
 lha_crc16(uint16_t crc, const void *pp, size_t len)
 {
 	const unsigned char *buff = (const unsigned char *)pp;
 
-	while (len-- > 0)
-		crc = crc16tbl[(crc ^ (*buff++)) & 0xFF] ^ (crc >> 8);
+	while (len >= 8) {
+		CRC16(crc, *buff++); CRC16(crc, *buff++);
+		CRC16(crc, *buff++); CRC16(crc, *buff++);
+		CRC16(crc, *buff++); CRC16(crc, *buff++);
+		CRC16(crc, *buff++); CRC16(crc, *buff++);
+		len -= 8;
+	}
+	switch (len) {
+	case 7:
+		CRC16(crc, *buff++);
+		/* FALL THROUGH */
+	case 6:
+		CRC16(crc, *buff++);
+		/* FALL THROUGH */
+	case 5:
+		CRC16(crc, *buff++);
+		/* FALL THROUGH */
+	case 4:
+		CRC16(crc, *buff++);
+		/* FALL THROUGH */
+	case 3:
+		CRC16(crc, *buff++);
+		/* FALL THROUGH */
+	case 2:
+		CRC16(crc, *buff++);
+		/* FALL THROUGH */
+	case 1:
+		CRC16(crc, *buff++);
+		/* FALL THROUGH */
+	case 0:
+		break;
+	}
 	return (crc);
 }
 
@@ -1732,6 +1783,7 @@ lzh_decode_init(struct lzh_stream *strm, const char *method)
 			return (ARCHIVE_FATAL);
 	}
 	memset(ds->w_buff, 0x20, ds->w_size);
+	ds->crc16 = 0;
 	ds->w_pos = 0;
 	ds->state = 0;
 	ds->pos_pt_len_size = w_bits + 1;
@@ -1741,11 +1793,11 @@ lzh_decode_init(struct lzh_stream *strm, const char *method)
 	ds->br.cache_buffer = 0;
 	ds->br.cache_avail = 0;
 
-	if (lzh_huffman_init(&(ds->lt), LT_BITLEN_SIZE, 16, 0)
+	if (lzh_huffman_init(&(ds->lt), LT_BITLEN_SIZE, 16)
 	    != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 	ds->lt.len_bits = 9;
-	if (lzh_huffman_init(&(ds->pt), PT_BITLEN_SIZE, 12, 1)
+	if (lzh_huffman_init(&(ds->pt), PT_BITLEN_SIZE, 12)
 	    != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 	ds->error = 0;
@@ -1769,29 +1821,40 @@ lzh_decode_free(struct lzh_stream *strm)
 	strm->ds = NULL;
 }
 
+static uint16_t
+lzh_crc16(struct lzh_stream *strm)
+{
+
+	if (strm->ds == NULL)
+		return (0);
+	return (strm->ds->crc16);
+}
+
+
 /*
  * Bit stream reader.
  */
 /* Check that the cache buffer has enough bits. */
-#define lzh_br_has(strm, n)	((strm)->ds->br.cache_avail >= n)
+#define lzh_br_has(br, n)	((br)->cache_avail >= n)
 /* Get compressed data by bit. */
-#define lzh_br_bits(strm, n)				\
-	(((uint16_t)((strm)->ds->br.cache_buffer >>	\
-		((strm)->ds->br.cache_avail - (n)))) & cache_masks[n])
-#define lzh_br_bits_forced(strm, n)			\
-	(((uint16_t)((strm)->ds->br.cache_buffer <<	\
-		((n) - (strm)->ds->br.cache_avail))) & cache_masks[n])
+#define lzh_br_bits(br, n)				\
+	(((uint16_t)((br)->cache_buffer >>		\
+		((br)->cache_avail - (n)))) & cache_masks[n])
+#define lzh_br_bits_forced(br, n)			\
+	(((uint16_t)((br)->cache_buffer <<		\
+		((n) - (br)->cache_avail))) & cache_masks[n])
 /* Read ahead to make sure the cache buffer has enough compressed data we
  * will use.
  *  True  : completed, there is enough data in the cache buffer.
  *  False : we met that strm->next_in is empty, we have to get following
  *          bytes. */
-#define lzh_br_read_ahead(strm, n)	\
-	(lzh_br_has((strm), (n)) || lzh_br_fillup(strm))
+#define lzh_br_read_ahead(strm, br, n)	\
+	(lzh_br_has(br, (n)) || lzh_br_fillup(strm, br))
 /* Notify how man bits we consumed. */
-#define lzh_br_consume(strm, n)	((strm)->ds->br.cache_avail -= (n))
+#define lzh_br_consume(br, n)	((br)->cache_avail -= (n))
+#define lzh_br_unconsume(br, n)	((br)->cache_avail += (n))
 
-static uint16_t cache_masks[] = {
+static const uint16_t cache_masks[] = {
 	0x0000, 0x0001, 0x0003, 0x0007,
 	0x000F, 0x001F, 0x003F, 0x007F,
 	0x00FF, 0x01FF, 0x03FF, 0x07FF,
@@ -1807,55 +1870,103 @@ static uint16_t cache_masks[] = {
  * Returns 0 if the cache buffer is not full; input buffer is empty.
  */
 static int
-lzh_br_fillup(struct lzh_stream *strm)
+lzh_br_fillup(struct lzh_stream *strm, struct lzh_br *br)
 {
-	struct lzh_dec *ds = strm->ds;
-	int n = CACHE_BITS - ds->br.cache_avail;
+/*
+ * x86 proccessor family can read misaligned data without an access error.
+ */
+#if defined(__i386__) || (defined(_MSC_VER) && defined(_M_IX86)) 
+#  if defined(_WIN32) && !defined(__CYGWIN__)
+#    define lzh_be16dec(p) _byteswap_ushort(*(const uint16_t *)(p))
+#  elif defined(be16toh)
+#    define lzh_be16dec(p) be16toh(*(const uint16_t *)(p))
+#  elif defined(betoh16)
+#    define lzh_be16dec(p) betoh16(*(const uint16_t *)(p))
+#  else
+#    define lzh_be16dec	archive_be16dec
+#  endif
+#  if defined(_WIN32) && !defined(__CYGWIN__)
+#    define lzh_be32dec(p) _byteswap_ulong(*(const uint32_t *)(p))
+#  elif defined(be32toh)
+#    define lzh_be32dec(p) be32toh(*(const uint32_t *)(p))
+#  elif defined(betoh32)
+#    define lzh_be32dec(p) betoh32(*(const uint32_t *)(p))
+#  else
+#    define lzh_be32dec	archive_be32dec
+#  endif
+#  if defined(_WIN32) && !defined(__CYGWIN__)
+#    define lzh_be64dec(p) _byteswap_uint64(*(const uint64_t *)(p))
+#  elif defined(be64toh)
+#    define lzh_be64dec(p) be64toh(*(const uint64_t *)(p))
+#  elif defined(betoh64)
+#    define lzh_be64dec(p) betoh64(*(const uint64_t *)(p))
+#  else
+#    define lzh_be64dec	archive_be64dec
+#  endif
+#else
+#  define lzh_be16dec	archive_be16dec
+#  define lzh_be32dec	archive_be32dec
+#  define lzh_be64dec	archive_be64dec
+#endif
+	int n = CACHE_BITS - br->cache_avail;
 
-	while (n >= 8) {
+	for (;;) {
+		switch (n >> 3) {
+		case 8:
+			if (strm->avail_in >= 8) {
+				br->cache_buffer =
+				    lzh_be64dec(strm->next_in);
+				strm->next_in += 8;
+				strm->avail_in -= 8;
+				br->cache_avail += 8 * 8;
+				return (1);
+			}
+			break;
+		case 7:
+			if (strm->avail_in >= 8) {/* Read extra one. */
+				br->cache_buffer =
+		 		   (br->cache_buffer << 56) |
+				    lzh_be64dec(strm->next_in) >> 8;
+				strm->next_in += 7;
+				strm->avail_in -= 7;
+				br->cache_avail += 7 * 8;
+				return (1);
+			}
+			break;
+		case 6:
+			if (strm->avail_in >= 6) {
+				br->cache_buffer =
+		 		   (br->cache_buffer << 48) |
+				   (((uint64_t)lzh_be32dec(
+				       strm->next_in)) << 16) |
+				    lzh_be16dec(&strm->next_in[4]);
+				strm->next_in += 6;
+				strm->avail_in -= 6;
+				br->cache_avail += 6 * 8;
+				return (1);
+			}
+			break;
+		case 0:
+			/* We have enough compressed data in
+			 * the cache buffer.*/ 
+			return (1);
+		default:
+			break;
+		}
 		if (strm->avail_in == 0) {
 			/* There is not enough compressed data to fill up the
 			 * cache buffer. */
 			return (0);
-		} else if (strm->avail_in >= 8) {
-			int bytes;
-			switch (bytes = (n >> 3)) {
-			case 8:
-				ds->br.cache_buffer =
-				    archive_be64dec(strm->next_in);
-				break;
-			case 7:
-				ds->br.cache_buffer =
-		 		   (ds->br.cache_buffer << 56) |
-				    archive_be64dec(strm->next_in) >> 8;
-				break;
-			case 6:
-				ds->br.cache_buffer =
-		 		   (ds->br.cache_buffer << 48) |
-				   (((uint64_t)archive_be32dec(
-				       strm->next_in)) << 16) |
-				    archive_be16dec(&strm->next_in[4]);
-				break;
-			default:
-				bytes = 0;
-				break;
-			}
-			if (bytes) {
-				strm->next_in += bytes;
-				strm->avail_in -= bytes;
-				strm->total_in += bytes;
-				ds->br.cache_avail += bytes * 8;
-				return (1);
-			}
 		}
-		ds->br.cache_buffer =
-		   (ds->br.cache_buffer << 8) | *strm->next_in++;
+		br->cache_buffer =
+		   (br->cache_buffer << 8) | *strm->next_in++;
 		strm->avail_in--;
-		strm->total_in++;
-		ds->br.cache_avail += 8;
+		br->cache_avail += 8;
 		n -= 8;
 	}
-	return (1);
+#undef lzh_be16dec
+#undef lzh_be32dec
+#undef lzh_be64dec
 }
 
 /*
@@ -1878,11 +1989,8 @@ lzh_br_fillup(struct lzh_stream *strm)
  *    zeros are treated as the mark of the end of the data although the zeros
  *    is dummy, not the file data.
  */
-static int
-lzh_decode(struct lzh_stream *strm, int last)
-{
-	struct lzh_dec *ds = strm->ds;
-	int c = 0, i;
+static int	lzh_read_blocks(struct lzh_stream *, int);
+static int	lzh_decode_blocks(struct lzh_stream *, int);
 #define ST_RD_BLOCK		0
 #define ST_RD_PT_1		1
 #define ST_RD_PT_2		2
@@ -1896,8 +2004,40 @@ lzh_decode(struct lzh_stream *strm, int last)
 #define ST_GET_POS_1		10
 #define ST_GET_POS_2		11
 #define ST_COPY_DATA		12
+
+static int
+lzh_decode(struct lzh_stream *strm, int last)
+{
+	struct lzh_dec *ds = strm->ds;
+	int64_t avail_in;
+	int r;
+
 	if (ds->error)
 		return (ds->error);
+
+	avail_in = strm->avail_in;
+	do {
+		if (ds->state < ST_GET_LITERAL)
+			r = lzh_read_blocks(strm, last);
+		else {
+			int64_t bytes_written = strm->avail_out;
+			r = lzh_decode_blocks(strm, last);
+			bytes_written -= strm->avail_out;
+			strm->next_out += bytes_written;
+			strm->total_out += bytes_written;
+		}
+	} while (r == 100);
+	strm->total_in += avail_in - strm->avail_in;
+	return (r);
+}
+
+static int
+lzh_read_blocks(struct lzh_stream *strm, int last)
+{
+	struct lzh_dec *ds = strm->ds;
+	struct lzh_br *br = &(ds->br);
+	int c = 0, i;
+	unsigned rbits;
 
 	for (;;) {
 		switch (ds->state) {
@@ -1909,11 +2049,11 @@ lzh_decode(struct lzh_stream *strm, int last)
 			 * in particular, there are no reference data at
 			 * the beginning of the decompression.
 			 */
-			if (!lzh_br_read_ahead(strm, 16)) {
+			if (!lzh_br_read_ahead(strm, br, 16)) {
 				if (!last)
 					/* We need following data. */
 					return (ARCHIVE_OK);
-				if (lzh_br_has(strm, 8)) {
+				if (lzh_br_has(br, 8)) {
 					/*
 					 * It seems there are extra bits.
 					 *  1. Compressed data is broken.
@@ -1926,10 +2066,10 @@ lzh_decode(struct lzh_stream *strm, int last)
 				 * handled all compressed data. */
 				return (ARCHIVE_EOF);
 			}
-			ds->blocks_avail = lzh_br_bits(strm, 16);
+			ds->blocks_avail = lzh_br_bits(br, 16);
 			if (ds->blocks_avail == 0)
 				goto failed;
-			lzh_br_consume(strm, 16);
+			lzh_br_consume(br, 16);
 			/*
 			 * Read a literal table compressed in huffman
 			 * coding.
@@ -1942,28 +2082,29 @@ lzh_decode(struct lzh_stream *strm, int last)
 			/* Note: ST_RD_PT_1, ST_RD_PT_2 and ST_RD_PT_4 are
 			 * used in reading both a literal table and a
 			 * position table. */
-			if (!lzh_br_read_ahead(strm, ds->pt.len_bits)) {
+			if (!lzh_br_read_ahead(strm, br, ds->pt.len_bits)) {
 				if (last)
 					goto failed;/* Truncated data. */
 				ds->state = ST_RD_PT_1;
 				return (ARCHIVE_OK);
 			}
-			ds->pt.len_avail = lzh_br_bits(strm, ds->pt.len_bits);
-			lzh_br_consume(strm, ds->pt.len_bits);
+			ds->pt.len_avail = lzh_br_bits(br, ds->pt.len_bits);
+			lzh_br_consume(br, ds->pt.len_bits);
 			/* FALL THROUGH */
 		case ST_RD_PT_2:
 			if (ds->pt.len_avail == 0) {
 				/* There is no bitlen. */
-				if (!lzh_br_read_ahead(strm, ds->pt.len_bits)) {
+				if (!lzh_br_read_ahead(strm, br,
+				    ds->pt.len_bits)) {
 					if (last)
 						goto failed;/* Truncated data.*/
 					ds->state = ST_RD_PT_2;
 					return (ARCHIVE_OK);
 				}
 				if (!lzh_make_fake_table(&(ds->pt),
-				    lzh_br_bits(strm, ds->pt.len_bits)))
+				    lzh_br_bits(br, ds->pt.len_bits)))
 					goto failed;/* Invalid data. */
-				lzh_br_consume(strm, ds->pt.len_bits);
+				lzh_br_consume(br, ds->pt.len_bits);
 				if (ds->reading_position)
 					ds->state = ST_GET_LITERAL;
 				else
@@ -1989,14 +2130,14 @@ lzh_decode(struct lzh_stream *strm, int last)
 				return (ARCHIVE_OK);
 			}
 			/* There are some null in bitlen of the literal. */
-			if (!lzh_br_read_ahead(strm, 2)) {
+			if (!lzh_br_read_ahead(strm, br, 2)) {
 				if (last)
 					goto failed;/* Truncated data. */
 				ds->state = ST_RD_PT_3;
 				return (ARCHIVE_OK);
 			}
-			c = lzh_br_bits(strm, 2);
-			lzh_br_consume(strm, 2);
+			c = lzh_br_bits(br, 2);
+			lzh_br_consume(br, 2);
 			if (c > ds->pt.len_avail - 3)
 				goto failed;/* Invalid data. */
 			for (i = 3; c-- > 0 ;)
@@ -2021,28 +2162,29 @@ lzh_decode(struct lzh_stream *strm, int last)
 			}
 			/* FALL THROUGH */
 		case ST_RD_LITERAL_1:
-			if (!lzh_br_read_ahead(strm, ds->lt.len_bits)) {
+			if (!lzh_br_read_ahead(strm, br, ds->lt.len_bits)) {
 				if (last)
 					goto failed;/* Truncated data. */
 				ds->state = ST_RD_LITERAL_1;
 				return (ARCHIVE_OK);
 			}
-			ds->lt.len_avail = lzh_br_bits(strm, ds->lt.len_bits);
-			lzh_br_consume(strm, ds->lt.len_bits);
+			ds->lt.len_avail = lzh_br_bits(br, ds->lt.len_bits);
+			lzh_br_consume(br, ds->lt.len_bits);
 			/* FALL THROUGH */
 		case ST_RD_LITERAL_2:
 			if (ds->lt.len_avail == 0) {
 				/* There is no bitlen. */
-				if (!lzh_br_read_ahead(strm, ds->lt.len_bits)) {
+				if (!lzh_br_read_ahead(strm, br,
+				    ds->lt.len_bits)) {
 					if (last)
 						goto failed;/* Truncated data.*/
 					ds->state = ST_RD_LITERAL_2;
 					return (ARCHIVE_OK);
 				}
 				if (!lzh_make_fake_table(&(ds->lt),
-				    lzh_br_bits(strm, ds->lt.len_bits)))
+				    lzh_br_bits(br, ds->lt.len_bits)))
 					goto failed;/* Invalid data */
-				lzh_br_consume(strm, ds->lt.len_bits);
+				lzh_br_consume(br, ds->lt.len_bits);
 				ds->state = ST_RD_POS_DATA_1;
 				break;
 			} else if (ds->lt.len_avail > ds->lt.len_size)
@@ -2053,33 +2195,33 @@ lzh_decode(struct lzh_stream *strm, int last)
 		case ST_RD_LITERAL_3:
 			i = ds->loop;
 			while (i < ds->lt.len_avail) {
-				if (!lzh_br_read_ahead(strm, ds->pt.max_bits)) {
+				if (!lzh_br_read_ahead(strm, br,
+				    ds->pt.max_bits)) {
 					if (last)
 						goto failed;/* Truncated data.*/
 					ds->loop = i;
 					ds->state = ST_RD_LITERAL_3;
 					return (ARCHIVE_OK);
 				}
-				c = ds->pt.tbl[lzh_br_bits(strm,
-				    ds->pt.max_bits)];
+				rbits = lzh_br_bits(br, ds->pt.max_bits);
+				c = lzh_decode_huffman(&(ds->pt), rbits);
 				if (c > 2) {
 					/* Note: 'c' will never be more than
 					 * eighteen since it's limited by
 					 * PT_BITLEN_SIZE, which is being set
 					 * to ds->pt.len_size through
 					 * ds->literal_pt_len_size. */
-					lzh_br_consume(strm, ds->pt.bitlen[c]);
+					lzh_br_consume(br, ds->pt.bitlen[c]);
 					c -= 2;
 					ds->lt.freq[c]++;
 					ds->lt.bitlen[i++] = c;
 				} else if (c == 0) {
-					lzh_br_consume(strm, ds->pt.bitlen[c]);
-					ds->lt.skip[i] = 1;
+					lzh_br_consume(br, ds->pt.bitlen[c]);
 					ds->lt.bitlen[i++] = 0;
 				} else {
 					/* c == 1 or c == 2 */
 					int n = (c == 1)?4:9;
-					if (!lzh_br_read_ahead(strm,
+					if (!lzh_br_read_ahead(strm, br,
 					     ds->pt.bitlen[c] + n)) {
 						if (last) /* Truncated data. */
 							goto failed;
@@ -2087,12 +2229,13 @@ lzh_decode(struct lzh_stream *strm, int last)
 						ds->state = ST_RD_LITERAL_3;
 						return (ARCHIVE_OK);
 					}
-					lzh_br_consume(strm, ds->pt.bitlen[c]);
-					c = lzh_br_bits(strm, n);
-					lzh_br_consume(strm, n);
+					lzh_br_consume(br, ds->pt.bitlen[c]);
+					c = lzh_br_bits(br, n);
+					lzh_br_consume(br, n);
 					c += (n == 4)?3:20;
-					ds->lt.skip[i] = c;
-					ds->lt.bitlen[i] = 0;
+					if (i + c > ds->lt.len_avail)
+						goto failed;/* Invalid data */
+					memset(&(ds->lt.bitlen[i]), 0, c);
 					i += c;
 				}
 			}
@@ -2111,16 +2254,47 @@ lzh_decode(struct lzh_stream *strm, int last)
 			ds->state = ST_RD_PT_1;
 			break;
 		case ST_GET_LITERAL:
+			return (100);
+		}
+	}
+failed:
+	return (ds->error = ARCHIVE_FAILED);
+}
+
+static int
+lzh_decode_blocks(struct lzh_stream *strm, int last)
+{
+	struct lzh_dec *ds = strm->ds;
+	struct lzh_br bre = ds->br;
+	struct huffman *lt = &(ds->lt);
+	struct huffman *pt = &(ds->pt);
+	unsigned char *outp = strm->next_out;
+	unsigned char *endp = outp + strm->avail_out;
+	unsigned char *w_buff = ds->w_buff;
+	unsigned char *lt_bitlen = lt->bitlen;
+	unsigned char *pt_bitlen = pt->bitlen;
+	int blocks_avail = ds->blocks_avail, c = 0;
+	int copy_len = ds->copy_len, copy_pos = ds->copy_pos;
+	int w_pos = ds->w_pos, w_mask = ds->w_mask, w_size = ds->w_size;
+	int lt_max_bits = lt->max_bits, pt_max_bits = pt->max_bits;
+	int state = ds->state;
+	uint16_t crc16 = ds->crc16;
+
+	for (;;) {
+		switch (state) {
+		case ST_GET_LITERAL:
 			for (;;) {
-				if (ds->blocks_avail == 0) {
+				if (blocks_avail == 0) {
 					/* We have decoded all blocks.
 					 * Let's handle next blocks. */
 					ds->state = ST_RD_BLOCK;
-					break;
+					ds->br = bre;
+					ds->blocks_avail = 0;
+					ds->crc16 = crc16;
+					ds->w_pos = w_pos;
+					strm->avail_out = endp - outp;
+					return (100);
 				}
-				if (strm->avail_out <= 0)
-					/* Output buffer is empty. */
-					return (ARCHIVE_OK);
 
 				/* lzh_br_read_ahead() always try to fill the
 				 * cache buffer up. In specific situation we
@@ -2129,159 +2303,193 @@ lzh_decode(struct lzh_stream *strm, int last)
 				 * determine if the cache buffer has some bits
 				 * as much as we need after lzh_br_read_ahead()
 				 * failed. */
-				if (!lzh_br_read_ahead(strm,
-					ds->lt.max_bits) &&
-				    !lzh_br_has(strm, ds->lt.max_bits)) {
+				if (!lzh_br_read_ahead(strm, &bre,
+				    lt_max_bits) &&
+				    !lzh_br_has(&bre, lt_max_bits)) {
 					if (!last)
-						return (ARCHIVE_OK);
+						goto next_data;
 					/* Remaining bits are less than
 					 * maximum bits(lt.max_bits) but maybe
 					 * it still remains as much as we need,
 					 * so we should try to use it with
 					 * dummy bits. */
-					c = ds->lt.tbl[lzh_br_bits_forced(
-					    strm, ds->lt.max_bits)];
-					lzh_br_consume(strm, ds->lt.bitlen[c]);
-					if (!lzh_br_has(strm, 0))
+					c = lzh_decode_huffman(lt,
+					      lzh_br_bits_forced(&bre,
+					        lt_max_bits));
+					lzh_br_consume(&bre, lt_bitlen[c]);
+					if (!lzh_br_has(&bre, 0))
 						goto failed;/* Over read. */
 				} else {
-					c = ds->lt.tbl[lzh_br_bits(strm,
-					    ds->lt.max_bits)];
-					lzh_br_consume(strm, ds->lt.bitlen[c]);
+					c = lzh_decode_huffman(lt,
+					      lzh_br_bits(&bre, lt_max_bits));
+					lzh_br_consume(&bre, lt_bitlen[c]);
 				}
-				ds->blocks_avail--;
+				blocks_avail--;
 				if (c > UCHAR_MAX)
 					/* Current block is a match data. */
 					break;
+				if (outp >= endp) {
+					/* Output buffer is empty. */
+					/* Back out the current block. */
+					blocks_avail++;
+					lzh_br_unconsume(&bre, lt_bitlen[c]);
+					goto next_data;
+				}
 				/*
-				 * 'c' is exactly literal code.
+				 * 'c' is exactly a literal code.
 				 */
 				/* Save a decoded code to reference it
 				 * afterward. */
-				strm->ds->w_buff[ds->w_pos] = c;
-				strm->ds->w_pos = (ds->w_pos + 1)
-				    & strm->ds->w_mask;
-				/* Store the decoded code to output buffer. */
-				*strm->next_out++ = c;
-				strm->avail_out--;
-				strm->total_out++;
+				w_buff[w_pos] = c;
+				w_pos = (w_pos + 1) & w_mask;
+				CRC16(crc16, c);
+				/* Store the decoded code to the output
+				 * buffer. */
+				*outp++ = c;
 			}
-			if (ds->state == ST_RD_BLOCK)
-				break;
 			/* 'c' is the length of a match pattern we have
 			 * already extracted, which has be stored in
 			 * window(ds->w_buff). */
-			ds->copy_len = c - (UCHAR_MAX + 1) + MINMATCH;
+			copy_len = c - (UCHAR_MAX + 1) + MINMATCH;
 			/* FALL THROUGH */
 		case ST_GET_POS_1:
 			/*
 			 * Get a reference position. 
 			 */
-			if (!lzh_br_read_ahead(strm, ds->pt.max_bits) &&
-			    !lzh_br_has(strm, ds->pt.max_bits)) {
+			if (!lzh_br_read_ahead(strm, &bre, pt_max_bits) &&
+			    !lzh_br_has(&bre, pt_max_bits)) {
 				if (!last) {
-					ds->state = ST_GET_POS_1;
-					return (ARCHIVE_OK);
+					state = ST_GET_POS_1;
+					ds->copy_len = copy_len;
+					goto next_data;
 				}
-				c = ds->pt.tbl[lzh_br_bits_forced(strm,
-				    ds->pt.max_bits)];
-				lzh_br_consume(strm, ds->pt.bitlen[c]);
-				if (!lzh_br_has(strm, 0))
+				copy_pos = lzh_decode_huffman(pt,
+				    lzh_br_bits_forced(&bre, pt_max_bits));
+				lzh_br_consume(&bre, pt_bitlen[copy_pos]);
+				if (!lzh_br_has(&bre, 0))
 					goto failed;/* Over read. */
 			} else {
-				c = ds->pt.tbl[lzh_br_bits(strm,
-				    ds->pt.max_bits)];
-				lzh_br_consume(strm, ds->pt.bitlen[c]);
+				copy_pos = lzh_decode_huffman(pt,
+				    lzh_br_bits(&bre, pt_max_bits));
+				lzh_br_consume(&bre, pt_bitlen[copy_pos]);
 			}
-			ds->copy_pos = c;
 			/* FALL THROUGH */
 		case ST_GET_POS_2:
-			if (ds->copy_pos > 1) {
+			if (copy_pos > 1) {
 				/* We need an additional adjustment number to
 				 * the position. */
-				int p = ds->copy_pos - 1;
-				if (!lzh_br_read_ahead(strm, p) &&
-				    !lzh_br_has(strm, p)) {
+				int p = copy_pos - 1;
+				if (!lzh_br_read_ahead(strm, &bre, p) &&
+				    !lzh_br_has(&bre, p)) {
 					if (last)
 						goto failed;/* Truncated data.*/
-					ds->state = ST_GET_POS_2;
-					return (ARCHIVE_OK);
+					state = ST_GET_POS_2;
+					ds->copy_len = copy_len;
+					ds->copy_pos = copy_pos;
+					goto next_data;
 				}
-				ds->copy_pos = (1 << p) + lzh_br_bits(strm, p);
-				lzh_br_consume(strm, p);
+				copy_pos = (1 << p) + lzh_br_bits(&bre, p);
+				lzh_br_consume(&bre, p);
 			}
 			/* The position is actually a distance from the last
 			 * code we had extracted and thus we have to convert
 			 * it to a position of the window. */
-			ds->copy_pos =
-			    (ds->w_pos - ds->copy_pos - 1) & ds->w_mask;
+			copy_pos = (w_pos - copy_pos - 1) & w_mask;
 			/* FALL THROUGH */
 		case ST_COPY_DATA:
 			/*
 			 * Copy several bytes as extracted data from the window
 			 * into the output buffer.
 			 */
-			do {
+			for (;;) {
 				const unsigned char *s;
-				unsigned char *d;
-				int l,ll;
-				if (strm->avail_out <= 0) {
+				int l;
+
+				l = copy_len;
+				if (copy_pos > w_pos) {
+					if (l > w_size - copy_pos)
+						l = w_size - copy_pos;
+				} else {
+					if (l > w_size - w_pos)
+						l = w_size - w_pos;
+				}
+				if (outp + l >= endp)
+					l = endp - outp;
+				s = w_buff + copy_pos;
+				/*
+				 * We calculate CRC16 here becase of
+				 * increasing a performance of the
+				 * calculation so as to reduce L1 cache miss. 
+				 */
+				if (l >= 8 && ((copy_pos + l < w_pos)
+				    || (w_pos + l < copy_pos))) {
+					memcpy(w_buff + w_pos, s, l);
+					memcpy(outp, s, l);
+					crc16 = lha_crc16(crc16, s, l);
+				} else {
+					unsigned char *d;
+					int li;
+
+					d = w_buff + w_pos;
+					for (li = 0; li < l; li++) {
+						c = outp[li] = d[li] = s[li];
+						CRC16(crc16, c);
+					}
+				}
+				outp += l;
+				copy_pos = (copy_pos + l) & w_mask;
+				w_pos = (w_pos + l) & w_mask;
+				if (copy_len <= l)
+					/* A copy of current pattern ended. */
+					break;
+				copy_len -= l;
+				if (outp >= endp) {
 					/* Output buffer is empty. */
-					ds->state = ST_COPY_DATA;
-					return (ARCHIVE_OK);
+					state = ST_COPY_DATA;
+					ds->copy_len = copy_len;
+					ds->copy_pos = copy_pos;
+					goto next_data;
 				}
-				l = ds->copy_len;
-				if (l > ds->w_size - ds->copy_pos)
-					l = ds->w_size - ds->copy_pos;
-				if (l > ds->w_size - ds->w_pos)
-					l = ds->w_size - ds->w_pos;
-				if (l > strm->avail_out)
-					l = (int)strm->avail_out;
-				ll = l;
-				s = &(ds->w_buff[ds->copy_pos]);
-				d = &(ds->w_buff[ds->w_pos]);
-				while (--l >= 0) {
-					*strm->next_out++ = *s;
-					*d++ = *s++;
-				}
-				strm->avail_out -= ll;
-				strm->total_out += ll;
-				ds->copy_pos =
-				    (ds->copy_pos + ll) & ds->w_mask;
-				ds->w_pos = (ds->w_pos + ll) & ds->w_mask;
-				ds->copy_len -= ll;
-			} while (ds->copy_len > 0);
-			ds->state = ST_GET_LITERAL;
+			}
+			state = ST_GET_LITERAL;
 			break;
 		}
 	}
 failed:
 	return (ds->error = ARCHIVE_FAILED);
+next_data:
+	ds->br = bre;
+	ds->blocks_avail = blocks_avail;
+	ds->crc16 = crc16;
+	ds->state = state;
+	ds->w_pos = w_pos;
+	strm->avail_out = endp - outp;
+	return (ARCHIVE_OK);
 }
 
 static int
-lzh_huffman_init(struct huffman *hf, size_t len_size, int tbl_bits,
-	int init_skip)
+lzh_huffman_init(struct huffman *hf, size_t len_size, int tbl_bits)
 {
-	unsigned i;
+	int bits;
 
 	if (hf->bitlen == NULL) {
 		hf->bitlen = malloc(len_size * sizeof(hf->bitlen[0]));
 		if (hf->bitlen == NULL)
 			return (ARCHIVE_FATAL);
 	}
-	if (hf->skip == NULL) {
-		hf->skip = malloc(len_size * sizeof(hf->skip[0]));
-		if (hf->skip == NULL)
+	if (hf->tbl == NULL) {
+		if (tbl_bits < HTBL_BITS)
+			bits = tbl_bits;
+		else
+			bits = HTBL_BITS;
+		hf->tbl = malloc((1 << bits) * sizeof(hf->tbl[0]));
+		if (hf->tbl == NULL)
 			return (ARCHIVE_FATAL);
 	}
-	if (init_skip) {
-		for (i = 0; i < len_size; i++)
-			hf->skip[i] = 1;
-	}
-	if (hf->tbl == NULL) {
-		hf->tbl = malloc((1 << tbl_bits) * sizeof(hf->tbl[0]));
-		if (hf->tbl == NULL)
+	if (hf->tree == NULL && tbl_bits > HTBL_BITS) {
+		hf->tree_avail = 1 << (tbl_bits - HTBL_BITS + 4);
+		hf->tree = malloc(hf->tree_avail * sizeof(hf->tree[0]));
+		if (hf->tree == NULL)
 			return (ARCHIVE_FATAL);
 	}
 	hf->len_size = len_size;
@@ -2293,14 +2501,15 @@ static void
 lzh_huffman_free(struct huffman *hf)
 {
 	free(hf->bitlen);
-	free(hf->skip);
 	free(hf->tbl);
+	free(hf->tree);
 }
 
 static int
 lzh_read_pt_bitlen(struct lzh_stream *strm, int start, int end)
 {
 	struct lzh_dec *ds = strm->ds;
+	struct lzh_br * br = &(ds->br);
 	int c, i;
 
 	for (i = start; i < end;) {
@@ -2316,22 +2525,22 @@ lzh_read_pt_bitlen(struct lzh_stream *strm, int start, int end)
 		 *     ...
 		 *     1111111111110 ->  16
 		 */
-		if (!lzh_br_read_ahead(strm, 3))
+		if (!lzh_br_read_ahead(strm, br, 3))
 			return (i);
-		if ((c = lzh_br_bits(strm, 3)) == 7) {
+		if ((c = lzh_br_bits(br, 3)) == 7) {
 			int d;
-			if (!lzh_br_read_ahead(strm, 13))
+			if (!lzh_br_read_ahead(strm, br, 13))
 				return (i);
-			d = lzh_br_bits(strm, 13);
+			d = lzh_br_bits(br, 13);
 			while (d & 0x200) {
 				c++;
 				d <<= 1;
 			}
 			if (c > 16)
 				return (-1);/* Invalid data. */
-			lzh_br_consume(strm, c - 3);
+			lzh_br_consume(br, c - 3);
 		} else
-			lzh_br_consume(strm, 3);
+			lzh_br_consume(br, 3);
 		ds->pt.bitlen[i++] = c;
 		ds->pt.freq[c]++;
 	}
@@ -2355,8 +2564,11 @@ lzh_make_fake_table(struct huffman *hf, uint16_t c)
 static int
 lzh_make_huffman_table(struct huffman *hf)
 {
+	uint16_t *tbl;
+	const unsigned char *bitlen;
 	int bitptn[17], weight[17];
 	int i, maxbits = 0, ptn, tbl_size, w;
+	int diffbits, len_avail;
 
 	/*
 	 * Initialize bit patterns.
@@ -2374,7 +2586,6 @@ lzh_make_huffman_table(struct huffman *hf)
 		return (0);/* Invalid */
 
 	hf->max_bits = maxbits;
-	tbl_size = 1 << maxbits;
 
 	/*
 	 * Cut out extra bits which we won't house in the table.
@@ -2388,30 +2599,160 @@ lzh_make_huffman_table(struct huffman *hf)
 			weight[i] >>= ebits;
 		}
 	}
+	if (maxbits > HTBL_BITS) {
+		int htbl_max;
+		uint16_t *p;
+
+		diffbits = maxbits - HTBL_BITS;
+		for (i = 1; i <= HTBL_BITS; i++) {
+			bitptn[i] >>= diffbits;
+			weight[i] >>= diffbits;
+		}
+		htbl_max = bitptn[HTBL_BITS] +
+		    weight[HTBL_BITS] * hf->freq[HTBL_BITS];
+		p = &(hf->tbl[htbl_max]);
+		while (p < &hf->tbl[1U<<HTBL_BITS])
+			*p++ = 0;
+	} else
+		diffbits = 0;
 
 	/*
 	 * Make the table.
 	 */
-	for (i = 0; i < hf->len_avail; ) {
+	tbl_size = 1 << HTBL_BITS;
+	tbl = hf->tbl;
+	bitlen = hf->bitlen;
+	len_avail = hf->len_avail;
+	hf->tree_used = 0;
+	for (i = 0; i < len_avail; i++) {
 		uint16_t *p;
 		int len, cnt;
+		uint16_t bit;
+		int extlen;
+		struct htree_t *ht;
 
-		if ((len = hf->bitlen[i]) == 0) {
-			i += hf->skip[i];
+		if (bitlen[i] == 0)
 			continue;
-		}
 		/* Get a bit pattern */
+		len = bitlen[i];
 		ptn = bitptn[len];
 		cnt = weight[len];
-		/* Calculate next bit pattern */
-		if ((bitptn[len] += cnt) > tbl_size)
-			return (0);/* Invalid */
-		/* Update the table */
-		p = &(hf->tbl[ptn]);
-		while (--cnt >= 0)
-			*p++ = (uint16_t)i;
-		i++;
+		if (len <= HTBL_BITS) {
+			/* Calculate next bit pattern */
+			if ((bitptn[len] = ptn + cnt) > tbl_size)
+				return (0);/* Invalid */
+			/* Update the table */
+			p = &(tbl[ptn]);
+			while (--cnt >= 0)
+				p[cnt] = (uint16_t)i;
+			continue;
+		}
+
+		/*
+		 * A bit length is too big to be housed to a direct table,
+		 * so we use a tree model for its extra bits.
+		 */
+		bitptn[len] = ptn + cnt;
+		bit = 1U << (diffbits -1);
+		extlen = len - HTBL_BITS;
+		
+		p = &(tbl[ptn >> diffbits]);
+		if (*p == 0) {
+			*p = len_avail + hf->tree_used;
+			ht = &(hf->tree[hf->tree_used++]);
+			if (hf->tree_used > hf->tree_avail)
+				return (0);/* Invalid */
+			ht->left = 0;
+			ht->right = 0;
+		} else {
+			if (*p < len_avail ||
+			    *p >= (len_avail + hf->tree_used))
+				return (0);/* Invalid */
+			ht = &(hf->tree[*p - len_avail]);
+		}
+		while (--extlen > 0) {
+			if (ptn & bit) {
+				if (ht->left < len_avail) {
+					ht->left = len_avail + hf->tree_used;
+					ht = &(hf->tree[hf->tree_used++]);
+					if (hf->tree_used > hf->tree_avail)
+						return (0);/* Invalid */
+					ht->left = 0;
+					ht->right = 0;
+				} else {
+					ht = &(hf->tree[ht->left - len_avail]);
+				}
+			} else {
+				if (ht->right < len_avail) {
+					ht->right = len_avail + hf->tree_used;
+					ht = &(hf->tree[hf->tree_used++]);
+					if (hf->tree_used > hf->tree_avail)
+						return (0);/* Invalid */
+					ht->left = 0;
+					ht->right = 0;
+				} else {
+					ht = &(hf->tree[ht->right - len_avail]);
+				}
+			}
+			bit >>= 1;
+		}
+		if (ptn & bit) {
+			if (ht->left != 0)
+				return (0);/* Invalid */
+			ht->left = (uint16_t)i;
+		} else {
+			if (ht->right != 0)
+				return (0);/* Invalid */
+			ht->right = (uint16_t)i;
+		}
 	}
 	return (1);
+}
+
+static int
+lzh_decode_huffman_tree(struct huffman *hf, unsigned rbits, int c)
+{
+	struct htree_t *ht;
+	uint16_t bit;
+	int extlen;
+
+	extlen = hf->max_bits - HTBL_BITS;
+	bit = 1U << (extlen -1);
+	while (c >= hf->len_avail && extlen-- > 0) {
+		c -= hf->len_avail;
+		if (c >= hf->tree_used)
+			return (0);
+		ht = &(hf->tree[c]);
+		if (rbits & bit)
+			c = ht->left;
+		else
+			c = ht->right;
+		bit >>= 1;
+	}
+	if (c >= hf->len_avail)
+		return (0);
+	return (c);
+}
+
+static inline int
+lzh_decode_huffman(struct huffman *hf, unsigned rbits)
+{
+	/*
+	 * At first search an index table for a bit pattern.
+	 * If it fails, search a huffman tree for.
+	 */
+
+	if (hf->max_bits <= HTBL_BITS)
+		return (hf->tbl[rbits]);
+	else {
+		int c;
+		c = hf->tbl[rbits >> (hf->max_bits - HTBL_BITS)];
+		if (c < hf->len_avail)
+			return (c);
+		else
+			/* This bit pattern needs to be found out from
+			 * a huffman tree. */
+			return (lzh_decode_huffman_tree(hf, rbits, c));
+	}
 }
 
