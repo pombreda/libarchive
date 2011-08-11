@@ -1019,6 +1019,7 @@ get_dir_entry(struct archive_dir *adir, const char *name)
 		adir->allocated_size = 32;
 		adir->size = 1;
 		/* Always return the first entry of archive_dir_entry list. */
+		adir->list[0].name = NULL;
 		return (&(adir->list[0]));
 	}
 
