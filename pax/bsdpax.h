@@ -102,6 +102,10 @@ struct bsdpax {
 	char		  day_first; /* show day before month in -v output */
 	char		  enable_copyfile; /* For Mac OS */
 
+	/* Option parser state */
+	int		  getopt_state;
+	char		 *getopt_word;
+
 	/* If >= 0, then close this when done. */
 	int		  fd;
 

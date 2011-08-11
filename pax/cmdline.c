@@ -113,8 +113,6 @@ int
 bsdpax_getopt(struct bsdpax *bsdpax)
 {
 	enum { state_start = 0, state_next_word, state_short, state_long };
-	static int state = state_start;
-	static char *opt_word;
 
 	const struct bsdpax_option *popt, *match = NULL, *match2 = NULL;
 	const char *p, *long_prefix = "--";
@@ -125,17 +123,17 @@ bsdpax_getopt(struct bsdpax *bsdpax)
 	bsdpax->argument = NULL;
 
 	/* First time through, initialize everything. */
-	if (state == state_start) {
+	if (bsdpax->getopt_state == state_start) {
 		/* Skip program name. */
 		++bsdpax->argv;
 		--bsdpax->argc;
-		state = state_next_word;
+		bsdpax->getopt_state = state_next_word;
 	}
 
 	/*
 	 * We're ready to look at the next word in argv.
 	 */
-	if (state == state_next_word) {
+	if (bsdpax->getopt_state == state_next_word) {
 		/* No more arguments, so no more options. */
 		if (bsdpax->argv[0] == NULL)
 			return (-1);
@@ -149,28 +147,28 @@ bsdpax_getopt(struct bsdpax *bsdpax)
 			return (-1);
 		}
 		/* Get next word for parsing. */
-		opt_word = *bsdpax->argv++;
+		bsdpax->getopt_word = *bsdpax->argv++;
 		--bsdpax->argc;
-		if (opt_word[1] == '-') {
+		if (bsdpax->getopt_word[1] == '-') {
 			/* Set up long option parser. */
-			state = state_long;
-			opt_word += 2; /* Skip leading '--' */
+			bsdpax->getopt_state = state_long;
+			bsdpax->getopt_word += 2; /* Skip leading '--' */
 		} else {
 			/* Set up short option parser. */
-			state = state_short;
-			++opt_word;  /* Skip leading '-' */
+			bsdpax->getopt_state = state_short;
+			++bsdpax->getopt_word;  /* Skip leading '-' */
 		}
 	}
 
 	/*
 	 * We're parsing a group of POSIX-style single-character options.
 	 */
-	if (state == state_short) {
+	if (bsdpax->getopt_state == state_short) {
 		/* Peel next option off of a group of short options. */
-		opt = *opt_word++;
+		opt = *bsdpax->getopt_word++;
 		if (opt == '\0') {
 			/* End of this group; recurse to get next option. */
-			state = state_next_word;
+			bsdpax->getopt_state = state_next_word;
 			return bsdpax_getopt(bsdpax);
 		}
 
@@ -183,11 +181,11 @@ bsdpax_getopt(struct bsdpax *bsdpax)
 
 		/* If it takes an argument, parse that. */
 		if (required) {
-			/* If arg is run-in, opt_word already points to it. */
-			if (opt_word[0] == '\0') {
+			/* If arg is run-in, bsdpax->getopt_word already points to it. */
+			if (bsdpax->getopt_word[0] == '\0') {
 				/* Otherwise, pick up the next word. */
-				opt_word = *bsdpax->argv;
-				if (opt_word == NULL) {
+				bsdpax->getopt_word = *bsdpax->argv;
+				if (bsdpax->getopt_word == NULL) {
 					lafe_warnc(0,
 					    "Option -%c requires an argument",
 					    opt);
@@ -197,36 +195,36 @@ bsdpax_getopt(struct bsdpax *bsdpax)
 				--bsdpax->argc;
 			}
 			if (opt == 'W') {
-				state = state_long;
+				bsdpax->getopt_state = state_long;
 				long_prefix = "-W "; /* For clearer errors. */
 			} else {
-				state = state_next_word;
-				bsdpax->argument = opt_word;
+				bsdpax->getopt_state = state_next_word;
+				bsdpax->argument = bsdpax->getopt_word;
 			}
 		}
 	}
 
 	/* We're reading a long option, including -W long=arg convention. */
-	if (state == state_long) {
+	if (bsdpax->getopt_state == state_long) {
 		/* After this long option, we'll be starting a new word. */
-		state = state_next_word;
+		bsdpax->getopt_state = state_next_word;
 
 		/* Option name ends at '=' if there is one. */
-		p = strchr(opt_word, '=');
+		p = strchr(bsdpax->getopt_word, '=');
 		if (p != NULL) {
-			optlength = (size_t)(p - opt_word);
+			optlength = (size_t)(p - bsdpax->getopt_word);
 			bsdpax->argument = (char *)(uintptr_t)(p + 1);
 		} else {
-			optlength = strlen(opt_word);
+			optlength = strlen(bsdpax->getopt_word);
 		}
 
 		/* Search the table for an unambiguous match. */
 		for (popt = bsdpax_longopts; popt->name != NULL; popt++) {
 			/* Short-circuit if first chars don't match. */
-			if (popt->name[0] != opt_word[0])
+			if (popt->name[0] != bsdpax->getopt_word[0])
 				continue;
 			/* If option is a prefix of name in table, record it.*/
-			if (strncmp(opt_word, popt->name, optlength) == 0) {
+			if (strncmp(bsdpax->getopt_word, popt->name, optlength) == 0) {
 				match2 = match; /* Record up to two matches. */
 				match = popt;
 				/* If it's an exact match, we're done. */
@@ -241,13 +239,13 @@ bsdpax_getopt(struct bsdpax *bsdpax)
 		if (match == NULL) {
 			lafe_warnc(0,
 			    "Option %s%s is not supported",
-			    long_prefix, opt_word);
+			    long_prefix, bsdpax->getopt_word);
 			return ('?');
 		}
 		if (match2 != NULL) {
 			lafe_warnc(0,
 			    "Ambiguous option %s%s (matches --%s and --%s)",
-			    long_prefix, opt_word, match->name, match2->name);
+			    long_prefix, bsdpax->getopt_word, match->name, match2->name);
 			return ('?');
 		}
 
