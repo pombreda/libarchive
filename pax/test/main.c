@@ -44,6 +44,7 @@ __FBSDID("$FreeBSD$");
 #define KNOWNREF	"test_option_T_upper.pax.uu"
 #define ENVBASE "BSDPAX"  /* Prefix for environment variables. */
 #define	PROGRAM "bsdbax"  /* Name of program being tested. */
+#define PROGRAM_ALIAS "pax" /* Generic alias for program */
 #undef	LIBRARY		  /* Not testing a library. */
 #undef	EXTRA_DUMP	  /* How to dump extra data */
 #undef	EXTRA_ERRNO	  /* What errno to report */
@@ -2033,6 +2034,12 @@ get_refdir(const char *d)
 #else
 	snprintf(buff, sizeof(buff), "%s/%s/test", pwd, PROGRAM);
 #endif
+	p = slurpfile(NULL, "%s/%s", buff, KNOWNREF);
+	if (p != NULL) goto success;
+	strncat(tried, buff, sizeof(tried) - strlen(tried) - 1);
+	strncat(tried, "\n", sizeof(tried) - strlen(tried) - 1);
+
+	snprintf(buff, sizeof(buff), "%s/%s/test", pwd, PROGRAM_ALIAS);
 	p = slurpfile(NULL, "%s/%s", buff, KNOWNREF);
 	if (p != NULL) goto success;
 	strncat(tried, buff, sizeof(tried) - strlen(tried) - 1);
