@@ -107,6 +107,9 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_options.c				\
 	libarchive/archive_options_private.h			\
 	libarchive/archive_platform.h				\
+	libarchive/archive_ppmd_private.h			\
+	libarchive/archive_ppmd7.c				\
+	libarchive/archive_ppmd7_private.h			\
 	libarchive/archive_private.h				\
 	libarchive/archive_rb.c					\
 	libarchive/archive_rb.h					\
@@ -427,10 +430,12 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_compat_gzip_1.tgz.uu			\
 	libarchive/test/test_compat_gzip_2.tgz.uu			\
 	libarchive/test/test_compat_lzip_1.tlz.uu			\
+	libarchive/test/test_compat_lzip_2.tlz.uu			\
 	libarchive/test/test_compat_lzma_1.tlz.uu			\
 	libarchive/test/test_compat_lzma_2.tlz.uu			\
 	libarchive/test/test_compat_lzma_3.tlz.uu			\
-	libarchive/test/test_compat_mac_gnutar.tar.Z.uu			\
+	libarchive/test/test_compat_mac-1.tar.Z.uu			\
+	libarchive/test/test_compat_mac-2.tar.Z.uu			\
 	libarchive/test/test_compat_pax_libarchive_2x.tar.Z.uu		\
 	libarchive/test/test_compat_solaris_tar_acl.tar.uu		\
 	libarchive/test/test_compat_solaris_pax_sparse_1.pax.Z.uu	\
@@ -489,9 +494,12 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_read_format_mtree.mtree.uu			\
 	libarchive/test/test_read_format_mtree_nomagic.mtree.uu		\
 	libarchive/test/test_read_format_rar.rar.uu			\
+	libarchive/test/test_read_format_rar_binary_data.rar.uu		\
+	libarchive/test/test_read_format_rar_compress_best.rar.uu	\
 	libarchive/test/test_read_format_rar_compress_normal.rar.uu	\
 	libarchive/test/test_read_format_rar_multi_lzss_blocks.rar.uu	\
 	libarchive/test/test_read_format_rar_noeof.rar.uu		\
+	libarchive/test/test_read_format_rar_ppmd_lzss_conversion.rar.uu\
 	libarchive/test/test_read_format_rar_subblock.rar.uu		\
 	libarchive/test/test_read_format_rar_unicode.rar.uu		\
 	libarchive/test/test_read_format_raw.data.Z.uu			\
@@ -508,6 +516,7 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_read_format_zip_filename_utf8_jp.zip.uu	\
 	libarchive/test/test_read_format_zip_filename_utf8_ru2.zip.uu	\
 	libarchive/test/test_read_format_zip_filename_utf8_ru.zip.uu	\
+	libarchive/test/test_read_format_zip_ux.zip.uu			\
 	libarchive/test/CMakeLists.txt					\
 	libarchive/test/README
 

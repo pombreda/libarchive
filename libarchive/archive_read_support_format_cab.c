@@ -1051,14 +1051,6 @@ archive_read_format_cab_read_data(struct archive_read *a,
 static uint32_t
 cab_checksum_cfdata_4(const void *p, size_t bytes, uint32_t seed)
 {
-/*
- * x86 proccessor family can read misaligned data without an access error.
- */
-#if defined(__i386__) || (defined(_MSC_VER) && defined(_M_IX86)) 
-#  define lzx_le32dec(a)	(*(const uint32_t *)(a))
-#else
-#  define lzx_le32dec(a)	archive_le32dec(a)
-#endif
 	const unsigned char *b;
 	int u32num;
 	uint32_t sum;
@@ -1067,11 +1059,10 @@ cab_checksum_cfdata_4(const void *p, size_t bytes, uint32_t seed)
 	sum = seed;
 	b = p;
 	while (--u32num >= 0) {
-		sum ^= lzx_le32dec(b);
+		sum ^= archive_le32dec(b);
 		b += 4;
 	}
 	return (sum);
-#undef lzx_le32dec
 }
 
 static uint32_t
@@ -2168,6 +2159,7 @@ lzx_decode_free(struct lzx_stream *strm)
 	if (strm->ds == NULL)
 		return;
 	free(strm->ds->w_buff);
+	free(strm->ds->pos_tbl);
 	lzx_huffman_free(&(strm->ds->at));
 	lzx_huffman_free(&(strm->ds->pt));
 	lzx_huffman_free(&(strm->ds->mt));
@@ -2256,11 +2248,6 @@ lzx_br_fillup(struct lzx_stream *strm, struct lzx_br *br)
 /*
  * x86 proccessor family can read misaligned data without an access error.
  */
-#ifdef __i386__
-#  define lzx_le16dec(a)	(*(const uint16_t *)(a))
-#else
-#  define lzx_le16dec(a)	archive_le16dec(a)
-#endif
 	int n = CACHE_BITS - br->cache_avail;
 
 	for (;;) {
@@ -2268,13 +2255,14 @@ lzx_br_fillup(struct lzx_stream *strm, struct lzx_br *br)
 		case 4:
 			if (strm->avail_in >= 8) {
 				br->cache_buffer =
-				    (((uint64_t)lzx_le16dec(
-					strm->next_in)) << 48) |
-				    (((uint64_t)lzx_le16dec(
-					strm->next_in+2)) << 32) |
-				    (((uint32_t)lzx_le16dec(
-					strm->next_in+4)) << 16) |
-				    lzx_le16dec(strm->next_in+6);
+				    ((uint64_t)strm->next_in[1]) << 56 |
+				    ((uint64_t)strm->next_in[0]) << 48 |
+				    ((uint64_t)strm->next_in[3]) << 40 |
+				    ((uint64_t)strm->next_in[2]) << 32 |
+				    ((uint32_t)strm->next_in[5]) << 24 |
+				    ((uint32_t)strm->next_in[4]) << 16 |
+				    ((uint32_t)strm->next_in[7]) << 8 |
+				     (uint32_t)strm->next_in[6];
 				strm->next_in += 8;
 				strm->avail_in -= 8;
 				br->cache_avail += 8 * 8;
@@ -2285,11 +2273,12 @@ lzx_br_fillup(struct lzx_stream *strm, struct lzx_br *br)
 			if (strm->avail_in >= 6) {
 				br->cache_buffer =
 		 		   (br->cache_buffer << 48) |
-				    (((uint64_t)lzx_le16dec(
-					strm->next_in)) << 32) |
-				    (((uint32_t)lzx_le16dec(
-					strm->next_in+2)) << 16) |
-				    lzx_le16dec(strm->next_in+4);
+				    ((uint64_t)strm->next_in[1]) << 40 |
+				    ((uint64_t)strm->next_in[0]) << 32 |
+				    ((uint32_t)strm->next_in[3]) << 24 |
+				    ((uint32_t)strm->next_in[2]) << 16 |
+				    ((uint32_t)strm->next_in[5]) << 8 |
+				     (uint32_t)strm->next_in[4];
 				strm->next_in += 6;
 				strm->avail_in -= 6;
 				br->cache_avail += 6 * 8;
@@ -2315,13 +2304,12 @@ lzx_br_fillup(struct lzx_stream *strm, struct lzx_br *br)
 		}
 		br->cache_buffer =
 		   (br->cache_buffer << 16) |
-		    lzx_le16dec(strm->next_in);
+		    archive_le16dec(strm->next_in);
 		strm->next_in += 2;
 		strm->avail_in -= 2;
 		br->cache_avail += 16;
 		n -= 16;
 	}
-#undef lzx_le16dec
 }
 
 static void

@@ -25,14 +25,8 @@
 
 #include "archive_platform.h"
 
-#ifdef HAVE_SYS_ENDIAN_H
-#include <sys/endian.h>
-#endif
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
-#endif
-#ifdef HAVE_ENDIAN_H
-#include <endian.h>
 #endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -142,7 +136,6 @@ struct lzh_dec {
 	int			 reading_position;
 	int			 loop;
 	int			 error;
-	uint16_t		 crc16;
 };
 
 struct lzh_stream {
@@ -288,7 +281,6 @@ static int	lha_read_data_lzh(struct archive_read *, const void **,
 static uint16_t lha_crc16(uint16_t, const void *, size_t);
 static int	lzh_decode_init(struct lzh_stream *, const char *);
 static void	lzh_decode_free(struct lzh_stream *);
-static uint16_t lzh_crc16(struct lzh_stream *);
 static int	lzh_decode(struct lzh_stream *, int);
 static int	lzh_br_fillup(struct lzh_stream *, struct lzh_br *);
 static int	lzh_huffman_init(struct huffman *, size_t, int);
@@ -527,7 +519,7 @@ archive_read_format_lha_read_header(struct archive_read *a,
 	lha->end_of_entry_cleanup = 0;
 	lha->entry_unconsumed = 0;
 
-	if ((p = __archive_read_ahead(a, sizeof(*p), NULL)) == NULL) {
+	if ((p = __archive_read_ahead(a, H_SIZE, NULL)) == NULL) {
 		/*
 		 * LHa archiver added 0 to the tail of its archive file as
 		 * the mark of the end of the archive.
@@ -1550,7 +1542,8 @@ lha_read_data_lzh(struct archive_read *a, const void **buff,
 		*offset = lha->entry_offset;
 		*size = lha->strm.next_out - lha->uncompressed_buffer;
 		*buff = lha->uncompressed_buffer;
-		lha->entry_crc_calculated = lzh_crc16(&(lha->strm));
+		lha->entry_crc_calculated =
+		    lha_crc16(lha->entry_crc_calculated, *buff, *size);
 		lha->entry_offset += *size;
 	} else {
 		*offset = lha->entry_offset;
@@ -1783,7 +1776,6 @@ lzh_decode_init(struct lzh_stream *strm, const char *method)
 			return (ARCHIVE_FATAL);
 	}
 	memset(ds->w_buff, 0x20, ds->w_size);
-	ds->crc16 = 0;
 	ds->w_pos = 0;
 	ds->state = 0;
 	ds->pos_pt_len_size = w_bits + 1;
@@ -1797,7 +1789,7 @@ lzh_decode_init(struct lzh_stream *strm, const char *method)
 	    != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 	ds->lt.len_bits = 9;
-	if (lzh_huffman_init(&(ds->pt), PT_BITLEN_SIZE, 12)
+	if (lzh_huffman_init(&(ds->pt), PT_BITLEN_SIZE, 16)
 	    != ARCHIVE_OK)
 		return (ARCHIVE_FATAL);
 	ds->error = 0;
@@ -1821,16 +1813,6 @@ lzh_decode_free(struct lzh_stream *strm)
 	strm->ds = NULL;
 }
 
-static uint16_t
-lzh_crc16(struct lzh_stream *strm)
-{
-
-	if (strm->ds == NULL)
-		return (0);
-	return (strm->ds->crc16);
-}
-
-
 /*
  * Bit stream reader.
  */
@@ -1850,7 +1832,7 @@ lzh_crc16(struct lzh_stream *strm)
  *          bytes. */
 #define lzh_br_read_ahead(strm, br, n)	\
 	(lzh_br_has(br, (n)) || lzh_br_fillup(strm, br))
-/* Notify how man bits we consumed. */
+/* Notify how many bits we consumed. */
 #define lzh_br_consume(br, n)	((br)->cache_avail -= (n))
 #define lzh_br_unconsume(br, n)	((br)->cache_avail += (n))
 
@@ -1872,42 +1854,6 @@ static const uint16_t cache_masks[] = {
 static int
 lzh_br_fillup(struct lzh_stream *strm, struct lzh_br *br)
 {
-/*
- * x86 proccessor family can read misaligned data without an access error.
- */
-#if defined(__i386__) || (defined(_MSC_VER) && defined(_M_IX86)) 
-#  if defined(_WIN32) && !defined(__CYGWIN__)
-#    define lzh_be16dec(p) _byteswap_ushort(*(const uint16_t *)(p))
-#  elif defined(be16toh)
-#    define lzh_be16dec(p) be16toh(*(const uint16_t *)(p))
-#  elif defined(betoh16)
-#    define lzh_be16dec(p) betoh16(*(const uint16_t *)(p))
-#  else
-#    define lzh_be16dec	archive_be16dec
-#  endif
-#  if defined(_WIN32) && !defined(__CYGWIN__)
-#    define lzh_be32dec(p) _byteswap_ulong(*(const uint32_t *)(p))
-#  elif defined(be32toh)
-#    define lzh_be32dec(p) be32toh(*(const uint32_t *)(p))
-#  elif defined(betoh32)
-#    define lzh_be32dec(p) betoh32(*(const uint32_t *)(p))
-#  else
-#    define lzh_be32dec	archive_be32dec
-#  endif
-#  if defined(_WIN32) && !defined(__CYGWIN__)
-#    define lzh_be64dec(p) _byteswap_uint64(*(const uint64_t *)(p))
-#  elif defined(be64toh)
-#    define lzh_be64dec(p) be64toh(*(const uint64_t *)(p))
-#  elif defined(betoh64)
-#    define lzh_be64dec(p) betoh64(*(const uint64_t *)(p))
-#  else
-#    define lzh_be64dec	archive_be64dec
-#  endif
-#else
-#  define lzh_be16dec	archive_be16dec
-#  define lzh_be32dec	archive_be32dec
-#  define lzh_be64dec	archive_be64dec
-#endif
 	int n = CACHE_BITS - br->cache_avail;
 
 	for (;;) {
@@ -1915,7 +1861,14 @@ lzh_br_fillup(struct lzh_stream *strm, struct lzh_br *br)
 		case 8:
 			if (strm->avail_in >= 8) {
 				br->cache_buffer =
-				    lzh_be64dec(strm->next_in);
+				    ((uint64_t)strm->next_in[0]) << 56 |
+				    ((uint64_t)strm->next_in[1]) << 48 |
+				    ((uint64_t)strm->next_in[2]) << 40 |
+				    ((uint64_t)strm->next_in[3]) << 32 |
+				    ((uint32_t)strm->next_in[4]) << 24 |
+				    ((uint32_t)strm->next_in[5]) << 16 |
+				    ((uint32_t)strm->next_in[6]) << 8 |
+				     (uint32_t)strm->next_in[7];
 				strm->next_in += 8;
 				strm->avail_in -= 8;
 				br->cache_avail += 8 * 8;
@@ -1923,10 +1876,16 @@ lzh_br_fillup(struct lzh_stream *strm, struct lzh_br *br)
 			}
 			break;
 		case 7:
-			if (strm->avail_in >= 8) {/* Read extra one. */
+			if (strm->avail_in >= 7) {
 				br->cache_buffer =
 		 		   (br->cache_buffer << 56) |
-				    lzh_be64dec(strm->next_in) >> 8;
+				    ((uint64_t)strm->next_in[0]) << 48 |
+				    ((uint64_t)strm->next_in[1]) << 40 |
+				    ((uint64_t)strm->next_in[2]) << 32 |
+				    ((uint32_t)strm->next_in[3]) << 24 |
+				    ((uint32_t)strm->next_in[4]) << 16 |
+				    ((uint32_t)strm->next_in[5]) << 8 |
+				     (uint32_t)strm->next_in[6];
 				strm->next_in += 7;
 				strm->avail_in -= 7;
 				br->cache_avail += 7 * 8;
@@ -1937,9 +1896,12 @@ lzh_br_fillup(struct lzh_stream *strm, struct lzh_br *br)
 			if (strm->avail_in >= 6) {
 				br->cache_buffer =
 		 		   (br->cache_buffer << 48) |
-				   (((uint64_t)lzh_be32dec(
-				       strm->next_in)) << 16) |
-				    lzh_be16dec(&strm->next_in[4]);
+				    ((uint64_t)strm->next_in[0]) << 40 |
+				    ((uint64_t)strm->next_in[1]) << 32 |
+				    ((uint32_t)strm->next_in[2]) << 24 |
+				    ((uint32_t)strm->next_in[3]) << 16 |
+				    ((uint32_t)strm->next_in[4]) << 8 |
+				     (uint32_t)strm->next_in[5];
 				strm->next_in += 6;
 				strm->avail_in -= 6;
 				br->cache_avail += 6 * 8;
@@ -1964,9 +1926,6 @@ lzh_br_fillup(struct lzh_stream *strm, struct lzh_br *br)
 		br->cache_avail += 8;
 		n -= 8;
 	}
-#undef lzh_be16dec
-#undef lzh_be32dec
-#undef lzh_be64dec
 }
 
 /*
@@ -2082,7 +2041,8 @@ lzh_read_blocks(struct lzh_stream *strm, int last)
 			/* Note: ST_RD_PT_1, ST_RD_PT_2 and ST_RD_PT_4 are
 			 * used in reading both a literal table and a
 			 * position table. */
-			if (!lzh_br_read_ahead(strm, br, ds->pt.len_bits)) {
+			if (!lzh_br_read_ahead(strm, br, ds->pt.len_bits) &&
+			    !lzh_br_has(br, ds->pt.len_bits)) {
 				if (last)
 					goto failed;/* Truncated data. */
 				ds->state = ST_RD_PT_1;
@@ -2095,7 +2055,8 @@ lzh_read_blocks(struct lzh_stream *strm, int last)
 			if (ds->pt.len_avail == 0) {
 				/* There is no bitlen. */
 				if (!lzh_br_read_ahead(strm, br,
-				    ds->pt.len_bits)) {
+				    ds->pt.len_bits) &&
+				    !lzh_br_has(br, ds->pt.len_bits)) {
 					if (last)
 						goto failed;/* Truncated data.*/
 					ds->state = ST_RD_PT_2;
@@ -2130,7 +2091,8 @@ lzh_read_blocks(struct lzh_stream *strm, int last)
 				return (ARCHIVE_OK);
 			}
 			/* There are some null in bitlen of the literal. */
-			if (!lzh_br_read_ahead(strm, br, 2)) {
+			if (!lzh_br_read_ahead(strm, br, 2) &&
+			    !lzh_br_has(br, 2)) {
 				if (last)
 					goto failed;/* Truncated data. */
 				ds->state = ST_RD_PT_3;
@@ -2162,7 +2124,8 @@ lzh_read_blocks(struct lzh_stream *strm, int last)
 			}
 			/* FALL THROUGH */
 		case ST_RD_LITERAL_1:
-			if (!lzh_br_read_ahead(strm, br, ds->lt.len_bits)) {
+			if (!lzh_br_read_ahead(strm, br, ds->lt.len_bits) &&
+			    !lzh_br_has(br, ds->lt.len_bits)) {
 				if (last)
 					goto failed;/* Truncated data. */
 				ds->state = ST_RD_LITERAL_1;
@@ -2175,7 +2138,8 @@ lzh_read_blocks(struct lzh_stream *strm, int last)
 			if (ds->lt.len_avail == 0) {
 				/* There is no bitlen. */
 				if (!lzh_br_read_ahead(strm, br,
-				    ds->lt.len_bits)) {
+				    ds->lt.len_bits) &&
+				    !lzh_br_has(br, ds->lt.len_bits)) {
 					if (last)
 						goto failed;/* Truncated data.*/
 					ds->state = ST_RD_LITERAL_2;
@@ -2196,7 +2160,8 @@ lzh_read_blocks(struct lzh_stream *strm, int last)
 			i = ds->loop;
 			while (i < ds->lt.len_avail) {
 				if (!lzh_br_read_ahead(strm, br,
-				    ds->pt.max_bits)) {
+				    ds->pt.max_bits) &&
+				    !lzh_br_has(br, ds->pt.max_bits)) {
 					if (last)
 						goto failed;/* Truncated data.*/
 					ds->loop = i;
@@ -2222,7 +2187,9 @@ lzh_read_blocks(struct lzh_stream *strm, int last)
 					/* c == 1 or c == 2 */
 					int n = (c == 1)?4:9;
 					if (!lzh_br_read_ahead(strm, br,
-					     ds->pt.bitlen[c] + n)) {
+					     ds->pt.bitlen[c] + n) &&
+					    !lzh_br_has(br,
+					      ds->pt.bitlen[c] + n)) {
 						if (last) /* Truncated data. */
 							goto failed;
 						ds->loop = i;
@@ -2278,7 +2245,6 @@ lzh_decode_blocks(struct lzh_stream *strm, int last)
 	int w_pos = ds->w_pos, w_mask = ds->w_mask, w_size = ds->w_size;
 	int lt_max_bits = lt->max_bits, pt_max_bits = pt->max_bits;
 	int state = ds->state;
-	uint16_t crc16 = ds->crc16;
 
 	for (;;) {
 		switch (state) {
@@ -2290,7 +2256,6 @@ lzh_decode_blocks(struct lzh_stream *strm, int last)
 					ds->state = ST_RD_BLOCK;
 					ds->br = bre;
 					ds->blocks_avail = 0;
-					ds->crc16 = crc16;
 					ds->w_pos = w_pos;
 					strm->avail_out = endp - outp;
 					return (100);
@@ -2342,7 +2307,6 @@ lzh_decode_blocks(struct lzh_stream *strm, int last)
 				 * afterward. */
 				w_buff[w_pos] = c;
 				w_pos = (w_pos + 1) & w_mask;
-				CRC16(crc16, c);
 				/* Store the decoded code to the output
 				 * buffer. */
 				*outp++ = c;
@@ -2425,16 +2389,13 @@ lzh_decode_blocks(struct lzh_stream *strm, int last)
 				    || (w_pos + l < copy_pos))) {
 					memcpy(w_buff + w_pos, s, l);
 					memcpy(outp, s, l);
-					crc16 = lha_crc16(crc16, s, l);
 				} else {
 					unsigned char *d;
 					int li;
 
 					d = w_buff + w_pos;
-					for (li = 0; li < l; li++) {
-						c = outp[li] = d[li] = s[li];
-						CRC16(crc16, c);
-					}
+					for (li = 0; li < l; li++)
+						outp[li] = d[li] = s[li];
 				}
 				outp += l;
 				copy_pos = (copy_pos + l) & w_mask;
@@ -2460,7 +2421,6 @@ failed:
 next_data:
 	ds->br = bre;
 	ds->blocks_avail = blocks_avail;
-	ds->crc16 = crc16;
 	ds->state = state;
 	ds->w_pos = w_pos;
 	strm->avail_out = endp - outp;
@@ -2582,7 +2542,7 @@ lzh_make_huffman_table(struct huffman *hf)
 			maxbits = i;
 		}
 	}
-	if ((ptn & 0xffff) != 0 || maxbits > hf->tbl_bits)
+	if (ptn != 0x10000 || maxbits > hf->tbl_bits)
 		return (0);/* Invalid */
 
 	hf->max_bits = maxbits;

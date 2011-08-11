@@ -30,6 +30,9 @@ SET(libarchive_SOURCES
   archive_options.c
   archive_options_private.h
   archive_platform.h
+  archive_ppmd_private.h
+  archive_ppmd7.c
+  archive_ppmd7_private.h
   archive_private.h
   archive_rb.c
   archive_rb.h
