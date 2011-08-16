@@ -43,7 +43,7 @@
 __FBSDID("$FreeBSD$");
 #define KNOWNREF	"test_option_T_upper.pax.uu"
 #define ENVBASE "BSDPAX"  /* Prefix for environment variables. */
-#define	PROGRAM "bsdbax"  /* Name of program being tested. */
+#define	PROGRAM "bsdpax"  /* Name of program being tested. */
 #define PROGRAM_ALIAS "pax" /* Generic alias for program */
 #undef	LIBRARY		  /* Not testing a library. */
 #undef	EXTRA_DUMP	  /* How to dump extra data */
@@ -2077,15 +2077,24 @@ int
 main(int argc, char **argv)
 {
 	static const int limit = sizeof(tests) / sizeof(tests[0]);
-	int i, start, end, tests_run = 0, tests_failed = 0, option;
+	int i = 0, j = 0, start, end, tests_run = 0, tests_failed = 0, option;
 	time_t now;
 	char *refdir_alloc = NULL;
 	const char *progname;
 	const char *tmp, *option_arg, *p;
-	char tmpdir[256];
+	char tmpdir[256], *pwd, *testprogdir, *tmp2 = NULL;
 	char tmpdir_timestamp[256];
 
 	(void)argc; /* UNUSED */
+
+	/* Get the current dir. */
+#ifdef PATH_MAX
+	pwd = getcwd(NULL, PATH_MAX);/* Solaris getcwd needs the size. */
+#else
+	pwd = getcwd(NULL, 0);
+#endif
+	while (pwd[strlen(pwd) - 1] == '\n')
+		pwd[strlen(pwd) - 1] = '\0';
 
 #if defined(HAVE__CrtSetReportMode)
 	/* To stop to run the default invalid parameter handler. */
@@ -2099,11 +2108,35 @@ main(int argc, char **argv)
 	 * tree.
 	 */
 	progname = p = argv[0];
+	if ((testprogdir = (char *)malloc(strlen(progname) + 1)) == NULL)
+	{
+		fprintf(stderr, "ERROR: Out of memory.");
+		exit(1);
+	}
+	strcpy(testprogdir, progname);
 	while (*p != '\0') {
 		/* Support \ or / dir separators for Windows compat. */
 		if (*p == '/' || *p == '\\')
+		{
 			progname = p + 1;
+			i = j;
+		}
 		++p;
+		j++;
+	}
+	testprogdir[i] = '\0';
+	if (testprogdir[0] != '/')
+	{
+		/* Fixup path for relative directories. */
+		if ((testprogdir = (char *)realloc(testprogdir,
+			strlen(pwd) + 1 + strlen(testprogdir) + 1)) == NULL)
+		{
+			fprintf(stderr, "ERROR: Out of memory.");
+			exit(1);
+		}
+		strcpy(testprogdir + strlen(pwd) + 1, testprogdir);
+		strcpy(testprogdir, pwd);
+		testprogdir[strlen(pwd)] = '/';
 	}
 
 #ifdef PROGRAM
@@ -2193,9 +2226,18 @@ main(int argc, char **argv)
 	 * Sanity-check that our options make sense.
 	 */
 #ifdef PROGRAM
-	if (testprogfile == NULL) {
-		fprintf(stderr, "Program executable required\n");
-		usage(progname);
+	if (testprogfile == NULL)
+	{
+		if ((tmp2 = (char *)malloc(strlen(testprogdir) + 1 +
+			strlen(PROGRAM) + 1)) == NULL)
+		{
+			fprintf(stderr, "ERROR: Out of memory.");
+			exit(1);
+		}
+		strcpy(tmp2, testprogdir);
+		strcat(tmp2, "/");
+		strcat(tmp2, PROGRAM);
+		testprogfile = tmp2;
 	}
 
 	{
@@ -2336,6 +2378,10 @@ main(int argc, char **argv)
 			argv++;
 		}
 	}
+	/* Must be freed after all tests run */
+	free(tmp2);
+	free(testprogdir);
+	free(pwd);
 
 	/*
 	 * Report summary statistics.
