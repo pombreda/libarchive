@@ -569,7 +569,7 @@ archive_read_format_iso9660_options(struct archive_read *a,
 
 	/* Note: The "warn" return is just to inform the options
 	 * supervisor that we didn't handle it.  It will generate
-	 * a suitable error if noone used this option. */
+	 * a suitable error if no one used this option. */
 	return (ARCHIVE_WARN);
 }
 
@@ -898,8 +898,10 @@ isPVD(struct iso9660 *iso9660, const unsigned char *h)
 		return (0);
 
 	/* Reserved field must be 0. */
+	/* But accept NetBSD/FreeBSD "makefs" images with 0x20 here. */
 	for (i = 0; i < PVD_reserved4_size; ++i)
-		if (h[PVD_reserved4_offset + i] != 0)
+		if (h[PVD_reserved4_offset + i] != 0
+		    && h[PVD_reserved4_offset + i] != 0x20)
 			return (0);
 
 	/* Reserved field must be 0. */
@@ -1889,7 +1891,7 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 
 		/* trim trailing first version and dot from filename.
 		 *
-		 * Remember we where in UTF-16BE land!
+		 * Remember we were in UTF-16BE land!
 		 * SEPARATOR 1 (.) and SEPARATOR 2 (;) are both
 		 * 16 bits big endian characters on Joliet.
 		 *

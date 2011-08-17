@@ -412,7 +412,7 @@ tar_flush_unconsumed(struct archive_read *a, size_t *unconsumed)
 }
 
 /*
- * The function invoked by archive_read_header().  This
+ * The function invoked by archive_read_next_header().  This
  * just sets up a few things and then calls the internal
  * tar_read_header() function below.
  */
@@ -1035,7 +1035,7 @@ read_body_to_string(struct archive_read *a, struct tar *tar,
 
 	tar_flush_unconsumed(a, unconsumed);
 
- 	/* Read the body into the string. */
+	/* Read the body into the string. */
 	*unconsumed = (size + 511) & ~ 511;
 	src = __archive_read_ahead(a, *unconsumed, NULL);
 	if (src == NULL) {
@@ -2168,7 +2168,7 @@ gnu_sparse_old_parse(struct archive_read *a, struct tar *tar,
  * Beginning with GNU tar 1.15, sparse files are stored using
  * information in the pax extended header.  The GNU tar maintainers
  * have gone through a number of variations in the process of working
- * out this scheme; furtunately, they're all numbered.
+ * out this scheme; fortunately, they're all numbered.
  *
  * Sparse format 0.0 uses attribute GNU.sparse.numblocks to store the
  * number of blocks, and GNU.sparse.offset/GNU.sparse.numbytes to
