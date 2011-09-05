@@ -204,12 +204,71 @@ client_skip_proxy(struct archive_read_filter *self, int64_t request)
 static int
 client_close_proxy(struct archive_read_filter *self)
 {
-	int r = ARCHIVE_OK;
+	int r = ARCHIVE_OK, r2;
+	unsigned int i;
 
-	if (self->archive->client.closer != NULL)
-		r = (self->archive->client.closer)((struct archive *)self->archive,
+	if (self->archive->client.closer == NULL)
+		return (r);
+	for (i = 0; i < self->archive->client.nodes; i++)
+	{
+		r2 = (self->archive->client.closer)
+			((struct archive *)self->archive,
+				self->archive->client.dataset[i].data);
+		if (r > r2)
+			r = r2;
+	}
+	return (r);
+}
+
+static int
+client_open_proxy(struct archive_read_filter *self)
+{
+  int r = ARCHIVE_OK;
+	if (self->archive->client.opener != NULL)
+		r = (self->archive->client.opener)((struct archive *)self->archive,
 		    self->data);
 	return (r);
+}
+
+static int
+client_switch_proxy(struct archive_read_filter *self, int usenext)
+{
+  int r1 = ARCHIVE_OK, r2 = ARCHIVE_OK;
+	void *data2 = NULL;
+
+	if (usenext &&
+		(self->archive->client.cursor + 1 < self->archive->client.nodes))
+	{
+		data2 =
+			self->archive->client.dataset[self->archive->client.cursor + 1].data;
+		self->archive->client.cursor++;
+	}
+	else if (!usenext && (self->archive->client.cursor > 0) &&
+		(self->archive->client.cursor - 1 >= 0))
+	{
+		data2 =
+			self->archive->client.dataset[self->archive->client.cursor - 1].data;
+		self->archive->client.cursor--;
+	}
+
+	if (self->archive->client.switcher != NULL)
+	{
+		r1 = r2 = (self->archive->client.switcher)
+			((struct archive *)self->archive, self->data, data2);
+		self->data = data2;
+	}
+	else
+	{
+		/* Attempt to call close and open instead */
+		if (self->archive->client.opener != NULL)
+			r1 = (self->archive->client.opener)
+				((struct archive *)self->archive, self->data);
+		self->data = data2;
+		if (self->archive->client.closer != NULL)
+			r2 = (self->archive->client.closer)
+				((struct archive *)self->archive, self->data);
+	}
+	return (r1 < r2) ? r1 : r2;
 }
 
 int
@@ -257,13 +316,92 @@ archive_read_set_close_callback(struct archive *_a,
 }
 
 int
-archive_read_set_callback_data(struct archive *_a, void *client_data)
+archive_read_set_switch_callback(struct archive *_a,
+    archive_switch_callback *client_switcher)
 {
 	struct archive_read *a = (struct archive_read *)_a;
 	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
-	    "archive_read_set_callback_data");
-	a->client.data = client_data;
+	    "archive_read_set_switch_callback");
+	a->client.switcher = client_switcher;
 	return ARCHIVE_OK;
+}
+
+int
+archive_read_set_callback_data(struct archive *_a, void *client_data)
+{
+	return archive_read_set_callback_data2(_a, client_data, 0);
+}
+
+int
+archive_read_set_callback_data2(struct archive *_a, void *client_data,
+    unsigned int index)
+{
+	struct archive_read *a = (struct archive_read *)_a;
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
+	    "archive_read_set_callback_data2");
+
+	if (a->client.nodes == 0)
+	{
+		a->client.dataset =
+			(struct archive_read_data_node *)calloc(1, sizeof(*a->client.dataset));
+		if (a->client.dataset == NULL)
+		{
+			archive_set_error(&a->archive, ENOMEM,
+				"No memory.");
+			return ARCHIVE_FATAL;
+		}
+		a->client.nodes = 1;
+	}
+
+	if (index > a->client.nodes - 1)
+	{
+		archive_set_error(&a->archive, EINVAL,
+			"Invalid index specified.");
+		return ARCHIVE_FATAL;
+	}
+	a->client.dataset[index].data = client_data;
+	return ARCHIVE_OK;
+}
+
+int
+archive_read_add_callback_data(struct archive *_a, void *client_data,
+    unsigned int index)
+{
+	struct archive_read *a = (struct archive_read *)_a;
+	unsigned int i;
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
+	    "archive_read_add_callback_data");
+	if (index > a->client.nodes)
+	{
+		archive_set_error(&a->archive, EINVAL,
+			"Invalid index specified.");
+		return ARCHIVE_FATAL;
+	}
+	if ((a->client.dataset =
+		(struct archive_read_data_node *)realloc(a->client.dataset,
+			sizeof(*a->client.dataset) * (++(a->client.nodes)))) == NULL)
+	{
+		archive_set_error(&a->archive, ENOMEM,
+			"No memory.");
+		return ARCHIVE_FATAL;
+	}
+	for (i = a->client.nodes - 1; i > index && i > 0; i--)
+		a->client.dataset[i].data = a->client.dataset[i-1].data;
+	a->client.dataset[index].data = client_data;
+	return ARCHIVE_OK;
+}
+
+int
+archive_read_append_callback_data(struct archive *_a, void *client_data)
+{
+	struct archive_read *a = (struct archive_read *)_a;
+	return archive_read_add_callback_data(_a, client_data, a->client.nodes);
+}
+
+int
+archive_read_prepend_callback_data(struct archive *_a, void *client_data)
+{
+	return archive_read_add_callback_data(_a, client_data, 0);
 }
 
 int
@@ -272,6 +410,7 @@ archive_read_open1(struct archive *_a)
 	struct archive_read *a = (struct archive_read *)_a;
 	struct archive_read_filter *filter;
 	int slot, e;
+	unsigned int i;
 
 	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
 	    "archive_read_open");
@@ -286,11 +425,14 @@ archive_read_open1(struct archive *_a)
 
 	/* Open data source. */
 	if (a->client.opener != NULL) {
-		e =(a->client.opener)(&a->archive, a->client.data);
+		e =(a->client.opener)(&a->archive, a->client.dataset[0].data);
 		if (e != 0) {
 			/* If the open failed, call the closer to clean up. */
 			if (a->client.closer)
-				(a->client.closer)(&a->archive, a->client.data);
+			{
+				for (i = 0; i < a->client.nodes; i++)
+					(a->client.closer)(&a->archive, a->client.dataset[i].data);
+			}
 			return (e);
 		}
 	}
@@ -301,10 +443,12 @@ archive_read_open1(struct archive *_a)
 	filter->bidder = NULL;
 	filter->upstream = NULL;
 	filter->archive = a;
-	filter->data = a->client.data;
+	filter->data = a->client.dataset[0].data;
+	filter->open = client_open_proxy;
 	filter->read = client_read_proxy;
 	filter->skip = client_skip_proxy;
 	filter->close = client_close_proxy;
+	filter->_switch = client_switch_proxy;
 	filter->name = "none";
 	filter->code = ARCHIVE_COMPRESSION_NONE;
 	a->filter = filter;
@@ -811,6 +955,7 @@ _archive_read_free(struct archive *_a)
 		archive_entry_free(a->entry);
 	a->archive.magic = 0;
 	__archive_clean(&a->archive);
+	free(a->client.dataset);
 	free(a);
 	return (r);
 }
@@ -1067,7 +1212,14 @@ __archive_read_filter_ahead(struct archive_read_filter *filter,
 					*avail = ARCHIVE_FATAL;
 				return (NULL);
 			}
-			if (bytes_read == 0) {	/* Premature end-of-file. */
+			if (bytes_read == 0) {
+				/* Check for another client object first */
+				if (filter->archive->client.cursor != filter->archive->client.nodes - 1)
+				{
+					if (client_switch_proxy(filter, 1) == (ARCHIVE_OK))
+						continue;
+				}
+				/* Premature end-of-file. */
 				filter->client_total = filter->client_avail = 0;
 				filter->client_next = filter->client_buff = NULL;
 				filter->end_of_file = 1;
@@ -1247,6 +1399,11 @@ advance_file_pointer(struct archive_read_filter *filter, int64_t request)
 		}
 
 		if (bytes_read == 0) {
+			if (filter->archive->client.cursor != filter->archive->client.nodes - 1)
+			{
+				if (client_switch_proxy(filter, 1) == (ARCHIVE_OK))
+					continue;
+			}
 			filter->client_buff = NULL;
 			filter->end_of_file = 1;
 			return (total_bytes_skipped);

@@ -82,12 +82,16 @@ struct archive_read_filter {
 	struct archive_read_filter_bidder *bidder; /* My bidder. */
 	struct archive_read_filter *upstream; /* Who I read from. */
 	struct archive_read *archive; /* Associated archive. */
+	/* Open a block for reading */
+	int (*open)(struct archive_read_filter *self);
 	/* Return next block. */
 	ssize_t (*read)(struct archive_read_filter *, const void **);
 	/* Skip forward this many bytes. */
 	int64_t (*skip)(struct archive_read_filter *self, int64_t request);
 	/* Close (just this filter) and free(self). */
 	int (*close)(struct archive_read_filter *self);
+	/* Function that handles switching from reading one block to the next/prev */
+	int (*_switch)(struct archive_read_filter *self, int usenext);
 	/* My private data. */
 	void *data;
 
@@ -116,12 +120,18 @@ struct archive_read_filter {
  * transformation filters.  This will probably break the API/ABI and
  * so should be deferred at least until libarchive 3.0.
  */
+struct archive_read_data_node {
+	void *data;
+};
 struct archive_read_client {
 	archive_open_callback	*opener;
 	archive_read_callback	*reader;
 	archive_skip_callback	*skipper;
 	archive_close_callback	*closer;
-	void *data;
+	archive_switch_callback *switcher;
+	unsigned int nodes;
+	unsigned int cursor;
+	struct archive_read_data_node *dataset;
 };
 
 struct archive_read {
@@ -142,7 +152,7 @@ struct archive_read {
 	int64_t		  read_data_output_offset;
 	size_t		  read_data_remaining;
 
-	/* Callbacks to open/read/write/close client archive stream. */
+	/* Callbacks to open/read/write/close client archive streams. */
 	struct archive_read_client client;
 
 	/* Registered filter bidders. */

@@ -74,7 +74,10 @@ struct read_file_data {
 	char	 filename[1]; /* Must be last! */
 };
 
+static int	file_open(struct archive *, void *);
 static int	file_close(struct archive *, void *);
+static int file_close2(struct archive *, void *);
+static int file_switch(struct archive *, void *, void *);
 static ssize_t	file_read(struct archive *, void *, const void **buff);
 static int64_t	file_skip(struct archive *, void *, int64_t request);
 static off_t	file_skip_lseek(struct archive *, void *, off_t request);
@@ -90,138 +93,47 @@ int
 archive_read_open_filename(struct archive *a, const char *filename,
     size_t block_size)
 {
-	struct stat st;
+	const char *filenames[2] = { filename, NULL };
+	return archive_read_open_filenames(a, filenames, block_size);
+}
+
+int
+archive_read_open_filenames(struct archive *a, const char **filenames,
+    size_t block_size)
+{
 	struct read_file_data *mine;
-	void *buffer;
-	int fd;
-	int is_disk_like = 0;
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
-	off_t mediasize = 0; /* FreeBSD-specific, so off_t okay here. */
-#elif defined(__NetBSD__) || defined(__OpenBSD__)
-	struct disklabel dl;
-#elif defined(__DragonFly__)
-	struct partinfo pi;
-#endif
+	const char *filename = NULL;
+	if (filenames)
+		filename = *(filenames++);
 
 	archive_clear_error(a);
-	if (filename == NULL || filename[0] == '\0') {
-		/* We used to delegate stdin support by
-		 * directly calling archive_read_open_fd(a,0,block_size)
-		 * here, but that doesn't (and shouldn't) handle the
-		 * end-of-file flush when reading stdout from a pipe.
-		 * Basically, read_open_fd() is intended for folks who
-		 * are willing to handle such details themselves.  This
-		 * API is intended to be a little smarter for folks who
-		 * want easy handling of the common case.
-		 */
-		filename = ""; /* Normalize NULL to "" */
-		fd = 0;
-#if defined(__CYGWIN__) || defined(_WIN32)
-		setmode(0, O_BINARY);
-#endif
-	} else {
-		fd = open(filename, O_RDONLY | O_BINARY);
-		if (fd < 0) {
-			archive_set_error(a, errno,
-			    "Failed to open '%s'", filename);
+	do
+	{
+		if (filename == NULL)
+			filename = "";
+		mine = (struct read_file_data *)calloc(1,
+			sizeof(*mine) + strlen(filename));
+		if (mine == NULL)
+			goto no_memory;
+		strcpy(mine->filename, filename);
+		mine->block_size = block_size;
+		mine->fd = -1;
+		mine->buffer = NULL;
+		mine->st_mode = mine->use_lseek = 0;
+		if (archive_read_append_callback_data(a, mine) != (ARCHIVE_OK))
 			return (ARCHIVE_FATAL);
-		}
-	}
-	if (fstat(fd, &st) != 0) {
-		archive_set_error(a, errno, "Can't stat '%s'", filename);
-		return (ARCHIVE_FATAL);
-	}
-
-	/*
-	 * Determine whether the input looks like a disk device or a
-	 * tape device.  The results are used below to select an I/O
-	 * strategy:
-	 *  = "disk-like" devices support arbitrary lseek() and will
-	 *    support I/O requests of any size.  So we get easy skipping
-	 *    and can cheat on block sizes to get better performance.
-	 *  = "tape-like" devices require strict blocking and use
-	 *    specialized ioctls for seeking.
-	 *  = "socket-like" devices cannot seek at all but can improve
-	 *    performance by using nonblocking I/O to read "whatever is
-	 *    available right now".
-	 *
-	 * Right now, we only specially recognize disk-like devices,
-	 * but it should be straightforward to add probes and strategy
-	 * here for tape-like and socket-like devices.
-	 */
-	if (S_ISREG(st.st_mode)) {
-		/* Safety:  Tell the extractor not to overwrite the input. */
-		archive_read_extract_set_skip_file(a, st.st_dev, st.st_ino);
-		/* Regular files act like disks. */
-		is_disk_like = 1;
-	}
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
-	/* FreeBSD: if it supports DIOCGMEDIASIZE ioctl, it's disk-like. */
-	else if (S_ISCHR(st.st_mode) &&
-	    ioctl(fd, DIOCGMEDIASIZE, &mediasize) == 0 &&
-	    mediasize > 0) {
-		is_disk_like = 1;
-	}
-#elif defined(__NetBSD__) || defined(__OpenBSD__)
-	/* Net/OpenBSD: if it supports DIOCGDINFO ioctl, it's disk-like. */
-	else if ((S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode)) &&
-	    ioctl(fd, DIOCGDINFO, &dl) == 0 &&
-	    dl.d_partitions[DISKPART(st.st_rdev)].p_size > 0) {
-		is_disk_like = 1;
-	}
-#elif defined(__DragonFly__)
-	/* DragonFly BSD:  if it supports DIOCGPART ioctl, it's disk-like. */
-	else if (S_ISCHR(st.st_mode) &&
-	    ioctl(fd, DIOCGPART, &pi) == 0 &&
-	    pi.media_size > 0) {
-		is_disk_like = 1;
-	}
-#elif defined(__linux__)
-	/* Linux:  All block devices are disk-like. */
-	else if (S_ISBLK(st.st_mode) &&
-	    lseek(fd, 0, SEEK_CUR) == 0 &&
-	    lseek(fd, 0, SEEK_SET) == 0 &&
-	    lseek(fd, 0, SEEK_END) > 0 &&
-	    lseek(fd, 0, SEEK_SET) == 0) {
-		is_disk_like = 1;
-	}
-#endif
-	/* TODO: Add an "is_tape_like" variable and appropriate tests. */
-
-	mine = (struct read_file_data *)calloc(1,
-	    sizeof(*mine) + strlen(filename));
-	/* Disk-like devices prefer power-of-two block sizes.  */
-	/* Use provided block_size as a guide so users have some control. */
-	if (is_disk_like) {
-		size_t new_block_size = 64 * 1024;
-		while (new_block_size < block_size
-		    && new_block_size < 64 * 1024 * 1024)
-			new_block_size *= 2;
-		block_size = new_block_size;
-	}
-	buffer = malloc(block_size);
-	if (mine == NULL || buffer == NULL) {
-		archive_set_error(a, ENOMEM, "No memory");
-		free(mine);
-		free(buffer);
-		return (ARCHIVE_FATAL);
-	}
-	strcpy(mine->filename, filename);
-	mine->block_size = block_size;
-	mine->buffer = buffer;
-	mine->fd = fd;
-	/* Remember mode so close can decide whether to flush. */
-	mine->st_mode = st.st_mode;
-
-	/* Disk-like inputs can use lseek(). */
-	if (is_disk_like)
-		mine->use_lseek = 1;
-
+		filename = *(filenames++);
+	} while (filename != NULL && filename[0] != '\0');
+	archive_read_set_open_callback(a, file_open);
 	archive_read_set_read_callback(a, file_read);
 	archive_read_set_skip_callback(a, file_skip);
 	archive_read_set_close_callback(a, file_close);
-	archive_read_set_callback_data(a, mine);
+	archive_read_set_switch_callback(a, file_switch);
+
 	return (archive_read_open1(a));
+no_memory:
+	archive_set_error(a, ENOMEM, "No memory");
+	return (ARCHIVE_FATAL);
 }
 
 static ssize_t
@@ -326,7 +238,7 @@ file_skip(struct archive *a, void *client_data, int64_t request)
 }
 
 static int
-file_close(struct archive *a, void *client_data)
+file_close2(struct archive *a, void *client_data)
 {
 	struct read_file_data *mine = (struct read_file_data *)client_data;
 
@@ -359,6 +271,151 @@ file_close(struct archive *a, void *client_data)
 			close(mine->fd);
 	}
 	free(mine->buffer);
+	mine->buffer = NULL;
+	mine->fd = -1;
+	return (ARCHIVE_OK);
+}
+
+static int
+file_close(struct archive *a, void *client_data)
+{
+	struct read_file_data *mine = (struct read_file_data *)client_data;
+	file_close2(a, client_data);
 	free(mine);
 	return (ARCHIVE_OK);
+}
+
+static int
+file_open(struct archive *a, void *client_data)
+{
+	struct read_file_data *mine = (struct read_file_data *)client_data;
+	(void)a;
+	struct stat st;
+	void *buffer;
+	int fd;
+	int is_disk_like = 0;
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+	off_t mediasize = 0; /* FreeBSD-specific, so off_t okay here. */
+#elif defined(__NetBSD__) || defined(__OpenBSD__)
+	struct disklabel dl;
+#elif defined(__DragonFly__)
+	struct partinfo pi;
+#endif
+
+	if (mine->filename[0] == '\0') {
+		/* We used to delegate stdin support by
+		* directly calling archive_read_open_fd(a,0,block_size)
+		* here, but that doesn't (and shouldn't) handle the
+		* end-of-file flush when reading stdout from a pipe.
+		* Basically, read_open_fd() is intended for folks who
+		* are willing to handle such details themselves.  This
+		* API is intended to be a little smarter for folks who
+		* want easy handling of the common case.
+		*/
+		fd = 0;
+#if defined(__CYGWIN__) || defined(_WIN32)
+		setmode(0, O_BINARY);
+#endif
+	} else {
+		fd = open(mine->filename, O_RDONLY | O_BINARY);
+		if (fd < 0) {
+			archive_set_error(a, errno,
+					"Failed to open '%s'", mine->filename);
+			return (ARCHIVE_FATAL);
+		}
+	}
+
+	if (fstat(fd, &st) != 0) {
+		archive_set_error(a, errno, "Can't stat '%s'", mine->filename);
+		return (ARCHIVE_FATAL);
+	}
+
+	/*
+	* Determine whether the input looks like a disk device or a
+	* tape device.  The results are used below to select an I/O
+	* strategy:
+	*  = "disk-like" devices support arbitrary lseek() and will
+	*    support I/O requests of any size.  So we get easy skipping
+	*    and can cheat on block sizes to get better performance.
+	*  = "tape-like" devices require strict blocking and use
+	*    specialized ioctls for seeking.
+	*  = "socket-like" devices cannot seek at all but can improve
+	*    performance by using nonblocking I/O to read "whatever is
+	*    available right now".
+	*
+	* Right now, we only specially recognize disk-like devices,
+	* but it should be straightforward to add probes and strategy
+	* here for tape-like and socket-like devices.
+	*/
+	if (S_ISREG(st.st_mode)) {
+		/* Safety:  Tell the extractor not to overwrite the input. */
+		archive_read_extract_set_skip_file(a, st.st_dev, st.st_ino);
+		/* Regular files act like disks. */
+		is_disk_like = 1;
+	}
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+	/* FreeBSD: if it supports DIOCGMEDIASIZE ioctl, it's disk-like. */
+	else if (S_ISCHR(st.st_mode) &&
+			ioctl(fd, DIOCGMEDIASIZE, &mediasize) == 0 &&
+			mediasize > 0) {
+		is_disk_like = 1;
+	}
+#elif defined(__NetBSD__) || defined(__OpenBSD__)
+	/* Net/OpenBSD: if it supports DIOCGDINFO ioctl, it's disk-like. */
+	else if ((S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode)) &&
+			ioctl(fd, DIOCGDINFO, &dl) == 0 &&
+			dl.d_partitions[DISKPART(st.st_rdev)].p_size > 0) {
+		is_disk_like = 1;
+	}
+#elif defined(__DragonFly__)
+	/* DragonFly BSD:  if it supports DIOCGPART ioctl, it's disk-like. */
+	else if (S_ISCHR(st.st_mode) &&
+			ioctl(fd, DIOCGPART, &pi) == 0 &&
+			pi.media_size > 0) {
+		is_disk_like = 1;
+	}
+#elif defined(__linux__)
+	/* Linux:  All block devices are disk-like. */
+	else if (S_ISBLK(st.st_mode) &&
+			lseek(fd, 0, SEEK_CUR) == 0 &&
+			lseek(fd, 0, SEEK_SET) == 0 &&
+			lseek(fd, 0, SEEK_END) > 0 &&
+			lseek(fd, 0, SEEK_SET) == 0) {
+		is_disk_like = 1;
+	}
+#endif
+	/* TODO: Add an "is_tape_like" variable and appropriate tests. */
+
+	/* Disk-like devices prefer power-of-two block sizes.  */
+	/* Use provided block_size as a guide so users have some control. */
+	if (is_disk_like) {
+		size_t new_block_size = 64 * 1024;
+		while (new_block_size < mine->block_size
+				&& new_block_size < 64 * 1024 * 1024)
+			new_block_size *= 2;
+		mine->block_size = new_block_size;
+	}
+	buffer = malloc(mine->block_size);
+	if (buffer == NULL)
+		goto no_memory;
+	mine->buffer = buffer;
+	mine->fd = fd;
+	/* Remember mode so close can decide whether to flush. */
+	mine->st_mode = st.st_mode;
+
+	/* Disk-like inputs can use lseek(). */
+	if (is_disk_like)
+		mine->use_lseek = 1;
+	return (ARCHIVE_OK);
+no_memory:
+	archive_set_error(a, ENOMEM, "No memory");
+	free(mine);
+	return (ARCHIVE_FATAL);
+}
+
+static int
+file_switch(struct archive *a, void *client_data1, void *client_data2)
+{
+	file_close2(a, client_data1);
+	return file_open(a, client_data2);
 }

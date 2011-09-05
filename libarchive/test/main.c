@@ -1932,6 +1932,13 @@ extract_reference_file(const char *name)
 	fclose(in);
 }
 
+void
+extract_reference_files(const char **names)
+{
+	while (names && *names)
+		extract_reference_file(*names++);
+}
+
 /*
  *
  * TEST management
