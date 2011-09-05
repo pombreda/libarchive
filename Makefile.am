@@ -499,6 +499,10 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_read_format_rar_compress_best.rar.uu	\
 	libarchive/test/test_read_format_rar_compress_normal.rar.uu	\
 	libarchive/test/test_read_format_rar_multi_lzss_blocks.rar.uu	\
+	libarchive/test/test_read_format_rar_multivolume.part0001.rar.uu\
+	libarchive/test/test_read_format_rar_multivolume.part0002.rar.uu\
+	libarchive/test/test_read_format_rar_multivolume.part0003.rar.uu\
+	libarchive/test/test_read_format_rar_multivolume.part0004.rar.uu\
 	libarchive/test/test_read_format_rar_noeof.rar.uu		\
 	libarchive/test/test_read_format_rar_ppmd_lzss_conversion.rar.uu\
 	libarchive/test/test_read_format_rar_subblock.rar.uu		\
