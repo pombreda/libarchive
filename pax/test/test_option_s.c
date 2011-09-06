@@ -34,6 +34,12 @@ DEFINE_TEST(test_option_s)
 	assertMakeDir("in/d1", 0755);
 	assertMakeFile("in/d1/foo", 0644, "foo");
 	assertMakeFile("in/d1/bar", 0644, "bar");
+	if (canSymlink()) {
+		assertMakeFile("in/d1/realfile", 0644, "realfile");
+		assertMakeSymlink("in/d1/symlink", "realfile");
+	}
+	assertMakeFile("in/d1/hardlink1", 0644, "hardlinkedfile");
+	assertMakeHardlink("in/d1/hardlink2", "in/d1/hardlink1");
 
 	/* Does bsdpax support -s option ? */
 	systemf("%s -w -s /foo/bar/ in/d1/foo > NUL 2> check.err",
@@ -59,7 +65,6 @@ DEFINE_TEST(test_option_s)
 	systemf("%s -rf ../test12.pax", testprog);
 	assertChdir("..");
 	assertFileContents("foo", 3, "test1/in/d2/foo");
-
 
 	/*
 	 * Test 2: Basic substitution when extracting archive.
@@ -99,4 +104,119 @@ DEFINE_TEST(test_option_s)
 	assertChdir("..");
 	assertFileContents("foo", 3, "test5/in/d1/bar");
 	assertFileContents("bar", 3, "test5/in/d1/foo");
+
+	/*
+	 * Test 6: symlinks get renamed by default
+	 */
+	if (canSymlink()) {
+		/* At extraction time. */
+		assertMakeDir("test6a", 0755);
+		systemf("%s -wf test6a.pax in/d1", testprog);
+		assertChdir("test6a");
+		systemf("%s -rf ../test6a.pax -s /d1/d2/", testprog);
+		assertChdir("..");
+		assertFileContents("realfile", 8, "test6a/in/d2/realfile");
+		assertFileContents("realfile", 8, "test6a/in/d2/symlink");
+		assertIsSymlink("test6a/in/d2/symlink", "realfile");
+		/* At creation time. */
+		assertMakeDir("test6b", 0755);
+		systemf("%s -wf test6b.pax -s /d1/d2/ in/d1", testprog);
+		assertChdir("test6b");
+		systemf("%s -rf ../test6b.pax", testprog);
+		assertChdir("..");
+		assertFileContents("realfile", 8, "test6b/in/d2/realfile");
+		assertFileContents("realfile", 8, "test6b/in/d2/symlink");
+		assertIsSymlink("test6b/in/d2/symlink", "realfile");
+	}
+
+	/*
+	 * Test 7: selective renaming of symlink target
+	 */
+	if (canSymlink()) {
+		/* At extraction. */
+		assertMakeDir("test7a", 0755);
+		systemf("%s -wf test7a.pax in/d1", testprog);
+		assertChdir("test7a");
+		systemf("%s -rf ../test7a.pax -s /realfile/realfile-renamed/",
+		    testprog);
+		assertChdir("..");
+		assertFileContents(
+		    "realfile", 8, "test7a/in/d1/realfile-renamed");
+		assertFileContents("realfile", 8, "test7a/in/d1/symlink");
+		assertIsSymlink("test7a/in/d1/symlink", "realfile-renamed");
+		/* At creation. */
+		assertMakeDir("test7b", 0755);
+		systemf(
+		    "%s -wf test7b.pax -s /realfile/realfile-renamed/ in/d1",
+		    testprog);
+		assertChdir("test7b");
+		systemf("%s -rf ../test7b.pax", testprog);
+		assertChdir("..");
+		assertFileContents("realfile", 8,
+		    "test7b/in/d1/realfile-renamed");
+		assertFileContents("realfile", 8, "test7b/in/d1/symlink");
+		assertIsSymlink("test7b/in/d1/symlink", "realfile-renamed");
+	}
+
+	/*
+	 * Test 8: hardlinks get renamed by default
+	 */
+	/* At extraction time. */
+	assertMakeDir("test8a", 0755);
+	systemf("%s -wf test8a.pax in/d1", testprog);
+	assertChdir("test8a");
+	systemf("%s -rf ../test8a.pax -s /d1/d2/", testprog);
+	assertChdir("..");
+	assertIsHardlink("test8a/in/d2/hardlink1", "test8a/in/d2/hardlink2");
+	/* At creation time. */
+	assertMakeDir("test8b", 0755);
+	systemf("%s -wf test8b.pax -s /d1/d2/ in/d1", testprog);
+	assertChdir("test8b");
+	systemf("%s -rf ../test8b.pax", testprog);
+	assertChdir("..");
+	assertIsHardlink("test8b/in/d2/hardlink1", "test8b/in/d2/hardlink2");
+
+	/*
+	 * Test 9: selective renaming of hardlink target
+	 */
+	if (canSymlink()) {
+		/* At extraction. (assuming hardlink2 is the hardlink entry) */
+		assertMakeDir("test9a", 0755);
+		systemf("%s -wf test9a.pax in/d1", testprog);
+		assertChdir("test9a");
+		systemf("%s -rf ../test9a.pax -s /hardlink1/hardlink1-renamed/",
+		    testprog);
+		assertChdir("..");
+		assertIsHardlink("test9a/in/d1/hardlink1-renamed",
+		    "test9a/in/d1/hardlink2");
+		/* At extraction. (assuming hardlink1 is the hardlink entry) */
+		assertMakeDir("test9b", 0755);
+		systemf("%s -wf test9b.pax in/d1", testprog);
+		assertChdir("test9b");
+		systemf("%s -rf ../test9b.pax -s /hardlink2/hardlink2-renamed/",
+		    testprog);
+		assertChdir("..");
+		assertIsHardlink("test9b/in/d1/hardlink1",
+		    "test9b/in/d1/hardlink2-renamed");
+		/* At creation. (assuming hardlink2 is the hardlink entry) */
+		assertMakeDir("test9c", 0755);
+		systemf(
+		    "%s -wf test9c.pax -s /hardlink1/hardlink1-renamed/ in/d1",
+		    testprog);
+		assertChdir("test9c");
+		systemf("%s -rf ../test9c.pax", testprog);
+		assertChdir("..");
+		assertIsHardlink("test9c/in/d1/hardlink1-renamed",
+		    "test9c/in/d1/hardlink2");
+		/* At creation. (assuming hardlink1 is the hardlink entry) */
+		assertMakeDir("test9d", 0755);
+		systemf(
+		    "%s -wf test9d.pax -s /hardlink2/hardlink2-renamed/ in/d1",
+		    testprog);
+		assertChdir("test9d");
+		systemf("%s -rf ../test9d.pax", testprog);
+		assertChdir("..");
+		assertIsHardlink("test9d/in/d1/hardlink1",
+		    "test9d/in/d1/hardlink2-renamed");
+	}
 }

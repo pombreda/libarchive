@@ -177,6 +177,6 @@ int	disk_new_enough(struct bsdpax *bsdpax, const char *path,
 
 #if HAVE_REGEX_H
 void	add_substitution(struct bsdpax *, const char *);
-int	apply_substitution(struct bsdpax *, const char *, char **, int);
+int	apply_substitution(struct bsdpax *, const char *, char **, int, int);
 void	cleanup_substitution(struct bsdpax *);
 #endif
