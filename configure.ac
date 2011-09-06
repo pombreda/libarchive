@@ -260,7 +260,8 @@ AC_CHECK_HEADERS([sys/mkdev.h sys/mount.h])
 AC_CHECK_HEADERS([sys/param.h sys/poll.h sys/select.h sys/statfs.h sys/statvfs.h])
 AC_CHECK_HEADERS([sys/time.h sys/utime.h sys/utsname.h sys/vfs.h])
 AC_CHECK_HEADERS([time.h unistd.h utime.h wchar.h wctype.h])
-AC_CHECK_HEADERS([windows.h winioctl.h])
+# check windows.h first.
+AC_CHECK_HEADERS([windows.h wincrypt.h winioctl.h])
 
 # Checks for libraries.
 AC_ARG_WITH([zlib],
@@ -314,6 +315,8 @@ if test "x$with_lzma" != "xno"; then
   AC_CHECK_LIB(lzma,lzma_stream_decoder)
 fi
 
+AC_ARG_WITH([nettle],
+  AS_HELP_STRING([--without-nettle], [Don't build with crypto support from Nettle]))
 AC_ARG_WITH([openssl],
   AS_HELP_STRING([--without-openssl], [Don't build support for mtree and xar hashes through openssl]))
 
@@ -337,69 +340,6 @@ if test "x$ac_cv_header_libxml_xmlreader_h" != "xyes"; then
     AC_CHECK_LIB(expat,XML_ParserCreate)
   fi
 fi
-
-AC_DEFUN([MD_CHECK], [
-  if test "$found_$1" != yes; then
-    saved_LIBS="$LIBS"
-    saved_CPPFLAGS="$CPPFLAGS"
-    CPPFLAGS="$CPPFLAGS -I$srcdir/libarchive"
-    LIBS="$LIBS $4"
-    AC_MSG_CHECKING([support for ARCHIVE_HASH_$1_$2])
-    AC_LINK_IFELSE([AC_LANG_SOURCE([
-#define $1_COMPILE_TEST
-#define ARCHIVE_HASH_$1_$2
-#define __LIBARCHIVE_BUILD
-#include "archive_hash.h"
-
-int
-main(int argc, char **argv)
-{
-	archive_$3_ctx ctx;
-
-	archive_$3_init(&ctx);
-	archive_$3_update(&ctx, *argv, argc);
-	archive_$3_final(&ctx, *argv);
-	return 0;
-}
-])],
-    [ AC_MSG_RESULT([yes])
-      found_$1=yes
-      mdLIBS="$mdLIBS $4"
-      AC_DEFINE(ARCHIVE_HASH_$1_$2, 1, [ $1 via ARCHIVE_HASH_$1_$2 supported.])
-    ],
-    [ AC_MSG_RESULT([no])])
-    LIBS="$saved_LIBS"
-    CPPFLAGS="$saved_CPPFLAGS"
-  fi
-])
-
-MD_CHECK(MD5, LIBC, md5)
-MD_CHECK(MD5, LIBSYSTEM, md5)
-MD_CHECK(RMD160, LIBC, rmd160)
-MD_CHECK(SHA1, LIBC, sha1)
-MD_CHECK(SHA1, LIBSYSTEM, sha1)
-MD_CHECK(SHA256, LIBC, sha256)
-MD_CHECK(SHA256, LIBC2, sha256)
-MD_CHECK(SHA256, LIBC3, sha256)
-MD_CHECK(SHA256, LIBSYSTEM, sha256)
-MD_CHECK(SHA384, LIBC, sha384)
-MD_CHECK(SHA384, LIBC2, sha384)
-MD_CHECK(SHA384, LIBC3, sha384)
-MD_CHECK(SHA384, LIBSYSTEM, sha384)
-MD_CHECK(SHA512, LIBC, sha512)
-MD_CHECK(SHA512, LIBC2, sha512)
-MD_CHECK(SHA512, LIBC3, sha512)
-MD_CHECK(SHA512, LIBSYSTEM, sha512)
-
-if test "x$with_openssl" != "xno"; then
-    MD_CHECK(MD5, OPENSSL, md5, -lcrypto)
-    MD_CHECK(RMD160, OPENSSL, rmd160, -lcrypto)
-    MD_CHECK(SHA1, OPENSSL, sha1, -lcrypto)
-    MD_CHECK(SHA256, OPENSSL, sha256, -lcrypto)
-    MD_CHECK(SHA384, OPENSSL, sha384, -lcrypto)
-    MD_CHECK(SHA512, OPENSSL, sha512, -lcrypto)
-fi
-LIBS="$LIBS $mdLIBS"
 
 # TODO: Give the user the option of using a pre-existing system
 # libarchive.  This will define HAVE_LIBARCHIVE which will cause
@@ -620,5 +560,79 @@ fi
 
 # Additional requirements
 AC_SYS_LARGEFILE
+
+dnl NOTE: Crypto checks must run last.
+AC_DEFUN([CRYPTO_CHECK], [
+  if test "$found_$1" != yes; then
+    saved_LIBS="$LIBS"
+    saved_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS -I$srcdir -I$srcdir/libarchive"
+    LIBS="$LIBS $4"
+    touch "check_crypto_md.h"
+    AC_MSG_CHECKING([support for ARCHIVE_CRYPTO_$1_$2])
+    AC_LINK_IFELSE([AC_LANG_SOURCE([
+#define ARCHIVE_$1_COMPILE_TEST
+#define ARCHIVE_CRYPTO_$1_$2
+#define PLATFORM_CONFIG_H "check_crypto_md.h"
+
+$(cat "$srcdir/libarchive/archive_crypto.c")
+
+int
+main(int argc, char **argv)
+{
+  archive_$3_ctx ctx;
+  archive_$3_init(&ctx);
+  archive_$3_update(&ctx, *argv, argc);
+  archive_$3_final(&ctx, NULL);
+  return 0;
+}
+])],
+    [ AC_MSG_RESULT([yes])
+      found_$1=yes
+      mdLIBS="$mdLIBS $4"
+      AC_DEFINE(ARCHIVE_CRYPTO_$1_$2, 1, [ $1 via ARCHIVE_CRYPTO_$1_$2 supported.])
+    ],
+    [ AC_MSG_RESULT([no])])
+    LIBS="$saved_LIBS"
+    CPPFLAGS="$saved_CPPFLAGS"
+    rm "check_crypto_md.h"
+  fi
+])
+
+CRYPTO_CHECK(MD5, LIBC, md5)
+CRYPTO_CHECK(MD5, LIBSYSTEM, md5)
+CRYPTO_CHECK(RMD160, LIBC, rmd160)
+CRYPTO_CHECK(SHA1, LIBC, sha1)
+CRYPTO_CHECK(SHA1, LIBSYSTEM, sha1)
+CRYPTO_CHECK(SHA256, LIBC, sha256)
+CRYPTO_CHECK(SHA256, LIBC2, sha256)
+CRYPTO_CHECK(SHA256, LIBC3, sha256)
+CRYPTO_CHECK(SHA256, LIBSYSTEM, sha256)
+CRYPTO_CHECK(SHA384, LIBC, sha384)
+CRYPTO_CHECK(SHA384, LIBC2, sha384)
+CRYPTO_CHECK(SHA384, LIBC3, sha384)
+CRYPTO_CHECK(SHA384, LIBSYSTEM, sha384)
+CRYPTO_CHECK(SHA512, LIBC, sha512)
+CRYPTO_CHECK(SHA512, LIBC2, sha512)
+CRYPTO_CHECK(SHA512, LIBC3, sha512)
+CRYPTO_CHECK(SHA512, LIBSYSTEM, sha512)
+
+if test "x$with_nettle" != "xno"; then
+    CRYPTO_CHECK(MD5, NETTLE, md5, -lnettle)
+    CRYPTO_CHECK(RMD160, NETTLE, rmd160, -lnettle)
+    CRYPTO_CHECK(SHA1, NETTLE, sha1, -lnettle)
+    CRYPTO_CHECK(SHA256, NETTLE, sha256, -lnettle)
+    CRYPTO_CHECK(SHA384, NETTLE, sha384, -lnettle)
+    CRYPTO_CHECK(SHA512, NETTLE, sha512, -lnettle)
+fi
+if test "x$with_openssl" != "xno"; then
+    CRYPTO_CHECK(MD5, OPENSSL, md5, -lcrypto)
+    CRYPTO_CHECK(RMD160, OPENSSL, rmd160, -lcrypto)
+    CRYPTO_CHECK(SHA1, OPENSSL, sha1, -lcrypto)
+    CRYPTO_CHECK(SHA256, OPENSSL, sha256, -lcrypto)
+    CRYPTO_CHECK(SHA384, OPENSSL, sha384, -lcrypto)
+    CRYPTO_CHECK(SHA512, OPENSSL, sha512, -lcrypto)
+fi
+LIBS="$LIBS $mdLIBS"
 
 AC_OUTPUT

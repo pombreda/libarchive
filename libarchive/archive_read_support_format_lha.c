@@ -119,6 +119,7 @@ struct lzh_dec {
 		 */
 #define HTBL_BITS	10
 		int		 max_bits;
+		int		 shift_bits;
 		int		 tbl_bits;
 		int		 tree_used;
 		int		 tree_avail;
@@ -167,6 +168,7 @@ struct lha {
 #define BIRTHTIME_IS_SET	1
 #define ATIME_IS_SET		2
 #define UNIX_MODE_IS_SET	4
+#define CRC_IS_SET		8
 	time_t			 birthtime;
 	long			 birthtime_tv_nsec;
 	time_t			 mtime;
@@ -823,7 +825,7 @@ lha_read_file_header_0(struct archive_read *a, struct lha *lha)
 	lha->mtime = lha_dos_time(p + H0_DOS_TIME_OFFSET);
 	namelen = p[H0_NAME_LEN_OFFSET];
 	extdsize = (int)lha->header_size - H0_FIXED_SIZE - namelen;
-	if (namelen > 221 || extdsize < 0) {
+	if ((namelen > 221 || extdsize < 0) && extdsize != -2) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
 		    "Invalid LHa header");
 		return (ARCHIVE_FATAL);
@@ -832,7 +834,11 @@ lha_read_file_header_0(struct archive_read *a, struct lha *lha)
 		return (truncated_error(a));
 
 	archive_strncpy(&lha->filename, p + H0_FILE_NAME_OFFSET, namelen);
-	lha->crc = archive_le16dec(p + H0_FILE_NAME_OFFSET + namelen);
+	/* When extdsize == -2, A CRC16 value is not present in the header. */
+	if (extdsize >= 0) {
+		lha->crc = archive_le16dec(p + H0_FILE_NAME_OFFSET + namelen);
+		lha->setflag |= CRC_IS_SET;
+	}
 	sum_calculated = lha_calcsum(0, p, 2, lha->header_size - 2);
 
 	/* Read an extended header */
@@ -933,6 +939,7 @@ lha_read_file_header_1(struct archive_read *a, struct lha *lha)
 	}
 	archive_strncpy(&lha->filename, p + H1_FILE_NAME_OFFSET, namelen);
 	lha->crc = archive_le16dec(p + H1_FILE_NAME_OFFSET + namelen);
+	lha->setflag |= CRC_IS_SET;
 
 	sum_calculated = lha_calcsum(0, p, 2, lha->header_size - 2);
 	/* Consume used bytes but not include `next header size' data
@@ -1005,6 +1012,7 @@ lha_read_file_header_2(struct archive_read *a, struct lha *lha)
 	lha->origsize = archive_le32dec(p + H2_ORIG_SIZE_OFFSET);
 	lha->mtime = archive_le32dec(p + H2_TIME_OFFSET);
 	lha->crc = archive_le16dec(p + H2_CRC_OFFSET);
+	lha->setflag |= CRC_IS_SET;
 
 	if (lha->header_size < H2_FIXED_SIZE) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
@@ -1085,6 +1093,7 @@ lha_read_file_header_3(struct archive_read *a, struct lha *lha)
 	lha->origsize = archive_le32dec(p + H3_ORIG_SIZE_OFFSET);
 	lha->mtime = archive_le32dec(p + H3_TIME_OFFSET);
 	lha->crc = archive_le16dec(p + H3_CRC_OFFSET);
+	lha->setflag |= CRC_IS_SET;
 
 	if (lha->header_size < H3_FIXED_SIZE + 4)
 		goto invalid;
@@ -1201,7 +1210,7 @@ lha_read_file_extended_header(struct archive_read *a, struct lha *lha,
 			if (datasize >= 2) {
 				lha->header_crc = archive_le16dec(extdheader);
 				if (crc != NULL) {
-					static char zeros[2] = {0, 0};
+					static const char zeros[2] = {0, 0};
 					*crc = lha_crc16(*crc, h,
 					    extdsize - datasize);
 					/* CRC value itself as zero */
@@ -1376,7 +1385,7 @@ archive_read_format_lha_read_data(struct archive_read *a,
 	}
 	if (lha->end_of_entry) {
 		if (!lha->end_of_entry_cleanup) {
-			if (lha->level >= 2 &&
+			if ((lha->setflag & CRC_IS_SET) &&
 			    lha->crc != lha->entry_crc_calculated) {
 				archive_set_error(&a->archive,
 				    ARCHIVE_ERRNO_MISC,
@@ -1723,7 +1732,7 @@ lha_crc16(uint16_t crc, const void *pp, size_t len)
 		CRC16(crc, *buff++);
 		/* FALL THROUGH */
 	case 1:
-		CRC16(crc, *buff++);
+		CRC16(crc, *buff);
 		/* FALL THROUGH */
 	case 0:
 		break;
@@ -1834,8 +1843,14 @@ lzh_decode_free(struct lzh_stream *strm)
  *  True  : completed, there is enough data in the cache buffer.
  *  False : we met that strm->next_in is empty, we have to get following
  *          bytes. */
-#define lzh_br_read_ahead(strm, br, n)	\
+#define lzh_br_read_ahead_0(strm, br, n)	\
 	(lzh_br_has(br, (n)) || lzh_br_fillup(strm, br))
+/*  True  : the cache buffer has some bits as much as we need.
+ *  False : there are no enough bits in the cache buffer to be used,
+ *          we have to get following bytes if we could. */
+#define lzh_br_read_ahead(strm, br, n)	\
+	(lzh_br_read_ahead_0((strm), (br), (n)) || lzh_br_has((br), (n)))
+
 /* Notify how many bits we consumed. */
 #define lzh_br_consume(br, n)	((br)->cache_avail -= (n))
 #define lzh_br_unconsume(br, n)	((br)->cache_avail += (n))
@@ -2038,7 +2053,7 @@ lzh_read_blocks(struct lzh_stream *strm, int last)
 			 * in particular, there are no reference data at
 			 * the beginning of the decompression.
 			 */
-			if (!lzh_br_read_ahead(strm, br, 16)) {
+			if (!lzh_br_read_ahead_0(strm, br, 16)) {
 				if (!last)
 					/* We need following data. */
 					return (ARCHIVE_OK);
@@ -2075,8 +2090,7 @@ lzh_read_blocks(struct lzh_stream *strm, int last)
 			/* Note: ST_RD_PT_1, ST_RD_PT_2 and ST_RD_PT_4 are
 			 * used in reading both a literal table and a
 			 * position table. */
-			if (!lzh_br_read_ahead(strm, br, ds->pt.len_bits) &&
-			    !lzh_br_has(br, ds->pt.len_bits)) {
+			if (!lzh_br_read_ahead(strm, br, ds->pt.len_bits)) {
 				if (last)
 					goto failed;/* Truncated data. */
 				ds->state = ST_RD_PT_1;
@@ -2089,8 +2103,7 @@ lzh_read_blocks(struct lzh_stream *strm, int last)
 			if (ds->pt.len_avail == 0) {
 				/* There is no bitlen. */
 				if (!lzh_br_read_ahead(strm, br,
-				    ds->pt.len_bits) &&
-				    !lzh_br_has(br, ds->pt.len_bits)) {
+				    ds->pt.len_bits)) {
 					if (last)
 						goto failed;/* Truncated data.*/
 					ds->state = ST_RD_PT_2;
@@ -2125,8 +2138,7 @@ lzh_read_blocks(struct lzh_stream *strm, int last)
 				return (ARCHIVE_OK);
 			}
 			/* There are some null in bitlen of the literal. */
-			if (!lzh_br_read_ahead(strm, br, 2) &&
-			    !lzh_br_has(br, 2)) {
+			if (!lzh_br_read_ahead(strm, br, 2)) {
 				if (last)
 					goto failed;/* Truncated data. */
 				ds->state = ST_RD_PT_3;
@@ -2158,8 +2170,7 @@ lzh_read_blocks(struct lzh_stream *strm, int last)
 			}
 			/* FALL THROUGH */
 		case ST_RD_LITERAL_1:
-			if (!lzh_br_read_ahead(strm, br, ds->lt.len_bits) &&
-			    !lzh_br_has(br, ds->lt.len_bits)) {
+			if (!lzh_br_read_ahead(strm, br, ds->lt.len_bits)) {
 				if (last)
 					goto failed;/* Truncated data. */
 				ds->state = ST_RD_LITERAL_1;
@@ -2172,8 +2183,7 @@ lzh_read_blocks(struct lzh_stream *strm, int last)
 			if (ds->lt.len_avail == 0) {
 				/* There is no bitlen. */
 				if (!lzh_br_read_ahead(strm, br,
-				    ds->lt.len_bits) &&
-				    !lzh_br_has(br, ds->lt.len_bits)) {
+				    ds->lt.len_bits)) {
 					if (last)
 						goto failed;/* Truncated data.*/
 					ds->state = ST_RD_LITERAL_2;
@@ -2194,8 +2204,7 @@ lzh_read_blocks(struct lzh_stream *strm, int last)
 			i = ds->loop;
 			while (i < ds->lt.len_avail) {
 				if (!lzh_br_read_ahead(strm, br,
-				    ds->pt.max_bits) &&
-				    !lzh_br_has(br, ds->pt.max_bits)) {
+				    ds->pt.max_bits)) {
 					if (last)
 						goto failed;/* Truncated data.*/
 					ds->loop = i;
@@ -2221,9 +2230,7 @@ lzh_read_blocks(struct lzh_stream *strm, int last)
 					/* c == 1 or c == 2 */
 					int n = (c == 1)?4:9;
 					if (!lzh_br_read_ahead(strm, br,
-					     ds->pt.bitlen[c] + n) &&
-					    !lzh_br_has(br,
-					      ds->pt.bitlen[c] + n)) {
+					     ds->pt.bitlen[c] + n)) {
 						if (last) /* Truncated data. */
 							goto failed;
 						ds->loop = i;
@@ -2305,8 +2312,7 @@ lzh_decode_blocks(struct lzh_stream *strm, int last)
 				 * as much as we need after lzh_br_read_ahead()
 				 * failed. */
 				if (!lzh_br_read_ahead(strm, &bre,
-				    lt_max_bits) &&
-				    !lzh_br_has(&bre, lt_max_bits)) {
+				    lt_max_bits)) {
 					if (!last)
 						goto next_data;
 					/* Remaining bits are less than
@@ -2351,8 +2357,7 @@ lzh_decode_blocks(struct lzh_stream *strm, int last)
 			/*
 			 * Get a reference position. 
 			 */
-			if (!lzh_br_read_ahead(strm, &bre, pt_max_bits) &&
-			    !lzh_br_has(&bre, pt_max_bits)) {
+			if (!lzh_br_read_ahead(strm, &bre, pt_max_bits)) {
 				if (!last) {
 					state = ST_GET_POS_1;
 					ds->copy_len = copy_len;
@@ -2374,8 +2379,7 @@ lzh_decode_blocks(struct lzh_stream *strm, int last)
 				/* We need an additional adjustment number to
 				 * the position. */
 				int p = copy_pos - 1;
-				if (!lzh_br_read_ahead(strm, &bre, p) &&
-				    !lzh_br_has(&bre, p)) {
+				if (!lzh_br_read_ahead(strm, &bre, p)) {
 					if (last)
 						goto failed;/* Truncated data.*/
 					state = ST_GET_POS_2;
@@ -2422,7 +2426,6 @@ lzh_decode_blocks(struct lzh_stream *strm, int last)
 					for (li = 0; li < l; li++)
 						d[li] = s[li];
 				}
-				copy_pos = (copy_pos + l) & w_mask;
 				w_pos = (w_pos + l) & w_mask;
 				if (w_pos == 0) {
 					ds->w_remaining = w_size;
@@ -2433,8 +2436,10 @@ lzh_decode_blocks(struct lzh_stream *strm, int last)
 							state = ST_COPY_DATA;
 							ds->copy_len =
 							    copy_len - l;
+							ds->copy_pos =
+							    (copy_pos + l)
+							    & w_mask;
 						}
-						ds->copy_pos = copy_pos;
 						goto next_data;
 					}
 				}
@@ -2442,6 +2447,7 @@ lzh_decode_blocks(struct lzh_stream *strm, int last)
 					/* A copy of current pattern ended. */
 					break;
 				copy_len -= l;
+				copy_pos = (copy_pos + l) & w_mask;
 			}
 			state = ST_GET_LITERAL;
 			break;
@@ -2544,6 +2550,7 @@ lzh_make_fake_table(struct huffman *hf, uint16_t c)
 		return (0);
 	hf->tbl[0] = c;
 	hf->max_bits = 0;
+	hf->shift_bits = 0;
 	hf->bitlen[hf->tbl[0]] = 0;
 	return (1);
 }
@@ -2605,6 +2612,7 @@ lzh_make_huffman_table(struct huffman *hf)
 			*p++ = 0;
 	} else
 		diffbits = 0;
+	hf->shift_bits = diffbits;
 
 	/*
 	 * Make the table.
@@ -2703,46 +2711,34 @@ static int
 lzh_decode_huffman_tree(struct huffman *hf, unsigned rbits, int c)
 {
 	struct htree_t *ht;
-	uint16_t bit;
 	int extlen;
 
-	extlen = hf->max_bits - HTBL_BITS;
-	bit = 1U << (extlen -1);
-	while (c >= hf->len_avail && extlen-- > 0) {
+	ht = hf->tree;
+	extlen = hf->shift_bits;
+	while (c >= hf->len_avail) {
 		c -= hf->len_avail;
-		if (c >= hf->tree_used)
+		if (extlen-- <= 0 || c >= hf->tree_used)
 			return (0);
-		ht = &(hf->tree[c]);
-		if (rbits & bit)
-			c = ht->left;
+		if (rbits & (1U << extlen))
+			c = ht[c].left;
 		else
-			c = ht->right;
-		bit >>= 1;
+			c = ht[c].right;
 	}
-	if (c >= hf->len_avail)
-		return (0);
 	return (c);
 }
 
 static inline int
 lzh_decode_huffman(struct huffman *hf, unsigned rbits)
 {
+	int c;
 	/*
 	 * At first search an index table for a bit pattern.
 	 * If it fails, search a huffman tree for.
 	 */
-
-	if (hf->max_bits <= HTBL_BITS)
-		return (hf->tbl[rbits]);
-	else {
-		int c;
-		c = hf->tbl[rbits >> (hf->max_bits - HTBL_BITS)];
-		if (c < hf->len_avail)
-			return (c);
-		else
-			/* This bit pattern needs to be found out from
-			 * a huffman tree. */
-			return (lzh_decode_huffman_tree(hf, rbits, c));
-	}
+	c = hf->tbl[rbits >> hf->shift_bits];
+	if (c < hf->len_avail)
+		return (c);
+	/* This bit pattern needs to be found out at a huffman tree. */
+	return (lzh_decode_huffman_tree(hf, rbits, c));
 }
 

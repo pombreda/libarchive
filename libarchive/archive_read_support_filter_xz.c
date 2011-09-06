@@ -119,7 +119,7 @@ static int	lzip_bidder_init(struct archive_read_filter *);
 int
 archive_read_support_compression_xz(struct archive *a)
 {
-	return archive_read_support_compression_xz(a);
+	return archive_read_support_filter_xz(a);
 }
 #endif
 
@@ -149,18 +149,16 @@ archive_read_support_filter_xz(struct archive *_a)
 #endif
 }
 
-#if ARCHIVE_VERSION_NUMBER >= 4000000
-#warning archive_read_support_compression_lzma
+#if ARCHIVE_VERSION_NUMBER < 4000000
+int
+archive_read_support_compression_lzma(struct archive *a)
+{
+	return archive_read_support_filter_lzma(a);
+}
 #endif
 
 int
-archive_read_support_filter_lzma(struct archive *a)
-{
-	return archive_read_support_compression_lzma(a);
-}
-
-int
-archive_read_support_compression_lzma(struct archive *_a)
+archive_read_support_filter_lzma(struct archive *_a)
 {
 	struct archive_read *a = (struct archive_read *)_a;
 	struct archive_read_filter_bidder *bidder;
@@ -187,18 +185,17 @@ archive_read_support_compression_lzma(struct archive *_a)
 #endif
 }
 
-#if ARCHIVE_VERSION_NUMBER >= 4000000
-#warning archive_read_support_compression_lzip
+
+#if ARCHIVE_VERSION_NUMBER < 4000000
+int
+archive_read_support_compression_lzip(struct archive *a)
+{
+	return archive_read_support_filter_lzip(a);
+}
 #endif
 
 int
-archive_read_support_filter_lzip(struct archive *a)
-{
-	return archive_read_support_compression_lzip(a);
-}
-
-int
-archive_read_support_compression_lzip(struct archive *_a)
+archive_read_support_filter_lzip(struct archive *_a)
 {
 	struct archive_read *a = (struct archive_read *)_a;
 	struct archive_read_filter_bidder *bidder;
@@ -232,7 +229,6 @@ xz_bidder_bid(struct archive_read_filter_bidder *self,
 {
 	const unsigned char *buffer;
 	ssize_t avail;
-	int bits_checked;
 
 	(void)self; /* UNUSED */
 
@@ -243,27 +239,10 @@ xz_bidder_bid(struct archive_read_filter_bidder *self,
 	/*
 	 * Verify Header Magic Bytes : FD 37 7A 58 5A 00
 	 */
-	bits_checked = 0;
-	if (buffer[0] != 0xFD)
+	if (memcmp(buffer, "\xFD\x37\x7A\x58\x5A\x00", 6) != 0)
 		return (0);
-	bits_checked += 8;
-	if (buffer[1] != 0x37)
-		return (0);
-	bits_checked += 8;
-	if (buffer[2] != 0x7A)
-		return (0);
-	bits_checked += 8;
-	if (buffer[3] != 0x58)
-		return (0);
-	bits_checked += 8;
-	if (buffer[4] != 0x5A)
-		return (0);
-	bits_checked += 8;
-	if (buffer[5] != 0x00)
-		return (0);
-	bits_checked += 8;
 
-	return (bits_checked);
+	return (48);
 }
 
 /*
@@ -401,18 +380,9 @@ lzip_has_member(struct archive_read_filter *filter)
 	 * Verify Header Magic Bytes : 4C 5A 49 50 (`LZIP')
 	 */
 	bits_checked = 0;
-	if (buffer[0] != 0x4C)
+	if (memcmp(buffer, "LZIP", 4) != 0)
 		return (0);
-	bits_checked += 8;
-	if (buffer[1] != 0x5A)
-		return (0);
-	bits_checked += 8;
-	if (buffer[2] != 0x49)
-		return (0);
-	bits_checked += 8;
-	if (buffer[3] != 0x50)
-		return (0);
-	bits_checked += 8;
+	bits_checked += 32;
 
 	/* A version number must be 0 or 1 */
 	if (buffer[4] != 0 && buffer[4] != 1)

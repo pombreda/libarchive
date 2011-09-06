@@ -71,6 +71,7 @@ ELSE(WIN32 AND NOT CYGWIN)
   SET(ICONV_DEFAULT ON)
 ENDIF(WIN32 AND NOT CYGWIN)
 
+OPTION(ENABLE_NETTLE "Enable use of Nettle" ON)
 OPTION(ENABLE_OPENSSL "Enable use of OpenSSL" ON)
 OPTION(ENABLE_TAR "Enable tar building" ${TAR_DEFAULT})
 OPTION(ENABLE_TAR_SHARED "Enable dynamic build of tar" ${TAR_SHARED_DEFAULT})
@@ -291,6 +292,8 @@ LA_CHECK_INCLUDE_FILE("utime.h" HAVE_UTIME_H)
 LA_CHECK_INCLUDE_FILE("wchar.h" HAVE_WCHAR_H)
 LA_CHECK_INCLUDE_FILE("wctype.h" HAVE_WCTYPE_H)
 LA_CHECK_INCLUDE_FILE("windows.h" HAVE_WINDOWS_H)
+# Following files need windwos.h, so we should test it after windows.h test.
+LA_CHECK_INCLUDE_FILE("wincrypt.h" HAVE_WINCRYPT_H)
 LA_CHECK_INCLUDE_FILE("winioctl.h" HAVE_WINIOCTL_H)
 
 #
@@ -309,6 +312,20 @@ CHECK_C_SOURCE_COMPILES(
  SAFE_TO_DEFINE_EXTENSIONS)
 
 #
+# Find Nettle
+#
+IF(ENABLE_NETTLE)
+  CHECK_LIBRARY_EXISTS(nettle "nettle_sha1_digest" "" NETTLE_FOUND)
+  IF(NETTLE_FOUND)
+    SET(CMAKE_REQUIRED_LIBRARIES "nettle")
+    FIND_LIBRARY(NETTLE_LIBRARY NAMES nettle)
+    LIST(APPEND ADDITIONAL_LIBS ${NETTLE_LIBRARY})
+  ELSE(NETTLE_FOUND)
+    SET(ENABLE_NETTLE OFF)
+  ENDIF(NETTLE_FOUND)
+ENDIF(ENABLE_NETTLE)
+
+#
 # Find OpenSSL
 #
 IF(ENABLE_OPENSSL)
@@ -318,122 +335,130 @@ ELSE()
 ENDIF()
 
 #
-# How to prove that HASH functions, which have several names on various
-# platforms, can be mapped to archive_{hash name}_init,
-# archive_{hash name}_update and archive_{hash name}_final through
-# archive_hash.h
+# How to prove that CRYPTO functions, which have several names on various
+# platforms, just see if archive_crypto.c can compile and link against
+# required libraries.
 #
-MACRO(CHECK_MD HASH IMPLEMENTATIONS)
+MACRO(CHECK_CRYPTO CRYPTO IMPLEMENTATIONS)
     IF(HAVE_SYS_TYPES_H)
-        SET(HASH_HEADER_CONFIG "#define HAVE_SYS_TYPES_H 1\n")
+        SET(CRYPTO_HEADER_CONFIG "#define HAVE_SYS_TYPES_H 1\n")
     ELSE(HAVE_SYS_TYPES_H)
-        SET(HASH_HEADER_CONFIG "")
+        SET(CRYPTO_HEADER_CONFIG "")
     ENDIF(HAVE_SYS_TYPES_H)
-    STRING(TOLOWER "${HASH}" lower_hash)
-    STRING(TOUPPER "${HASH}" hash)
+    STRING(TOLOWER "${CRYPTO}" lower_crypto)
+    STRING(TOUPPER "${CRYPTO}" crypto)
 
     FOREACH(IMPLEMENTATION ${IMPLEMENTATIONS})
       IF ("${IMPLEMENTATION}" MATCHES "^OPENSSL$" AND NOT OPENSSL_FOUND)
-        SET(ARCHIVE_HASH_${HASH}_${IMPLEMENTATION} FALSE)
-      ENDIF ("${IMPLEMENTATION}" MATCHES "^OPENSSL$" AND NOT OPENSSL_FOUND)
-      IF(NOT DEFINED ARCHIVE_HASH_${HASH}_${IMPLEMENTATION})
+        SET(ARCHIVE_CRYPTO_${CRYPTO}_${IMPLEMENTATION} FALSE)
+      ELSEIF("${IMPLEMENTATION}" MATCHES "^NETTLE$" AND NOT NETTLE_FOUND)
+        SET(ARCHIVE_CRYPTO_${CRYPTO}_${IMPLEMENTATION} FALSE)
+      ENDIF("${IMPLEMENTATION}" MATCHES "^OPENSSL$" AND NOT OPENSSL_FOUND)
+      IF(NOT DEFINED ARCHIVE_CRYPTO_${CRYPTO}_${IMPLEMENTATION})
         # Probe the local implementation for whether this
-	# hash implementation is available on this platform.
-	SET(TRY_HASH_REQUIRED_INCLUDES
-	  "-DINCLUDE_DIRECTORIES:STRING=${CMAKE_CURRENT_SOURCE_DIR}/libarchive")
-	SET(TRY_HASH_REQUIRED_LIBS)
+	# crypto implementation is available on this platform.
+	SET(TRY_CRYPTO_REQUIRED_INCLUDES
+	  "-DINCLUDE_DIRECTORIES:STRING=${CMAKE_CURRENT_SOURCE_DIR}/libarchive;${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp")
+	SET(TRY_CRYPTO_REQUIRED_LIBS)
 	IF ("${IMPLEMENTATION}" MATCHES "^OPENSSL$" AND OPENSSL_FOUND)
-	    SET(TRY_HASH_REQUIRED_INCLUDES
-	      "${TRY_HASH_REQUIRED_INCLUDES};${OPENSSL_INCLUDE_DIR}")
-	    SET(TRY_HASH_REQUIRED_LIBS
+	    SET(TRY_CRYPTO_REQUIRED_INCLUDES
+	      "${TRY_CRYPTO_REQUIRED_INCLUDES};${OPENSSL_INCLUDE_DIR}")
+	    SET(TRY_CRYPTO_REQUIRED_LIBS
 	        "-DLINK_LIBRARIES:STRING=${OPENSSL_LIBRARIES}")
-	ENDIF ("${IMPLEMENTATION}" MATCHES "^OPENSSL$" AND OPENSSL_FOUND)
+	ELSEIF("${IMPLEMENTATION}" MATCHES "^NETTLE$" AND NETTLE_FOUND)
+	    SET(TRY_CRYPTO_REQUIRED_LIBS
+	        "-DLINK_LIBRARIES:STRING=${NETTLE_LIBRARY}")
+	ENDIF("${IMPLEMENTATION}" MATCHES "^OPENSSL$" AND OPENSSL_FOUND)
 
-	SET(SOURCE "#define ${hash}_COMPILE_TEST
-#define ARCHIVE_HASH_${hash}_${IMPLEMENTATION}
-#define __LIBARCHIVE_BUILD
-${HASH_HEADER_CONFIG}
-#include \"archive_hash.h\"
+	FILE(READ "${CMAKE_CURRENT_SOURCE_DIR}/libarchive/archive_crypto.c"
+	     ARCHIVE_CRYPTO_C)
+
+	SET(SOURCE "
+#define ARCHIVE_${crypto}_COMPILE_TEST
+#define ARCHIVE_CRYPTO_${crypto}_${IMPLEMENTATION}
+#define PLATFORM_CONFIG_H \"check_crypto_md.h\"
+
+${ARCHIVE_CRYPTO_C}
 
 int
 main(int argc, char **argv)
 {
-	archive_${lower_hash}_ctx ctx;
-
-	archive_${lower_hash}_init(&ctx);
-	archive_${lower_hash}_update(&ctx, *argv, argc);
-	archive_${lower_hash}_final(&ctx, *argv);
-	return 0;
+  archive_${lower_crypto}_ctx ctx;
+  archive_${lower_crypto}_init(&ctx);
+  archive_${lower_crypto}_update(&ctx, *argv, argc);
+  archive_${lower_crypto}_final(&ctx, NULL);
+  return 0;
 }
 ")
 
-	FILE(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/check_hash_md.c" "${SOURCE}")
-	MESSAGE(STATUS "Checking support for ARCHIVE_HASH_${HASH}_${IMPLEMENTATION}")
+  FILE(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/check_crypto_md.h" "")
+	FILE(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/check_crypto_md.c" "${SOURCE}")
+	MESSAGE(STATUS "Checking support for ARCHIVE_CRYPTO_${CRYPTO}_${IMPLEMENTATION}")
 
-	TRY_COMPILE(ARCHIVE_HASH_${HASH}_${IMPLEMENTATION}
+	TRY_COMPILE(ARCHIVE_CRYPTO_${CRYPTO}_${IMPLEMENTATION}
 	  ${CMAKE_BINARY_DIR}
-	  ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/check_hash_md.c
+	  ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/check_crypto_md.c
 	  CMAKE_FLAGS
-	   "${TRY_HASH_REQUIRED_LIBS}"
-	   "${TRY_HASH_REQUIRED_INCLUDES}"
+	   "${TRY_CRYPTO_REQUIRED_LIBS}"
+	   "${TRY_CRYPTO_REQUIRED_INCLUDES}"
 	  OUTPUT_VARIABLE OUTPUT)
 
 	# Inform user whether or not we found it; if not, log why we didn't.
-        IF (ARCHIVE_HASH_${HASH}_${IMPLEMENTATION})
-          MESSAGE(STATUS "Checking support for ARCHIVE_HASH_${HASH}_${IMPLEMENTATION} -- found")
-        ELSE (ARCHIVE_HASH_${HASH}_${IMPLEMENTATION})
-          MESSAGE(STATUS "Checking support for ARCHIVE_HASH_${HASH}_${IMPLEMENTATION} -- not found")
+        IF (ARCHIVE_CRYPTO_${CRYPTO}_${IMPLEMENTATION})
+          MESSAGE(STATUS "Checking support for ARCHIVE_CRYPTO_${CRYPTO}_${IMPLEMENTATION} -- found")
+        ELSE (ARCHIVE_CRYPTO_${CRYPTO}_${IMPLEMENTATION})
+          MESSAGE(STATUS "Checking support for ARCHIVE_CRYPTO_${CRYPTO}_${IMPLEMENTATION} -- not found")
           FILE(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeOutput.log
-    	    "Checking support for ARCHIVE_HASH_${HASH}_${IMPLEMENTATION} failed with the following output:\n"
+    	    "Checking support for ARCHIVE_CRYPTO_${CRYPTO}_${IMPLEMENTATION} failed with the following output:\n"
     	    "${OUTPUT}\n"
     	    "Source file was:\n${SOURCE}\n")
-        ENDIF (ARCHIVE_HASH_${HASH}_${IMPLEMENTATION})
-      ENDIF(NOT DEFINED ARCHIVE_HASH_${HASH}_${IMPLEMENTATION})
+        ENDIF (ARCHIVE_CRYPTO_${CRYPTO}_${IMPLEMENTATION})
+      ENDIF(NOT DEFINED ARCHIVE_CRYPTO_${CRYPTO}_${IMPLEMENTATION})
 
       # Add appropriate libs/includes depending on whether the implementation
       # was found on this platform.
-      IF (ARCHIVE_HASH_${HASH}_${IMPLEMENTATION})
+      IF (ARCHIVE_CRYPTO_${CRYPTO}_${IMPLEMENTATION})
         IF ("${IMPLEMENTATION}" MATCHES "^OPENSSL$" AND OPENSSL_FOUND)
           INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})
 	  LIST(APPEND ADDITIONAL_LIBS ${OPENSSL_LIBRARIES})
 	   LIST(REMOVE_DUPLICATES ADDITIONAL_LIBS)
         ENDIF ("${IMPLEMENTATION}" MATCHES "^OPENSSL$" AND OPENSSL_FOUND)
-      ENDIF (ARCHIVE_HASH_${HASH}_${IMPLEMENTATION})
-    ENDFOREACH(IMPLEMENTATION)
-ENDMACRO(CHECK_MD HASH IMPLEMENTATIONS)
+      ENDIF (ARCHIVE_CRYPTO_${CRYPTO}_${IMPLEMENTATION})
+    ENDFOREACH(IMPLEMENTATION ${IMPLEMENTATIONS})
+ENDMACRO(CHECK_CRYPTO CRYPTO IMPLEMENTATIONS)
 
 #
-# HASH functions on Windows is defined at archive_windows.c, thus we do not
-# need the test what the functions can be mapped to archive_{hash name}_init,
-# archive_{hash name}_update and archive_{hash name}_final.
-# The functions on Windows use CALG_{hash name} macro to create a crypt object
-# and then we need to know what CALG_{hash name} macros is available to show
-# ARCHIVE_HASH_{hash name}_WIN macros because Windows 2000 and earlier version
+# CRYPTO functions on Windows is defined at archive_windows.c, thus we do not
+# need the test what the functions can be mapped to archive_{crypto name}_init,
+# archive_{crypto name}_update and archive_{crypto name}_final.
+# The functions on Windows use CALG_{crypto name} macro to create a crypt object
+# and then we need to know what CALG_{crypto name} macros is available to show
+# ARCHIVE_CRYPTO_{crypto name}_WIN macros because Windows 2000 and earlier version
 # of Windows XP do not support SHA256, SHA384 and SHA512.
 #
-MACRO(CHECK_HASH_WIN HASH_LIST)
+MACRO(CHECK_CRYPTO_WIN CRYPTO_LIST)
   IF(WIN32 AND NOT CYGWIN)
-    FOREACH(HASH ${HASH_LIST})
-      IF(NOT DEFINED ARCHIVE_HASH_${HASH}_WIN)
-	STRING(TOUPPER "${HASH}" hash)
+    FOREACH(CRYPTO ${CRYPTO_LIST})
+      IF(NOT DEFINED ARCHIVE_CRYPTO_${CRYPTO}_WIN)
+	STRING(TOUPPER "${CRYPTO}" crypto)
 	SET(ALGID "")
-	IF ("${HASH}" MATCHES "^MD5$")
+	IF ("${CRYPTO}" MATCHES "^MD5$")
 	    SET(ALGID "CALG_MD5")
-	ENDIF ("${HASH}" MATCHES "^MD5$")
-	IF ("${HASH}" MATCHES "^SHA1$")
+	ENDIF ("${CRYPTO}" MATCHES "^MD5$")
+	IF ("${CRYPTO}" MATCHES "^SHA1$")
 	    SET(ALGID "CALG_SHA1")
-	ENDIF ("${HASH}" MATCHES "^SHA1$")
-	IF ("${HASH}" MATCHES "^SHA256$")
+	ENDIF ("${CRYPTO}" MATCHES "^SHA1$")
+	IF ("${CRYPTO}" MATCHES "^SHA256$")
 	    SET(ALGID "CALG_SHA_256")
-	ENDIF ("${HASH}" MATCHES "^SHA256$")
-	IF ("${HASH}" MATCHES "^SHA384$")
+	ENDIF ("${CRYPTO}" MATCHES "^SHA256$")
+	IF ("${CRYPTO}" MATCHES "^SHA384$")
 	    SET(ALGID "CALG_SHA_384")
-	ENDIF ("${HASH}" MATCHES "^SHA384$")
-	IF ("${HASH}" MATCHES "^SHA512$")
+	ENDIF ("${CRYPTO}" MATCHES "^SHA384$")
+	IF ("${CRYPTO}" MATCHES "^SHA512$")
 	    SET(ALGID "CALG_SHA_512")
-	ENDIF ("${HASH}" MATCHES "^SHA512$")
+	ENDIF ("${CRYPTO}" MATCHES "^SHA512$")
 
-	SET(SOURCE "#define ${hash}_COMPILE_TEST
+	SET(SOURCE "#define ${crypto}_COMPILE_TEST
 #define _WIN32_WINNT ${_WIN32_WINNT}
 #define WINVER ${WINVER}
 #include <windows.h>
@@ -445,45 +470,34 @@ main(int argc, char **argv)
 	return ${ALGID};
 }
 ")
-	SET(SOURCE_FILE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/check_hash_win.c")
+	SET(SOURCE_FILE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/check_crypto_win.c")
 
 	FILE(WRITE "${SOURCE_FILE}" "${SOURCE}")
-	MESSAGE(STATUS "Checking support for ARCHIVE_HASH_${HASH}_WIN")
+	MESSAGE(STATUS "Checking support for ARCHIVE_CRYPTO_${CRYPTO}_WIN")
 
-	TRY_COMPILE(ARCHIVE_HASH_${HASH}_WIN
+	TRY_COMPILE(ARCHIVE_CRYPTO_${CRYPTO}_WIN
 	  ${CMAKE_BINARY_DIR}
 	  ${SOURCE_FILE}
 	  CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${CMAKE_CURRENT_SOURCE_DIR}/libarchive"
 	  OUTPUT_VARIABLE OUTPUT)
 
-	IF (ARCHIVE_HASH_${HASH}_WIN)
+	IF (ARCHIVE_CRYPTO_${CRYPTO}_WIN)
 	    MESSAGE(STATUS
-	        "Checking support for ARCHIVE_HASH_${HASH}_WIN -- found")
-	ELSE (ARCHIVE_HASH_${HASH}_WIN)
+	        "Checking support for ARCHIVE_CRYPTO_${CRYPTO}_WIN -- found")
+	ELSE (ARCHIVE_CRYPTO_${CRYPTO}_WIN)
 	    MESSAGE(STATUS
-	         "Checking support for ARCHIVE_HASH_${HASH}_WIN -- not found")
+	         "Checking support for ARCHIVE_CRYPTO_${CRYPTO}_WIN -- not found")
     	    FILE(APPEND
 	        ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeOutput.log
-                "Checking support for ARCHIVE_HASH_${HASH}_WIN failed with the following output:\n"
+                "Checking support for ARCHIVE_CRYPTO_${CRYPTO}_WIN failed with the following output:\n"
         	"${OUTPUT}\n"
         	"Source file was:\n${SOURCE}\n")
-	ENDIF (ARCHIVE_HASH_${HASH}_WIN)
+	ENDIF (ARCHIVE_CRYPTO_${CRYPTO}_WIN)
 
-      ENDIF(NOT DEFINED ARCHIVE_HASH_${HASH}_WIN)
-    ENDFOREACH(HASH)
+      ENDIF(NOT DEFINED ARCHIVE_CRYPTO_${CRYPTO}_WIN)
+    ENDFOREACH(CRYPTO)
   ENDIF(WIN32 AND NOT CYGWIN)
-ENDMACRO(CHECK_HASH_WIN HASH_LIST)
-
-#
-# Check MD5/RMD160/SHA support
-#
-CHECK_MD(MD5 "LIBC;LIBSYSTEM;OPENSSL")
-CHECK_MD(RMD160 "LIBC;OPENSSL")
-CHECK_MD(SHA1 "LIBC;LIBSYSTEM;OPENSSL")
-CHECK_MD(SHA256 "LIBC;LIBC2;LIBC3;LIBSYSTEM;OPENSSL")
-CHECK_MD(SHA384 "LIBC;LIBC2;LIBC3;LIBSYSTEM;OPENSSL")
-CHECK_MD(SHA512 "LIBC;LIBC2;LIBC3;LIBSYSTEM;OPENSSL")
-CHECK_HASH_WIN("MD5;SHA1;SHA256;SHA384;SHA512")
+ENDMACRO(CHECK_CRYPTO_WIN CRYPTO_LIST)
 
 #
 # Find iconv
@@ -492,77 +506,46 @@ CHECK_HASH_WIN("MD5;SHA1;SHA256;SHA384;SHA512")
 # a non-const argument here and can support iconv()
 # being in libiconv.
 #
+MACRO(CHECK_ICONV LIB TRY_ICONV_CONST)
+  IF(NOT HAVE_ICONV)
+    CHECK_C_SOURCE_COMPILES(
+      "#include <stdlib.h>
+       #include <iconv.h>
+       int main() {
+          ${TRY_ICONV_CONST} char *ccp;
+          iconv_t cd = iconv_open(\"\", \"\");
+          iconv(cd, &ccp, (size_t *)0, (char **)0, (size_t *)0);
+          iconv_close(cd);
+          return 0;
+       }"
+     HAVE_ICONV_${LIB}_${TRY_ICONV_CONST})
+    IF(HAVE_ICONV_${LIB}_${TRY_ICONV_CONST})
+      SET(HAVE_ICONV true)
+      SET(ICONV_CONST ${TRY_ICONV_CONST})
+    ENDIF(HAVE_ICONV_${LIB}_${TRY_ICONV_CONST})
+  ENDIF(NOT HAVE_ICONV)
+ENDMACRO(CHECK_ICONV TRY_ICONV_CONST)
+
 IF(ENABLE_ICONV)
   FIND_PATH(ICONV_INCLUDE_DIR iconv.h)
   IF(ICONV_INCLUDE_DIR)
-    INCLUDE_DIRECTORIES(${ICONV_INCLUDE_DIR})
-    SET(CMAKE_REQUIRED_INCLUDES ${ICONV_INCLUDE_DIR})
     #SET(INCLUDES ${INCLUDES} "iconv.h")
     SET(HAVE_ICONV_H 1)
+    INCLUDE_DIRECTORIES(${ICONV_INCLUDE_DIR})
+    SET(CMAKE_REQUIRED_INCLUDES ${ICONV_INCLUDE_DIR})
+    CHECK_ICONV("libc" "const")
+    CHECK_ICONV("libc" "")
 
-    # Try POSIX-conforming iconv() in libc
-    CHECK_C_SOURCE_COMPILES(
-      "#include <stdlib.h>
-#include <iconv.h>
-       int main() {const char *ccp; iconv_t cd = iconv_open(\"\", \"\");
-       iconv(cd, &ccp, (size_t *)0, (char **)0, (size_t *)0);
-       iconv_close(cd);
-       return 0;}"
-     HAVE_POSIX_ICONV_IN_LIBC)
-    IF(HAVE_POSIX_ICONV_IN_LIBC)
-      SET(HAVE_ICONV true)
-      SET(ICONV_CONST "const")
-    ELSE(HAVE_POSIX_ICONV_IN_LIBC)
-
-      # Try non-POSIX-conforming iconv() in libc
-      CHECK_C_SOURCE_COMPILES(
-        "#include <stdlib.h>
-#include <iconv.h>
-         int main() {char *ccp; iconv_t cd = iconv_open(\"\", \"\");
-         iconv(cd, &ccp, (size_t *)0, (char **)0, (size_t *)0);
-         iconv_close(cd);
-         return 0;}"
-       HAVE_NONPOSIX_ICONV_IN_LIBC)
-      IF(HAVE_NONPOSIX_ICONV_IN_LIBC)
-        SET(HAVE_ICONV true)
-        SET(ICONV_CONST "") 
-      ELSE(HAVE_NONPOSIX_ICONV_IN_LIBC)
-
-        # iconv isn't in libc, try libiconv
-        FIND_LIBRARY(LIBICONV_PATH iconv)
-        IF(LIBICONV_PATH)
-          SET(CMAKE_REQUIRED_LIBRARIES ${LIBICONV_PATH})
-        ENDIF(LIBICONV_PATH)
-        CHECK_C_SOURCE_COMPILES(
-            "#include <stdlib.h>
-#include <iconv.h>
-             int main() {const char *ccp; iconv_t cd = iconv_open(\"\", \"\");
-             iconv(cd, &ccp, (size_t *)0, (char **)0, (size_t *)0);
-             iconv_close(cd);
-             return 0;}"
-         HAVE_POSIX_ICONV_IN_LIBICONV)
-        IF(HAVE_POSIX_ICONV_IN_LIBICONV)
-          SET(HAVE_ICONV true) 
-          SET(ICONV_CONST "const") 
-          LIST(APPEND ADDITIONAL_LIBS ${LIBICONV_PATH})
-        ELSE(HAVE_POSIX_ICONV_IN_LIBICONV)
-
-          CHECK_C_SOURCE_COMPILES(
-              "#include <stdlib.h>
-#include <iconv.h>
-               int main() {char *ccp; iconv_t cd = iconv_open(\"\", \"\");
-               iconv(cd, &ccp, (size_t *)0, (char **)0, (size_t *)0);
-               iconv_close(cd);
-               return 0;}"
-           HAVE_NONPOSIX_ICONV_IN_LIBICONV)
-          IF(HAVE_NONPOSIX_ICONV_IN_LIBICONV)
-            SET(HAVE_ICONV true) 
-            SET(ICONV_CONST "") 
-            LIST(APPEND ADDITIONAL_LIBS ${LIBICONV_PATH})
-          ENDIF(HAVE_NONPOSIX_ICONV_IN_LIBICONV)
-        ENDIF(HAVE_POSIX_ICONV_IN_LIBICONV)
-      ENDIF(HAVE_NONPOSIX_ICONV_IN_LIBC)
-    ENDIF(HAVE_POSIX_ICONV_IN_LIBC)
+    # If iconv isn't in libc and we have a libiconv, try that.
+    FIND_LIBRARY(LIBICONV_PATH iconv)
+    IF(NOT HAVE_ICONV AND LIBICONV_PATH)
+      LIST(APPEND CMAKE_REQUIRED_LIBRARIES ${LIBICONV_PATH})
+      CHECK_ICONV("libiconv" "const")
+      CHECK_ICONV("libiconv" "")
+      IF (HAVE_ICONV)
+        LIST(APPEND ADDITIONAL_LIBS ${LIBICONV_PATH})
+      ENDIF(HAVE_ICONV)
+    ENDIF(NOT HAVE_ICONV AND LIBICONV_PATH)
   ENDIF(ICONV_INCLUDE_DIR)
   #
   # Find locale_charset() for libiconv.
@@ -1044,6 +1027,18 @@ ELSE(ENABLE_ACL)
   SET(HAVE_ACL_SET_FILE FALSE)
   SET(HAVE_ACL_USER FALSE)
 ENDIF(ENABLE_ACL)
+
+#
+# Check MD5/RMD160/SHA support
+# NOTE: Crypto checks must be run last before generating config.h
+#
+CHECK_CRYPTO(MD5 "LIBC;LIBSYSTEM;NETTLE;OPENSSL")
+CHECK_CRYPTO(RMD160 "LIBC;NETTLE;OPENSSL")
+CHECK_CRYPTO(SHA1 "LIBC;LIBSYSTEM;NETTLE;OPENSSL")
+CHECK_CRYPTO(SHA256 "LIBC;LIBC2;LIBC3;LIBSYSTEM;NETTLE;OPENSSL")
+CHECK_CRYPTO(SHA384 "LIBC;LIBC2;LIBC3;LIBSYSTEM;NETTLE;OPENSSL")
+CHECK_CRYPTO(SHA512 "LIBC;LIBC2;LIBC3;LIBSYSTEM;NETTLE;OPENSSL")
+CHECK_CRYPTO_WIN("MD5;SHA1;SHA256;SHA384;SHA512")
 
 # Generate "config.h" from "build/cmake/config.h.in"
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/build/cmake/config.h.in

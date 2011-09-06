@@ -122,6 +122,7 @@ struct lzx_dec {
 		 */
 #define HTBL_BITS	10
 		int		 max_bits;
+		int		 shift_bits;
 		int		 tbl_bits;
 		int		 tree_used;
 		int		 tree_avail;
@@ -138,7 +139,7 @@ struct lzx_dec {
 	int			 error;
 };
 
-static int slots[] = {
+static const int slots[] = {
 	30, 32, 34, 36, 38, 42, 50, 66, 98, 162, 290
 };
 #define SLOT_BASE	15
@@ -190,7 +191,7 @@ struct lzx_stream {
 #define CFDATA_cbData		4
 #define CFDATA_cbUncomp		6
 
-static char *compression_name[] = {
+static const char *compression_name[] = {
 	"NONE",
 	"MSZIP",
 	"Quantum",
@@ -2205,34 +2206,38 @@ lzx_translation(struct lzx_stream *strm, void *p, size_t size, uint32_t offset)
 #define lzx_br_has(br, n)	((br)->cache_avail >= n)
 /* Get compressed data by bit. */
 #define lzx_br_bits(br, n)				\
-	(((uint16_t)((br)->cache_buffer >>		\
+	(((uint32_t)((br)->cache_buffer >>		\
 		((br)->cache_avail - (n)))) & cache_masks[n])
 #define lzx_br_bits_forced(br, n)			\
-	(((uint16_t)((br)->cache_buffer <<		\
+	(((uint32_t)((br)->cache_buffer <<		\
 		((n) - (br)->cache_avail))) & cache_masks[n])
 /* Read ahead to make sure the cache buffer has enough compressed data we
  * will use.
  *  True  : completed, there is enough data in the cache buffer.
  *  False : we met that strm->next_in is empty, we have to get following
  *          bytes. */
-#define lzx_br_read_ahead(strm, br, n)	\
+#define lzx_br_read_ahead_0(strm, br, n)	\
 	(lzx_br_has((br), (n)) || lzx_br_fillup(strm, br))
 /*  True  : the cache buffer has some bits as much as we need.
  *  False : there are no enough bits in the cache buffer to be used,
  *          we have to get following bytes if we could. */
-#define lzx_br_ensure(strm, br, n)	\
-	(lzx_br_read_ahead((strm), (br), (n)) || lzx_br_has((br), (n)))
+#define lzx_br_read_ahead(strm, br, n)	\
+	(lzx_br_read_ahead_0((strm), (br), (n)) || lzx_br_has((br), (n)))
 
 /* Notify how many bits we consumed. */
 #define lzx_br_consume(br, n)	((br)->cache_avail -= (n))
 #define lzx_br_consume_unalined_bits(br) ((br)->cache_avail &= ~0x0f)
 
-static const uint16_t cache_masks[] = {
-	0x0000, 0x0001, 0x0003, 0x0007,
-	0x000F, 0x001F, 0x003F, 0x007F,
-	0x00FF, 0x01FF, 0x03FF, 0x07FF,
-	0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF,
-	0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF
+static const uint32_t cache_masks[] = {
+	0x00000000, 0x00000001, 0x00000003, 0x00000007,
+	0x0000000F, 0x0000001F, 0x0000003F, 0x0000007F,
+	0x000000FF, 0x000001FF, 0x000003FF, 0x000007FF,
+	0x00000FFF, 0x00001FFF, 0x00003FFF, 0x00007FFF,
+	0x0000FFFF, 0x0001FFFF, 0x0003FFFF, 0x0007FFFF,
+	0x000FFFFF, 0x001FFFFF, 0x003FFFFF, 0x007FFFFF,
+	0x00FFFFFF, 0x01FFFFFF, 0x03FFFFFF, 0x07FFFFFF,
+	0x0FFFFFFF, 0x1FFFFFFF, 0x3FFFFFFF, 0x7FFFFFFF,
+	0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
 };
 
 /*
@@ -2757,7 +2762,8 @@ lzx_decode_blocks(struct lzx_stream *strm, int last)
 					/* Output buffer is empty. */
 					goto next_data;
 
-				if (!lzx_br_ensure(strm, &bre, mt_max_bits)) {
+				if (!lzx_br_read_ahead(strm, &bre,
+				    mt_max_bits)) {
 					if (!last)
 						goto next_data;
 					/* Remaining bits are less than
@@ -2801,7 +2807,8 @@ lzx_decode_blocks(struct lzx_stream *strm, int last)
 			 * Get a length.
 			 */
 			if (length_header == 7) {
-				if (!lzx_br_ensure(strm, &bre, lt_max_bits)) {
+				if (!lzx_br_read_ahead(strm, &bre,
+				    lt_max_bits)) {
 					if (!last) {
 						state = ST_LENGTH;
 						goto next_data;
@@ -2859,7 +2866,7 @@ lzx_decode_blocks(struct lzx_stream *strm, int last)
 			    offset_bits >= 3) {
 				int offbits = offset_bits - 3;
 
-				if (!lzx_br_ensure(strm, &bre, offbits)) {
+				if (!lzx_br_read_ahead(strm, &bre, offbits)) {
 					state = ST_OFFSET;
 					if (last)
 						goto failed;
@@ -2868,7 +2875,7 @@ lzx_decode_blocks(struct lzx_stream *strm, int last)
 				copy_pos = lzx_br_bits(&bre, offbits) << 3;
 
 				/* Get an aligned number. */
-				if (!lzx_br_ensure(strm, &bre,
+				if (!lzx_br_read_ahead(strm, &bre,
 				    offbits + at_max_bits)) {
 					if (!last) {
 						state = ST_OFFSET;
@@ -2890,7 +2897,8 @@ lzx_decode_blocks(struct lzx_stream *strm, int last)
 				/* Add an aligned number. */
 				copy_pos += c;
 			} else {
-				if (!lzx_br_ensure(strm, &bre, offset_bits)) {
+				if (!lzx_br_read_ahead(strm, &bre,
+				    offset_bits)) {
 					state = ST_OFFSET;
 					if (last)
 						goto failed;
@@ -3179,6 +3187,7 @@ lzx_make_huffman_table(struct huffman *hf)
 			*p++ = 0;
 	} else
 		diffbits = 0;
+	hf->shift_bits = diffbits;
 
 	/*
 	 * Make the table.
@@ -3277,46 +3286,34 @@ static int
 lzx_decode_huffman_tree(struct huffman *hf, unsigned rbits, int c)
 {
 	struct htree_t *ht;
-	uint16_t bit;
 	int extlen;
 
-	extlen = hf->max_bits - HTBL_BITS;
-	bit = 1U << (extlen -1);
-	while (c >= hf->len_size && extlen-- > 0) {
+	ht = hf->tree;
+	extlen = hf->shift_bits;
+	while (c >= hf->len_size) {
 		c -= hf->len_size;
-		if (c >= hf->tree_used)
+		if (extlen-- <= 0 || c >= hf->tree_used)
 			return (0);
-		ht = &(hf->tree[c]);
-		if (rbits & bit)
-			c = ht->left;
+		if (rbits & (1U << extlen))
+			c = ht[c].left;
 		else
-			c = ht->right;
-		bit >>= 1;
+			c = ht[c].right;
 	}
-	if (c >= hf->len_size)
-		return (0);
 	return (c);
 }
 
 static inline int
 lzx_decode_huffman(struct huffman *hf, unsigned rbits)
 {
+	int c;
 	/*
 	 * At first search an index table for a bit pattern.
 	 * If it fails, search a huffman tree for.
 	 */
-
-	if (hf->max_bits <= HTBL_BITS)
-		return (hf->tbl[rbits]);
-	else {
-		int c;
-		c = hf->tbl[rbits >> (hf->max_bits - HTBL_BITS)];
-		if (c < hf->len_size)
-			return (c);
-		else
-			/* This bit pattern needs to be found out from
-			 * a huffman tree. */
-			return (lzx_decode_huffman_tree(hf, rbits, c));
-	}
+	c = hf->tbl[rbits >> hf->shift_bits];
+	if (c < hf->len_size)
+		return (c);
+	/* This bit pattern needs to be found out at a huffman tree. */
+	return (lzx_decode_huffman_tree(hf, rbits, c));
 }
 

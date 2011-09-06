@@ -83,7 +83,7 @@ static int	gzip_bidder_init(struct archive_read_filter *);
 int
 archive_read_support_compression_gzip(struct archive *a)
 {
-	return archive_read_support_compression_gzip(a);
+	return archive_read_support_filter_gzip(a);
 }
 #endif
 
@@ -135,15 +135,10 @@ peek_at_header(struct archive_read_filter *filter, int *pbits)
 	p = __archive_read_filter_ahead(filter, len, &avail);
 	if (p == NULL || avail == 0)
 		return (0);
-	if (p[0] != 037)
+	/* We only support deflation- third byte must be 0x08. */
+	if (memcmp(p, "\x1F\x8B\x08", 3) != 0)
 		return (0);
-	bits += 8;
-	if (p[1] != 0213)
-		return (0);
-	bits += 8;
-	if (p[2] != 8) /* We only support deflation. */
-		return (0);
-	bits += 8;
+	bits += 24;
 	if ((p[3] & 0xE0)!= 0)	/* No reserved flags set. */
 		return (0);
 	bits += 3;

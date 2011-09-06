@@ -321,8 +321,8 @@ static int create_code(struct archive_read *, struct huffman_code *,
 static int add_value(struct archive_read *, struct huffman_code *, int, int,
                      int);
 static int new_node(struct huffman_code *);
-static int make_table(struct huffman_code *);
-static int make_table_recurse(struct huffman_code *, int,
+static int make_table(struct archive_read *, struct huffman_code *);
+static int make_table_recurse(struct archive_read *, struct huffman_code *, int,
                               struct huffman_table_entry *, int, int);
 static int64_t expand(struct archive_read *, int64_t);
 static int copy_from_lzss_window(struct archive_read *, const void **,
@@ -1139,7 +1139,7 @@ read_header(struct archive_read *a, struct archive_entry *entry,
       if (filename_size >= end) {
         archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
           "Invalid filename");
-        return (ARCHIVE_FAILED);
+        return (ARCHIVE_FATAL);
       }
       filename[filename_size++] = '\0';
       filename[filename_size++] = '\0';
@@ -1211,6 +1211,8 @@ read_header(struct archive_read *a, struct archive_entry *entry,
 
   switch(file_header.host_os)
   {
+  case OS_MSDOS:
+  case OS_OS2:
   case OS_WIN32:
     rar->mode = archive_le32dec(file_header.file_attr);
     if (rar->mode & FILE_ATTRIBUTE_DIRECTORY)
@@ -1221,13 +1223,11 @@ read_header(struct archive_read *a, struct archive_entry *entry,
     break;
 
   case OS_UNIX:
+  case OS_MAC_OS:
+  case OS_BEOS:
     rar->mode = archive_le32dec(file_header.file_attr);
     break;
 
-  case OS_MSDOS:
-  case OS_OS2:
-  case OS_MAC_OS:
-  case OS_BEOS:
   default:
     archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                       "Unknown file attributes from RAR file's host OS");
@@ -1426,9 +1426,9 @@ read_data_stored(struct archive_read *a, const void **buff, size_t *size,
     *size = 0;
     *offset = rar->offset;
     if (rar->file_crc != rar->crc_calculated) {
-      archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+      archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                         "File CRC error");
-      return (ARCHIVE_FAILED);
+      return (ARCHIVE_FATAL);
     }
     rar->entry_eof = 1;
     return (ARCHIVE_EOF);
@@ -1467,7 +1467,7 @@ read_data_compressed(struct archive_read *a, const void **buff, size_t *size,
 
   do {
     if (!rar->valid)
-      return (ARCHIVE_FAILED);
+      return (ARCHIVE_FATAL);
     if (rar->ppmd_eod ||
        (rar->dictionary_size && rar->offset >= rar->unp_size))
     {
@@ -1488,9 +1488,9 @@ read_data_compressed(struct archive_read *a, const void **buff, size_t *size,
       *size = 0;
       *offset = rar->offset;
       if (rar->file_crc != rar->crc_calculated) {
-        archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+        archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                           "File CRC error");
-        return (ARCHIVE_FAILED);
+        return (ARCHIVE_FATAL);
       }
       rar->entry_eof = 1;
       return (ARCHIVE_EOF);
@@ -1560,7 +1560,7 @@ read_data_compressed(struct archive_read *a, const void **buff, size_t *size,
             continue;
 
           case 3:
-            archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+            archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
                               "Parsing filters is unsupported.");
             return (ARCHIVE_FAILED);
 
@@ -1623,7 +1623,7 @@ read_data_compressed(struct archive_read *a, const void **buff, size_t *size,
           * what we would do to solve it. */
           archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                             "Internal error extracting RAR file");
-          return (ARCHIVE_FAILED);
+          return (ARCHIVE_FATAL);
       }
     }
     if (rar->bytes_uncopied > (rar->unp_buffer_size - rar->unp_offset))
@@ -1739,7 +1739,7 @@ parse_codes(struct archive_read *a)
       if (!rar->ppmd_valid) {
         archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                           "Invalid PPMd sequence");
-        return (ARCHIVE_FAILED);
+        return (ARCHIVE_FATAL);
       }
       if (!__archive_ppmd7_functions.PpmdRAR_RangeDec_Init(&rar->range_dec))
       {
@@ -1795,7 +1795,7 @@ parse_codes(struct archive_read *a)
       if ((val = read_next_symbol(a, &precode)) < 0) {
         free(precode.tree);
         free(precode.table);
-        return (ARCHIVE_FAILED);
+        return (ARCHIVE_FATAL);
       }
       if (val < 16)
       {
@@ -1810,7 +1810,7 @@ parse_codes(struct archive_read *a)
           free(precode.table);
           archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                             "Internal error extracting RAR file.");
-          return (ARCHIVE_FAILED);
+          return (ARCHIVE_FATAL);
         }
 
         if(val == 16) {
@@ -1910,7 +1910,7 @@ truncated_data:
   archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                     "Truncated RAR file data");
   rar->valid = 0;
-  return (ARCHIVE_FAILED);
+  return (ARCHIVE_FATAL);
 }
 
 static void
@@ -1943,12 +1943,8 @@ read_next_symbol(struct archive_read *a, struct huffman_code *code)
 
   if (!code->table)
   {
-    if (make_table(code) != (ARCHIVE_OK))
-    {
-      archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
-                        "Error in generating table.");
+    if (make_table(a, code) != (ARCHIVE_OK))
       return -1;
-    }
   }
 
   rar = (struct rar *)(a->format->data);
@@ -2029,7 +2025,7 @@ create_code(struct archive_read *a, struct huffman_code *code,
     {
       if (lengths[j] != i) continue;
       if (add_value(a, code, j, codebits, i) != ARCHIVE_OK)
-        return (ARCHIVE_FAILED);
+        return (ARCHIVE_FATAL);
       codebits++;
       if (--symbolsleft <= 0) { break; break; }
     }
@@ -2059,7 +2055,7 @@ add_value(struct archive_read *a, struct huffman_code *code, int value,
   {
     archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                       "Invalid repeat position");
-    return (ARCHIVE_FAILED);
+    return (ARCHIVE_FATAL);
   }
 
   lastnode = 0;
@@ -2073,7 +2069,7 @@ add_value(struct archive_read *a, struct huffman_code *code, int value,
     {
       archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                         "Prefix found");
-      return (ARCHIVE_FAILED);
+      return (ARCHIVE_FATAL);
     }
 
     if (bitpos == repeatpos)
@@ -2083,7 +2079,7 @@ add_value(struct archive_read *a, struct huffman_code *code, int value,
       {
         archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                           "Invalid repeating code");
-        return (ARCHIVE_FAILED);
+        return (ARCHIVE_FATAL);
       }
 
       if ((repeatnode = new_node(code)) < 0) {
@@ -2128,7 +2124,7 @@ add_value(struct archive_read *a, struct huffman_code *code, int value,
   {
     archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                       "Prefix found");
-    return (ARCHIVE_FAILED);
+    return (ARCHIVE_FATAL);
   }
 
   /* Set leaf value */
@@ -2151,7 +2147,7 @@ new_node(struct huffman_code *code)
 }
 
 static int
-make_table(struct huffman_code *code)
+make_table(struct archive_read *a, struct huffman_code *code)
 {
   if (code->maxlength < code->minlength || code->maxlength > 10)
     code->tablesize = 10;
@@ -2162,20 +2158,30 @@ make_table(struct huffman_code *code)
     (struct huffman_table_entry *)malloc(sizeof(*code->table)
     * (1 << code->tablesize));
 
-  return make_table_recurse(code, 0, code->table, 0, code->tablesize);
+  return make_table_recurse(a, code, 0, code->table, 0, code->tablesize);
 }
 
 static int
-make_table_recurse(struct huffman_code *code, int node,
+make_table_recurse(struct archive_read *a, struct huffman_code *code, int node,
                    struct huffman_table_entry *table, int depth,
                    int maxdepth)
 {
   int currtablesize, i, ret = (ARCHIVE_OK);
 
-  currtablesize = 1 << (maxdepth - depth);
-
   if (!code->tree)
+  {
+    archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+                      "Huffman tree was not created.");
     return (ARCHIVE_FATAL);
+  }
+  if (node < 0 || node >= code->numentries)
+  {
+    archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+                      "Invalid location to Huffman tree specified.");
+    return (ARCHIVE_FATAL);
+  }
+
+  currtablesize = 1 << (maxdepth - depth);
 
   if (code->tree[node].branches[0] ==
     code->tree[node].branches[1])
@@ -2200,9 +2206,9 @@ make_table_recurse(struct huffman_code *code, int node,
     }
     else
     {
-      ret |= make_table_recurse(code, code->tree[node].branches[0], table,
+      ret |= make_table_recurse(a, code, code->tree[node].branches[0], table,
                                 depth + 1, maxdepth);
-      ret |= make_table_recurse(code, code->tree[node].branches[1],
+      ret |= make_table_recurse(a, code, code->tree[node].branches[1],
                          table + currtablesize / 2, depth + 1, maxdepth);
     }
   }
@@ -2266,7 +2272,7 @@ expand(struct archive_read *a, int64_t end)
       return lzss_position(&rar->lzss);
 
     if ((symbol = read_next_symbol(a, &rar->maincode)) < 0)
-      return (ARCHIVE_FAILED);
+      return (ARCHIVE_FATAL);
     rar->output_last_match = 0;
     
     if (symbol < 256)
@@ -2293,13 +2299,13 @@ expand(struct archive_read *a, int64_t end)
       else
       {
         if (parse_codes(a) != ARCHIVE_OK)
-          return (ARCHIVE_FAILED);
+          return (ARCHIVE_FATAL);
         continue;
       }
     }
     else if(symbol==257)
     {
-      archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+      archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
                         "Parsing filters is unsupported.");
       return (ARCHIVE_FAILED);
     }
@@ -2391,7 +2397,7 @@ expand(struct archive_read *a, int64_t end)
           {
             if ((lowoffsetsymbol =
               read_next_symbol(a, &rar->lowoffsetcode)) < 0)
-              return (ARCHIVE_FAILED);
+              return (ARCHIVE_FATAL);
             if(lowoffsetsymbol == 16)
             {
               rar->numlowoffsetrepeats = 15;
@@ -2430,11 +2436,11 @@ truncated_data:
   archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                     "Truncated RAR file data");
   rar->valid = 0;
-  return (ARCHIVE_FAILED);
+  return (ARCHIVE_FATAL);
 bad_data:
   archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                     "Bad RAR file data");
-  return (ARCHIVE_FAILED);
+  return (ARCHIVE_FATAL);
 }
 
 static int
@@ -2464,7 +2470,7 @@ copy_from_lzss_window(struct archive_read *a, const void **buffer,
     if (firstpart < 0) {
       archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                         "Bad RAR file data");
-      return (ARCHIVE_FAILED);
+      return (ARCHIVE_FATAL);
     }
     if (firstpart < length) {
       memcpy(&rar->unp_buffer[rar->unp_offset],
