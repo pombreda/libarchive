@@ -26,7 +26,7 @@
  * Ports of libarchive, bsdtar, etc.
   * [http://gnuwin32.sourceforge.net/ GnuWin32] and [http://cygwin.org/ Cygwin] for Windows.
   * [http://libarchive.darwinports.com/ Darwinports] for MacOS
-  * [http://packages.debian.org/sid/libarchive-dev Debian Linux]
+  * [http://packages.qa.debian.org/liba/libarchive.html Debian Linux]
   * [http://packages.gentoo.org/package/app-arch/libarchive Gentoo]
 
 If you know of other projects that should be in this list, please let us know.
