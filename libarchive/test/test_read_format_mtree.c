@@ -33,11 +33,11 @@ test_read_format_mtree1(void)
 	struct archive_entry *ae;
 	struct archive *a;
 	FILE *f;
-	// Compute min and max 64-bit signed twos-complement values
+	// Compute max 64-bit signed twos-complement value
 	// without relying on overflow.  This assumes that long long
 	// is at least 64 bits.
 	const static long long max_int64 = ((((long long)1) << 62) - 1) + (((long long)1) << 62);
-	const static long long min_int64 = - (((long long)1) << 62) - (((long long)1) << 62);
+	time_t min_time;
 
 	extract_reference_file(reffile);
 
@@ -117,24 +117,36 @@ test_read_format_mtree1(void)
 	assertEqualString(archive_entry_pathname(ae), "dir2/smallfile");
 	assertEqualInt(archive_entry_size(ae), 1);
 
+	/* TODO: Mtree reader should probably return ARCHIVE_WARN for this. */
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualString(archive_entry_pathname(ae), "dir2/toosmallfile");
+	assertEqualInt(archive_entry_size(ae), -1);
+
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
 	assertEqualString(archive_entry_pathname(ae), "dir2/bigfile");
 	assertEqualInt(archive_entry_size(ae), max_int64);
 
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
 	assertEqualString(archive_entry_pathname(ae), "dir2/toobigfile");
+	/* Size in mtree is max_int64 + 1; should return max_int64. */
 	assertEqualInt(archive_entry_size(ae), max_int64);
 
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
 	assertEqualString(archive_entry_pathname(ae), "dir2/veryoldfile");
-	assertEqualInt(archive_entry_mtime(ae), min_int64);
+	/* The value in the file is MIN_INT64_T, but time_t may be narrower. */
+	/* Verify min_time is the smallest possible time_t. */
+	min_time = archive_entry_mtime(ae);
+	assert(min_time <= 0);
+	assert(min_time - 1 > 0);
 
+	/* toooldfile is 1 sec older, which should overflow and get returned
+	 * with the same value. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
 	assertEqualString(archive_entry_pathname(ae), "dir2/toooldfile");
-	assertEqualInt(archive_entry_mtime(ae), min_int64);
+	assertEqualInt(archive_entry_mtime(ae), min_time);
 
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
-	assertEqualInt(18, archive_file_count(a));
+	assertEqualInt(19, archive_file_count(a));
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }

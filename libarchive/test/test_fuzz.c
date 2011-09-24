@@ -168,35 +168,40 @@ static const char *fileset22[] =
 };
 static const char *fileset23[] =
 {
-	"test_read_format_rar_subblock.rar", /* RAR with subblocks */
+	"test_read_format_rar_sfx.exe", /* RAR SFX archive */
 	NULL
 };
 static const char *fileset24[] =
 {
-	"test_read_format_rar_unicode.rar", /* RAR with Unicode filenames */
+	"test_read_format_rar_subblock.rar", /* RAR with subblocks */
 	NULL
 };
 static const char *fileset25[] =
 {
-	"test_read_format_gtar_sparse_1_17_posix10_modified.tar",
+	"test_read_format_rar_unicode.rar", /* RAR with Unicode filenames */
 	NULL
 };
 static const char *fileset26[] =
 {
-	"test_read_format_mtree.mtree",
+	"test_read_format_gtar_sparse_1_17_posix10_modified.tar",
 	NULL
 };
 static const char *fileset27[] =
 {
-	"test_read_format_tar_empty_filename.tar",
+	"test_read_format_mtree.mtree",
 	NULL
 };
 static const char *fileset28[] =
 {
-	"test_read_format_zip.zip",
+	"test_read_format_tar_empty_filename.tar",
 	NULL
 };
 static const char *fileset29[] =
+{
+	"test_read_format_zip.zip",
+	NULL
+};
+static const char *fileset30[] =
 {
 	"test_read_format_rar_multivolume.part0001.rar",
 	"test_read_format_rar_multivolume.part0002.rar",
@@ -235,6 +240,7 @@ static const struct files filesets[] = {
 	{0, fileset27},
 	{0, fileset28},
 	{0, fileset29},
+	{0, fileset30},
 	{1, NULL}
 };
 

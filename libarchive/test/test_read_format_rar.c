@@ -191,22 +191,40 @@ test_unicode_UTF8(void)
 
   /* First header. */
   assertA(0 == archive_read_next_header(a, &ae));
-  assertEqualUTF8String("\xE8\xA1\xA8\xE3\x81\xA0\xE3\x82\x88/"
-      "\xE6\x96\xB0\xE3\x81\x97\xE3\x81\x84\xE3\x83\x95\xE3\x82"
-      "\xA9\xE3\x83\xAB\xE3\x83\x80/\xE6\x96\xB0\xE8\xA6\x8F"
-      "\xE3\x83\x86\xE3\x82\xAD\xE3\x82\xB9\xE3\x83\x88 "
-      "\xE3\x83\x89\xE3\x82\xAD\xE3\x83\xA5\xE3\x83\xA1\xE3\x83"
-      "\xB3\xE3\x83\x88.txt", archive_entry_pathname(ae));
+#if defined(__APPLE__)
+#define f1name "\xE8\xA1\xA8\xE3\x81\x9F\xE3\x82\x99\xE3\x82\x88/"\
+      "\xE6\x96\xB0\xE3\x81\x97\xE3\x81\x84\xE3\x83\x95\xE3\x82\xA9"\
+      "\xE3\x83\xAB\xE3\x82\xBF\xE3\x82\x99/\xE6\x96\xB0\xE8\xA6\x8F"\
+      "\xE3\x83\x86\xE3\x82\xAD\xE3\x82\xB9\xE3\x83\x88 "\
+      "\xE3\x83\x88\xE3\x82\x99\xE3\x82\xAD\xE3\x83\xA5\xE3\x83\xA1"\
+      "\xE3\x83\xB3\xE3\x83\x88.txt" /* NFD */
+#else
+#define f1name "\xE8\xA1\xA8\xE3\x81\xA0\xE3\x82\x88/"\
+      "\xE6\x96\xB0\xE3\x81\x97\xE3\x81\x84\xE3\x83\x95\xE3\x82\xA9"\
+      "\xE3\x83\xAB\xE3\x83\x80/\xE6\x96\xB0\xE8\xA6\x8F"\
+      "\xE3\x83\x86\xE3\x82\xAD\xE3\x82\xB9\xE3\x83\x88 "\
+      "\xE3\x83\x89\xE3\x82\xAD\xE3\x83\xA5\xE3\x83\xA1"\
+      "\xE3\x83\xB3\xE3\x83\x88.txt" /* NFC */
+#endif
+  assertEqualUTF8String(f1name, archive_entry_pathname(ae));
   assertA((int)archive_entry_mtime(ae));
   assertEqualInt(0, archive_entry_size(ae));
   assertEqualInt(33188, archive_entry_mode(ae));
 
   /* Second header. */
   assertA(0 == archive_read_next_header(a, &ae));
-  assertEqualUTF8String("\xE8\xA1\xA8\xE3\x81\xA0\xE3\x82\x88/"
-      "\xE6\xBC\xA2\xE5\xAD\x97\xE9\x95\xB7\xE3\x81\x84\xE3\x83\x95"
-      "\xE3\x82\xA1\xE3\x82\xA4\xE3\x83\xAB\xE5\x90\x8Dlong-filename-in-"
-      "\xE6\xBC\xA2\xE5\xAD\x97.txt", archive_entry_pathname(ae));
+#if defined(__APPLE__)
+#define f2name "\xE8\xA1\xA8\xE3\x81\x9F\xE3\x82\x99\xE3\x82\x88/"\
+      "\xE6\xBC\xA2\xE5\xAD\x97\xE9\x95\xB7\xE3\x81\x84\xE3\x83\x95"\
+      "\xE3\x82\xA1\xE3\x82\xA4\xE3\x83\xAB\xE5\x90\x8Dlong-filename-in-"\
+      "\xE6\xBC\xA2\xE5\xAD\x97.txt" /* NFD */
+#else
+#define f2name "\xE8\xA1\xA8\xE3\x81\xA0\xE3\x82\x88/"\
+      "\xE6\xBC\xA2\xE5\xAD\x97\xE9\x95\xB7\xE3\x81\x84\xE3\x83\x95"\
+      "\xE3\x82\xA1\xE3\x82\xA4\xE3\x83\xAB\xE5\x90\x8Dlong-filename-in-"\
+      "\xE6\xBC\xA2\xE5\xAD\x97.txt" /* NFC */
+#endif
+  assertEqualUTF8String(f2name, archive_entry_pathname(ae));
   assertA((int)archive_entry_mtime(ae));
   assertEqualInt(5, archive_entry_size(ae));
   assertEqualInt(33188, archive_entry_mode(ae));
@@ -215,26 +233,42 @@ test_unicode_UTF8(void)
 
   /* Third header. */
   assertA(0 == archive_read_next_header(a, &ae));
-  assertEqualUTF8String("\xE8\xA1\xA8\xE3\x81\xA0\xE3\x82\x88/"
-      "\xE6\x96\xB0\xE3\x81\x97\xE3\x81\x84\xE3\x83\x95\xE3\x82"
-      "\xA9\xE3\x83\xAB\xE3\x83\x80", archive_entry_pathname(ae));
+#if defined(__APPLE__)
+#define f3name "\xE8\xA1\xA8\xE3\x81\x9F\xE3\x82\x99\xE3\x82\x88/"\
+      "\xE6\x96\xB0\xE3\x81\x97\xE3\x81\x84\xE3\x83\x95\xE3\x82"\
+      "\xA9\xE3\x83\xAB\xE3\x82\xBF\xE3\x82\x99" /* NFD */
+#else
+#define f3name "\xE8\xA1\xA8\xE3\x81\xA0\xE3\x82\x88/"\
+      "\xE6\x96\xB0\xE3\x81\x97\xE3\x81\x84\xE3\x83\x95\xE3\x82"\
+      "\xA9\xE3\x83\xAB\xE3\x83\x80" /* NFC */
+#endif
+  assertEqualUTF8String(f3name, archive_entry_pathname(ae));
   assertA((int)archive_entry_mtime(ae));
   assertEqualInt(0, archive_entry_size(ae));
   assertEqualInt(16877, archive_entry_mode(ae));
 
   /* Fourth header. */
   assertA(0 == archive_read_next_header(a, &ae));
-  assertEqualUTF8String("\xE8\xA1\xA8\xE3\x81\xA0\xE3\x82\x88",
-      archive_entry_pathname(ae));
+#if defined(__APPLE__)
+#define f4name "\xE8\xA1\xA8\xE3\x81\x9F\xE3\x82\x99\xE3\x82\x88" /* NFD */
+#else
+#define f4name "\xE8\xA1\xA8\xE3\x81\xA0\xE3\x82\x88" /* NFC */
+#endif
+  assertEqualUTF8String(f4name, archive_entry_pathname(ae));
   assertA((int)archive_entry_mtime(ae));
   assertEqualInt(0, archive_entry_size(ae));
   assertEqualInt(16877, archive_entry_mode(ae));
 
   /* Fifth header, which has a symbolic-link name in multi-byte characters. */
   assertA(0 == archive_read_next_header(a, &ae));
-  assertEqualUTF8String("\xE8\xA1\xA8\xE3\x81\xA0\xE3\x82\x88/"
-      "\xE3\x83\x95\xE3\x82\xA1\xE3\x82\xA4\xE3\x83\xAB",
-      archive_entry_pathname(ae));
+#if defined(__APPLE__)
+#define f5name "\xE8\xA1\xA8\xE3\x81\x9F\xE3\x82\x99\xE3\x82\x88/"\
+      "\xE3\x83\x95\xE3\x82\xA1\xE3\x82\xA4\xE3\x83\xAB" /* NFD */
+#else
+#define f5name "\xE8\xA1\xA8\xE3\x81\xA0\xE3\x82\x88/"\
+      "\xE3\x83\x95\xE3\x82\xA1\xE3\x82\xA4\xE3\x83\xAB" /* NFC */
+#endif
+  assertEqualUTF8String(f5name, archive_entry_pathname(ae));
   assertEqualUTF8String(
       "\xE6\xBC\xA2\xE5\xAD\x97\xE9\x95\xB7\xE3\x81\x84\xE3\x83\x95"
       "\xE3\x82\xA1\xE3\x82\xA4\xE3\x83\xAB\xE5\x90\x8Dlong-filename-in-"
@@ -867,6 +901,79 @@ test_multivolume_rar(void)
   assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 
+static void
+test_sfx(void)
+{
+  char buff[441];
+  const char reffile[] = "test_read_format_rar_sfx.exe";
+  const char test_txt[] = "test text file\r\n";
+  int size = sizeof(test_txt)-1;
+  struct archive_entry *ae;
+  struct archive *a;
+
+  extract_reference_file(reffile);
+  assert((a = archive_read_new()) != NULL);
+  assertA(0 == archive_read_support_filter_all(a));
+  assertA(0 == archive_read_support_format_all(a));
+  assertA(0 == archive_read_open_file(a, reffile, 10240));
+
+  /* First header. */
+  assertA(0 == archive_read_next_header(a, &ae));
+  assertEqualString("test.txt", archive_entry_pathname(ae));
+  assertA((int)archive_entry_mtime(ae));
+  assertA((int)archive_entry_ctime(ae));
+  assertA((int)archive_entry_atime(ae));
+  assertEqualInt(16, archive_entry_size(ae));
+  assertEqualInt(33188, archive_entry_mode(ae));
+  assertA(size == archive_read_data(a, buff, size));
+  assertEqualMem(buff, test_txt, size);
+
+  /* Second header. */
+  assertA(0 == archive_read_next_header(a, &ae));
+  assertEqualString("testshortcut.lnk", archive_entry_pathname(ae));
+  assertA((int)archive_entry_mtime(ae));
+  assertA((int)archive_entry_ctime(ae));
+  assertA((int)archive_entry_atime(ae));
+  assertEqualInt(sizeof(buff), archive_entry_size(ae));
+  assertEqualInt(33188, archive_entry_mode(ae));
+  assertA(sizeof(buff) == archive_read_data(a, buff, sizeof(buff)));
+
+  /* Third header. */
+  assertA(0 == archive_read_next_header(a, &ae));
+  assertEqualString("testdir/test.txt", archive_entry_pathname(ae));
+  assertA((int)archive_entry_mtime(ae));
+  assertA((int)archive_entry_ctime(ae));
+  assertA((int)archive_entry_atime(ae));
+  assertEqualInt(16, archive_entry_size(ae));
+  assertEqualInt(33188, archive_entry_mode(ae));
+  assertA(size == archive_read_data(a, buff, size));
+  assertEqualMem(buff, test_txt, size);
+
+  /* Fourth header. */
+  assertA(0 == archive_read_next_header(a, &ae));
+  assertEqualString("testdir", archive_entry_pathname(ae));
+  assertA((int)archive_entry_mtime(ae));
+  assertA((int)archive_entry_ctime(ae));
+  assertA((int)archive_entry_atime(ae));
+  assertEqualInt(0, archive_entry_size(ae));
+  assertEqualInt(16877, archive_entry_mode(ae));
+
+  /* Fifth header. */
+  assertA(0 == archive_read_next_header(a, &ae));
+  assertEqualString("testemptydir", archive_entry_pathname(ae));
+  assertA((int)archive_entry_mtime(ae));
+  assertA((int)archive_entry_ctime(ae));
+  assertA((int)archive_entry_atime(ae));
+  assertEqualInt(0, archive_entry_size(ae));
+  assertEqualInt(16877, archive_entry_mode(ae));
+
+  /* Test EOF */
+  assertA(1 == archive_read_next_header(a, &ae));
+  assertEqualInt(5, archive_file_count(a));
+  assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+  assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+}
+
 DEFINE_TEST(test_read_format_rar)
 {
   test_basic();
@@ -881,4 +988,5 @@ DEFINE_TEST(test_read_format_rar)
   test_binary();
   test_windows();
   test_multivolume_rar();
+  test_sfx();
 }
