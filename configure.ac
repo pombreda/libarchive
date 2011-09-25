@@ -294,7 +294,7 @@ AC_ARG_WITH([iconv],
 if test "x$with_iconv" != "xno"; then
   AC_CHECK_HEADERS([iconv.h],[],[],[#include <stdlib.h>])
   AM_ICONV
-  if test "x$am_cv_lib_iconv" != "xno"; then
+  if test "x$am_cv_func_iconv" = "xyes"; then
     AC_CHECK_HEADERS([localcharset.h])
     am_save_LIBS="$LIBS"
     LIBS="${LIBS} ${LIBICONV}"
@@ -330,9 +330,11 @@ if test "x$with_xml2" != "xno"; then
   if test "x$XML2_CONFIG" != "x"; then
     CPPFLAGS="${CPPFLAGS} `${XML2_CONFIG} --cflags`"
     LIBS="${LIBS} `${XML2_CONFIG} --libs`"
+    AC_CHECK_LIB(xml2,xmlInitParser,[true],AC_MSG_FAILURE(Missing xml2 library))
+  else
+    AC_CHECK_LIB(xml2,xmlInitParser)
   fi
   AC_CHECK_HEADERS([libxml/xmlreader.h libxml/xmlwriter.h])
-  AC_CHECK_LIB(xml2,xmlInitParser)
 fi
 if test "x$ac_cv_header_libxml_xmlreader_h" != "xyes"; then
   if test "x$with_expat" != "xno"; then
@@ -589,7 +591,9 @@ main(int argc, char **argv)
 ])],
     [ AC_MSG_RESULT([yes])
       found_$1=yes
-      mdLIBS="$mdLIBS $4"
+      if [[ -n "$4" ]]; then
+        test -n "$(echo $mdLIBS | grep -e $4)" || mdLIBS="$mdLIBS $4"
+      fi
       AC_DEFINE(ARCHIVE_CRYPTO_$1_$2, 1, [ $1 via ARCHIVE_CRYPTO_$1_$2 supported.])
     ],
     [ AC_MSG_RESULT([no])])
