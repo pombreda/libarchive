@@ -21,15 +21,19 @@ It would be nice to break it out into separate pages by platform and provide mor
 
 The man pages are a little out-of-date now; some of the newer changes need to be added.
 
-= Man Page Refactoring =
-
-The big monolithic man pages are a little hard to navigate.
-Breaking them down some would probably help, as long as there were enough cross-references to help navigate.
-The existing `archive_read.3`, etc, man pages should probably be retained as a holder for overall API information and examples.
-
 = Better documentation conversions =
 
 The existing conversion scripts don't do a bad job but could probably stand improvement.
+
+= CMake-based install target =
+
+The CMake-based build has basic install support, but could use improvement.
+
+= CMake-based distribution building =
+
+Currently, the distribution can only be built from the autoconf build system.
+This is one of the few capabilities of the autoconf-based build that
+is not implemented in the CMake-based build.
 
 = Command-line parsing for compress_program =
 
@@ -55,24 +59,6 @@ Solaris and possibly others.)
 = Pax front-end =
 
 It should be feasible to build a POSIX-compliant pax on top of libarchive.
-
-= lzip support =
-
-Libarchive already integrates the liblzma library from xz-utils to
-support bare lzma streams and xz format.
-It should be relatively straightforward to utilize this library
-to support lzip format as well.
-Note that I am strongly opposed to bringing in a second LZMA library
-and even more opposed to copying the LZMA SDK code into libarchive.
-
-= Sparse archiving =
-
-FreeBSD now has `seek(HOLE)` support that should make it possible
-to efficiently archive sparse files. Solaris supported this first, see [http://blogs.sun.com/bonwick/entry/seek_hole_and_seek_data seek_hole_and_seek_data] for more information. Linux Kernel starting from 2.6.28 has an FIEMAP IOCTL which does this job there - but the interface is quite different from the Solaris/FreeBSD implementation (this [http://lwn.net/Articles/260795/ LWN article] may be interesting for you).
-
-This will require adding a new archive_entry field to store the
-list of segments and modifications to archive_read_disk and
-the pax writer.
 
 = cpio as archive translation =
 
@@ -178,11 +164,6 @@ and make sure that the final API is clean and easy to
 understand (and backwards compatible with existing clients
 if that's possible).
 
-= UUencode/decode filters =
-
-UUdecode support was added to libarchive 2.8.
-Now that libarchive/trunk supports multiple write filters, it should be easy to add a corresponding write filter.
-
 = Encrypted backup support =
 
 This should be a straightforward use of OpenSSL wrapped
@@ -252,6 +233,11 @@ This requires a little care, but ISO and Zip readers could really
 benefit from seeking when the input supports it.
 I insist that we maintain the ability to read most ISO and Zip
 files even when seek is unavailable.
+For Zip files, that may involve having two completely separate Zip readers:
+one that works in a streaming mode, and
+one that works in a seeking fashion.
+These two readers will certainly share a lot of code even though
+the overal structure will be quite different.
 
 = Seek in archives =
 
@@ -297,26 +283,6 @@ extracted to, and reading from a separate disk.
 
 I've not yet experimented to see if I can find any
 benefits from async I/O when writing archives to tape.
-
-= ISO writer =
-
-The ISO writer has been written; it will be available
-in libarchive 2.9.
-
-= Mac "copyfile()" support =
-
-Apple is distributing a patched bsdtar with Mac OS X 10.6 Snow Leopard
-that uses their copyfile() API to handle Mac OS ACLs and extended attributes.
-They recently (Jan 2010) released their patches and I've
-begun incorporating them into bsdtar.
-It looks like this facility could be pushed down into
-libarchive in order to make such support transparent to
-all libarchive clients, not just bsdtar.
-
-= xar reader and writer =
-
-Xar reading was implemented for libarchive 2.8.
-Writing will require tricks similar to the ISO writer.
 
 = BSD-style long filename support for GNU ld and other ld implementations =
 
