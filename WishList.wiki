@@ -256,6 +256,38 @@ restore back to that checkpoint.
 The checkpoint object could be complex if you have a series of
 stacked read filters plus state in the format handler itself.
 
+= fadvise() and O_DIRECT =
+
+Libarchive's streaming operation should allow the kernel to
+optimize I/O very cleanly.
+However, the current bsdtar and bsdcpio clients don't
+make any attempt to inform the kernel about that
+pattern:  suitable fadvise() calls could have a significant
+improvement in overall performance.
+
+The O_DIRECT flag could also be used to provide better
+I/O performance.  There has been some work recently
+to align the copy buffers used within bsdtar so that
+O_DIRECT can be used; there is probably more that
+could be done.
+
+= File I/O strategy development =
+
+The `archive_read_open_filename` module now has a basic
+notion of "strategy" for reading files from different sources.
+This has been used to optimize reading archives from disk,
+but could be further extended to optimize reading archives
+from tapes, pipes, or other sources as well.
+
+It would be even better to share the strategy layer
+between `archive_read_open_filename` and
+`archive_read_open_fd`.
+The easiest approach is probably to convert
+`archive_read_open_filename` into
+a simple wrapper around `archive_read_open_fd`,
+but there are a couple of small mismatches in the current
+code that would need to be resolved.
+
 = MMap and async I/O performance experiments =
 
 It should be possible to read archives using mmap()
@@ -265,6 +297,11 @@ However, this requires some careful performance testing
 before we can be confident that it really is an improvement.
 (If it doesn't help performance, we shouldn't do it.)
 
+Using mmap() should provide real advantages when reading
+archives from disk, especially uncompressed archives.
+This essentially lets libarchive work with very large blocks
+by pushing the I/O concerns back onto the kernel.
+
 Async I/O would seem to improve performance
 with streaming tape drives.
 Joerg Schilling has had good results with _star_ using two processes
@@ -272,7 +309,12 @@ and a shared-memory buffer to smooth out data flow when talking to tape drives.
 I think async I/O could provide comparable performance
 without forking. (Clients can easily get confused when
 callbacks get invoked in different processes, so I'm reluctant
-to fork within libarchive.)
+to fork within libarchive.
+However, forking or threading would be okay if it were contained
+entirely within a module such as `archive_read_open_filename`.
+Reading in a background thread into a shared-memory buffer
+while libarchive processes the previous buffer is certainly worth
+investigating.)
 
 Note:  In Jan 2010, I did some experiments using async I/O
 to begin reading the next block of the archive while the
