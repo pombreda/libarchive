@@ -13,18 +13,18 @@ If there is an example you'd like to see added to this page, please ask.
 = List contents of Archive stored in File =
 
 Libarchive is based around two types of "objects":  archive objects (pointers to `struct archive`) and entry objects (pointers to `struct archive_entry`).
-These are opaque references: you cannot directly access of the structure fields, you can only invoke libarchive functions that create, manipulate, and destroy these objects for you.
+These are opaque references: you cannot directly access the structure fields, you can only invoke libarchive functions that create, manipulate, and destroy these objects for you.
 
 The basic lifecycle of an archive object is very simple:
  * Create one using archive_XXX_new()
  * Configure it using "support" or "set" calls.  ("Support" calls allow libarchive to decide when to use a feature, "set" calls enable the feature unconditionally.)
  * "Open" a particular data source.
  * Iterate over the contents:  ask alternately for "header" (which returns an entry object describing the next entry in the archive) and "data"
- * When you're done, you can "close", query any final information or statistics, then call "finish" to free the archive object.  (The "finish" calls will be renamed "free" starting in libarchive 3.0.)
+ * When you're done, you can "close", query any final information or statistics, then call "free" to free the archive object.  (The "free" calls were named "finish" in earlier versions of libarchive.)
 
 Writing an archive is very similar, except that you provide header and data to libarchive instead of asking for them from libarchive.
 
-Here's a very basic usage that simply opens a file and lists the contents of the archive:
+Here's a very basic example that simply opens a file and lists the contents of the archive:
 
 {{{
   struct archive *a;
@@ -32,7 +32,7 @@ Here's a very basic usage that simply opens a file and lists the contents of the
   int r;
 
   a = archive_read_new();
-  archive_read_support_compression_all(a);
+  archive_read_support_filter_all(a);
   archive_read_support_format_all(a);
   r = archive_read_open_filename(a, "archive.tar", 10240); // Note 1
   if (r != ARCHIVE_OK)
@@ -41,13 +41,13 @@ Here's a very basic usage that simply opens a file and lists the contents of the
     printf("%s\\n",archive_entry_pathname(entry));
     archive_read_data_skip(a);  // Note 2
   }
-  r = archive_read_finish(a);  // Note 3
+  r = archive_read_free(a);  // Note 3
   if (r != ARCHIVE_OK)
     exit(1);
 }}}
 
 Note 1: Beginning with libarchive 3.0, the `archive_read_open_filename()`
-function will inspect the file before deciding how to handle the blocksize.
+function inspects the file before deciding how to handle the blocksize.
 If the filename provided refers to a tape device, for example, it will
 use exactly the blocksize you specify.  For other devices, it may
 adjust the requested blocksize in order to obtain better performance.
@@ -56,9 +56,9 @@ Note 2:  The call to `archive_read_data_skip()` here is not
 actually necessary, since libarchive will invoke it automatically
 if you request the next header without reading the data for the last entry.
 
-Note 3:  Beginning with libarchive 3.0, this function will be
-renamed to `archive_read_free()`.
-The old name will remain available for at least a few years.
+Note 3:  This function was called `archive_read_finish()` in
+earlier versions of libarchive.
+That name will remain available for at least a few years.
 
 = List contents of Archive stored in Memory =
 
@@ -201,7 +201,7 @@ including files with multiple encodings such as `gz.uu` files:
     write(1, buff, size);
   }
 
-  archive_read_finish(a));
+  archive_read_free(a));
 }}}
 
 Note that the "raw" format is not enabled by `archive_read_support_format_all()`.
@@ -249,7 +249,7 @@ the file bodies.
       filename++;
     }
     archive_write_close(a); // Note 4
-    archive_write_finish(a); // Note 5
+    archive_write_free(a); // Note 5
   }
 
   int main(int argc, const char **argv)
@@ -296,9 +296,12 @@ the implicit close, you won't be able to detect
 any errors that happen with the final writes.
 
 Note 5: Beginning with libarchive 3.0, this function is
-renamed to `archive_write_free()`.
-The old name will remain available for several years
-to permit an easy transition.
+called `archive_write_free()`.
+The previous name was `archive_write_finish()`.
+If you want to write software compatible with
+libarchive 2.x and libarchive 3.x, you should
+use the old name, but be aware that it will
+be removed when libarchive 4.x is released.
 
 = Constructing Objects On Disk =
 
@@ -458,4 +461,6 @@ The most important values are:
  * `ARCHIVE_FATAL` if the archive object itself is no longer usable, typically because of an I/O failure or memory allocation failure.   Generally, your only recovery in this case is to invoke `archive_write_finish` to release the archive object.
 
 In certain extreme cases, libarchive will call abort() to terminate the program.
-For example, this occurs if you call library functions in nonsensical orders (such as calling `archive_write_header` before you've called one of the open functions or continuing to write data to an archive object that has previously returned ARCHIVE_FATAL).
+This should generally only happen when libarchive's internal consistency checks detect serious bugs in libarchive itself.
+Prior to libarchive 3.0, these consistency checks also caused libarchive to call abort() when the API was misused -- such as by calling archive_write_header before opening an archive or continuing to write data to an archive handle after it has previously returned ARCHIVE_FATAL.
+Starting with libarchive 3.0, this type of misuse instead causes ARCHIVE_FATAL to be returned.
