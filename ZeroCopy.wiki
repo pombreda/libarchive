@@ -70,3 +70,10 @@ If your block size is somehow limited, it can make sense
 to perform multiple reads each time your input function
 is called and provide the total result to libarchive as a
 single block.
+
+Depending on your requirements, you may want to consider
+using tools such as `mmap()` to provide libarchive direct
+access to the entire file at once, or investigate the techniques
+used by libarchive's own file read module, which will
+"cheat" by reading much larger block sizes in cases where
+it doesn't affect the actual behavior.
