@@ -5,7 +5,7 @@
 Libarchive is highly modular.
 It was designed from the beginning to make it relatively easy to add new archive formats and compression algorithms.
 Note, however, that each program that uses libarchive chooses which formats it wants to use, so support in libarchive does not guarantee support in any particular program.
-Of course, the bsdtar and bsdcpio programs included in the libarchive formats do enable all libarchive formats by default.
+Of course, the bsdtar and bsdcpio programs included in the libarchive distribution do enable all libarchive formats by default.
 
 For developers:  Note that libarchive is modularized in such a way that statically-linked executables pay nothing for formats that they don't use.
 If you choose to omit a particular format, no code for that format will be linked into your program.
@@ -14,27 +14,30 @@ In particular, you only need zlib, bzlib, or lzma libraries if you specifically 
 
 = Filter Support =
 
-Libarchive 2.6 and later supports multiple filters when reading archives.
-Libarchive 3.0 and later supports multiple filters when writing archives.
+The read pipeline automatically recognizes archives processed with any combination of the following.
+Libarchive 3.0 supports multiple filters when writing archives.
  * gzip (read and write, uses zlib)
  * bzip2 (read and write, uses bzlib)
  * compress (read and write, uses an internal implementation)
- * uudecode (read only)
+ * uudecode (read and write)
  * separate command-line compressors with fixed-signature auto-detection
- * xz and lzma (read and write using liblzma)
- * lzma (if you lack liblzma, you can get read-only lzma support through the lzmadec library; this will likely be dropped as soon as liblzma is stable and widely-available)
- * Starting with libarchive 2.7, most of the above will fall back to using command-line tools if the libraries were unavailable at build time.  Note that the command-line tools are usually slower than using the libraries directly.
+ * xz, lzip, and lzma (read and write using liblzma)
+ * lzma (if you lack liblzma, you can get read-only lzma support through the lzmadec library; this will likely be dropped when liblzma is stable and widely-available)
+ * Most of the above fall back to using command-line tools if the libraries were unavailable at build time.  Due to the additional overhead, the command-line tools are usually slower than using the libraries directly.
 
 = Archive Formats Supported =
 
  * tar (read and write, including GNU extensions)
  * pax (read and write, including GNU and star extensions)
- * cpio (read and write, including odc and newc variants)
- * ISO9660 (read only, including Joliet and Rockridge extensions, with some limitations; write support starting with libarchive 2.9)
- * Zip (read only, with some limitations, uses zlib; write support starting with libarchive 2.8)
- * mtree (read and write, uses OpenSSL libraries for creating and verifying cryptographic hashes)
+ * cpio (read and write, including odd, news, and afio variants)
+ * ISO9660 (read and write, including Joliet and Rockridge extensions, with some limitations)
+ * Zip (read and write, with some limitations, uses zlib)
+ * mtree (read and write, uses separate libraries for creating and verifying cryptographic hashes)
  * shar (write only)
  * ar (read and write, including BSD and GNU/SysV variants)
  * empty (read only; in particular, note that no other format will accept an empty file)
  * raw (read only, starting in libarchive 2.8)
  * xar (read only, starting in libarchive 2.8)
+ * lha/lzh (read only, starting in libarchive 3.0)
+ * rar (read only, starting in libarchive 3.0)
+ * Microsoft CAB format (read only, starting in libarchive 3.0)
