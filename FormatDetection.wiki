@@ -7,11 +7,17 @@ multiple modules inspect the incoming data.
 The technical [LibarchiveInternals] page describes
 the process in detail; this page walks through a simple example.
 
+Keep in mind that the mechanism described here is
+completely handled within the library and is available
+to any program that uses libarchive.
+It also works with any input source, including pipes,
+sockets, and other data sources that cannot rewind
+the input.
+
 = Modules and Bidding =
 
 Libarchive is broken into separate modules for every
-format that it supports, including separate modules
-for compression formats.
+format that it supports.
 Each such module includes a "bid" function that knows
 how to inspect the incoming data and provide a number
 that indicates how certain that module is that it
@@ -39,8 +45,12 @@ You can then open a file and prepare to read the archive contents:
    archive_read_open_filename(a, "input.tar", 10240);
 }}}
 
-This is a shorthand for calling `archive_read_open2()` with
+This function is a shorthand for calling `archive_read_open2()` with
 an input function that reads blocks from a file.
+If you want to read data from some other data source,
+you can call `archive_read_open2()` directly with a custom
+input function.
+
 Inside `archive_read_open2()`, libarchive asks the input
 function for the first block and shows that block to
 each registered module.
@@ -80,7 +90,7 @@ So let's start over and create a new archive reader:
 {{{
    struct archive *a = archive_read_new();
    archive_read_support_format_all();
-   archive_read_support_compression_all();
+   archive_read_support_filter_all();
 }}}
 
 This time, I used two convenience functions that register
@@ -98,7 +108,7 @@ filter will in turn ask the file input function for data from the
 file.
 
 So now libarchive can take the output of the uudecode filter and
-present that data to each registered filter module.
+again present that data to each registered filter module.
 In our example here, the gzip decompression module will win the
 next round of bidding.
 After initializing the gzip decompression module, libarchive
