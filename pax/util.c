@@ -653,7 +653,7 @@ excluded_entry(struct bsdpax *bsdpax, struct archive_entry *entry)
 	/*
 	 * Exclude entries that are too old.
 	 */
-	if (bsdpax->newer_ctime_sec > 0) {
+	if (bsdpax->newer_ctime_filter) {
 		/* Use ctime if format provides, else mtime. */
 		if (archive_entry_ctime_is_set(entry))
 			sec = archive_entry_ctime(entry);
@@ -664,7 +664,7 @@ excluded_entry(struct bsdpax *bsdpax, struct archive_entry *entry)
 		if (sec < bsdpax->newer_ctime_sec)
 			return (1); /* Too old, skip it. */
 	}
-	if (bsdpax->newer_mtime_sec > 0) {
+	if (bsdpax->newer_mtime_filter) {
 		if (archive_entry_mtime_is_set(entry))
 			sec = archive_entry_mtime(entry);
 		else
@@ -676,7 +676,7 @@ excluded_entry(struct bsdpax *bsdpax, struct archive_entry *entry)
 	/*
 	 * Exclude entries that are too new.
 	 */
-	if (bsdpax->older_ctime_sec > 0) {
+	if (bsdpax->older_ctime_filter) {
 		/* Use ctime if format provides, else mtime. */
 		if (archive_entry_ctime_is_set(entry))
 			sec = archive_entry_ctime(entry);
@@ -687,7 +687,7 @@ excluded_entry(struct bsdpax *bsdpax, struct archive_entry *entry)
 		if (sec > bsdpax->older_ctime_sec)
 			return (1); /* Too new, skip it. */
 	}
-	if (bsdpax->older_mtime_sec > 0) {
+	if (bsdpax->older_mtime_filter) {
 		if (archive_entry_mtime_is_set(entry))
 			sec = archive_entry_mtime(entry);
 		else

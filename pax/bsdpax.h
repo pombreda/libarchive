@@ -49,9 +49,13 @@ struct bsdpax {
 	size_t		  destdir_len;
 	int64_t		  dest_dev;
 	int64_t		  dest_ino;
+	int		  newer_ctime_filter;
 	time_t		  newer_ctime_sec; /* -T<date>/m */
+	int		  newer_mtime_filter;
 	time_t		  newer_mtime_sec; /* -T <date>/m */
+	int		  older_ctime_filter;
 	time_t		  older_ctime_sec; /* -T ,<date>/c */
+	int		  older_mtime_filter;
 	time_t		  older_mtime_sec; /* -T ,<date>/m */
 	int		  bytes_per_block; /* -b block_size */
 	int		  bytes_in_last_block; /* See -b handling. */
