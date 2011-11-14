@@ -28,8 +28,14 @@
 #include <sys/time.h>
 #endif
 #include <errno.h>
+#ifdef HAVE_ICONV_H
+#include <iconv.h>
+#endif
 #include <limits.h>
 #include <locale.h>
+#ifdef HAVE_SIGNAL_H
+#include <signal.h>
+#endif
 #include <stdarg.h>
 #include <time.h>
 
@@ -47,7 +53,7 @@ __FBSDID("$FreeBSD$");
 #define PROGRAM_ALIAS "pax" /* Generic alias for program */
 #undef	LIBRARY		  /* Not testing a library. */
 #undef	EXTRA_DUMP	  /* How to dump extra data */
-#undef	EXTRA_ERRNO	  /* What errno to report */
+#undef	EXTRA_ERRNO	  /* How to dump errno */
 /* How to generate extra version info. */
 #define	EXTRA_VERSION    (systemf("%s --version", testprog) ? "" : "")
 
@@ -157,7 +163,7 @@ my_GetFileInformationByName(const char *path, BY_HANDLE_FILE_INFORMATION *bhfi)
 
 	memset(bhfi, 0, sizeof(*bhfi));
 	h = CreateFile(path, FILE_READ_ATTRIBUTES, 0, NULL,
-		OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 	if (h == INVALID_HANDLE_VALUE)
 		return (0);
 	r = GetFileInformationByHandle(h, bhfi);
@@ -243,10 +249,14 @@ void
 failure(const char *fmt, ...)
 {
 	va_list ap;
-	va_start(ap, fmt);
-	vsprintf(msgbuff, fmt, ap);
-	va_end(ap);
-	nextmsg = msgbuff;
+	if (fmt == NULL) {
+		nextmsg = NULL;
+	} else {
+		va_start(ap, fmt);
+		vsprintf(msgbuff, fmt, ap);
+		va_end(ap);
+		nextmsg = msgbuff;
+	}
 }
 
 /*
@@ -430,11 +440,98 @@ assertion_equal_int(const char *file, int line,
 	return (0);
 }
 
-static void strdump(const char *e, const char *p)
+/*
+ * Utility to convert a single UTF-8 sequence.
+ */
+static int
+_utf8_to_unicode(uint32_t *pwc, const char *s, size_t n)
+{
+	static const char utf8_count[256] = {
+		 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,/* 00 - 0F */
+		 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,/* 10 - 1F */
+		 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,/* 20 - 2F */
+		 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,/* 30 - 3F */
+		 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,/* 40 - 4F */
+		 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,/* 50 - 5F */
+		 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,/* 60 - 6F */
+		 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,/* 70 - 7F */
+		 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,/* 80 - 8F */
+		 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,/* 90 - 9F */
+		 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,/* A0 - AF */
+		 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,/* B0 - BF */
+		 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,/* C0 - CF */
+		 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,/* D0 - DF */
+		 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,/* E0 - EF */
+		 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 /* F0 - FF */
+	};
+	int ch;
+	int cnt;
+	uint32_t wc;
+
+	/* Sanity check. */
+	if (n == 0)
+		return (0);
+	/*
+	 * Decode 1-4 bytes depending on the value of the first byte.
+	 */
+	ch = (unsigned char)*s;
+	if (ch == 0)
+		return (0); /* Standard:  return 0 for end-of-string. */
+	cnt = utf8_count[ch];
+
+	/* Invalide sequence or there are not plenty bytes. */
+	if (n < (size_t)cnt)
+		return (-1);
+
+	/* Make a Unicode code point from a single UTF-8 sequence. */
+	switch (cnt) {
+	case 1:	/* 1 byte sequence. */
+		*pwc = ch & 0x7f;
+		return (cnt);
+	case 2:	/* 2 bytes sequence. */
+		if ((s[1] & 0xc0) != 0x80) return (-1);
+		*pwc = ((ch & 0x1f) << 6) | (s[1] & 0x3f);
+		return (cnt);
+	case 3:	/* 3 bytes sequence. */
+		if ((s[1] & 0xc0) != 0x80) return (-1);
+		if ((s[2] & 0xc0) != 0x80) return (-1);
+		wc = ((ch & 0x0f) << 12)
+		    | ((s[1] & 0x3f) << 6)
+		    | (s[2] & 0x3f);
+		if (wc < 0x800)
+			return (-1);/* Overlong sequence. */
+		break;
+	case 4:	/* 4 bytes sequence. */
+		if (n < 4)
+			return (-1);
+		if ((s[1] & 0xc0) != 0x80) return (-1);
+		if ((s[2] & 0xc0) != 0x80) return (-1);
+		if ((s[3] & 0xc0) != 0x80) return (-1);
+		wc = ((ch & 0x07) << 18)
+		    | ((s[1] & 0x3f) << 12)
+		    | ((s[2] & 0x3f) << 6)
+		    | (s[3] & 0x3f);
+		if (wc < 0x10000)
+			return (-1);/* Overlong sequence. */
+		break;
+	default:
+		return (-1);
+	}
+
+	/* The code point larger than 0x10FFFF is not leagal
+	 * Unicode values. */
+	if (wc > 0x10FFFF)
+		return (-1);
+	/* Correctly gets a Unicode, returns used bytes. */
+	*pwc = wc;
+	return (cnt);
+}
+
+static void strdump(const char *e, const char *p, int ewidth, int utf8)
 {
 	const char *q = p;
 
-	logprintf("      %s = ", e);
+	logprintf("      %*s = ", ewidth, e);
 	if (p == NULL) {
 		logprintf("NULL\n");
 		return;
@@ -455,7 +552,37 @@ static void strdump(const char *e, const char *p)
 		}
 	}
 	logprintf("\"");
-	logprintf(" (length %d)\n", q == NULL ? -1 : (int)strlen(q));
+	logprintf(" (length %d)", q == NULL ? -1 : (int)strlen(q));
+
+	/*
+	 * If the current string is UTF-8, dump its code points.
+	 */
+	if (utf8) {
+		size_t len;
+		uint32_t uc;
+		int n;
+		int cnt = 0;
+
+		p = q;
+		len = strlen(p);
+		logprintf(" [");
+		while ((n = _utf8_to_unicode(&uc, p, len)) > 0) {
+			if (p != q)
+				logprintf(" ");
+			logprintf("%04X", uc);
+			p += n;
+			len -= n;
+			cnt++;
+		}
+		logprintf("]");
+		logprintf(" (count %d", cnt);
+		if (n < 0) {
+			logprintf(",unknown %d bytes", len);
+		}
+		logprintf(")");
+
+	}
+	logprintf("\n");
 }
 
 /* Verify two strings are equal, dump them if not. */
@@ -463,14 +590,20 @@ int
 assertion_equal_string(const char *file, int line,
     const char *v1, const char *e1,
     const char *v2, const char *e2,
-    void *extra)
+    void *extra, int utf8)
 {
+	int l1, l2;
+
 	assertion_count(file, line);
 	if (v1 == v2 || (v1 != NULL && v2 != NULL && strcmp(v1, v2) == 0))
 		return (1);
 	failure_start(file, line, "%s != %s", e1, e2);
-	strdump(e1, v1);
-	strdump(e2, v2);
+	l1 = strlen(e1);
+	l2 = strlen(e2);
+	if (l1 < l2)
+		l1 = l2;
+	strdump(e1, v1, l1, utf8);
+	strdump(e2, v2, l1, utf8);
 	failure_finish(extra);
 	return (0);
 }
@@ -522,7 +655,9 @@ assertion_equal_wstring(const char *file, int line,
     void *extra)
 {
 	assertion_count(file, line);
-	if (v1 == v2 || wcscmp(v1, v2) == 0)
+	if (v1 == v2)
+		return (1);
+	if (v1 != NULL && v2 != NULL && wcscmp(v1, v2) == 0)
 		return (1);
 	failure_start(file, line, "%s != %s", e1, e2);
 	wcsdump(e1, v1);
@@ -768,7 +903,7 @@ assertion_file_contents(const char *filename, int line, const void *buff, int s,
 		hexdump(contents, buff, n > 512 ? 512 : n, 0);
 	else {
 		logprintf("  File empty, contents should be:\n");
-		hexdump(buff, NULL, s > 512 ? 512 : n, 0);
+		hexdump(buff, NULL, s > 512 ? 512 : s, 0);
 	}
 	failure_finish(NULL);
 	free(contents);
@@ -859,7 +994,7 @@ assertion_file_contains_lines_any_order(const char *file, int line,
 		return (0);
 	}
 
-	// Make a copy of the provided lines and count up the expected file size.
+	/* Make a copy of the provided lines and count up the expected file size. */
 	expected_count = 0;
 	for (i = 0; lines[i] != NULL; ++i) {
 	}
@@ -869,7 +1004,7 @@ assertion_file_contains_lines_any_order(const char *file, int line,
 		expected[i] = strdup(lines[i]);
 	}
 
-	// Break the file into lines
+	/* Break the file into lines */
 	actual_count = 0;
 	for (c = '\0', p = buff; p < buff + buff_size; ++p) {
 		if (*p == '\x0d' || *p == '\x0a')
@@ -886,7 +1021,7 @@ assertion_file_contains_lines_any_order(const char *file, int line,
 		}
 	}
 
-	// Erase matching lines from both lists
+	/* Erase matching lines from both lists */
 	for (i = 0; i < expected_count; ++i) {
 		if (expected[i] == NULL)
 			continue;
@@ -902,7 +1037,7 @@ assertion_file_contains_lines_any_order(const char *file, int line,
 		}
 	}
 
-	// If there's anything left, it's a failure
+	/* If there's anything left, it's a failure */
 	for (i = 0; i < expected_count; ++i) {
 		if (expected[i] != NULL)
 			++expected_failure;
@@ -1100,7 +1235,7 @@ assertion_file_time(const char *file, int line,
 		}
 	} else if (filet != t || filet_nsec != nsec) {
 		failure_start(file, line,
-		    "File %s has %ctime %lld.%09ld, expected %lld.%09ld",
+		    "File %s has %ctime %lld.%09lld, expected %lld.%09lld",
 		    pathname, type, filet, filet_nsec, t, nsec);
 		failure_finish(NULL);
 		return (0);
@@ -1802,6 +1937,27 @@ extract_reference_file(const char *name)
 	fclose(in);
 }
 
+int
+is_LargeInode(const char *file)
+{
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	BY_HANDLE_FILE_INFORMATION bhfi;
+	int r;
+
+	r = my_GetFileInformationByName(file, &bhfi);
+	if (r != 0)
+		return (0);
+	return (bhfi.nFileIndexHigh & 0x0000FFFFUL);
+#else
+	struct stat st;
+	int64_t ino;
+
+	if (stat(file, &st) < 0)
+		return (0);
+	ino = (int64_t)st.st_ino;
+	return (ino > 0xffffffff);
+#endif
+}
 /*
  *
  * TEST management
@@ -2039,11 +2195,13 @@ get_refdir(const char *d)
 	strncat(tried, buff, sizeof(tried) - strlen(tried) - 1);
 	strncat(tried, "\n", sizeof(tried) - strlen(tried) - 1);
 
+#if defined(PROGRAM_ALIAS)
 	snprintf(buff, sizeof(buff), "%s/%s/test", pwd, PROGRAM_ALIAS);
 	p = slurpfile(NULL, "%s/%s", buff, KNOWNREF);
 	if (p != NULL) goto success;
 	strncat(tried, buff, sizeof(tried) - strlen(tried) - 1);
 	strncat(tried, "\n", sizeof(tried) - strlen(tried) - 1);
+#endif
 
 	if (memcmp(pwd, "/usr/obj", 8) == 0) {
 		snprintf(buff, sizeof(buff), "%s", pwd + 8);
@@ -2257,6 +2415,16 @@ main(int argc, char **argv)
 		strcat(testprg, testprogfile);
 		strcat(testprg, "\"");
 		testprog = testprg;
+	}
+#endif
+
+#if !defined(_WIN32) && defined(SIGPIPE)
+	{   /* Ignore SIGPIPE signals */
+		struct sigaction sa;
+		sa.sa_handler = SIG_IGN;
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = 0;
+		sigaction(SIGPIPE, &sa, NULL);
 	}
 #endif
 
