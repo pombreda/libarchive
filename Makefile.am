@@ -836,7 +836,6 @@ bsdpax_CPPFLAGS= -I$(top_srcdir)/libarchive -I$(top_srcdir)/libarchive_fe $(bsdp
 bsdpax_LDFLAGS= $(bsdpax_ldstatic)
 
 bsdpax_EXTRA_DIST=		\
-	pax/test/list.h		\
 	pax/bsdpax.1		\
 	pax/bsdpax_windows.h	\
 	pax/CMakeLists.txt
@@ -906,6 +905,7 @@ bsdpax_TESTS_ENVIRONMENT=
 endif
 
 bsdpax_test_EXTRA_DIST=			\
+	pax/test/list.h		\
 	pax/test/test_option_T_upper.pax.uu	\
 	pax/test/test_options_listopt.pax.Z.uu	\
 	pax/test/CMakeLists.txt
