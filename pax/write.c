@@ -462,9 +462,10 @@ write_archive(struct archive *a, struct bsdpax *bsdpax)
  */
 static int
 append_archive_filename(struct bsdpax *bsdpax, struct archive *a,
-    const char *filename)
+    const char *raw_filename)
 {
 	struct archive *ina;
+	const char *filename = raw_filename;
 	int rc;
 
 	if (strcmp(filename, "-") == 0)
@@ -483,7 +484,7 @@ append_archive_filename(struct bsdpax *bsdpax, struct archive *a,
 
 	if (rc != ARCHIVE_OK) {
 		lafe_warnc(0, "Error reading archive %s: %s",
-		    filename, archive_error_string(ina));
+		    raw_filename, archive_error_string(ina));
 		bsdpax->return_value = 1;
 	}
 	archive_read_free(ina);
