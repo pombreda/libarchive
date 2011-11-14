@@ -28,15 +28,20 @@ AC_CONFIG_MACRO_DIR([build/autoconf])
 # Must follow AC_CONFIG macros above...
 AM_INIT_AUTOMAKE()
 
-# Libtool versioning uses different conventions on different
-# platforms.  At least on FreeBSD, libtool uses an overly complex
-# convention that attempts to solve problems that most people just
-# don't have and which just causes confusion for most end users.
-ARCHIVE_MAJOR=$(( LIBARCHIVE_VERSION_N() / 1000000 ))
+# Libtool's "interface version" can be computed from the libarchive version.
+
+# Libtool interface version bumps on any API change, so increments
+# whenever libarchive minor version does.
 ARCHIVE_MINOR=$(( (LIBARCHIVE_VERSION_N() / 1000) % 1000 ))
+# Libarchive 2.7 == libtool interface 9 = 2 + 7
+# Libarchive 2.8 == libtool interface 10 = 2 + 8
+# Libarchive 3.0 == libtool interface 11 (assumes there's no libarchive 2.9)
+# Libarchive 3.x == libtool interface 11 + x
+ARCHIVE_INTERFACE=`echo $((11 + ${ARCHIVE_MINOR}))`
+# Libarchive revision is bumped on any source change === libtool revision
 ARCHIVE_REVISION=$(( LIBARCHIVE_VERSION_N() % 1000 ))
-ARCHIVE_LIBTOOL_MAJOR=`echo $((${ARCHIVE_MAJOR} + ${ARCHIVE_MINOR}))`
-ARCHIVE_LIBTOOL_VERSION=$ARCHIVE_LIBTOOL_MAJOR:$ARCHIVE_REVISION:$ARCHIVE_MINOR
+# Libarchive minor is bumped on any interface addition === libtool age
+ARCHIVE_LIBTOOL_VERSION=$ARCHIVE_INTERFACE:$ARCHIVE_REVISION:$ARCHIVE_MINOR
 
 # Stick the version numbers into config.h
 AC_DEFINE([LIBARCHIVE_VERSION_STRING],"LIBARCHIVE_VERSION_S()",
@@ -319,6 +324,9 @@ AC_ARG_WITH([nettle],
   AS_HELP_STRING([--without-nettle], [Don't build with crypto support from Nettle]))
 AC_ARG_WITH([openssl],
   AS_HELP_STRING([--without-openssl], [Don't build support for mtree and xar hashes through openssl]))
+case "$host_os" in
+  *darwin* ) with_openssl=no ;;
+esac
 
 AC_ARG_WITH([xml2],
   AS_HELP_STRING([--without-xml2], [Don't build support for xar through libxml2]))

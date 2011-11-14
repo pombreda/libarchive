@@ -33,11 +33,11 @@ test_read_format_mtree1(void)
 	struct archive_entry *ae;
 	struct archive *a;
 	FILE *f;
-	// Compute max 64-bit signed twos-complement value
-	// without relying on overflow.  This assumes that long long
-	// is at least 64 bits.
+	/* Compute max 64-bit signed twos-complement value
+	 * without relying on overflow.  This assumes that long long
+	 * is at least 64 bits. */
 	const static long long max_int64 = ((((long long)1) << 62) - 1) + (((long long)1) << 62);
-	time_t min_time;
+	time_t min_time, t;
 
 	extract_reference_file(reffile);
 
@@ -137,7 +137,9 @@ test_read_format_mtree1(void)
 	/* Verify min_time is the smallest possible time_t. */
 	min_time = archive_entry_mtime(ae);
 	assert(min_time <= 0);
-	assert(min_time - 1 > 0);
+	/* Simply asserting min_time - 1 > 0 breaks with some compiler optimizations. */
+	t = min_time - 1;
+	assert(t > 0);
 
 	/* toooldfile is 1 sec older, which should overflow and get returned
 	 * with the same value. */
@@ -302,6 +304,40 @@ test_read_format_mtree4(void)
 	assertChdir("..");
 }
 
+/*
+ * We should get a warning if the contents file doesn't exist.
+ */
+static void
+test_read_format_mtree5(void)
+{
+	static char archive[] =
+	    "#mtree\n"
+	    "a type=file contents=nonexistent_file\n";
+	struct archive_entry *ae;
+	struct archive *a;
+
+	assertMakeDir("mtree5", 0777);
+	assertChdir("mtree5");
+
+	assert((a = archive_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_support_filter_all(a));
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_open_memory(a, archive, sizeof(archive)));
+	assertEqualIntA(a, ARCHIVE_WARN, archive_read_next_header(a, &ae));
+	assert(strlen(archive_error_string(a)) > 0);
+	assertEqualString(archive_entry_pathname(ae), "a");
+	assertEqualInt(archive_entry_filetype(ae), AE_IFREG);
+
+	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
+	assertEqualInt(1, archive_file_count(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+
+	assertChdir("..");
+}
 
 DEFINE_TEST(test_read_format_mtree)
 {
@@ -309,4 +345,5 @@ DEFINE_TEST(test_read_format_mtree)
 	test_read_format_mtree2();
 	test_read_format_mtree3();
 	test_read_format_mtree4();
+	test_read_format_mtree5();
 }

@@ -97,13 +97,6 @@
 #pragma warn -8068	/* Constant out of range in comparison. */
 #endif
 
-/* Cygwin */
-#if defined(__CYGWIN__)
-/* Cygwin-1.7.x is lazy about populating nlinks, so don't
- * expect it to be accurate. */
-# define NLINKS_INACCURATE_FOR_DIRS
-#endif
-
 /* Haiku OS and QNX */
 #if defined(__HAIKU__) || defined(__QNXNTO__)
 /* Haiku and QNX have typedefs in stdint.h (needed for int64_t) */
@@ -274,6 +267,9 @@ int canGzip(void);
 /* Return true if this platform can run the "gunzip" program. */
 int canGunzip(void);
 
+/* Return true if the file has large i-node number(>0xffffffff). */
+int is_LargeInode(const char *);
+
 /* Suck file into string allocated via malloc(). Call free() when done. */
 /* Supports printf-style args: slurpfile(NULL, "%s/myfile", refdir); */
 char *slurpfile(size_t *, const char *fmt, ...);
@@ -306,4 +302,3 @@ int read_open_memory2(struct archive *, void *, size_t, size_t);
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
 #endif
-
