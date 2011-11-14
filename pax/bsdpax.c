@@ -134,8 +134,8 @@ main(int argc, char **argv)
 	option_a = 0;
 	lafe_init_options(&(bsdpax->options));
 
-#if defined(HAVE_SIGACTION) && (defined(SIGINFO) || defined(SIGUSR1))
-	{ /* Catch SIGINFO and SIGUSR1, if they exist. */
+#if defined(HAVE_SIGACTION)
+	{ /* Set up signal handling. */
 		struct sigaction sa;
 		sa.sa_handler = siginfo_handler;
 		sigemptyset(&sa.sa_mask);
@@ -148,6 +148,11 @@ main(int argc, char **argv)
 		/* ... and treat SIGUSR1 the same way as SIGINFO. */
 		if (sigaction(SIGUSR1, &sa, NULL))
 			lafe_errc(1, errno, "sigaction(SIGUSR1) failed");
+#endif
+#ifdef SIGPIPE
+		/* Ignore SIGPIPE signals. */
+		sa.sa_handler = SIG_IGN;
+		sigaction(SIGPIPE, &sa, NULL);
 #endif
 	}
 #endif
