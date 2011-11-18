@@ -479,26 +479,12 @@ This option is provided as a performance optimization.
 Extract files as sparse files.
 For every block on disk, check first if it contains only NULL bytes and seek
 over it otherwise.
-This works similiar to the conv=sparse option of dd.
-</dd><dt>--same-owner</dt><dd>
-(x mode only)
-Extract owner and group IDs.
-This is the reverse of
---no-same-owner
-and the default behavior if
-*tar*
-is run as root.
-</dd><dt>--strip-components _count_</dt><dd>
-(x mode only)
-Remove the specified number of leading path elements.
-Pathnames with fewer elements will be silently skipped.
-Note that the pathname is edited after checking inclusion/exclusion patterns
-but before security checks.
+This works similar to the conv=sparse option of dd.
 </dd><dt>-s _pattern_</dt><dd>
 Modify file or archive member names according to
 _pattern_.
 The pattern has the format
-_/old/new/_`[`gps`]`
+_/old/new/_`[`ghHprRsS`]`
 where
 _old_
 is a basic regular expression,
@@ -514,12 +500,35 @@ _new_,
 ~ is substituted with the match, \e1 to \e9 with the content of
 the corresponding captured group.
 The optional trailing g specifies that matching should continue
-after the matched part and stopped on the first unmatched pattern.
+after the matched part and stop on the first unmatched pattern.
 The optional trailing s specifies that the pattern applies to the value
 of symbolic links.
 The optional trailing p specifies that after a successful substitution
 the original path name and the new path name should be printed to
 standard error.
+Optional trailing H, R, or S characters suppress substitutions
+for hardlink targets, regular filenames, or symlink targets,
+respectively.
+Optional trailing h, r, or s characters enable substitutions
+for hardlink targets, regular filenames, or symlink targets,
+respectively.
+The default is
+_hrs_
+which applies substitutions to all names.
+In particular, it is never necessary to specify h, r, or s.
+</dd><dt>--same-owner</dt><dd>
+(x mode only)
+Extract owner and group IDs.
+This is the reverse of
+--no-same-owner
+and the default behavior if
+*tar*
+is run as root.
+</dd><dt>--strip-components _count_</dt><dd>
+Remove the specified number of leading path elements.
+Pathnames with fewer elements will be silently skipped.
+Note that the pathname is edited after checking inclusion/exclusion patterns
+but before security checks.
 </dd><dt>-T _filename_, --files-from _filename_</dt><dd>
 In x or t mode,
 *tar*

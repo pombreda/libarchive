@@ -12,12 +12,14 @@
 *archive_entry_unset_size*,
 *archive_entry_dev*,
 *archive_entry_set_dev*,
+*archive_entry_dev_is_set*,
 *archive_entry_devmajor*,
 *archive_entry_set_devmajor*,
 *archive_entry_devminor*,
 *archive_entry_set_devminor*,
 *archive_entry_ino*,
 *archive_entry_set_ino*,
+*archive_entry_ino_is_set*,
 *archive_entry_ino64*,
 *archive_entry_set_ino64*,
 *archive_entry_nlink*,
@@ -79,6 +81,10 @@
 <br>
 *archive_entry_set_dev*(_struct archive_entry `*`a_, _dev_t dev_);
 <br>
+*int*
+<br>
+*archive_entry_dev_is_set*(_struct archive_entry `*`a_);
+<br>
 *dev_t*
 <br>
 *archive_entry_devmajor*(_struct archive_entry `*`a_);
@@ -102,6 +108,10 @@
 *void*
 <br>
 *archive_entry_set_ino*(_struct archive_entry `*`a_, _unsigned long ino_);
+<br>
+*int*
+<br>
+*archive_entry_ino_is_set*(_struct archive_entry `*`a_);
 <br>
 *int64_t*
 <br>
@@ -143,7 +153,7 @@
 <br>
 *archive_entry_set_rdevminor*(_struct archive_entry `*`a_, _dev_t minor_);
 == DESCRIPTION ==
-=== Copying to and from Vt struct stat===
+=== Copying to and from _struct_ stat===
 The function
 *archive_entry_stat*()
 converts the various fields stored in the archive entry to the format
@@ -155,12 +165,31 @@ or
 *archive_entry_free*()
 is called.
 It is not affected by calls to the set accessor functions.
+It currently sets the following values in
+_struct_ stat:
+_st_atime_,
+_st_ctime_,
+_st_dev_,
+_st_gid_,
+_st_ino_,
+_st_mode_,
+_st_mtime_,
+_st_nlink_,
+_st_rdev_,
+_st_size_,
+_st_uid_.
+In addition,
+_st_birthtime_
+and high-precision information for time-related fields
+will be included on platforms that support it.
 
 The function
 *archive_entry_copy_stat*()
-copies all fields from the platform's
-Vt struct stat.
-Missing fields are unset.
+copies fields from the platform's
+_struct_ stat.
+Fields not provided by
+_struct_ stat
+are unchanged.
 === General accessor functions===
 The functions
 *archive_entry_filetype*()
@@ -187,7 +216,8 @@ Named pipe (fifo)
 Not all file types are supported by all platforms.
 The constants used by
 *stat*(2)
-may have different numeric value.
+may have different numeric values from the
+corresponding constants above.
 
 The functions
 *archive_entry_mode*()
@@ -214,7 +244,7 @@ can be used to query that status.
 *archive_entry_set_size*()
 and
 *archive_entry_unset_size*()
-set respectively unset the size.
+set and unset the size, respectively.
 
 The number of references (hardlinks) can be obtained by calling
 *archive_entry_nlinks*()
@@ -244,7 +274,7 @@ and
 The inode number can be obtained using
 *archive_entry_ino*().
 This is a legacy interface that uses the platform
-Vt ino_t,
+_ino_t_,
 which may be very small.
 To set the inode number,
 *archive_entry_set_ino64*()

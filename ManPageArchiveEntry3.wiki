@@ -70,7 +70,7 @@ Path name manipulation
 User, group and mode manipulation
 </dd><dt>*archive_entry_stat*(3)</dt><dd>
 Functions not in the other groups and copying to/from
-Vt struct stat.
+_struct_ stat.
 </dd><dt>*archive_entry_time*(3)</dt><dd>
 Time field manipulation
 </dd></dl>

@@ -212,9 +212,9 @@ which stops parsing at the first unrecognized name.)
 *archive_write_disk*(3)
 == BUGS ==
 The platform types
-Vt uid_t
+_uid_t_
 and
-Vt gid_t
+_gid_t_
 are often 16 or 32 bit wide.
 In this case it is possible that the ids can not be correctly restored
 from archives and get truncated.

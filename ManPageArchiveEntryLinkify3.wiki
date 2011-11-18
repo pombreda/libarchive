@@ -47,7 +47,7 @@ behind the scene.
 The
 *archive_entry_linkresolver*
 functions assume that
-Vt archive_entry
+_archive_entry_
 instances have valid nlinks, inode and device values.
 The inode and device value is used to match entries.
 The nlinks value is used to determined if all references have been found and
@@ -75,7 +75,7 @@ function is the core of
 The
 *entry*()
 argument points to the
-Vt archive_entry
+_archive_entry_
 that should be written.
 Depending on the strategy one of the following actions is taken:
 <ol>

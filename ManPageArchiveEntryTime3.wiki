@@ -105,7 +105,7 @@
 *archive_entry_unset_mtime*(_struct archive_entry `*`a_);
 == DESCRIPTION ==
 These functions create and manipulate the time fields in an
-Vt archive_entry.
+_archive_entry_.
 Supported time fields are atime (access time), birthtime (creation time),
 ctime (last time an inode property was changed) and mtime (modification time).
 
