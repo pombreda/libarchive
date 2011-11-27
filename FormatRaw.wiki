@@ -21,4 +21,4 @@ Many of the formats supported by libarchive were not designed with automatic for
 Although libarchive generally does a very good job of distinguishing different archive formats, mixing non-archive files can produce surprising results.
 As a result, the raw handler will often lose the bid because a file happens to have a pattern of bytes similar to that of one of the supported archive formats.
 
-In particular, the raw handler is not enabled by `archive_read_support_format_all` and will probably never be supported.
+In particular, the raw handler is not enabled by `archive_read_support_format_all`.
