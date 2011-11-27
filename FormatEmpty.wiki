@@ -1,0 +1,21 @@
+#summary Libarchive treats empty files specially.
+
+= A Philosophical Quandary =
+
+A file with zero bytes presents a problem for libarchive.
+It so happens that an empty file is valid for several of the formats supported by libarchive.
+This makes it difficult to accurately determine the "format" of such a file.
+
+Libarchive resolves this dilemma by providing a special dearchiving module called "empty" that recognizes an empty file as a valid archive that contains no entries.
+
+== Options ==
+
+Since the "empty" format handler is the only libarchive module that will recognize an empty file, you have control over how empty files get handled.
+
+ * If you want empty files to be treated as invalid, simply leave off the "empty" format handler.
+ * If you want empty files to be treated as empty archives, enable the "empty" handler (which occurs by default if you call `archive_read_support_format_all()`).
+
+== Useful Trivia ==
+
+ * You can tell whether a file is empty by examining the format of the archive after it has been opened.
+ * The "empty" handler is the only handler that mixes well with the [FormatRaw raw handler].
