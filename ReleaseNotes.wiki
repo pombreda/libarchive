@@ -14,8 +14,7 @@ _Future release: Expected Dec 2011_
 Major version number bumps indicate backwards-incompatible API changes:
  * New formats: RAR reader, LHA/LZH reader, CAB reader, ISO9660 writer, XAR writer
  * Improvements to many formats, especially including ISO9660 and Zip, 
- * Replace off_t with int64_t in the public headers.  Linux has two different off_t definitions, which gets very confusing.  Windows only has 32-bit off_t, which is pretty limiting.  Switching to int64_t will ensure consistent 64-bit file size handling on all platforms.
- * Replace other specialized types with int64_t.  In particular, ino_t is unusable on Windows.  There are also portability problems with uid_t, gid_t, id_t, and dev_t.
+ * Use int64_t instead of off_t, ino_t, uid_t, gid_t, and dev_t in the public interfaces.  This should reduce confusion on Linux (which has two different off_t definitions) and Windows (which has 32-bit off_t).  The other file types have similar portability issues.
  * Stackable write filters.
  * Exploit seekable input - New "seekable" Zip reader can exploit the Zip Central Directory when it's available; the old "streamable" Zip reader is still fully supported for cases where seeking is not possible.
  * Integrate Mac OS patches - Apple has released their patches; I intend to incorporate them so that people can use the newest libarchive/bsdtar on Mac OS X.
