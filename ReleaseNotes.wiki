@@ -9,27 +9,17 @@ the work.
 
 = Libarchive 3.0 =
 
-_Future release: Expected mid 2010_
+_Future release: Expected Dec 2011_
 
-Major version number bumps indicate backwards-incompatible API changes.
-There are a handful of API changes that I'd like to make but I do try hard to break the API as infrequently as possible, so I'm deferring these until there's enough here to justify the pain:
-  * Replace off_t with int64_t in the public headers.  Linux has two different off_t definitions, which gets very confusing.  Windows only has 32-bit off_t, which is pretty limiting.  Switching to int64_t will ensure consistent 64-bit file size handling on all platforms.
-  * Replace other specialized types with int64_t.  In particular, ino_t is unusable on Windows.  There are also portability problems with uid_t, gid_t, id_t, and dev_t.
-  * Linux support for both stat32 and stat64.  The preprocessor headaches here seem unavoidable.
-  * Thread-safe archive_write_disk.  This requires that you "open" an archive_write_disk object by giving it a base directory and requires that we find ways to eliminate the chdir() and umask() operations from the current code.
-  * Fix the awkward "options" naming conflict; archive_write_disk_options() is nothing like archive_write_options() and archive_read_options().
-  * Stackable write filters.  The stackable read filters have made the read side a lot more straightforward.  The write side should do this as well.  This may require changing the archive_write_disk API so that blocking is handled by explicitly adding a blocking filter.
-  * Source code reorganization.  I plan to circulate a proposal to libarchive-discuss@ mailing list with details.
-
-= Libarchive 2.9 =
-
-_Future Release_
-
-This release may not happen; the features below may get rolled into 3.0.
-
- * NFSv4 ACL support - I have done some research and think I have a good grasp of the requirements for this.
- * Exploit seekable input - Files support seeking and Zip and ISO both work better when this is available.  But I still want Zip and ISO to be usable when the input can't seek.
+Major version number bumps indicate backwards-incompatible API changes:
+ * New formats: RAR reader, LHA/LZH reader, CAB reader, ISO9660 writer, XAR writer
+ * Improvements to many formats, especially including ISO9660 and Zip, 
+ * Replace off_t with int64_t in the public headers.  Linux has two different off_t definitions, which gets very confusing.  Windows only has 32-bit off_t, which is pretty limiting.  Switching to int64_t will ensure consistent 64-bit file size handling on all platforms.
+ * Replace other specialized types with int64_t.  In particular, ino_t is unusable on Windows.  There are also portability problems with uid_t, gid_t, id_t, and dev_t.
+ * Stackable write filters.
+ * Exploit seekable input - New "seekable" Zip reader can exploit the Zip Central Directory when it's available; the old "streamable" Zip reader is still fully supported for cases where seeking is not possible.
  * Integrate Mac OS patches - Apple has released their patches; I intend to incorporate them so that people can use the newest libarchive/bsdtar on Mac OS X.
+
 
 = Libarchive 2.8.2 =
 
