@@ -1,0 +1,24 @@
+#summary Libarchive's "raw" reader.
+
+= Introduction =
+
+Libarchive's automatic decompression and decoding support is sometimes useful by itself.
+
+For this reason, libarchive provides a special dearchiving module called "raw" which returns a single fake entry; the data for that entry is the decoded data stream.
+This provides a way to use libarchive's automatic decompression and decoding 
+
+(Note:  There has been some discussion of splitting libarchive into two separate libraries.  "Libfilter" would expose just the decompression and decoding support, and "libarchive" would then become a user of "libfilter."  Initial work has been done but the project is currently looking for people to help complete it.)
+
+= Example Code =
+
+XXX TODO Example here XXX
+
+== Caveat: Don't mix _raw_ with other handlers ==
+
+If you are using the raw handler, you should generally not enable any other handler (except possibly for the [FormatEmpty empty handler]).
+
+Many of the formats supported by libarchive were not designed with automatic format detection in mind.
+Although libarchive generally does a very good job of distinguishing different archive formats, mixing non-archive files can produce surprising results.
+As a result, the raw handler will often lose the bid because a file happens to have a pattern of bytes similar to that of one of the supported archive formats.
+
+In particular, the raw handler is not enabled by `archive_read_support_format_all` and will probably never be supported.
