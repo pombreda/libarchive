@@ -45,13 +45,12 @@ You can then open a file and prepare to read the archive contents:
    archive_read_open_filename(a, "input.tar", 10240);
 }}}
 
-This function is a shorthand for calling `archive_read_open2()` with
-an input function that reads blocks from a file.
+This function is a shorthand for calling `archive_read_open1()` after
+registering an input function that reads blocks from a file.
 If you want to read data from some other data source,
-you can call `archive_read_open2()` directly with a custom
-input function.
+you can call the registration functions directly.
 
-Inside `archive_read_open2()`, libarchive asks the input
+Inside `archive_read_open1()`, libarchive asks the input
 function for the first block and shows that block to
 each registered module.
 In this case, the cpio module will probably bid zero and
@@ -76,8 +75,8 @@ In order to read this, libarchive must first decode the
 uuencode wrapping, then uncompress the resulting data
 before it can evaluate the tar structure.
 
-Besides format modules that understand archive formats,
-libarchive also has filter modules that
+Besides _format_ modules that understand archive formats,
+libarchive also has _filter_ modules that
 understand particular compression or encoding formats.
 (Originally, the filter machinery was used only for
 decompression.
