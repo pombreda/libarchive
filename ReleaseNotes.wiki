@@ -12,9 +12,14 @@ the work.
 _Future release: Expected Dec 2011_
 
 Major version number bumps indicate backwards-incompatible API changes:
+ * Use int64_t instead of off_t, ino_t, uid_t, gid_t, and dev_t in the public interfaces.  This should reduce confusion on Linux (which has two different off_t definitions) and Windows (which has 32-bit off_t).  The other file types have similar portability issues.
+ * New iconv integration provides deep support for converting filenames between different character sets.  It also fixes some long-standing problems with libarchive's handling of Unicode filenames in Pax, Zip, ISO, and other formats.
+ * Many libarchive 1.x APIs have been removed.
+ * Some libarchive 2.x APIs have been deprecated; they'll continue to be supported until libarchive users have had plenty of time to migrate to the newer interfaces.  (In particular, function names have changed to prefer "free" to "finish", "filter" to "compression", and a few other small adjustments.)
+
+Other features:
  * New formats: RAR reader, LHA/LZH reader, CAB reader, ISO9660 writer, XAR writer
  * Improvements to many formats, especially including ISO9660 and Zip, 
- * Use int64_t instead of off_t, ino_t, uid_t, gid_t, and dev_t in the public interfaces.  This should reduce confusion on Linux (which has two different off_t definitions) and Windows (which has 32-bit off_t).  The other file types have similar portability issues.
  * Stackable write filters.
  * Exploit seekable input - New "seekable" Zip reader can exploit the Zip Central Directory when it's available; the old "streamable" Zip reader is still fully supported for cases where seeking is not possible.
  * Integrate Mac OS patches - Apple has released their patches; I intend to incorporate them so that people can use the newest libarchive/bsdtar on Mac OS X.
