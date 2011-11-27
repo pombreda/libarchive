@@ -13,4 +13,16 @@ XXX TODO XXX
 
 XXX TODO XXX
 
+= References =
 
+* ECMA 119 (which is identical to ISO 9660)
+http://www.ecma-international.org/publications/standards/Ecma-119.htm
+
+* IEEE 1281 (SUSP extension techniques)
+http://www.ymi.com/ymi/sites/default/files/pdf/Systems%20Use%20P1281.pdf
+
+* IEEE 1282 (Rock Ridge standard, uses SUSP techniques described in IEEE 1281)
+http://www.ymi.com/ymi/sites/default/files/pdf/Rockridge.pdf
+
+* Joliet specification (developed by Microsoft for storing Unicode filenames)
+http://littlesvr.ca/isomaster/resources/JolietSpecification.html
