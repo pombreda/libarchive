@@ -18,7 +18,7 @@ Major version number bumps indicate backwards-incompatible API changes:
  * Some libarchive 2.x APIs have been deprecated; they'll continue to be supported until libarchive users have had plenty of time to migrate to the newer interfaces.  (In particular, function names have changed to prefer "free" to "finish", "filter" to "compression", and a few other small adjustments.)
 
 Other features:
- * New formats: RAR reader, LHA/LZH reader, CAB reader, ISO9660 writer, XAR writer
+ * New formats: RAR reader, LHA/LZH reader, CAB reader, 7-Zip reader, ISO9660 writer, XAR writer
  * Improvements to many formats, especially including ISO9660 and Zip, 
  * Stackable write filters.
  * Exploit seekable input - New "seekable" Zip reader can exploit the Zip Central Directory when it's available; the old "streamable" Zip reader is still fully supported for cases where seeking is not possible.
