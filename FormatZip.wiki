@@ -7,6 +7,8 @@ It does this by storing two copies of the header information for each file.
 One copy is the "local file header" that is stored immediately before the contents of each file.
 The other is the "central directory" that is stored at the end of the archive.
 
+The Zip format also compresses each file entry independently using the "deflate" compression algorithm.  Compressing each file separately simplifies random access at some cost in overall archive size.
+
 == Zip and Streaming Reads ==
 
 Libarchive's internal architecture is heavily biased in favor of streaming.
