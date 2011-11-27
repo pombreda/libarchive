@@ -35,7 +35,7 @@ Libarchive 3.0 supports multiple filters when writing archives.
  * mtree (read and write, uses separate libraries for creating and verifying cryptographic hashes)
  * shar (write only)
  * ar (read and write, including BSD and GNU/SysV variants)
- * empty (read only; in particular, note that no other format will accept an empty file)
+ * [FormatEmpty empty] (read only; in particular, note that no other format will accept an empty file)
  * [FormatRaw raw] (read only, starting in libarchive 2.8)
  * xar (read only, starting in libarchive 2.8)
  * lha/lzh (read only, starting in libarchive 3.0)
