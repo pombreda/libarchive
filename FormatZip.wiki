@@ -62,3 +62,11 @@ When both Zip readers recognize the file, libarchive chooses the seeking reader,
 
 As of libarchive 3.0.1, the "filename" reader supports a seek callback but makes no effort to optimize disk I/O when seeking is used.
 More work is needed in this area to reduce the performance impact from non-aligned reads.
+
+= References =
+
+PKWare (the original developers of the Zip file format) maintain a specification document for the Zip format:
+http://www.pkware.com/documents/casestudies/APPNOTE.TXT
+
+The Info-ZIP project has developed portable implementations of the "zip" and "unzip" program and pioneered many of the Zip extensions used on POSIX systems.
+http://www.info-zip.org/
