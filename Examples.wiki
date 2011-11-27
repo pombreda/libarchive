@@ -135,6 +135,8 @@ myclose(struct archive *a, void *client_data)
 }
 }}}
 
+[LibarchiveIO] has more details about designing and implementing effective I/O callback functions.
+
 == A note about the skip callback ==
 
 The `archive_read_open2` function is like `archive_read_open` but it accepts an additional "skip" callback function.
@@ -160,18 +162,9 @@ earlier versions, you may need to define different types of your callbacks
 depending on the `ARCHIVE_VERSION_NUMBER` macro.
 Ask on libarchive-discuss@groups.google.com if you have questions about this.
 
-== A note about seeking ==
-
-The skip callback only seeks forward, never backwards.
-There are certain archive formats can be read much more quickly if they can seek both forwards and backwards to arbitrary positions in the archive.
-There are also rare cases of legal archives that cannot be read without seeking backwards.
-Libarchive does not currently support full seeking, but there are plans to add it.
-It requires reworking some of libarchive's deeper plumbing so may not happen very soon.
-If you'd like to work on this, please look at the [WishList] and ask on the discussion mailing list.
-
 = A Universal Decompressor =
 
-Starting with libarchive 2.8, there is a "raw" format handler that treats arbitrary binary input as a single-element archive.
+Starting with libarchive 2.8, there is a [FormatRaw "raw" format handler] that treats arbitrary binary input as a single-element archive.
 This is basically a cheat to allow you to get the output of a libarchive filter chain,
 including files with multiple encodings such as `gz.uu` files:
 
