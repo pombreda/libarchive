@@ -49,6 +49,9 @@ This function is a shorthand for calling `archive_read_open1()` after
 registering an input function that reads blocks from a file.
 If you want to read data from some other data source,
 you can call the registration functions directly.
+(If you decide to roll your own, you might want to look at
+[http://libarchive.googlecode.com/svn/trunk/libarchive/archive_read_open_filename.c the source code for archive_read_open_filename]
+for ideas.)
 
 Inside `archive_read_open1()`, libarchive asks the input
 function for the first block and shows that block to
