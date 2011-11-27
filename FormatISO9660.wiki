@@ -1,0 +1,16 @@
+#summary Libarchive support for ISO9660 images.
+
+= Introduction =
+
+Libarchive contains support for reading and writing ISO9660 images.
+Both reader and writer fit seamlessly into the libarchive model, presenting ISO9660 images as archives that can be read or written as a series of independent entries.
+
+= Reading ISO9660 images =
+
+XXX TODO XXX
+
+= Writing ISO9660 images = 
+
+XXX TODO XXX
+
+
