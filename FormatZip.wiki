@@ -1,0 +1,64 @@
+#summary Libarchive's Zip support.
+
+= About Zip =
+
+The Zip file format was one of the first archiving formats to attempt to support both efficient streaming and fast random access.
+It does this by storing two copies of the header information for each file.
+One copy is the "local file header" that is stored immediately before the contents of each file.
+The other is the "central directory" that is stored at the end of the archive.
+
+== Zip and Streaming Reads ==
+
+Libarchive's internal architecture is heavily biased in favor of streaming.
+For this reason, the first implementation of libarchive's Zip reader used streaming exclusively.
+This design was very efficient and integrated well into libarchive but resulted in a few limitations.
+In particular, a streaming Zip reader can only use the local file headers; reading the central directory requires seeking to the end of the archive first, inspecting the central directory information, then seeking back to the beginning of the archive to read the contents of each entry.
+
+Because the streaming Zip reader cannot use the central directory information, it has a few limitations:
+ * The Zip format omits some information from the local file header.  Most significantly, the local file header does not include file permissions.
+ * Many Zip writers do not duplicate extra data in the local file header.  Many file attributes are stored in an extensible "extra data section" that can be attached to either the local file header or the central directory entry.  Some Zip writers duplicate the extra data in both places, but many writers only store complete extra data with the central directory entry.
+ * Self-extracting Zip archives consist of an extraction program followed by the Zip archive data.  When a streaming reader examines the beginning of such a file, it looks like a program, not like a Zip archive.
+
+== Zip and Streaming Writes ==
+
+Fortunately, writing Zip archives in a streaming fashion is more straightforward.
+Libarchive's Zip writer operates by writing out each separate entry with the accompanying local file header.
+The Zip writer accumulates the central directory information in memory and writes it out when the archive is closed.
+
+This approach is reasonably straightforward and quite efficient, with only two relatively minor drawbacks:
+ * Accumulating the central directory in memory requires space proportional to the number of files being written.  However, the per-file memory requirements are fairly modest, so this should only be a problem on systems with limited memory storing very large numbers of files.
+ * Since the data for each entry is compressed as it is being written, the Zip writer cannot include the compressed size in the local file header.  This should not be an issue for most readers:  the compressed size is stored in the Central Directory, and libarchive does include all of the necessary markers for streaming readers to correctly identify the end of each entry using "length at end" data descriptors.  (In particular, libarchive's own streaming Zip reader has no problems with this style of Zip archive.)
+
+== Libarchive and seeking ==
+
+To address the issues with the streaming Zip reader described earlier, libarchive now supports a second seeking Zip reader that works by first examining the Zip central directory.
+Invoking `archive_read_support_format_zip()` enables both Zip readers, but if you want to use libarchive to read Zip files, it's important to understand the difference between these two readers.
+
+The older streaming cannot access some information about individual entries and does not handle self-extracting Zip archives particularly well.
+But it can read Zip archives from any data source.
+
+The new seeking reader can handle such archives, but it requires that you provide a seek callback in addition to the regular callbacks.
+A seek callback can be registered with `archive_read_set_seek_callback()`.
+The interface to the seek callback is the same as the standard `fseek()` call:  It accepts an offset (a signed 64-bit integer) and a "whence" value.
+
+Note:  If you provide a seek callback, you are promising libarchive that the seek call will actually work.  If you are working with data sources other than regular files on disk, you should be very careful as the standard seek system calls on many systems have no effect (and return no error) if used on file handles other than regular files on disk.  This will confuse libarchive's internal position tracking and can lead to a variety of difficult-to-diagnose failures.
+
+(As of libarchive 3.0.1b, only the "filename" and "memory" readers support seeking.  If you have other requirements, you'll need to provide your own I/O callbacks.)
+
+== Negotiating Two Readers ==
+
+Although the two Zip readers share a lot of code, they work completely differently:
+ * The seeking reader bids by seeking to the end of the file and examining the central directory information.
+ * The streaming reader bids by inspecting the beginning bytes of the file to see if they look like a local file header.
+
+As a result, there are many cases where only one of the Zip readers will recognize a Zip archive:
+A self-extracting zip archive will not be recognized by the streaming reader because it does not start with a local file header, but the seeking reader will recognize it correctly.
+Conversely, if presented with a Zip archive on a pipe or socket that cannot seek, the streaming reader will recognize the local file header but the seeking reader will fail to locate the central directory.
+
+Of course, for the common case of an ordinary Zip archive in a disk file that supports seeking, both readers will recognize the file.
+When both Zip readers recognize the file, libarchive chooses the seeking reader, which provides more accurate handling for extended Zip data at the cost of some performance.
+
+== About Performance ==
+
+As of libarchive 3.0.1, the "filename" reader supports a seek callback but makes no effort to optimize disk I/O when seeking is used.
+More work is needed in this area to reduce the performance impact from non-aligned reads.
