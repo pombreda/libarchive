@@ -26,6 +26,18 @@ Other features:
  * Mac OS extended attribute support.  Thanks to Apple for releasing their patches.
  * Many, many bug fixes.  More than 100 bugs have been marked "Fixed" in the Issue Tracker.
 
+= Libarchive 2.8.5 =
+
+_Released September 3, 2011 =
+
+= Libarchive 2.8.4 =
+
+_Released June, 2010
+
+= Libarchive 2.8.3 =
+
+_Released March, 2010_
+
 = Libarchive 2.8.2 =
 
 _Released March, 14, 2010_
