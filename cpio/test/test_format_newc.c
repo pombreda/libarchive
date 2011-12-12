@@ -68,6 +68,7 @@ from_hex(const char *p, size_t l)
 	return (r);
 }
 
+#if !defined(_WIN32) || defined(__CYGWIN__)
 static int
 nlinks(const char *p)
 {
@@ -75,6 +76,7 @@ nlinks(const char *p)
 	assertEqualInt(0, stat(p, &st));
 	return st.st_nlink;
 }
+#endif
 
 DEFINE_TEST(test_format_newc)
 {
@@ -251,7 +253,9 @@ DEFINE_TEST(test_format_newc)
 #endif
 	assertEqualInt(uid, from_hex(e + 22, 8)); /* uid */
 	assertEqualInt(gid, from_hex(e + 30, 8)); /* gid */
+#if !defined(_WIN32) || defined(__CYGWIN__)
 	assertEqualInt(nlinks("dir"), from_hex(e + 38, 8)); /* nlinks */
+#endif
 	t2 = from_hex(e + 46, 8); /* mtime */
 	failure("First entry created at t=0x%08x this entry created at t2=0x%08x", t, t2);
 	assert(t2 == t || t2 == t + 1); /* Almost same as first entry. */

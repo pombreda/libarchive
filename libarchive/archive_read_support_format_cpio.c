@@ -189,7 +189,7 @@ struct cpio {
 
 static int64_t	atol16(const char *, unsigned);
 static int64_t	atol8(const char *, unsigned);
-static int	archive_read_format_cpio_bid(struct archive_read *);
+static int	archive_read_format_cpio_bid(struct archive_read *, int);
 static int	archive_read_format_cpio_options(struct archive_read *,
 		    const char *, const char *);
 static int	archive_read_format_cpio_cleanup(struct archive_read *);
@@ -251,19 +251,19 @@ archive_read_support_format_cpio(struct archive *_a)
 
 
 static int
-archive_read_format_cpio_bid(struct archive_read *a)
+archive_read_format_cpio_bid(struct archive_read *a, int best_bid)
 {
-	const void *h;
 	const unsigned char *p;
 	struct cpio *cpio;
 	int bid;
 
+	(void)best_bid; /* UNUSED */
+
 	cpio = (struct cpio *)(a->format->data);
 
-	if ((h = __archive_read_ahead(a, 6, NULL)) == NULL)
+	if ((p = __archive_read_ahead(a, 6, NULL)) == NULL)
 		return (-1);
 
-	p = (const unsigned char *)h;
 	bid = 0;
 	if (memcmp(p, "070707", 6) == 0) {
 		/* ASCII cpio archive (odc, POSIX.1) */

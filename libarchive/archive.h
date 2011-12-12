@@ -138,13 +138,13 @@ extern "C" {
  * #endif
  */
 /* Note: Compiler will complain if this does not match archive_entry.h! */
-#define	ARCHIVE_VERSION_NUMBER 3000000
+#define	ARCHIVE_VERSION_NUMBER 3000001
 __LA_DECL int		archive_version_number(void);
 
 /*
  * Textual name/version of the library, useful for version displays.
  */
-#define	ARCHIVE_VERSION_STRING "libarchive 3.0.0a"
+#define	ARCHIVE_VERSION_STRING "libarchive 3.0.1b"
 __LA_DECL const char *	archive_version_string(void);
 
 /* Declare our basic types. */
@@ -190,9 +190,20 @@ struct archive_entry;
 typedef __LA_SSIZE_T	archive_read_callback(struct archive *,
 			    void *_client_data, const void **_buffer);
 
-/* Skips at most request bytes from archive and returns the skipped amount */
+/* Skips at most request bytes from archive and returns the skipped amount.
+ * This may skip fewer bytes than requested; it may even skip zero bytes.
+ * If you do skip fewer bytes than requested, libarchive will invoke your
+ * read callback and discard data as necessary to make up the full skip.
+ */
 typedef __LA_INT64_T	archive_skip_callback(struct archive *,
 			    void *_client_data, __LA_INT64_T request);
+
+/* Seeks to specified location in the file and returns the position.
+ * Whence values are SEEK_SET, SEEK_CUR, SEEK_END from stdio.h.
+ * Return ARCHIVE_FATAL if the seek fails for any reason.
+ */
+typedef __LA_INT64_T	archive_seek_callback(struct archive *,
+    void *_client_data, __LA_INT64_T offset, int whence);
 
 /* Returns size actually written, zero on EOF, -1 on error. */
 typedef __LA_SSIZE_T	archive_write_callback(struct archive *,
@@ -275,6 +286,7 @@ typedef int	archive_close_callback(struct archive *, void *_client_data);
 #define	ARCHIVE_FORMAT_LHA			0xB0000
 #define	ARCHIVE_FORMAT_CAB			0xC0000
 #define	ARCHIVE_FORMAT_RAR			0xD0000
+#define	ARCHIVE_FORMAT_7ZIP			0xE0000
 
 /*-
  * Basic outline for reading an archive:
@@ -334,8 +346,10 @@ __LA_DECL int archive_read_support_filter_rpm(struct archive *);
 __LA_DECL int archive_read_support_filter_uu(struct archive *);
 __LA_DECL int archive_read_support_filter_xz(struct archive *);
 
+__LA_DECL int archive_read_support_format_7zip(struct archive *);
 __LA_DECL int archive_read_support_format_all(struct archive *);
 __LA_DECL int archive_read_support_format_ar(struct archive *);
+__LA_DECL int archive_read_support_format_by_code(struct archive *, int);
 __LA_DECL int archive_read_support_format_cab(struct archive *);
 __LA_DECL int archive_read_support_format_cpio(struct archive *);
 __LA_DECL int archive_read_support_format_empty(struct archive *);
@@ -343,17 +357,19 @@ __LA_DECL int archive_read_support_format_gnutar(struct archive *);
 __LA_DECL int archive_read_support_format_iso9660(struct archive *);
 __LA_DECL int archive_read_support_format_lha(struct archive *);
 __LA_DECL int archive_read_support_format_mtree(struct archive *);
+__LA_DECL int archive_read_support_format_rar(struct archive *);
 __LA_DECL int archive_read_support_format_raw(struct archive *);
 __LA_DECL int archive_read_support_format_tar(struct archive *);
 __LA_DECL int archive_read_support_format_xar(struct archive *);
 __LA_DECL int archive_read_support_format_zip(struct archive *);
-__LA_DECL int archive_read_support_format_rar(struct archive *);
 
 /* Set various callbacks. */
 __LA_DECL int archive_read_set_open_callback(struct archive *,
     archive_open_callback *);
 __LA_DECL int archive_read_set_read_callback(struct archive *,
     archive_read_callback *);
+__LA_DECL int archive_read_set_seek_callback(struct archive *,
+    archive_seek_callback *);
 __LA_DECL int archive_read_set_skip_callback(struct archive *,
     archive_skip_callback *);
 __LA_DECL int archive_read_set_close_callback(struct archive *,
@@ -379,6 +395,8 @@ __LA_DECL int archive_read_open2(struct archive *, void *_client_data,
 /* Use this if you know the filename.  Note: NULL indicates stdin. */
 __LA_DECL int archive_read_open_filename(struct archive *,
 		     const char *_filename, size_t _block_size);
+__LA_DECL int archive_read_open_filename_w(struct archive *,
+		     const wchar_t *_filename, size_t _block_size);
 /* archive_read_open_file() is a deprecated synonym for ..._open_filename(). */
 __LA_DECL int archive_read_open_file(struct archive *,
 		     const char *_filename, size_t _block_size);
@@ -598,6 +616,8 @@ __LA_DECL int archive_write_open(struct archive *, void *,
 		     archive_close_callback *);
 __LA_DECL int archive_write_open_fd(struct archive *, int _fd);
 __LA_DECL int archive_write_open_filename(struct archive *, const char *_file);
+__LA_DECL int archive_write_open_filename_w(struct archive *,
+		     const wchar_t *_file);
 /* A deprecated synonym for archive_write_open_filename() */
 __LA_DECL int archive_write_open_file(struct archive *, const char *_file);
 __LA_DECL int archive_write_open_FILE(struct archive *, FILE *);

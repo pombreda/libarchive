@@ -376,7 +376,7 @@ struct iso9660 {
 	size_t		 utf16be_previous_path_len;
 };
 
-static int	archive_read_format_iso9660_bid(struct archive_read *);
+static int	archive_read_format_iso9660_bid(struct archive_read *, int);
 static int	archive_read_format_iso9660_options(struct archive_read *,
 		    const char *, const char *);
 static int	archive_read_format_iso9660_cleanup(struct archive_read *);
@@ -486,13 +486,17 @@ archive_read_support_format_iso9660(struct archive *_a)
 
 
 static int
-archive_read_format_iso9660_bid(struct archive_read *a)
+archive_read_format_iso9660_bid(struct archive_read *a, int best_bid)
 {
 	struct iso9660 *iso9660;
 	ssize_t bytes_read;
-	const void *h;
 	const unsigned char *p;
 	int seenTerminator;
+
+	/* If there's already a better bid than we can ever
+	   make, don't bother testing. */
+	if (best_bid > 48)
+		return (-1);
 
 	iso9660 = (struct iso9660 *)(a->format->data);
 
@@ -502,12 +506,11 @@ archive_read_format_iso9660_bid(struct archive_read *a)
 	 * if the I/O layer gives us more, we'll take it.
 	 */
 #define RESERVED_AREA	(SYSTEM_AREA_BLOCK * LOGICAL_BLOCK_SIZE)
-	h = __archive_read_ahead(a,
+	p = __archive_read_ahead(a,
 	    RESERVED_AREA + 8 * LOGICAL_BLOCK_SIZE,
 	    &bytes_read);
-	if (h == NULL)
+	if (p == NULL)
 	    return (-1);
-	p = (const unsigned char *)h;
 
 	/* Skip the reserved area. */
 	bytes_read -= RESERVED_AREA;
@@ -1758,6 +1761,13 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 		    "Invalid location of extent of file");
 		return (NULL);
 	}
+	/* Sanity check that location doesn't have a negative value
+	 * when the file is not empty. it's too large. */
+	if (fsize != 0 && location < 0) {
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+		    "Invalid location of extent of file");
+		return (NULL);
+	}
 
 	/* Create a new file entry and copy data from the ISO dir record. */
 	file = (struct file_info *)calloc(1, sizeof(*file));
@@ -1919,26 +1929,82 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 			file->re = 0;
 			parent->subdirs--;
 		} else if (file->re) {
-			/* This file's parent is not rr_moved, clear invalid
-			 * "RE" mark. */
-			if (parent == NULL || parent->rr_moved == 0)
-				file->re = 0;
-			else if ((flags & 0x02) == 0) {
-				file->rr_moved_has_re_only = 0;
-				file->re = 0;
+			/*
+			 * Sanity check: file's parent is rr_moved.
+			 */
+			if (parent == NULL || parent->rr_moved == 0) {
+				archive_set_error(&a->archive,
+				    ARCHIVE_ERRNO_MISC,
+				    "Invalid Rockridge RE");
+				return (NULL);
+			}
+			/*
+			 * Sanity check: file does not have "CL" extension.
+			 */
+			if (file->cl_offset) {
+				archive_set_error(&a->archive,
+				    ARCHIVE_ERRNO_MISC,
+				    "Invalid Rockridge RE and CL");
+				return (NULL);
+			}
+			/*
+			 * Sanity check: The file type must be a directory.
+			 */
+			if ((flags & 0x02) == 0) {
+				archive_set_error(&a->archive,
+				    ARCHIVE_ERRNO_MISC,
+				    "Invalid Rockridge RE");
+				return (NULL);
 			}
 		} else if (parent != NULL && parent->rr_moved)
 			file->rr_moved_has_re_only = 0;
 		else if (parent != NULL && (flags & 0x02) &&
 		    (parent->re || parent->re_descendant))
 			file->re_descendant = 1;
-		if (parent != NULL && file->cl_offset != 0) {
+		if (file->cl_offset) {
+			struct file_info *p;
+
+			if (parent == NULL || parent->parent == NULL) {
+				archive_set_error(&a->archive,
+				    ARCHIVE_ERRNO_MISC,
+				    "Invalid Rockridge CL");
+				return (NULL);
+			}
+			/*
+			 * Sanity check: The file type must be a regular file.
+			 */
+			if ((flags & 0x02) != 0) {
+				archive_set_error(&a->archive,
+				    ARCHIVE_ERRNO_MISC,
+				    "Invalid Rockridge CL");
+				return (NULL);
+			}
 			parent->subdirs++;
 			/* Overwrite an offset and a number of this "CL" entry
 			 * to appear before other dirs. "+1" to those is to
 			 * make sure to appear after "RE" entry which this
 			 * "CL" entry should be connected with. */
 			file->offset = file->number = file->cl_offset + 1;
+
+			/*
+			 * Sanity check: cl_offset does not point at its
+			 * the parents or itself.
+			 */
+			for (p = parent; p; p = p->parent) {
+				if (p->offset == file->cl_offset) {
+					archive_set_error(&a->archive,
+					    ARCHIVE_ERRNO_MISC,
+					    "Invalid Rockridge CL");
+					return (NULL);
+				}
+			}
+			if (file->cl_offset == file->offset ||
+			    parent->rr_moved) {
+				archive_set_error(&a->archive,
+				    ARCHIVE_ERRNO_MISC,
+				    "Invalid Rockridge CL");
+				return (NULL);
+			}
 		}
 	}
 
@@ -2038,6 +2104,13 @@ parse_rockridge(struct archive_read *a, struct file_info *file,
 			if (p[0] == 'P' && p[1] == 'D') {
 				/*
 				 * PD extension is padding;
+				 * contents are always ignored.
+				 */
+				break;
+			}
+			if (p[0] == 'P' && p[1] == 'L') {
+				/*
+				 * PL extension won't appear;
 				 * contents are always ignored.
 				 */
 				break;
@@ -2291,6 +2364,12 @@ read_CE(struct archive_read *a, struct iso9660 *iso9660)
 		}
 		do {
 			file = heap->reqs[0].file;
+			if (file->ce_offset + file->ce_size > step) {
+				archive_set_error(&a->archive,
+				    ARCHIVE_ERRNO_FILE_FORMAT,
+				    "Malformed CE information");
+				return (ARCHIVE_FATAL);
+			}
 			p = b + file->ce_offset;
 			end = p + file->ce_size;
 			next_CE(heap);
@@ -2835,6 +2914,9 @@ rede_add_entry(struct file_info *file)
 {
 	struct file_info *re;
 
+	/*
+	 * Find "RE" entry.
+	 */
 	re = file->parent;
 	while (re != NULL && !re->re)
 		re = re->parent;
@@ -3115,7 +3197,7 @@ dump_isodirrec(FILE *out, const unsigned char *isodirrec)
 	    toi(isodirrec + DR_extent_offset, DR_extent_size));
 	fprintf(out, " s %d,",
 	    toi(isodirrec + DR_size_offset, DR_extent_size));
-	fprintf(out, " f 0x%02x,",
+	fprintf(out, " f 0x%x,",
 	    toi(isodirrec + DR_flags_offset, DR_flags_size));
 	fprintf(out, " u %d,",
 	    toi(isodirrec + DR_file_unit_size_offset, DR_file_unit_size_size));

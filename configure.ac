@@ -4,8 +4,8 @@ dnl First, define all of the version numbers up front.
 dnl In particular, this allows the version macro to be used in AC_INIT
 
 dnl These first two version numbers are updated automatically on each release.
-m4_define([LIBARCHIVE_VERSION_S],[3.0.0a])
-m4_define([LIBARCHIVE_VERSION_N],[3000000])
+m4_define([LIBARCHIVE_VERSION_S],[3.0.1b])
+m4_define([LIBARCHIVE_VERSION_N],[3000001])
 
 dnl bsdtar, bsdcpio and bsdpax versioning tracks libarchive
 m4_define([BSDTAR_VERSION_S],LIBARCHIVE_VERSION_S())
@@ -265,8 +265,13 @@ AC_CHECK_HEADERS([sys/mkdev.h sys/mount.h])
 AC_CHECK_HEADERS([sys/param.h sys/poll.h sys/select.h sys/statfs.h sys/statvfs.h])
 AC_CHECK_HEADERS([sys/time.h sys/utime.h sys/utsname.h sys/vfs.h])
 AC_CHECK_HEADERS([time.h unistd.h utime.h wchar.h wctype.h])
-# check windows.h first.
-AC_CHECK_HEADERS([windows.h wincrypt.h winioctl.h])
+AC_CHECK_HEADERS([windows.h])
+# check windows.h first; the other headers require it.
+AC_CHECK_HEADERS([wincrypt.h winioctl.h],[],[],
+[[#ifdef HAVE_WINDOWS_H
+# include <windows.h>
+#endif
+]])
 
 # Checks for libraries.
 AC_ARG_WITH([zlib],
@@ -576,8 +581,8 @@ AC_DEFUN([CRYPTO_CHECK], [
   if test "$found_$1" != yes; then
     saved_LIBS="$LIBS"
     saved_CPPFLAGS="$CPPFLAGS"
-    CPPFLAGS="$CPPFLAGS -I$srcdir -I$srcdir/libarchive"
-    LIBS="$LIBS $4"
+    CPPFLAGS="$CPPFLAGS -I. -I$srcdir -I$srcdir/libarchive"
+    LIBS="$LIBS $mdLIBS $4"
     touch "check_crypto_md.h"
     AC_MSG_CHECKING([support for ARCHIVE_CRYPTO_$1_$2])
     AC_LINK_IFELSE([AC_LANG_SOURCE([
@@ -612,13 +617,17 @@ main(int argc, char **argv)
 ])
 
 CRYPTO_CHECK(MD5, LIBC, md5)
+CRYPTO_CHECK(MD5, LIBMD, md5, -lmd)
 CRYPTO_CHECK(MD5, LIBSYSTEM, md5)
 CRYPTO_CHECK(RMD160, LIBC, rmd160)
+CRYPTO_CHECK(RMD160, LIBMD, rmd160, -lmd)
 CRYPTO_CHECK(SHA1, LIBC, sha1)
+CRYPTO_CHECK(SHA1, LIBMD, sha1, -lmd)
 CRYPTO_CHECK(SHA1, LIBSYSTEM, sha1)
 CRYPTO_CHECK(SHA256, LIBC, sha256)
 CRYPTO_CHECK(SHA256, LIBC2, sha256)
 CRYPTO_CHECK(SHA256, LIBC3, sha256)
+CRYPTO_CHECK(SHA256, LIBMD, sha256, -lmd)
 CRYPTO_CHECK(SHA256, LIBSYSTEM, sha256)
 CRYPTO_CHECK(SHA384, LIBC, sha384)
 CRYPTO_CHECK(SHA384, LIBC2, sha384)
@@ -627,6 +636,7 @@ CRYPTO_CHECK(SHA384, LIBSYSTEM, sha384)
 CRYPTO_CHECK(SHA512, LIBC, sha512)
 CRYPTO_CHECK(SHA512, LIBC2, sha512)
 CRYPTO_CHECK(SHA512, LIBC3, sha512)
+CRYPTO_CHECK(SHA512, LIBMD, sha512, -lmd)
 CRYPTO_CHECK(SHA512, LIBSYSTEM, sha512)
 
 if test "x$with_nettle" != "xno"; then

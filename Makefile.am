@@ -136,8 +136,10 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_read_support_filter_rpm.c		\
 	libarchive/archive_read_support_filter_uu.c		\
 	libarchive/archive_read_support_filter_xz.c		\
+	libarchive/archive_read_support_format_7zip.c		\
 	libarchive/archive_read_support_format_all.c		\
 	libarchive/archive_read_support_format_ar.c		\
+	libarchive/archive_read_support_format_by_code.c	\
 	libarchive/archive_read_support_format_cab.c		\
 	libarchive/archive_read_support_format_cpio.c		\
 	libarchive/archive_read_support_format_empty.c		\
@@ -307,6 +309,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_read_disk_entry_from_file.c	\
 	libarchive/test/test_read_extract.c			\
 	libarchive/test/test_read_file_nonexistent.c		\
+	libarchive/test/test_read_format_7zip.c			\
 	libarchive/test/test_read_format_ar.c			\
 	libarchive/test/test_read_format_cab.c			\
 	libarchive/test/test_read_format_cab_filename.c		\
@@ -449,10 +452,27 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_compat_zip_1.zip.uu			\
 	libarchive/test/test_compat_zip_2.zip.uu			\
 	libarchive/test/test_compat_zip_3.zip.uu			\
+	libarchive/test/test_compat_zip_4.zip.uu			\
+	libarchive/test/test_compat_zip_5.zip.uu			\
 	libarchive/test/test_fuzz_1.iso.Z.uu				\
 	libarchive/test/test_fuzz.cab.uu				\
 	libarchive/test/test_fuzz.lzh.uu				\
 	libarchive/test/test_pax_filename_encoding.tar.uu		\
+	libarchive/test/test_read_format_7zip_bcj_lzma1.7z.uu		\
+	libarchive/test/test_read_format_7zip_bcj_lzma2.7z.uu		\
+	libarchive/test/test_read_format_7zip_bzip2.7z.uu		\
+	libarchive/test/test_read_format_7zip_copy.7z.uu		\
+	libarchive/test/test_read_format_7zip_copy_2.7z.uu		\
+	libarchive/test/test_read_format_7zip_deflate.7z.uu		\
+	libarchive/test/test_read_format_7zip_delta_lzma1.7z.uu		\
+	libarchive/test/test_read_format_7zip_delta_lzma2.7z.uu		\
+	libarchive/test/test_read_format_7zip_empty_archive.7z.uu	\
+	libarchive/test/test_read_format_7zip_empty_file.7z.uu		\
+	libarchive/test/test_read_format_7zip_lzma1.7z.uu		\
+	libarchive/test/test_read_format_7zip_lzma1_2.7z.uu		\
+	libarchive/test/test_read_format_7zip_lzma1_lzma2.7z.uu		\
+	libarchive/test/test_read_format_7zip_lzma2.7z.uu		\
+	libarchive/test/test_read_format_7zip_ppmd.7z.uu		\
 	libarchive/test/test_read_format_ar.ar.uu			\
 	libarchive/test/test_read_format_cab_1.cab.uu			\
 	libarchive/test/test_read_format_cab_2.cab.uu			\
@@ -643,13 +663,6 @@ bsdtar_test_SOURCES=						\
 	tar/test/test_symlink_dir.c				\
 	tar/test/test_version.c					\
 	tar/test/test_windows.c
-
-# For now, bsdtar_test uses Windows shims from tar/bsdtar_windows.*
-if INC_WINDOWS_FILES
-bsdtar_test_SOURCES+=			\
-		tar/bsdtar_windows.h	\
-		tar/bsdtar_windows.c
-endif
 
 bsdtar_test_CPPFLAGS=\
 	-I$(top_srcdir)/libarchive -I$(top_srcdir)/libarchive_fe \

@@ -293,7 +293,7 @@ struct rar
   } br;
 };
 
-static int archive_read_format_rar_bid(struct archive_read *);
+static int archive_read_format_rar_bid(struct archive_read *, int);
 static int archive_read_format_rar_options(struct archive_read *,
     const char *, const char *);
 static int archive_read_format_rar_read_header(struct archive_read *,
@@ -650,9 +650,13 @@ archive_read_support_format_rar(struct archive *_a)
 }
 
 static int
-archive_read_format_rar_bid(struct archive_read *a)
+archive_read_format_rar_bid(struct archive_read *a, int best_bid)
 {
   const char *p;
+
+  /* If there's already a bid > 30, we'll never win. */
+  if (best_bid > 30)
+	  return (-1);
 
   if ((p = __archive_read_ahead(a, 7, NULL)) == NULL)
     return (-1);
@@ -662,12 +666,11 @@ archive_read_format_rar_bid(struct archive_read *a)
 
   if (p[0] == 'M' && p[1] == 'Z') {
     /* This is a PE file */
-    const void *buff;
     ssize_t offset = 0x10000;
     ssize_t window = 4096;
     ssize_t bytes_avail;
     while (offset + window <= (1024 * 128)) {
-      buff = __archive_read_ahead(a, offset + window, &bytes_avail);
+      const char *buff = __archive_read_ahead(a, offset + window, &bytes_avail);
       if (buff == NULL) {
         /* Remaining bytes are less than window. */
         window >>= 1;
@@ -675,13 +678,13 @@ archive_read_format_rar_bid(struct archive_read *a)
           return (0);
         continue;
       }
-      p = (const char *)buff + offset;
-      while (p + 7 < (const char *)buff + bytes_avail) {
+      p = buff + offset;
+      while (p + 7 < buff + bytes_avail) {
         if (memcmp(p, RAR_SIGNATURE, 7) == 0)
           return (30);
         p += 0x100;
       }
-      offset = p - (const char *)buff;
+      offset = p - buff;
     }
   }
   return (0);
