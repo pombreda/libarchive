@@ -83,7 +83,6 @@ static int	file_open(struct archive *, void *);
 static int	file_close(struct archive *, void *);
 static int file_close2(struct archive *, void *);
 static int file_switch(struct archive *, void *, void *);
-static int	file_open_filename(struct archive *, void *);
 static ssize_t	file_read(struct archive *, void *, const void **buff);
 static int64_t	file_seek(struct archive *, void *, int64_t request, int);
 static int64_t	file_skip(struct archive *, void *, int64_t request);
@@ -202,7 +201,7 @@ archive_read_open_filename_w(struct archive *a, const wchar_t *wfilename,
 }
 
 static int
-file_open_filename(struct archive *a, void *client_data)
+file_open(struct archive *a, void *client_data)
 {
 	struct stat st;
 	struct read_file_data *mine = (struct read_file_data *)client_data;
@@ -554,12 +553,6 @@ file_close(struct archive *a, void *client_data)
 	file_close2(a, client_data);
 	free(mine);
 	return (ARCHIVE_OK);
-}
-
-static int
-file_open(struct archive *a, void *client_data)
-{
-	return (file_open_filename(a, client_data));
 }
 
 static int
