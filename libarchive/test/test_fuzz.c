@@ -50,7 +50,6 @@ struct files {
 	int uncompress; /* If 1, decompress the file before fuzzing. */
 	const char **names;
 };
-
 static const char *fileset1[] =
 {
 	"test_fuzz_1.iso.Z", /* Exercise compress decompressor. */
@@ -113,52 +112,112 @@ static const char *fileset12[] =
 };
 static const char *fileset13[] =
 {
-	"test_read_format_ar.ar",
+	"test_read_format_7zip_bzip2.7z",
 	NULL
 };
 static const char *fileset14[] =
 {
-	"test_read_format_cpio_bin_be.cpio",
+	"test_read_format_7zip_bcj_lzma1.7z",
 	NULL
 };
 static const char *fileset15[] =
 {
-	"test_read_format_cpio_svr4_gzip_rpm.rpm", /* Test RPM unwrapper */
+	"test_read_format_7zip_bcj_lzma2.7z",
 	NULL
 };
 static const char *fileset16[] =
 {
-	"test_read_format_rar.rar", /* Uncompressed RAR test */
+	"test_read_format_7zip_bcj2_lzma1_1.7z",
 	NULL
 };
 static const char *fileset17[] =
 {
-	"test_read_format_rar_binary_data.rar", /* RAR file with binary data */
+	"test_read_format_7zip_bcj2_lzma1_2.7z",
 	NULL
 };
 static const char *fileset18[] =
 {
-	"test_read_format_rar_compress_best.rar", /* Best Compressed RAR test */
+	"test_read_format_7zip_bcj2_lzma2_1.7z",
 	NULL
 };
 static const char *fileset19[] =
+{
+	"test_read_format_7zip_bcj2_lzma2_2.7z",
+	NULL
+};
+static const char *fileset20[] =
+{
+	"test_read_format_7zip_copy.7z",
+	NULL
+};
+static const char *fileset21[] =
+{
+	"test_read_format_7zip_deflate.7z",
+	NULL
+};
+static const char *fileset22[] =
+{
+	"test_read_format_7zip_lzma1.7z",
+	NULL
+};
+static const char *fileset23[] =
+{
+	"test_read_format_7zip_lzma1_lzma2.7z",
+	NULL
+};
+static const char *fileset24[] =
+{
+	"test_read_format_7zip_ppmd.7z",
+	NULL
+};
+static const char *fileset25[] =
+{
+	"test_read_format_ar.ar",
+	NULL
+};
+static const char *fileset26[] =
+{
+	"test_read_format_cpio_bin_be.cpio",
+	NULL
+};
+static const char *fileset27[] =
+{
+	"test_read_format_cpio_svr4_gzip_rpm.rpm", /* Test RPM unwrapper */
+	NULL
+};
+static const char *fileset28[] =
+{
+	"test_read_format_rar.rar", /* Uncompressed RAR test */
+	NULL
+};
+static const char *fileset29[] =
+{
+	"test_read_format_rar_binary_data.rar", /* RAR file with binary data */
+	NULL
+};
+static const char *fileset30[] =
+{
+	"test_read_format_rar_compress_best.rar", /* Best Compressed RAR test */
+	NULL
+};
+static const char *fileset31[] =
 {
 	"test_read_format_rar_compress_normal.rar", /* Normal Compressed RAR
 	                                                  * test */
 	NULL
 };
-static const char *fileset20[] =
+static const char *fileset32[] =
 {
 	"test_read_format_rar_multi_lzss_blocks.rar", /* Normal Compressed Multi
 	                                               * LZSS blocks RAR test */
 	NULL
 };
-static const char *fileset21[] =
+static const char *fileset33[] =
 {
 	"test_read_format_rar_noeof.rar", /* RAR with no EOF header */
 	NULL
 };
-static const char *fileset22[] =
+static const char *fileset34[] =
 {
 	"test_read_format_rar_ppmd_lzss_conversion.rar", /* Best Compressed
 	                                                  * RAR file with both
@@ -166,42 +225,42 @@ static const char *fileset22[] =
 	                                                  * blocks */
 	NULL
 };
-static const char *fileset23[] =
+static const char *fileset35[] =
 {
 	"test_read_format_rar_sfx.exe", /* RAR SFX archive */
 	NULL
 };
-static const char *fileset24[] =
+static const char *fileset36[] =
 {
 	"test_read_format_rar_subblock.rar", /* RAR with subblocks */
 	NULL
 };
-static const char *fileset25[] =
+static const char *fileset37[] =
 {
 	"test_read_format_rar_unicode.rar", /* RAR with Unicode filenames */
 	NULL
 };
-static const char *fileset26[] =
+static const char *fileset38[] =
 {
 	"test_read_format_gtar_sparse_1_17_posix10_modified.tar",
 	NULL
 };
-static const char *fileset27[] =
+static const char *fileset39[] =
 {
 	"test_read_format_mtree.mtree",
 	NULL
 };
-static const char *fileset28[] =
+static const char *fileset40[] =
 {
 	"test_read_format_tar_empty_filename.tar",
 	NULL
 };
-static const char *fileset29[] =
+static const char *fileset41[] =
 {
 	"test_read_format_zip.zip",
 	NULL
 };
-static const char *fileset30[] =
+static const char *fileset42[] =
 {
 	"test_read_format_rar_multivolume.part0001.rar",
 	"test_read_format_rar_multivolume.part0002.rar",
@@ -241,6 +300,18 @@ static const struct files filesets[] = {
 	{0, fileset28},
 	{0, fileset29},
 	{0, fileset30},
+	{0, fileset31},
+	{0, fileset32},
+	{0, fileset33},
+	{0, fileset34},
+	{0, fileset35},
+	{0, fileset36},
+	{0, fileset37},
+	{0, fileset38},
+	{0, fileset39},
+	{0, fileset40},
+	{0, fileset41},
+	{0, fileset42},
 	{1, NULL}
 };
 

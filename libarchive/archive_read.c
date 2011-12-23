@@ -127,7 +127,7 @@ archive_read_extract_set_skip_file(struct archive *_a, int64_t d, int64_t i)
 	if (ARCHIVE_OK != __archive_check_magic(_a, ARCHIVE_READ_MAGIC,
 		ARCHIVE_STATE_ANY, "archive_read_extract_set_skip_file"))
 		return;
-
+	a->skip_file_set = 1;
 	a->skip_file_dev = d;
 	a->skip_file_ino = i;
 }
@@ -179,26 +179,64 @@ client_read_proxy(struct archive_read_filter *self, const void **buff)
 static int64_t
 client_skip_proxy(struct archive_read_filter *self, int64_t request)
 {
-	int64_t ask, get, total;
-	/* Seek requests over 1GiB are broken down into multiple
-	 * seeks.  This avoids overflows when the requests get
-	 * passed through 32-bit arguments. */
-	int64_t skip_limit = (int64_t)1 << 30;
+	if (request < 0)
+		__archive_errx(1, "Negative skip requested.");
+	if (request == 0)
+		return 0;
 
-	if (self->archive->client.skipper == NULL)
-		return (0);
-	total = 0;
-	for (;;) {
-		ask = request;
-		if (ask > skip_limit)
-			ask = skip_limit;
-		get = (self->archive->client.skipper)(&self->archive->archive,
-			self->data, ask);
-		if (get == 0)
-			return (total);
-		request -= get;
-		total += get;
+	if (self->archive->client.skipper != NULL) {
+		/* Seek requests over 1GiB are broken down into
+		 * multiple seeks.  This avoids overflows when the
+		 * requests get passed through 32-bit arguments. */
+		int64_t skip_limit = (int64_t)1 << 30;
+		int64_t total = 0;
+		for (;;) {
+			int64_t get, ask = request;
+			if (ask > skip_limit)
+				ask = skip_limit;
+			get = (self->archive->client.skipper)(&self->archive->archive,
+			    self->data, ask);
+			if (get == 0)
+				return (total);
+			request -= get;
+			total += get;
+		}
+		return total;
+	} else if (self->archive->client.seeker != NULL
+		&& request > 64 * 1024) {
+		/* If the client provided a seeker but not a skipper,
+		 * we can use the seeker to skip forward.
+		 *
+		 * Note: This isn't always a good idea.  The client
+		 * skipper is allowed to skip by less than requested
+		 * if it needs to maintain block alignment.  The
+		 * seeker is not allowed to play such games, so using
+		 * the seeker here may be a performance loss compared
+		 * to just reading and discarding.  That's why we
+		 * only do this for skips of over 64k.
+		 */
+		int64_t before = self->position;
+		int64_t after = (self->archive->client.seeker)(&self->archive->archive,
+		    self->data, request, SEEK_CUR);
+		if (after != before + request)
+			return ARCHIVE_FATAL;
+		return after - before;
 	}
+	return 0;
+}
+
+static int64_t
+client_seek_proxy(struct archive_read_filter *self, int64_t offset, int whence)
+{
+	/* DO NOT use the skipper here!  If we transparently handled
+	 * forward seek here by using the skipper, that will break
+	 * other libarchive code that assumes a successful forward
+	 * seek means it can also seek backwards.
+	 */
+	if (self->archive->client.seeker == NULL)
+		return (ARCHIVE_FAILED);
+	return (self->archive->client.seeker)(&self->archive->archive,
+	    self->data, offset, whence);
 }
 
 static int
@@ -301,6 +339,17 @@ archive_read_set_skip_callback(struct archive *_a,
 	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
 	    "archive_read_set_skip_callback");
 	a->client.skipper = client_skipper;
+	return ARCHIVE_OK;
+}
+
+int
+archive_read_set_seek_callback(struct archive *_a,
+    archive_seek_callback *client_seeker)
+{
+	struct archive_read *a = (struct archive_read *)_a;
+	archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
+	    "archive_read_set_seek_callback");
+	a->client.seeker = client_seeker;
 	return ARCHIVE_OK;
 }
 
@@ -447,6 +496,7 @@ archive_read_open1(struct archive *_a)
 	filter->open = client_open_proxy;
 	filter->read = client_read_proxy;
 	filter->skip = client_skip_proxy;
+	filter->seek = client_seek_proxy;
 	filter->close = client_close_proxy;
 	filter->_switch = client_switch_proxy;
 	filter->name = "none";
@@ -541,7 +591,7 @@ static int
 _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 {
 	struct archive_read *a = (struct archive_read *)_a;
-	int ret;
+	int r1 = ARCHIVE_OK, r2;
 
 	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
 	    ARCHIVE_STATE_HEADER | ARCHIVE_STATE_DATA,
@@ -555,29 +605,28 @@ _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 	 * (This is especially important for GNU incremental directories.)
 	 */
 	if (a->archive.state == ARCHIVE_STATE_DATA) {
-		ret = archive_read_data_skip(&a->archive);
-		if (ret == ARCHIVE_EOF) {
+		r1 = archive_read_data_skip(&a->archive);
+		if (r1 == ARCHIVE_EOF)
 			archive_set_error(&a->archive, EIO,
 			    "Premature end-of-file.");
+		if (r1 == ARCHIVE_EOF || r1 == ARCHIVE_FATAL) {
 			a->archive.state = ARCHIVE_STATE_FATAL;
 			return (ARCHIVE_FATAL);
 		}
-		if (ret != ARCHIVE_OK)
-			return (ret);
 	}
 
 	/* Record start-of-header offset in uncompressed stream. */
-	a->header_position = a->filter->bytes_consumed;
+	a->header_position = a->filter->position;
 
 	++_a->file_count;
-	ret = (a->format->read_header)(a, entry);
+	r2 = (a->format->read_header)(a, entry);
 
 	/*
 	 * EOF and FATAL are persistent at this layer.  By
 	 * modifying the state, we guarantee that future calls to
 	 * read a header or read data will fail.
 	 */
-	switch (ret) {
+	switch (r2) {
 	case ARCHIVE_EOF:
 		a->archive.state = ARCHIVE_STATE_EOF;
 		--_a->file_count;/* Revert a file counter. */
@@ -597,7 +646,8 @@ _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 
 	a->read_data_output_offset = 0;
 	a->read_data_remaining = 0;
-	return (ret);
+	/* EOF always wins; otherwise return the worst error. */
+	return (r2 < r1 || r2 == ARCHIVE_EOF) ? r2 : r1;
 }
 
 int
@@ -631,9 +681,11 @@ choose_format(struct archive_read *a)
 	a->format = &(a->formats[0]);
 	for (i = 0; i < slots; i++, a->format++) {
 		if (a->format->bid) {
-			bid = (a->format->bid)(a);
+			bid = (a->format->bid)(a, best_bid);
 			if (bid == ARCHIVE_FATAL)
 				return (ARCHIVE_FATAL);
+			if (a->filter->position != 0)
+				__archive_read_seek(a, 0, SEEK_SET);
 			if ((bid > best_bid) || (best_bid_slot < 0)) {
 				best_bid = bid;
 				best_bid_slot = i;
@@ -759,22 +811,6 @@ archive_read_data(struct archive *_a, void *buff, size_t s)
 	}
 	return (bytes_read);
 }
-
-#if ARCHIVE_API_VERSION < 3
-/*
- * Obsolete function provided for compatibility only.  Note that the API
- * of this function doesn't allow the caller to detect if the remaining
- * data from the archive entry is shorter than the buffer provided, or
- * even if an error occurred while reading data.
- */
-int
-archive_read_data_into_buffer(struct archive *a, void *d, ssize_t len)
-{
-
-	archive_read_data(a, d, len);
-	return (ARCHIVE_OK);
-}
-#endif
 
 /*
  * Skip over all remaining data in this entry.
@@ -1002,7 +1038,7 @@ static int64_t
 _archive_filter_bytes(struct archive *_a, int n)
 {
 	struct archive_read_filter *f = get_filter(_a, n);
-	return f == NULL ? -1 : f->bytes_consumed;
+	return f == NULL ? -1 : f->position;
 }
 
 /*
@@ -1013,7 +1049,7 @@ int
 __archive_read_register_format(struct archive_read *a,
     void *format_data,
     const char *name,
-    int (*bid)(struct archive_read *),
+    int (*bid)(struct archive_read *, int),
     int (*options)(struct archive_read *, const char *, const char *),
     int (*read_header)(struct archive_read *, struct archive_entry *),
     int (*read_data)(struct archive_read *, const void **, size_t *, int64_t *),
@@ -1106,13 +1142,6 @@ __archive_read_get_bidder(struct archive_read *a,
  *    to fit your request, so use this technique cautiously.  This
  *    technique is used, for example, by some of the format tasting
  *    code that has uncertain look-ahead needs.
- *
- * TODO: Someday, provide a more generic __archive_read_seek() for
- * those cases where it's useful.  This is tricky because there are lots
- * of cases where seek() is not available (reading gzip data from a
- * network socket, for instance), so there needs to be a good way to
- * communicate whether seek() is available and users of that interface
- * need to use non-seeking strategies whenever seek() is not available.
  */
 
 /*
@@ -1123,7 +1152,6 @@ __archive_read_get_bidder(struct archive_read *a,
  *  * If error, *avail gets error code.
  *  * If request can be met, returns pointer to data.
  *  * If minimum request cannot be met, returns NULL.
- *    if request is not met.
  *
  * Note: If you just want "some data", ask for 1 byte and pay attention
  * to *avail, which will have the actual amount available.  If you
@@ -1359,7 +1387,7 @@ advance_file_pointer(struct archive_read_filter *filter, int64_t request)
 		filter->next += min;
 		filter->avail -= min;
 		request -= min;
-		filter->bytes_consumed += min;
+		filter->position += min;
 		total_bytes_skipped += min;
 	}
 
@@ -1369,7 +1397,7 @@ advance_file_pointer(struct archive_read_filter *filter, int64_t request)
 		filter->client_next += min;
 		filter->client_avail -= min;
 		request -= min;
-		filter->bytes_consumed += min;
+		filter->position += min;
 		total_bytes_skipped += min;
 	}
 	if (request == 0)
@@ -1382,7 +1410,7 @@ advance_file_pointer(struct archive_read_filter *filter, int64_t request)
 			filter->fatal = 1;
 			return (bytes_skipped);
 		}
-		filter->bytes_consumed += bytes_skipped;
+		filter->position += bytes_skipped;
 		total_bytes_skipped += bytes_skipped;
 		request -= bytes_skipped;
 		if (request == 0)
@@ -1415,12 +1443,57 @@ advance_file_pointer(struct archive_read_filter *filter, int64_t request)
 			filter->client_avail = bytes_read - request;
 			filter->client_total = bytes_read;
 			total_bytes_skipped += request;
-			filter->bytes_consumed += request;
+			filter->position += request;
 			return (total_bytes_skipped);
 		}
 
-		filter->bytes_consumed += bytes_read;
+		filter->position += bytes_read;
 		total_bytes_skipped += bytes_read;
 		request -= bytes_read;
 	}
+}
+
+/**
+ * Returns ARCHIVE_FAILED if seeking isn't supported.
+ */
+int64_t
+__archive_read_seek(struct archive_read *a, int64_t offset, int whence)
+{
+	return __archive_read_filter_seek(a->filter, offset, whence);
+}
+
+int64_t
+__archive_read_filter_seek(struct archive_read_filter *filter, int64_t offset, int whence)
+{
+	int64_t r;
+
+	if (filter->closed || filter->fatal)
+		return (ARCHIVE_FATAL);
+	if (filter->seek == NULL)
+		return (ARCHIVE_FAILED);
+	r = filter->seek(filter, offset, whence);
+	if (r >= 0) {
+		/*
+		 * Ouch.  Clearing the buffer like this hurts, especially
+		 * at bid time.  A lot of our efficiency at bid time comes
+		 * from having bidders reuse the data we've already read.
+		 *
+		 * TODO: If the seek request is in data we already
+		 * have, then don't call the seek callback.
+		 *
+		 * TODO: Zip seeks to end-of-file at bid time.  If
+		 * other formats also start doing this, we may need to
+		 * find a way for clients to fudge the seek offset to
+		 * a block boundary.
+		 *
+		 * Hmmm... If whence was SEEK_END, we know the file
+		 * size is (r - offset).  Can we use that to simplify
+		 * the TODO items above?
+		 */
+		filter->avail = filter->client_avail = 0;
+		filter->next = filter->buffer;
+		filter->position = r;
+		filter->end_of_file = 0;
+	}
+	return r;
 }

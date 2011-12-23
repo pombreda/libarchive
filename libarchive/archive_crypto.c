@@ -30,6 +30,12 @@
 #include "archive.h"
 #include "archive_crypto_private.h"
 
+/* In particular, force the configure probe to break if it tries
+ * to test a combination of OpenSSL and libmd. */
+#if defined(ARCHIVE_CRYPTO_OPENSSL) && defined(ARCHIVE_CRYPTO_LIBMD)
+#error Cannot use both OpenSSL and libmd.
+#endif
+
 /*
  * Message digest functions for Windows platform.
  */
@@ -119,6 +125,30 @@ __archive_libc_md5update(archive_md5_ctx *ctx, const void *indata,
 
 static int
 __archive_libc_md5final(archive_md5_ctx *ctx, void *md)
+{
+  MD5Final(md, ctx);
+  return (ARCHIVE_OK);
+}
+
+#elif defined(ARCHIVE_CRYPTO_MD5_LIBMD)
+
+static int
+__archive_libmd_md5init(archive_md5_ctx *ctx)
+{
+  MD5Init(ctx);
+  return (ARCHIVE_OK);
+}
+
+static int
+__archive_libmd_md5update(archive_md5_ctx *ctx, const void *indata,
+    size_t insize)
+{
+  MD5Update(ctx, indata, insize);
+  return (ARCHIVE_OK);
+}
+
+static int
+__archive_libmd_md5final(archive_md5_ctx *ctx, void *md)
 {
   MD5Final(md, ctx);
   return (ARCHIVE_OK);
@@ -276,6 +306,30 @@ __archive_libc_ripemd160final(archive_rmd160_ctx *ctx, void *md)
   return (ARCHIVE_OK);
 }
 
+#elif defined(ARCHIVE_CRYPTO_RMD160_LIBMD)
+
+static int
+__archive_libmd_ripemd160init(archive_rmd160_ctx *ctx)
+{
+  RIPEMD160_Init(ctx);
+  return (ARCHIVE_OK);
+}
+
+static int
+__archive_libmd_ripemd160update(archive_rmd160_ctx *ctx, const void *indata,
+    size_t insize)
+{
+  RIPEMD160_Update(ctx, indata, insize);
+  return (ARCHIVE_OK);
+}
+
+static int
+__archive_libmd_ripemd160final(archive_rmd160_ctx *ctx, void *md)
+{
+  RIPEMD160_Final(md, ctx);
+  return (ARCHIVE_OK);
+}
+
 #elif defined(ARCHIVE_CRYPTO_RMD160_NETTLE)
 
 static int
@@ -375,6 +429,30 @@ static int
 __archive_libc_sha1final(archive_sha1_ctx *ctx, void *md)
 {
   SHA1Final(md, ctx);
+  return (ARCHIVE_OK);
+}
+
+#elif defined(ARCHIVE_CRYPTO_SHA1_LIBMD)
+
+static int
+__archive_libmd_sha1init(archive_sha1_ctx *ctx)
+{
+  SHA1_Init(ctx);
+  return (ARCHIVE_OK);
+}
+
+static int
+__archive_libmd_sha1update(archive_sha1_ctx *ctx, const void *indata,
+    size_t insize)
+{
+  SHA1_Update(ctx, indata, insize);
+  return (ARCHIVE_OK);
+}
+
+static int
+__archive_libmd_sha1final(archive_sha1_ctx *ctx, void *md)
+{
+  SHA1_Final(md, ctx);
   return (ARCHIVE_OK);
 }
 
@@ -575,6 +653,30 @@ static int
 __archive_libc3_sha256final(archive_sha256_ctx *ctx, void *md)
 {
   SHA256Final(md, ctx);
+  return (ARCHIVE_OK);
+}
+
+#elif defined(ARCHIVE_CRYPTO_SHA256_LIBMD)
+
+static int
+__archive_libmd_sha256init(archive_sha256_ctx *ctx)
+{
+  SHA256_Init(ctx);
+  return (ARCHIVE_OK);
+}
+
+static int
+__archive_libmd_sha256update(archive_sha256_ctx *ctx, const void *indata,
+    size_t insize)
+{
+  SHA256_Update(ctx, indata, insize);
+  return (ARCHIVE_OK);
+}
+
+static int
+__archive_libmd_sha256final(archive_sha256_ctx *ctx, void *md)
+{
+  SHA256_Final(md, ctx);
   return (ARCHIVE_OK);
 }
 
@@ -968,6 +1070,30 @@ __archive_libc3_sha512final(archive_sha512_ctx *ctx, void *md)
   return (ARCHIVE_OK);
 }
 
+#elif defined(ARCHIVE_CRYPTO_SHA512_LIBMD)
+
+static int
+__archive_libmd_sha512init(archive_sha512_ctx *ctx)
+{
+  SHA512_Init(ctx);
+  return (ARCHIVE_OK);
+}
+
+static int
+__archive_libmd_sha512update(archive_sha512_ctx *ctx, const void *indata,
+    size_t insize)
+{
+  SHA512_Update(ctx, indata, insize);
+  return (ARCHIVE_OK);
+}
+
+static int
+__archive_libmd_sha512final(archive_sha512_ctx *ctx, void *md)
+{
+  SHA512_Final(md, ctx);
+  return (ARCHIVE_OK);
+}
+
 #elif defined(ARCHIVE_CRYPTO_SHA512_LIBSYSTEM)
 
 static int
@@ -1106,6 +1232,10 @@ const struct archive_crypto __archive_crypto =
   &__archive_libc_md5init,
   &__archive_libc_md5update,
   &__archive_libc_md5final,
+#elif defined(ARCHIVE_CRYPTO_MD5_LIBMD)
+  &__archive_libmd_md5init,
+  &__archive_libmd_md5update,
+  &__archive_libmd_md5final,
 #elif defined(ARCHIVE_CRYPTO_MD5_LIBSYSTEM)
   &__archive_libsystem_md5init,
   &__archive_libsystem_md5update,
@@ -1133,6 +1263,10 @@ const struct archive_crypto __archive_crypto =
   &__archive_libc_ripemd160init,
   &__archive_libc_ripemd160update,
   &__archive_libc_ripemd160final,
+#elif defined(ARCHIVE_CRYPTO_RMD160_LIBMD)
+  &__archive_libmd_ripemd160init,
+  &__archive_libmd_ripemd160update,
+  &__archive_libmd_ripemd160final,
 #elif defined(ARCHIVE_CRYPTO_RMD160_NETTLE)
   &__archive_nettle_ripemd160init,
   &__archive_nettle_ripemd160update,
@@ -1152,6 +1286,10 @@ const struct archive_crypto __archive_crypto =
   &__archive_libc_sha1init,
   &__archive_libc_sha1update,
   &__archive_libc_sha1final,
+#elif defined(ARCHIVE_CRYPTO_SHA1_LIBMD)
+  &__archive_libmd_sha1init,
+  &__archive_libmd_sha1update,
+  &__archive_libmd_sha1final,
 #elif defined(ARCHIVE_CRYPTO_SHA1_LIBSYSTEM)
   &__archive_libsystem_sha1init,
   &__archive_libsystem_sha1update,
@@ -1187,6 +1325,10 @@ const struct archive_crypto __archive_crypto =
   &__archive_libc3_sha256init,
   &__archive_libc3_sha256update,
   &__archive_libc3_sha256final,
+#elif defined(ARCHIVE_CRYPTO_SHA256_LIBMD)
+  &__archive_libmd_sha256init,
+  &__archive_libmd_sha256update,
+  &__archive_libmd_sha256final,
 #elif defined(ARCHIVE_CRYPTO_SHA256_LIBSYSTEM)
   &__archive_libsystem_sha256init,
   &__archive_libsystem_sha256update,
@@ -1257,6 +1399,10 @@ const struct archive_crypto __archive_crypto =
   &__archive_libc3_sha512init,
   &__archive_libc3_sha512update,
   &__archive_libc3_sha512final
+#elif defined(ARCHIVE_CRYPTO_SHA512_LIBMD)
+  &__archive_libmd_sha512init,
+  &__archive_libmd_sha512update,
+  &__archive_libmd_sha512final
 #elif defined(ARCHIVE_CRYPTO_SHA512_LIBSYSTEM)
   &__archive_libsystem_sha512init,
   &__archive_libsystem_sha512update,

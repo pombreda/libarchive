@@ -95,14 +95,9 @@ __FBSDID("$FreeBSD: src/usr.bin/tar/write.c,v 1.79 2008/11/27 05:49:52 kientzle 
 #include "line_reader.h"
 #include "tree.h"
 
-/* Fixed size of uname/gname caches. */
-#define	name_cache_size 101
-
 #ifndef O_BINARY
 #define	O_BINARY 0
 #endif
-
-static const char * const NO_NAME = "(noname)";
 
 struct archive_dir_entry {
 	struct archive_dir_entry	*next;
@@ -113,16 +108,6 @@ struct archive_dir_entry {
 
 struct archive_dir {
 	struct archive_dir_entry *head, *tail;
-};
-
-struct name_cache {
-	int	probes;
-	int	hits;
-	size_t	size;
-	struct {
-		id_t id;
-		const char *name;
-	} cache[name_cache_size];
 };
 
 static void		 add_dir_list(struct bsdtar *bsdtar, const char *path,
@@ -562,9 +547,10 @@ archive_names_from_file(struct bsdtar *bsdtar, struct archive *a)
  */
 static int
 append_archive_filename(struct bsdtar *bsdtar, struct archive *a,
-    const char *filename)
+    const char *raw_filename)
 {
 	struct archive *ina;
+	const char *filename = raw_filename;
 	int rc;
 
 	if (strcmp(filename, "-") == 0)
@@ -583,7 +569,7 @@ append_archive_filename(struct bsdtar *bsdtar, struct archive *a,
 
 	if (rc != ARCHIVE_OK) {
 		lafe_warnc(0, "Error reading archive %s: %s",
-		    filename, archive_error_string(ina));
+		    raw_filename, archive_error_string(ina));
 		bsdtar->return_value = 1;
 	}
 	archive_read_free(ina);
@@ -597,7 +583,7 @@ append_archive(struct bsdtar *bsdtar, struct archive *a, struct archive *ina)
 	struct archive_entry *in_entry;
 	int e;
 
-	while (0 == archive_read_next_header(ina, &in_entry)) {
+	while (ARCHIVE_OK == (e = archive_read_next_header(ina, &in_entry))) {
 		if (!new_enough(bsdtar, archive_entry_pathname(in_entry),
 			archive_entry_stat(in_entry)))
 			continue;
@@ -635,8 +621,7 @@ append_archive(struct bsdtar *bsdtar, struct archive *a, struct archive *ina)
 			fprintf(stderr, "\n");
 	}
 
-	/* Note: If we got here, we saw no write errors, so return success. */
-	return (0);
+	return (e == ARCHIVE_EOF ? ARCHIVE_OK : e);
 }
 
 /* Helper function to copy data between archives. */
@@ -875,7 +860,7 @@ write_hierarchy(struct bsdtar *bsdtar, struct archive *a, const char *path)
 			continue;
 #endif
 
-#if defined(EXT2_IOC_GETFLAGS) && defined(EXT2_NODUMP_FL)
+#if defined(EXT2_IOC_GETFLAGS) && defined(EXT2_NODUMP_FL) && defined(HAVE_WORKING_EXT2_IOC_GETFLAGS)
 		/* Linux uses ioctl to read flags. */
 		if (bsdtar->option_honor_nodump) {
 			int fd = open(name, O_RDONLY | O_NONBLOCK | O_BINARY);
@@ -1105,7 +1090,7 @@ new_enough(struct bsdtar *bsdtar, const char *path, const struct stat *st)
 	/*
 	 * If this file/dir is excluded by a time comparison, skip it.
 	 */
-	if (bsdtar->newer_ctime_sec > 0) {
+	if (bsdtar->newer_ctime_filter) {
 		if (st->st_ctime < bsdtar->newer_ctime_sec)
 			return (0); /* Too old, skip it. */
 		if (st->st_ctime == bsdtar->newer_ctime_sec
@@ -1113,7 +1098,7 @@ new_enough(struct bsdtar *bsdtar, const char *path, const struct stat *st)
 		    <= bsdtar->newer_ctime_nsec)
 			return (0); /* Too old, skip it. */
 	}
-	if (bsdtar->newer_mtime_sec > 0) {
+	if (bsdtar->newer_mtime_filter) {
 		if (st->st_mtime < bsdtar->newer_mtime_sec)
 			return (0); /* Too old, skip it. */
 		if (st->st_mtime == bsdtar->newer_mtime_sec

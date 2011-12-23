@@ -28,7 +28,6 @@ __FBSDID("$FreeBSD$");
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
-#include <stdio.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
@@ -374,7 +373,7 @@ struct xmlattr_list {
 	struct xmlattr	**last;
 };
 
-static int	xar_bid(struct archive_read *);
+static int	xar_bid(struct archive_read *, int);
 static int	xar_read_header(struct archive_read *,
 		    struct archive_entry *);
 static int	xar_read_data(struct archive_read *,
@@ -475,10 +474,12 @@ archive_read_support_format_xar(struct archive *_a)
 }
 
 static int
-xar_bid(struct archive_read *a)
+xar_bid(struct archive_read *a, int best_bid)
 {
 	const unsigned char *b;
 	int bid;
+
+	(void)best_bid; /* UNUSED */
 
 	b = __archive_read_ahead(a, HEADER_SIZE, NULL);
 	if (b == NULL)

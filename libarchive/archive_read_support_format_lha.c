@@ -25,16 +25,12 @@
 
 #include "archive_platform.h"
 
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
 #endif
-#include <stdio.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
@@ -253,7 +249,7 @@ static const uint16_t crc16tbl[256] = {
 	0x8201,0x42C0,0x4380,0x8341,0x4100,0x81C1,0x8081,0x4040
 };
 
-static int      archive_read_format_lha_bid(struct archive_read *);
+static int      archive_read_format_lha_bid(struct archive_read *, int);
 static int      archive_read_format_lha_options(struct archive_read *,
 		    const char *, const char *);
 static int	archive_read_format_lha_read_header(struct archive_read *,
@@ -384,12 +380,17 @@ lha_check_header_format(const void *h)
 }
 
 static int
-archive_read_format_lha_bid(struct archive_read *a)
+archive_read_format_lha_bid(struct archive_read *a, int best_bid)
 {
 	const char *p;
 	const void *buff;
 	ssize_t bytes_avail, offset, window;
 	size_t next;
+
+	/* If there's already a better bid than we can ever
+	   make, don't bother testing. */
+	if (best_bid > 30)
+		return (-1);
 
 	if ((p = __archive_read_ahead(a, H_SIZE, NULL)) == NULL)
 		return (-1);

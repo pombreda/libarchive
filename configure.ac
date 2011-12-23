@@ -4,8 +4,8 @@ dnl First, define all of the version numbers up front.
 dnl In particular, this allows the version macro to be used in AC_INIT
 
 dnl These first two version numbers are updated automatically on each release.
-m4_define([LIBARCHIVE_VERSION_S],[3.0.0a])
-m4_define([LIBARCHIVE_VERSION_N],[3000000])
+m4_define([LIBARCHIVE_VERSION_S],[3.0.1b])
+m4_define([LIBARCHIVE_VERSION_N],[3000001])
 
 dnl bsdtar and bsdcpio versioning tracks libarchive
 m4_define([BSDTAR_VERSION_S],LIBARCHIVE_VERSION_S())
@@ -27,15 +27,21 @@ AC_CONFIG_MACRO_DIR([build/autoconf])
 # Must follow AC_CONFIG macros above...
 AM_INIT_AUTOMAKE()
 
-# Libtool versioning uses different conventions on different
-# platforms.  At least on FreeBSD, libtool uses an overly complex
-# convention that attempts to solve problems that most people just
-# don't have and which just causes confusion for most end users.
-ARCHIVE_MAJOR=$(( LIBARCHIVE_VERSION_N() / 1000000 ))
+# Libtool's "interface version" can be computed from the libarchive version.
+
+# Libtool interface version bumps on any API change, so increments
+# whenever libarchive minor version does.
 ARCHIVE_MINOR=$(( (LIBARCHIVE_VERSION_N() / 1000) % 1000 ))
+# Libarchive 2.7 == libtool interface 9 = 2 + 7
+# Libarchive 2.8 == libtool interface 10 = 2 + 8
+# Libarchive 2.9 == libtool interface 11 = 2 + 8
+# Libarchive 3.0 == libtool interface 12
+# Libarchive 3.x == libtool interface 12 + x
+ARCHIVE_INTERFACE=`echo $((12 + ${ARCHIVE_MINOR}))`
+# Libarchive revision is bumped on any source change === libtool revision
 ARCHIVE_REVISION=$(( LIBARCHIVE_VERSION_N() % 1000 ))
-ARCHIVE_LIBTOOL_MAJOR=`echo $((${ARCHIVE_MAJOR} + ${ARCHIVE_MINOR}))`
-ARCHIVE_LIBTOOL_VERSION=$ARCHIVE_LIBTOOL_MAJOR:$ARCHIVE_REVISION:$ARCHIVE_MINOR
+# Libarchive minor is bumped on any interface addition === libtool age
+ARCHIVE_LIBTOOL_VERSION=$ARCHIVE_INTERFACE:$ARCHIVE_REVISION:$ARCHIVE_MINOR
 
 # Stick the version numbers into config.h
 AC_DEFINE([LIBARCHIVE_VERSION_STRING],"LIBARCHIVE_VERSION_S()",
@@ -203,6 +209,19 @@ AC_HEADER_DIRENT
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([acl/libacl.h attr/xattr.h copyfile.h ctype.h])
 AC_CHECK_HEADERS([errno.h ext2fs/ext2_fs.h fcntl.h grp.h])
+
+AC_CACHE_CHECK([whether EXT2_IOC_GETFLAGS is usable],
+    [ac_cv_have_decl_EXT2_IOC_GETFLAGS],
+    [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([@%:@include <sys/ioctl.h>
+@%:@include <ext2fs/ext2_fs.h>],
+                                   [int x = EXT2_IOC_GETFLAGS])],
+                  [AS_VAR_SET([ac_cv_have_decl_EXT2_IOC_GETFLAGS], [yes])],
+                  [AS_VAR_SET([ac_cv_have_decl_EXT2_IOC_GETFLAGS], [no])])])
+
+AS_VAR_IF([ac_cv_have_decl_EXT2_IOC_GETFLAGS], [yes],
+    [AC_DEFINE_UNQUOTED([HAVE_WORKING_EXT2_IOC_GETFLAGS], [1],
+                    [Define to 1 if you have a working EXT2_IOC_GETFLAGS])])
+
 AC_CHECK_HEADERS([inttypes.h io.h langinfo.h limits.h])
 AC_CHECK_HEADERS([linux/fiemap.h linux/fs.h linux/magic.h])
 AC_CHECK_HEADERS([locale.h paths.h poll.h pwd.h regex.h signal.h stdarg.h])
@@ -212,8 +231,13 @@ AC_CHECK_HEADERS([sys/mkdev.h sys/mount.h])
 AC_CHECK_HEADERS([sys/param.h sys/poll.h sys/select.h sys/statfs.h sys/statvfs.h])
 AC_CHECK_HEADERS([sys/time.h sys/utime.h sys/utsname.h sys/vfs.h])
 AC_CHECK_HEADERS([time.h unistd.h utime.h wchar.h wctype.h])
-# check windows.h first.
-AC_CHECK_HEADERS([windows.h wincrypt.h winioctl.h])
+AC_CHECK_HEADERS([windows.h])
+# check windows.h first; the other headers require it.
+AC_CHECK_HEADERS([wincrypt.h winioctl.h],[],[],
+[[#ifdef HAVE_WINDOWS_H
+# include <windows.h>
+#endif
+]])
 
 # Checks for libraries.
 AC_ARG_WITH([zlib],
@@ -271,6 +295,9 @@ AC_ARG_WITH([nettle],
   AS_HELP_STRING([--without-nettle], [Don't build with crypto support from Nettle]))
 AC_ARG_WITH([openssl],
   AS_HELP_STRING([--without-openssl], [Don't build support for mtree and xar hashes through openssl]))
+case "$host_os" in
+  *darwin* ) with_openssl=no ;;
+esac
 
 AC_ARG_WITH([xml2],
   AS_HELP_STRING([--without-xml2], [Don't build support for xar through libxml2]))
@@ -520,8 +547,8 @@ AC_DEFUN([CRYPTO_CHECK], [
   if test "$found_$1" != yes; then
     saved_LIBS="$LIBS"
     saved_CPPFLAGS="$CPPFLAGS"
-    CPPFLAGS="$CPPFLAGS -I$srcdir -I$srcdir/libarchive"
-    LIBS="$LIBS $4"
+    CPPFLAGS="$CPPFLAGS -I. -I$srcdir -I$srcdir/libarchive"
+    LIBS="$LIBS $mdLIBS $4"
     touch "check_crypto_md.h"
     AC_MSG_CHECKING([support for ARCHIVE_CRYPTO_$1_$2])
     AC_LINK_IFELSE([AC_LANG_SOURCE([
@@ -589,6 +616,15 @@ if test "x$with_openssl" != "xno"; then
     CRYPTO_CHECK(SHA384, OPENSSL, sha384, -lcrypto)
     CRYPTO_CHECK(SHA512, OPENSSL, sha512, -lcrypto)
 fi
+
+# Probe libmd AFTER OpenSSL/libcrypto.
+# The two are incompatible and OpenSSL is more complete.
+CRYPTO_CHECK(MD5, LIBMD, md5, -lmd)
+CRYPTO_CHECK(RMD160, LIBMD, rmd160, -lmd)
+CRYPTO_CHECK(SHA1, LIBMD, sha1, -lmd)
+CRYPTO_CHECK(SHA256, LIBMD, sha256, -lmd)
+CRYPTO_CHECK(SHA512, LIBMD, sha512, -lmd)
+
 LIBS="$LIBS $mdLIBS"
 
 AC_OUTPUT

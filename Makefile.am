@@ -133,8 +133,10 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_read_support_filter_rpm.c		\
 	libarchive/archive_read_support_filter_uu.c		\
 	libarchive/archive_read_support_filter_xz.c		\
+	libarchive/archive_read_support_format_7zip.c		\
 	libarchive/archive_read_support_format_all.c		\
 	libarchive/archive_read_support_format_ar.c		\
+	libarchive/archive_read_support_format_by_code.c	\
 	libarchive/archive_read_support_format_cab.c		\
 	libarchive/archive_read_support_format_cpio.c		\
 	libarchive/archive_read_support_format_empty.c		\
@@ -168,6 +170,7 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_write_add_filter_program.c	\
 	libarchive/archive_write_add_filter_xz.c		\
 	libarchive/archive_write_set_format.c			\
+	libarchive/archive_write_set_format_7zip.c		\
 	libarchive/archive_write_set_format_ar.c		\
 	libarchive/archive_write_set_format_by_name.c		\
 	libarchive/archive_write_set_format_cpio.c		\
@@ -225,7 +228,6 @@ libarchive_man_MANS=						\
 
 # Additional libarchive files to include in the distribution
 libarchive_EXTRA_DIST=			\
-	libarchive/test/list.h		\
 	libarchive/archive_windows.c	\
 	libarchive/archive_windows.h	\
 	libarchive/filter_fork_windows.c	\
@@ -306,6 +308,7 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_read_disk_entry_from_file.c	\
 	libarchive/test/test_read_extract.c			\
 	libarchive/test/test_read_file_nonexistent.c		\
+	libarchive/test/test_read_format_7zip.c			\
 	libarchive/test/test_read_format_ar.c			\
 	libarchive/test/test_read_format_cab.c			\
 	libarchive/test/test_read_format_cab_filename.c		\
@@ -380,11 +383,13 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_write_disk.c			\
 	libarchive/test/test_write_disk_failures.c		\
 	libarchive/test/test_write_disk_hardlink.c		\
+	libarchive/test/test_write_disk_lookup.c		\
 	libarchive/test/test_write_disk_perms.c			\
 	libarchive/test/test_write_disk_secure.c		\
 	libarchive/test/test_write_disk_sparse.c		\
 	libarchive/test/test_write_disk_symlink.c		\
 	libarchive/test/test_write_disk_times.c			\
+	libarchive/test/test_write_format_7zip.c		\
 	libarchive/test/test_write_format_ar.c			\
 	libarchive/test/test_write_format_cpio.c		\
 	libarchive/test/test_write_format_cpio_empty.c		\
@@ -423,6 +428,7 @@ libarchive/test/list.h: Makefile
 libarchive_TESTS_ENVIRONMENT= LIBARCHIVE_TEST_FILES=`cd $(top_srcdir);/bin/pwd`/libarchive/test
 
 libarchive_test_EXTRA_DIST=\
+	libarchive/test/list.h		\
 	libarchive/test/test_acl_pax.tar.uu				\
 	libarchive/test/test_archive_string_conversion.txt.Z.uu		\
 	libarchive/test/test_compat_bzip2_1.tbz.uu			\
@@ -447,10 +453,40 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_compat_zip_1.zip.uu			\
 	libarchive/test/test_compat_zip_2.zip.uu			\
 	libarchive/test/test_compat_zip_3.zip.uu			\
+	libarchive/test/test_compat_zip_4.zip.uu			\
+	libarchive/test/test_compat_zip_5.zip.uu			\
 	libarchive/test/test_fuzz_1.iso.Z.uu				\
 	libarchive/test/test_fuzz.cab.uu				\
 	libarchive/test/test_fuzz.lzh.uu				\
 	libarchive/test/test_pax_filename_encoding.tar.uu		\
+	libarchive/test/test_read_format_7zip_bcj_bzip2.7z.uu		\
+	libarchive/test/test_read_format_7zip_bcj_copy.7z.uu		\
+	libarchive/test/test_read_format_7zip_bcj_deflate.7z.uu		\
+	libarchive/test/test_read_format_7zip_bcj_lzma1.7z.uu		\
+	libarchive/test/test_read_format_7zip_bcj_lzma2.7z.uu		\
+	libarchive/test/test_read_format_7zip_bcj2_bzip2.7z.uu		\
+	libarchive/test/test_read_format_7zip_bcj2_copy_1.7z.uu		\
+	libarchive/test/test_read_format_7zip_bcj2_copy_2.7z.uu		\
+	libarchive/test/test_read_format_7zip_bcj2_copy_lzma.7z.uu	\
+	libarchive/test/test_read_format_7zip_bcj2_deflate.7z.uu	\
+	libarchive/test/test_read_format_7zip_bcj2_lzma1_1.7z.uu	\
+	libarchive/test/test_read_format_7zip_bcj2_lzma1_2.7z.uu	\
+	libarchive/test/test_read_format_7zip_bcj2_lzma2_1.7z.uu	\
+	libarchive/test/test_read_format_7zip_bcj2_lzma2_2.7z.uu	\
+	libarchive/test/test_read_format_7zip_bzip2.7z.uu		\
+	libarchive/test/test_read_format_7zip_copy.7z.uu		\
+	libarchive/test/test_read_format_7zip_copy_2.7z.uu		\
+	libarchive/test/test_read_format_7zip_deflate.7z.uu		\
+	libarchive/test/test_read_format_7zip_delta_lzma1.7z.uu		\
+	libarchive/test/test_read_format_7zip_delta_lzma2.7z.uu		\
+	libarchive/test/test_read_format_7zip_empty_archive.7z.uu	\
+	libarchive/test/test_read_format_7zip_empty_file.7z.uu		\
+	libarchive/test/test_read_format_7zip_lzma1.7z.uu		\
+	libarchive/test/test_read_format_7zip_lzma1_2.7z.uu		\
+	libarchive/test/test_read_format_7zip_lzma1_lzma2.7z.uu		\
+	libarchive/test/test_read_format_7zip_lzma2.7z.uu		\
+	libarchive/test/test_read_format_7zip_ppmd.7z.uu		\
+	libarchive/test/test_read_format_7zip_symbolic_name.7z.uu	\
 	libarchive/test/test_read_format_ar.ar.uu			\
 	libarchive/test/test_read_format_cab_1.cab.uu			\
 	libarchive/test/test_read_format_cab_2.cab.uu			\
@@ -527,6 +563,7 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_read_format_zip_filename_utf8_ru2.zip.uu	\
 	libarchive/test/test_read_format_zip_filename_utf8_ru.zip.uu	\
 	libarchive/test/test_read_format_zip_length_at_end.zip.uu	\
+	libarchive/test/test_read_format_zip_symlink.zip.uu		\
 	libarchive/test/test_read_format_zip_ux.zip.uu			\
 	libarchive/test/test_read_large_splitted_rar_aa.uu		\
 	libarchive/test/test_read_large_splitted_rar_ab.uu		\
@@ -598,8 +635,7 @@ bsdtar_EXTRA_DIST=		\
 	tar/bsdtar_windows.h	\
 	tar/bsdtar_windows.c	\
 	tar/CMakeLists.txt	\
-	tar/config_freebsd.h	\
-	tar/test/list.h
+	tar/config_freebsd.h
 
 
 if BUILD_BSDTAR
@@ -649,13 +685,6 @@ bsdtar_test_SOURCES=						\
 	tar/test/test_version.c					\
 	tar/test/test_windows.c
 
-# For now, bsdtar_test uses Windows shims from tar/bsdtar_windows.*
-if INC_WINDOWS_FILES
-bsdtar_test_SOURCES+=			\
-		tar/bsdtar_windows.h	\
-		tar/bsdtar_windows.c
-endif
-
 bsdtar_test_CPPFLAGS=\
 	-I$(top_srcdir)/libarchive -I$(top_srcdir)/libarchive_fe \
 	-I$(top_srcdir)/tar -I$(top_builddir)/tar/test \
@@ -673,7 +702,9 @@ bsdtar_TESTS_ENVIRONMENT=
 endif
 
 bsdtar_test_EXTRA_DIST=			\
+	tar/test/list.h \
 	tar/test/test_option_keep_newer_files.tar.Z.uu \
+	tar/test/test_option_s.tar.Z.uu \
 	tar/test/test_patterns_2.tar.uu	\
 	tar/test/test_patterns_3.tar.uu	\
 	tar/test/test_patterns_4.tar.uu	\
@@ -714,7 +745,6 @@ bsdcpio_CPPFLAGS= -I$(top_srcdir)/libarchive -I$(top_srcdir)/libarchive_fe $(bsd
 bsdcpio_LDFLAGS= $(bsdcpio_ldstatic)
 
 bsdcpio_EXTRA_DIST=		\
-	cpio/test/list.h	\
 	cpio/bsdcpio.1		\
 	cpio/cpio_windows.h	\
 	cpio/cpio_windows.c	\
@@ -786,6 +816,7 @@ bsdcpio_TESTS_ENVIRONMENT=
 endif
 
 bsdcpio_test_EXTRA_DIST=			\
+	cpio/test/list.h	\
 	cpio/test/test_gcpio_compat_ref.bin.uu	\
 	cpio/test/test_gcpio_compat_ref.crc.uu	\
 	cpio/test/test_gcpio_compat_ref.newc.uu	\

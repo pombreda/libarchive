@@ -3,7 +3,7 @@
 # How to build bsdtar_test
 #
 ############################################
-IF((ENABLE_TAR OR ENABLE_TAR_SHARED) AND ENABLE_TEST)
+IF(ENABLE_TAR AND ENABLE_TEST)
   SET(bsdtar_test_SOURCES
     ../getdate.c
     main.c
@@ -39,10 +39,6 @@ IF((ENABLE_TAR OR ENABLE_TAR_SHARED) AND ENABLE_TEST)
     test_version.c
     test_windows.c
   )
-  IF(WIN32 AND NOT CYGWIN)
-    LIST(APPEND bsdtar_test_SOURCES ../bsdtar_windows.c)
-    LIST(APPEND bsdtar_test_SOURCES ../bsdtar_windows.h)
-  ENDIF(WIN32 AND NOT CYGWIN)
 
   #
   # Register target
@@ -78,4 +74,4 @@ IF((ENABLE_TAR OR ENABLE_TAR_SHARED) AND ENABLE_TEST)
   ADD_DEPENDENCIES(run_bsdtar_test bsdtar)
   ADD_DEPENDENCIES(run_all_tests run_bsdtar_test)
 
-ENDIF((ENABLE_TAR OR ENABLE_TAR_SHARED) AND ENABLE_TEST)
+ENDIF(ENABLE_TAR AND ENABLE_TEST)

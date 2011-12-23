@@ -3,7 +3,7 @@
 # How to build bsdcpio_test
 #
 ############################################
-IF((ENABLE_CPIO OR ENABLE_CPIO_SHARED) AND ENABLE_TEST)
+IF(ENABLE_CPIO AND ENABLE_TEST)
   SET(bsdcpio_test_SOURCES
     ../cmdline.c
     ../../libarchive_fe/err.c
@@ -39,9 +39,6 @@ IF((ENABLE_CPIO OR ENABLE_CPIO_SHARED) AND ENABLE_TEST)
     test_passthrough_reverse.c
     test_pathmatch.c
   )
-  IF(WIN32 AND NOT CYGWIN)
-    LIST(APPEND bsdcpio_test_SOURCES ../cpio_windows.h)
-  ENDIF(WIN32 AND NOT CYGWIN)
 
   #
   # Register target
@@ -76,5 +73,5 @@ IF((ENABLE_CPIO OR ENABLE_CPIO_SHARED) AND ENABLE_TEST)
 	COMMAND	bsdcpio_test -p ${BSDCPIO} -r ${CMAKE_CURRENT_SOURCE_DIR})
   ADD_DEPENDENCIES(run_bsdcpio_test bsdcpio)
   ADD_DEPENDENCIES(run_all_tests run_bsdcpio_test)
-ENDIF((ENABLE_CPIO OR ENABLE_CPIO_SHARED) AND ENABLE_TEST)
+ENDIF(ENABLE_CPIO AND ENABLE_TEST)
 
