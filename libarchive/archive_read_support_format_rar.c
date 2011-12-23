@@ -2574,17 +2574,22 @@ rar_read_ahead(struct archive_read *a, size_t min, ssize_t *avail)
   struct rar *rar = (struct rar *)(a->format->data);
   const void *h = __archive_read_ahead(a, min, avail);
   int ret;
-  if (avail && *avail > rar->bytes_remaining)
-    *avail = rar->bytes_remaining;
-  if (avail && *avail <= 0 && rar->main_flags & MHD_VOLUME &&
-    rar->file_flags & FHD_SPLIT_AFTER)
+  if (avail)
   {
-    ret = archive_read_format_rar_read_header(a, a->entry);
-    if (ret == (ARCHIVE_EOF))
-      ret = archive_read_format_rar_read_header(a, a->entry);
-    if (ret != (ARCHIVE_OK))
+    if (*avail > rar->bytes_remaining)
+      *avail = rar->bytes_remaining;
+    if (*avail < 0)
       return NULL;
-    return rar_read_ahead(a, min, avail);
+    else if (*avail == 0 && rar->main_flags & MHD_VOLUME &&
+      rar->file_flags & FHD_SPLIT_AFTER)
+    {
+      ret = archive_read_format_rar_read_header(a, a->entry);
+      if (ret == (ARCHIVE_EOF))
+        ret = archive_read_format_rar_read_header(a, a->entry);
+      if (ret != (ARCHIVE_OK))
+        return NULL;
+      return rar_read_ahead(a, min, avail);
+    }
   }
   return h;
 }
