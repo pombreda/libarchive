@@ -269,26 +269,17 @@ client_open_proxy(struct archive_read_filter *self)
 }
 
 static int
-client_switch_proxy(struct archive_read_filter *self, int usenext)
+client_switch_proxy(struct archive_read_filter *self, int index)
 {
   int r1 = ARCHIVE_OK, r2 = ARCHIVE_OK;
 	void *data2 = NULL;
 
-	if (usenext &&
-		(self->archive->client.cursor + 1 < self->archive->client.nodes))
-	{
-		data2 =
-			self->archive->client.dataset[self->archive->client.cursor + 1].data;
-		self->archive->client.cursor++;
-	}
-	else if (!usenext && (self->archive->client.cursor > 0) &&
-		(self->archive->client.cursor - 1 >= 0))
-	{
-		data2 =
-			self->archive->client.dataset[self->archive->client.cursor - 1].data;
-		self->archive->client.cursor--;
-	}
+	/* Don't do anything if already in the specified data node */
+	if (self->archive->client.cursor == index)
+		return (ARCHIVE_OK);
 
+	self->archive->client.cursor = index;
+	data2 = self->archive->client.dataset[self->archive->client.cursor].data;
 	if (self->archive->client.switcher != NULL)
 	{
 		r1 = r2 = (self->archive->client.switcher)
@@ -298,12 +289,12 @@ client_switch_proxy(struct archive_read_filter *self, int usenext)
 	else
 	{
 		/* Attempt to call close and open instead */
-		if (self->archive->client.opener != NULL)
-			r1 = (self->archive->client.opener)
+		if (self->archive->client.closer != NULL)
+			r1 = (self->archive->client.closer)
 				((struct archive *)self->archive, self->data);
 		self->data = data2;
-		if (self->archive->client.closer != NULL)
-			r2 = (self->archive->client.closer)
+		if (self->archive->client.opener != NULL)
+			r2 = (self->archive->client.opener)
 				((struct archive *)self->archive, self->data);
 	}
 	return (r1 < r2) ? r1 : r2;
@@ -519,6 +510,9 @@ archive_read_open1(struct archive *_a)
 	a->format = &(a->formats[slot]);
 
 	a->archive.state = ARCHIVE_STATE_HEADER;
+
+	/* Ensure libarchive starts from the first node in a multivolume set */
+	client_switch_proxy(a->filter, 0);
 	return (e);
 }
 
@@ -1244,7 +1238,8 @@ __archive_read_filter_ahead(struct archive_read_filter *filter,
 				/* Check for another client object first */
 				if (filter->archive->client.cursor != filter->archive->client.nodes - 1)
 				{
-					if (client_switch_proxy(filter, 1) == (ARCHIVE_OK))
+					if (client_switch_proxy(filter,
+						filter->archive->client.cursor + 1) == (ARCHIVE_OK))
 						continue;
 				}
 				/* Premature end-of-file. */
@@ -1429,7 +1424,8 @@ advance_file_pointer(struct archive_read_filter *filter, int64_t request)
 		if (bytes_read == 0) {
 			if (filter->archive->client.cursor != filter->archive->client.nodes - 1)
 			{
-				if (client_switch_proxy(filter, 1) == (ARCHIVE_OK))
+				if (client_switch_proxy(filter,
+					filter->archive->client.cursor + 1) == (ARCHIVE_OK))
 					continue;
 			}
 			filter->client_buff = NULL;
