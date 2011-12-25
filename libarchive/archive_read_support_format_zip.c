@@ -30,11 +30,9 @@ __FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_zip.c 201102
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
-#include <stdio.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-#include <time.h>
 #ifdef HAVE_ZLIB_H
 #include <zlib.h>
 #endif
@@ -114,6 +112,8 @@ struct zip {
 };
 
 #define ZIP_LENGTH_AT_END	8
+#define ZIP_ENCRYPTED		(1<<0)	
+#define ZIP_STRONG_ENCRYPTED	(1<<6)	
 #define ZIP_UTF8_NAME		(1<<11)	
 
 static int	archive_read_format_zip_streamable_bid(struct archive_read *, int);
@@ -333,7 +333,7 @@ archive_read_format_zip_seekable_read_header(struct archive_read *a,
 	struct archive_entry *entry)
 {
 	struct zip *zip = (struct zip *)a->format->data;
-	int r;
+	int r, ret = ARCHIVE_OK;
 
 	a->archive.archive_format = ARCHIVE_FORMAT_ZIP;
 	if (a->archive.archive_format_name == NULL)
@@ -358,7 +358,56 @@ archive_read_format_zip_seekable_read_header(struct archive_read *a,
 	   typically faster (easier for I/O layer to optimize). */
 	__archive_read_seek(a, zip->entry->local_header_offset, SEEK_SET);
 	zip->unconsumed = 0;
-	return zip_read_local_file_header(a, entry, zip);
+	r = zip_read_local_file_header(a, entry, zip);
+	if (r != ARCHIVE_OK)
+		return r;
+	if ((zip->entry->mode & AE_IFMT) == AE_IFLNK) {
+		const void *p;
+		struct archive_string_conv *sconv;
+		size_t linkname_length = archive_entry_size(entry);
+
+		archive_entry_set_size(entry, 0);
+		p = __archive_read_ahead(a, linkname_length, NULL);
+		if (p == NULL) {
+			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+			    "Truncated Zip file");
+			return ARCHIVE_FATAL;
+		}
+
+		sconv = zip->sconv;
+		if (sconv == NULL && (zip->entry->flags & ZIP_UTF8_NAME))
+			sconv = zip->sconv_utf8;
+		if (sconv == NULL)
+			sconv = zip->sconv_default;
+		if (archive_entry_copy_symlink_l(entry, p, linkname_length,
+		    sconv) != 0) {
+			if (errno != ENOMEM && sconv == zip->sconv_utf8 &&
+			    (zip->entry->flags & ZIP_UTF8_NAME))
+			    archive_entry_copy_symlink_l(entry, p,
+				linkname_length, NULL);
+			if (errno == ENOMEM) {
+				archive_set_error(&a->archive, ENOMEM,
+				    "Can't allocate memory for Symlink");
+				return (ARCHIVE_FATAL);
+			}
+			/*
+			 * Since there is no character-set regulation for
+			 * symlink name, do not report the conversion error
+			 * in an automatic conversion.
+			 */
+			if (sconv != zip->sconv_utf8 ||
+			    (zip->entry->flags & ZIP_UTF8_NAME) == 0) {
+				archive_set_error(&a->archive,
+				    ARCHIVE_ERRNO_FILE_FORMAT,
+				    "Symlink cannot be converted "
+				    "from %s to current locale.",
+				    archive_string_conversion_charset_name(
+					sconv));
+				ret = ARCHIVE_WARN;
+			}
+		}
+	}
+	return (ret);
 }
 
 static int
@@ -723,6 +772,12 @@ archive_read_format_zip_read_data(struct archive_read *a,
 	/* Return EOF immediately if this is a non-regular file. */
 	if (AE_IFREG != (zip->entry->mode & AE_IFMT))
 		return (ARCHIVE_EOF);
+
+	if (zip->entry->flags & (ZIP_ENCRYPTED | ZIP_STRONG_ENCRYPTED)) {
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+		    "Encrypted file is unsupported");
+		return (ARCHIVE_FAILED);
+	}
 
 	__archive_read_consume(a, zip->unconsumed);
 	zip->unconsumed = 0;

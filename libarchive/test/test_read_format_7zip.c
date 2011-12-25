@@ -118,7 +118,7 @@ test_empty_file()
 
 	/* Verify regular empty. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("empty", archive_entry_pathname(ae));
 	assertEqualInt(86401, archive_entry_mtime(ae));
 	assertEqualInt(0, archive_entry_size(ae));
@@ -142,7 +142,7 @@ test_empty_file()
  * The header of the 7z archive files is not encdoed.
  */
 static void
-text_plain_header(const char *refname)
+test_plain_header(const char *refname)
 {
 	struct archive_entry *ae;
 	struct archive *a;
@@ -157,7 +157,7 @@ text_plain_header(const char *refname)
 
 	/* Verify regular file1. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("file1", archive_entry_pathname(ae));
 	assertEqualInt(1322058763, archive_entry_mtime(ae));
 	assertEqualInt(2844, archive_entry_size(ae));
@@ -198,7 +198,7 @@ test_extract_all_files(const char *refname)
 
 	/* Verify regular file1. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("dir1/file1", archive_entry_pathname(ae));
 	assertEqualInt(86401, archive_entry_mtime(ae));
 	assertEqualInt(13, archive_entry_size(ae));
@@ -207,7 +207,7 @@ test_extract_all_files(const char *refname)
 
 	/* Verify regular file2. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("file2", archive_entry_pathname(ae));
 	assertEqualInt(86401, archive_entry_mtime(ae));
 	assertEqualInt(26, archive_entry_size(ae));
@@ -216,7 +216,7 @@ test_extract_all_files(const char *refname)
 
 	/* Verify regular file3. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("file3", archive_entry_pathname(ae));
 	assertEqualInt(86401, archive_entry_mtime(ae));
 	assertEqualInt(39, archive_entry_size(ae));
@@ -225,7 +225,7 @@ test_extract_all_files(const char *refname)
 
 	/* Verify regular file4. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("file4", archive_entry_pathname(ae));
 	assertEqualInt(86401, archive_entry_mtime(ae));
 	assertEqualInt(52, archive_entry_size(ae));
@@ -235,8 +235,8 @@ test_extract_all_files(const char *refname)
 
 	/* Verify directory dir1. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFDIR | 0777), archive_entry_mode(ae));
-	assertEqualString("dir1", archive_entry_pathname(ae));
+	assertEqualInt((AE_IFDIR | 0755), archive_entry_mode(ae));
+	assertEqualString("dir1/", archive_entry_pathname(ae));
 	assertEqualInt(2764801, archive_entry_mtime(ae));
 
 	assertEqualInt(5, archive_file_count(a));
@@ -273,28 +273,28 @@ test_extract_last_file(const char *refname)
 
 	/* Verify regular file1. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("dir1/file1", archive_entry_pathname(ae));
 	assertEqualInt(86401, archive_entry_mtime(ae));
 	assertEqualInt(13, archive_entry_size(ae));
 
 	/* Verify regular file2. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("file2", archive_entry_pathname(ae));
 	assertEqualInt(86401, archive_entry_mtime(ae));
 	assertEqualInt(26, archive_entry_size(ae));
 
 	/* Verify regular file3. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("file3", archive_entry_pathname(ae));
 	assertEqualInt(86401, archive_entry_mtime(ae));
 	assertEqualInt(39, archive_entry_size(ae));
 
 	/* Verify regular file4. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("file4", archive_entry_pathname(ae));
 	assertEqualInt(86401, archive_entry_mtime(ae));
 	assertEqualInt(52, archive_entry_size(ae));
@@ -304,8 +304,8 @@ test_extract_last_file(const char *refname)
 
 	/* Verify directory dir1. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFDIR | 0777), archive_entry_mode(ae));
-	assertEqualString("dir1", archive_entry_pathname(ae));
+	assertEqualInt((AE_IFDIR | 0755), archive_entry_mode(ae));
+	assertEqualString("dir1/", archive_entry_pathname(ae));
 	assertEqualInt(2764801, archive_entry_mtime(ae));
 
 	assertEqualInt(5, archive_file_count(a));
@@ -343,7 +343,7 @@ test_extract_all_files2(const char *refname)
 
 	/* Verify regular file1. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("dir1/file1", archive_entry_pathname(ae));
 	assertEqualInt(86401, archive_entry_mtime(ae));
 	assertEqualInt(13, archive_entry_size(ae));
@@ -352,7 +352,7 @@ test_extract_all_files2(const char *refname)
 
 	/* Verify regular file2. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("file2", archive_entry_pathname(ae));
 	assertEqualInt(86401, archive_entry_mtime(ae));
 	assertEqualInt(26, archive_entry_size(ae));
@@ -361,7 +361,7 @@ test_extract_all_files2(const char *refname)
 
 	/* Verify regular file3. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("file3", archive_entry_pathname(ae));
 	assertEqualInt(86401, archive_entry_mtime(ae));
 	assertEqualInt(39, archive_entry_size(ae));
@@ -370,7 +370,7 @@ test_extract_all_files2(const char *refname)
 
 	/* Verify regular file4. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("file4", archive_entry_pathname(ae));
 	assertEqualInt(86401, archive_entry_mtime(ae));
 	assertEqualInt(52, archive_entry_size(ae));
@@ -380,7 +380,7 @@ test_extract_all_files2(const char *refname)
 
 	/* Verify regular zfile1. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("dir1/zfile1", archive_entry_pathname(ae));
 	assertEqualInt(5184001, archive_entry_mtime(ae));
 	assertEqualInt(13, archive_entry_size(ae));
@@ -389,7 +389,7 @@ test_extract_all_files2(const char *refname)
 
 	/* Verify regular zfile2. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("zfile2", archive_entry_pathname(ae));
 	assertEqualInt(5184001, archive_entry_mtime(ae));
 	assertEqualInt(26, archive_entry_size(ae));
@@ -398,7 +398,7 @@ test_extract_all_files2(const char *refname)
 
 	/* Verify regular zfile3. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("zfile3", archive_entry_pathname(ae));
 	assertEqualInt(5184001, archive_entry_mtime(ae));
 	assertEqualInt(39, archive_entry_size(ae));
@@ -407,7 +407,7 @@ test_extract_all_files2(const char *refname)
 
 	/* Verify regular zfile4. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("zfile4", archive_entry_pathname(ae));
 	assertEqualInt(5184001, archive_entry_mtime(ae));
 	assertEqualInt(52, archive_entry_size(ae));
@@ -417,8 +417,8 @@ test_extract_all_files2(const char *refname)
 
 	/* Verify directory dir1. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFDIR | 0777), archive_entry_mode(ae));
-	assertEqualString("dir1", archive_entry_pathname(ae));
+	assertEqualInt((AE_IFDIR | 0755), archive_entry_mode(ae));
+	assertEqualString("dir1/", archive_entry_pathname(ae));
 	assertEqualInt(2764801, archive_entry_mtime(ae));
 
 	assertEqualInt(9, archive_file_count(a));
@@ -456,7 +456,7 @@ test_delta_lzma(const char *refname)
 
 	/* Verify regular file1. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
 	assertEqualString("file1", archive_entry_pathname(ae));
 	assertEqualInt(172802, archive_entry_mtime(ae));
 	assertEqualInt(27627, archive_entry_size(ae));
@@ -493,7 +493,7 @@ test_delta_lzma(const char *refname)
  * Extract a file compressed with BCJ + LZMA2.
  */
 static void
-test_bcj_lzma(const char *refname)
+test_bcj(const char *refname)
 {
 	struct archive_entry *ae;
 	struct archive *a;
@@ -598,6 +598,52 @@ test_ppmd()
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 
+static void
+test_symname()
+{
+	const char *refname = "test_read_format_7zip_symbolic_name.7z";
+	struct archive_entry *ae;
+	struct archive *a;
+	char buff[128];
+
+	extract_reference_file(refname);
+	assert((a = archive_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_open_filename(a, refname, 10240));
+
+	/* Verify regular file1. */
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
+	assertEqualString("file1", archive_entry_pathname(ae));
+	assertEqualInt(86401, archive_entry_mtime(ae));
+	assertEqualInt(32, archive_entry_size(ae));
+	assertEqualInt(32, archive_read_data(a, buff, sizeof(buff)));
+	assertEqualMem(buff, "hellohellohello\nhellohellohello\n", 32);
+
+	/* Verify symbolic-linke symlinkfile. */
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualInt((AE_IFLNK | 0755), archive_entry_mode(ae));
+	assertEqualString("symlinkfile", archive_entry_pathname(ae));
+	assertEqualString("file1", archive_entry_symlink(ae));
+	assertEqualInt(86401, archive_entry_mtime(ae));
+
+	assertEqualInt(2, archive_file_count(a));
+
+	/* End of archive. */
+	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
+
+	/* Verify archive format. */
+	assertEqualIntA(a, ARCHIVE_COMPRESSION_NONE, archive_compression(a));
+	assertEqualIntA(a, ARCHIVE_FORMAT_7ZIP, archive_format(a));
+
+	/* Close the archive. */
+	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+}
+
+
 DEFINE_TEST(test_read_format_7zip)
 {
 	struct archive *a;
@@ -606,6 +652,9 @@ DEFINE_TEST(test_read_format_7zip)
 	test_empty_archive();
 	test_empty_file();
 	test_ppmd();
+	test_bcj("test_read_format_7zip_bcj_copy.7z");
+	test_bcj("test_read_format_7zip_bcj2_copy_1.7z");
+	test_bcj("test_read_format_7zip_bcj2_copy_2.7z");
 
 	assert((a = archive_read_new()) != NULL);
 
@@ -613,29 +662,39 @@ DEFINE_TEST(test_read_format_7zip)
 	if (ARCHIVE_OK != archive_read_support_filter_bzip2(a)) {
 		skipping("7zip:bzip2 decoding is not supported on this platform");
 	} else {
-		text_plain_header("test_read_format_7zip_bzip2.7z");
+		test_plain_header("test_read_format_7zip_bzip2.7z");
+		test_bcj("test_read_format_7zip_bcj_bzip2.7z");
+		test_bcj("test_read_format_7zip_bcj2_bzip2.7z");
 	}
 
 	/* Extracting with libz */
 	if (ARCHIVE_OK != archive_read_support_filter_gzip(a)) {
 		skipping("7zip:deflate decoding is not supported on this platform");
 	} else {
-		text_plain_header("test_read_format_7zip_deflate.7z");
+		test_plain_header("test_read_format_7zip_deflate.7z");
+		test_bcj("test_read_format_7zip_bcj_deflate.7z");
+		test_bcj("test_read_format_7zip_bcj2_deflate.7z");
 	}
 
 	/* Extracting with liblzma */
 	if (ARCHIVE_OK != archive_read_support_filter_xz(a)) {
 		skipping("7zip:lzma decoding is not supported on this platform");
 	} else {
-		text_plain_header("test_read_format_7zip_lzma1.7z");
-		text_plain_header("test_read_format_7zip_lzma2.7z");
+		test_symname();
+		test_plain_header("test_read_format_7zip_lzma1.7z");
+		test_plain_header("test_read_format_7zip_lzma2.7z");
 		test_extract_all_files("test_read_format_7zip_copy_2.7z");
 		test_extract_all_files("test_read_format_7zip_lzma1_2.7z");
 		test_extract_last_file("test_read_format_7zip_copy_2.7z");
 		test_extract_last_file("test_read_format_7zip_lzma1_2.7z");
 		test_extract_all_files2("test_read_format_7zip_lzma1_lzma2.7z");
-		test_bcj_lzma("test_read_format_7zip_bcj_lzma1.7z");
-		test_bcj_lzma("test_read_format_7zip_bcj_lzma2.7z");
+		test_bcj("test_read_format_7zip_bcj_lzma1.7z");
+		test_bcj("test_read_format_7zip_bcj_lzma2.7z");
+		test_bcj("test_read_format_7zip_bcj2_copy_lzma.7z");
+		test_bcj("test_read_format_7zip_bcj2_lzma1_1.7z");
+		test_bcj("test_read_format_7zip_bcj2_lzma1_2.7z");
+		test_bcj("test_read_format_7zip_bcj2_lzma2_1.7z");
+		test_bcj("test_read_format_7zip_bcj2_lzma2_2.7z");
 		test_delta_lzma("test_read_format_7zip_delta_lzma1.7z");
 		test_delta_lzma("test_read_format_7zip_delta_lzma2.7z");
 	}

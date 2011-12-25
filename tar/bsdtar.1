@@ -25,7 +25,7 @@
 .\" $FreeBSD: src/usr.bin/tar/bsdtar.1,v 1.46 2008/12/06 07:37:55 kientzle Exp $
 .\"
 .Dd Oct 12, 2009
-.Dt BSDTAR 1
+.Dt TAR 1
 .Os
 .Sh NAME
 .Nm tar
@@ -50,9 +50,9 @@
 .Sh DESCRIPTION
 .Nm
 creates and manipulates streaming archive files.
-This implementation can extract from tar, pax, cpio, zip, jar, ar,
-xar, and ISO 9660 cdrom images and can create tar, pax, cpio, ar, zip,
-and shar archives.
+This implementation can extract from tar, pax, cpio, zip, jar, ar, xar,
+rpm, 7-zip, and ISO 9660 cdrom images and can create tar, pax, cpio, ar, zip,
+7-zip, and shar archives.
 .Pp
 The first synopsis form shows a
 .Dq bundled
@@ -473,7 +473,7 @@ Attempt to restore the full permissions, including owner, file modes, file
 flags and ACLs, if available, for each item extracted from the archive.
 This is the default, if
 .Nm
-is being run by root and can be overriden by also specifying
+is being run by root and can be overridden by also specifying
 .Fl Fl no-same-owner
 and
 .Fl Fl no-same-permissions .
@@ -656,8 +656,6 @@ Note that, unlike other
 implementations, this implementation recognizes gzip compression
 automatically when reading archives.
 .El
-.Sh EXIT STATUS
-.Ex -std
 .Sh ENVIRONMENT
 The following environment variables affect the execution of
 .Nm :
@@ -681,6 +679,8 @@ See
 .Xr environ 7
 for more information.
 .El
+.Sh EXIT STATUS
+.Ex -std
 .Sh EXAMPLES
 The following creates a new archive
 called

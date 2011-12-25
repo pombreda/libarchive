@@ -124,18 +124,7 @@ extern "C" {
  * easy to compare versions at build time: for version a.b.c, the
  * version number is printf("%d%03d%03d",a,b,c).  For example, if you
  * know your application requires version 2.12.108 or later, you can
- * assert that ARCHIVE_VERSION >= 2012108.
- *
- * This single-number format was introduced with libarchive 1.9.0 in
- * the libarchive 1.x family and libarchive 2.2.4 in the libarchive
- * 2.x family.  The following may be useful if you really want to do
- * feature detection for earlier libarchive versions (which defined
- * ARCHIVE_API_VERSION and ARCHIVE_API_FEATURE instead):
- *
- * #ifndef ARCHIVE_VERSION_NUMBER
- * #define ARCHIVE_VERSION_NUMBER	\
- *             (ARCHIVE_API_VERSION * 1000000 + ARCHIVE_API_FEATURE * 1000)
- * #endif
+ * assert that ARCHIVE_VERSION_NUMBER >= 2012108.
  */
 /* Note: Compiler will complain if this does not match archive_entry.h! */
 #define	ARCHIVE_VERSION_NUMBER 3000001
@@ -447,8 +436,6 @@ __LA_DECL int archive_read_data_block(struct archive *a,
  *  'into_fd': writes data to specified filedes
  */
 __LA_DECL int archive_read_data_skip(struct archive *);
-__LA_DECL int archive_read_data_into_buffer(struct archive *,
-			    void *buffer, __LA_SSIZE_T len);
 __LA_DECL int archive_read_data_into_fd(struct archive *, int fd);
 
 /*
@@ -596,6 +583,7 @@ __LA_DECL int archive_write_set_format(struct archive *, int format_code);
 __LA_DECL int archive_write_set_format_by_name(struct archive *,
 		     const char *name);
 /* To minimize link pollution, use one or more of the following. */
+__LA_DECL int archive_write_set_format_7zip(struct archive *);
 __LA_DECL int archive_write_set_format_ar_bsd(struct archive *);
 __LA_DECL int archive_write_set_format_ar_svr4(struct archive *);
 __LA_DECL int archive_write_set_format_cpio(struct archive *);
@@ -723,6 +711,8 @@ __LA_DECL int archive_write_disk_set_user_lookup(struct archive *,
     void * /* private_data */,
     __LA_INT64_T (*)(void *, const char *, __LA_INT64_T),
     void (* /* cleanup */)(void *));
+__LA_DECL __LA_INT64_T archive_write_disk_gid(struct archive *, const char *, __LA_INT64_T);
+__LA_DECL __LA_INT64_T archive_write_disk_uid(struct archive *, const char *, __LA_INT64_T);
 
 /*
  * ARCHIVE_READ_DISK API

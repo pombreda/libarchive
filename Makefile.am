@@ -173,6 +173,7 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_write_add_filter_program.c	\
 	libarchive/archive_write_add_filter_xz.c		\
 	libarchive/archive_write_set_format.c			\
+	libarchive/archive_write_set_format_7zip.c		\
 	libarchive/archive_write_set_format_ar.c		\
 	libarchive/archive_write_set_format_by_name.c		\
 	libarchive/archive_write_set_format_cpio.c		\
@@ -384,11 +385,13 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_write_disk.c			\
 	libarchive/test/test_write_disk_failures.c		\
 	libarchive/test/test_write_disk_hardlink.c		\
+	libarchive/test/test_write_disk_lookup.c		\
 	libarchive/test/test_write_disk_perms.c			\
 	libarchive/test/test_write_disk_secure.c		\
 	libarchive/test/test_write_disk_sparse.c		\
 	libarchive/test/test_write_disk_symlink.c		\
 	libarchive/test/test_write_disk_times.c			\
+	libarchive/test/test_write_format_7zip.c		\
 	libarchive/test/test_write_format_ar.c			\
 	libarchive/test/test_write_format_cpio.c		\
 	libarchive/test/test_write_format_cpio_empty.c		\
@@ -458,8 +461,20 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_fuzz.cab.uu				\
 	libarchive/test/test_fuzz.lzh.uu				\
 	libarchive/test/test_pax_filename_encoding.tar.uu		\
+	libarchive/test/test_read_format_7zip_bcj_bzip2.7z.uu		\
+	libarchive/test/test_read_format_7zip_bcj_copy.7z.uu		\
+	libarchive/test/test_read_format_7zip_bcj_deflate.7z.uu		\
 	libarchive/test/test_read_format_7zip_bcj_lzma1.7z.uu		\
 	libarchive/test/test_read_format_7zip_bcj_lzma2.7z.uu		\
+	libarchive/test/test_read_format_7zip_bcj2_bzip2.7z.uu		\
+	libarchive/test/test_read_format_7zip_bcj2_copy_1.7z.uu		\
+	libarchive/test/test_read_format_7zip_bcj2_copy_2.7z.uu		\
+	libarchive/test/test_read_format_7zip_bcj2_copy_lzma.7z.uu	\
+	libarchive/test/test_read_format_7zip_bcj2_deflate.7z.uu	\
+	libarchive/test/test_read_format_7zip_bcj2_lzma1_1.7z.uu	\
+	libarchive/test/test_read_format_7zip_bcj2_lzma1_2.7z.uu	\
+	libarchive/test/test_read_format_7zip_bcj2_lzma2_1.7z.uu	\
+	libarchive/test/test_read_format_7zip_bcj2_lzma2_2.7z.uu	\
 	libarchive/test/test_read_format_7zip_bzip2.7z.uu		\
 	libarchive/test/test_read_format_7zip_copy.7z.uu		\
 	libarchive/test/test_read_format_7zip_copy_2.7z.uu		\
@@ -473,6 +488,7 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_read_format_7zip_lzma1_lzma2.7z.uu		\
 	libarchive/test/test_read_format_7zip_lzma2.7z.uu		\
 	libarchive/test/test_read_format_7zip_ppmd.7z.uu		\
+	libarchive/test/test_read_format_7zip_symbolic_name.7z.uu	\
 	libarchive/test/test_read_format_ar.ar.uu			\
 	libarchive/test/test_read_format_cab_1.cab.uu			\
 	libarchive/test/test_read_format_cab_2.cab.uu			\
@@ -545,6 +561,7 @@ libarchive_test_EXTRA_DIST=\
 	libarchive/test/test_read_format_zip_filename_utf8_ru2.zip.uu	\
 	libarchive/test/test_read_format_zip_filename_utf8_ru.zip.uu	\
 	libarchive/test/test_read_format_zip_length_at_end.zip.uu	\
+	libarchive/test/test_read_format_zip_symlink.zip.uu		\
 	libarchive/test/test_read_format_zip_ux.zip.uu			\
 	libarchive/test/CMakeLists.txt					\
 	libarchive/test/README

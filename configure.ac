@@ -18,7 +18,7 @@ AC_PREREQ(2.65)
 # Now starts the "real" configure script.
 #
 
-AC_INIT([libarchive],LIBARCHIVE_VERSION_S(),[kientzle@freebsd.org])
+AC_INIT([libarchive],LIBARCHIVE_VERSION_S(),[kientzle@FreeBSD.org])
 # Make sure the srcdir contains "libarchive" directory
 AC_CONFIG_SRCDIR([libarchive])
 # Use auxiliary subscripts from this subdirectory (cleans up root)
@@ -35,9 +35,10 @@ AM_INIT_AUTOMAKE()
 ARCHIVE_MINOR=$(( (LIBARCHIVE_VERSION_N() / 1000) % 1000 ))
 # Libarchive 2.7 == libtool interface 9 = 2 + 7
 # Libarchive 2.8 == libtool interface 10 = 2 + 8
-# Libarchive 3.0 == libtool interface 11 (assumes there's no libarchive 2.9)
-# Libarchive 3.x == libtool interface 11 + x
-ARCHIVE_INTERFACE=`echo $((11 + ${ARCHIVE_MINOR}))`
+# Libarchive 2.9 == libtool interface 11 = 2 + 8
+# Libarchive 3.0 == libtool interface 12
+# Libarchive 3.x == libtool interface 12 + x
+ARCHIVE_INTERFACE=`echo $((12 + ${ARCHIVE_MINOR}))`
 # Libarchive revision is bumped on any source change === libtool revision
 ARCHIVE_REVISION=$(( LIBARCHIVE_VERSION_N() % 1000 ))
 # Libarchive minor is bumped on any interface addition === libtool age
@@ -256,6 +257,19 @@ AC_HEADER_DIRENT
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([acl/libacl.h attr/xattr.h copyfile.h ctype.h])
 AC_CHECK_HEADERS([errno.h ext2fs/ext2_fs.h fcntl.h grp.h])
+
+AC_CACHE_CHECK([whether EXT2_IOC_GETFLAGS is usable],
+    [ac_cv_have_decl_EXT2_IOC_GETFLAGS],
+    [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([@%:@include <sys/ioctl.h>
+@%:@include <ext2fs/ext2_fs.h>],
+                                   [int x = EXT2_IOC_GETFLAGS])],
+                  [AS_VAR_SET([ac_cv_have_decl_EXT2_IOC_GETFLAGS], [yes])],
+                  [AS_VAR_SET([ac_cv_have_decl_EXT2_IOC_GETFLAGS], [no])])])
+
+AS_VAR_IF([ac_cv_have_decl_EXT2_IOC_GETFLAGS], [yes],
+    [AC_DEFINE_UNQUOTED([HAVE_WORKING_EXT2_IOC_GETFLAGS], [1],
+                    [Define to 1 if you have a working EXT2_IOC_GETFLAGS])])
+
 AC_CHECK_HEADERS([inttypes.h io.h langinfo.h limits.h])
 AC_CHECK_HEADERS([linux/fiemap.h linux/fs.h linux/magic.h])
 AC_CHECK_HEADERS([locale.h paths.h poll.h pwd.h regex.h signal.h stdarg.h])
@@ -617,17 +631,13 @@ main(int argc, char **argv)
 ])
 
 CRYPTO_CHECK(MD5, LIBC, md5)
-CRYPTO_CHECK(MD5, LIBMD, md5, -lmd)
 CRYPTO_CHECK(MD5, LIBSYSTEM, md5)
 CRYPTO_CHECK(RMD160, LIBC, rmd160)
-CRYPTO_CHECK(RMD160, LIBMD, rmd160, -lmd)
 CRYPTO_CHECK(SHA1, LIBC, sha1)
-CRYPTO_CHECK(SHA1, LIBMD, sha1, -lmd)
 CRYPTO_CHECK(SHA1, LIBSYSTEM, sha1)
 CRYPTO_CHECK(SHA256, LIBC, sha256)
 CRYPTO_CHECK(SHA256, LIBC2, sha256)
 CRYPTO_CHECK(SHA256, LIBC3, sha256)
-CRYPTO_CHECK(SHA256, LIBMD, sha256, -lmd)
 CRYPTO_CHECK(SHA256, LIBSYSTEM, sha256)
 CRYPTO_CHECK(SHA384, LIBC, sha384)
 CRYPTO_CHECK(SHA384, LIBC2, sha384)
@@ -636,7 +646,6 @@ CRYPTO_CHECK(SHA384, LIBSYSTEM, sha384)
 CRYPTO_CHECK(SHA512, LIBC, sha512)
 CRYPTO_CHECK(SHA512, LIBC2, sha512)
 CRYPTO_CHECK(SHA512, LIBC3, sha512)
-CRYPTO_CHECK(SHA512, LIBMD, sha512, -lmd)
 CRYPTO_CHECK(SHA512, LIBSYSTEM, sha512)
 
 if test "x$with_nettle" != "xno"; then
@@ -655,6 +664,15 @@ if test "x$with_openssl" != "xno"; then
     CRYPTO_CHECK(SHA384, OPENSSL, sha384, -lcrypto)
     CRYPTO_CHECK(SHA512, OPENSSL, sha512, -lcrypto)
 fi
+
+# Probe libmd AFTER OpenSSL/libcrypto.
+# The two are incompatible and OpenSSL is more complete.
+CRYPTO_CHECK(MD5, LIBMD, md5, -lmd)
+CRYPTO_CHECK(RMD160, LIBMD, rmd160, -lmd)
+CRYPTO_CHECK(SHA1, LIBMD, sha1, -lmd)
+CRYPTO_CHECK(SHA256, LIBMD, sha256, -lmd)
+CRYPTO_CHECK(SHA512, LIBMD, sha512, -lmd)
+
 LIBS="$LIBS $mdLIBS"
 
 AC_OUTPUT
