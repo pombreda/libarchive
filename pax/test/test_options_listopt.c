@@ -64,17 +64,17 @@ DEFINE_TEST(test_options_listopt)
 	failure("Output should be default value");
 #if defined(_WIN32) && !defined(__CYGWIN__)
 	assertTextFileContents(
-"-rw-r--r--  0 cue    cue        17 6 23 14:07 file1\n"
-"hrw-r--r--  0 cue    cue         0 6 23 14:07 hardlink1 link to file1\n"
+"-rw-r--r--  0 cue    cue        17 6 23  2011 file1\n"
+"hrw-r--r--  0 cue    cue         0 6 23  2011 hardlink1 link to file1\n"
 "-rw-r--r--  0 cue    cue         4 1 01  1980 oldfile\n"
-"lrwxr-xr-x  0 cue    cue         0 6 23 14:08 symlink1 -> file1\n",
+"lrwxr-xr-x  0 cue    cue         0 6 23  2011 symlink1 -> file1\n",
 	    "test.out");
 #else
 	assertTextFileContents(
-"-rw-r--r--  0 cue    cue        17 Jun 23 14:07 file1\n"
-"hrw-r--r--  0 cue    cue         0 Jun 23 14:07 hardlink1 link to file1\n"
+"-rw-r--r--  0 cue    cue        17 Jun 23  2011 file1\n"
+"hrw-r--r--  0 cue    cue         0 Jun 23  2011 hardlink1 link to file1\n"
 "-rw-r--r--  0 cue    cue         4 Jan  1  1980 oldfile\n"
-"lrwxr-xr-x  0 cue    cue         0 Jun 23 14:08 symlink1 -> file1\n",
+"lrwxr-xr-x  0 cue    cue         0 Jun 23  2011 symlink1 -> file1\n",
 	    "test.out");
 #endif
 	assertTextFileContents(
