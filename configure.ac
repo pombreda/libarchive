@@ -4,8 +4,8 @@ dnl First, define all of the version numbers up front.
 dnl In particular, this allows the version macro to be used in AC_INIT
 
 dnl These first two version numbers are updated automatically on each release.
-m4_define([LIBARCHIVE_VERSION_S],[3.0.1b])
-m4_define([LIBARCHIVE_VERSION_N],[3000001])
+m4_define([LIBARCHIVE_VERSION_S],[3.0.900a])
+m4_define([LIBARCHIVE_VERSION_N],[3000900])
 
 dnl bsdtar, bsdcpio and bsdpax versioning tracks libarchive
 m4_define([BSDTAR_VERSION_S],LIBARCHIVE_VERSION_S())
@@ -619,7 +619,7 @@ main(int argc, char **argv)
     [ AC_MSG_RESULT([yes])
       found_$1=yes
       if [[ -n "$4" ]]; then
-        test -n "$(echo $mdLIBS | grep -e $4)" || mdLIBS="$mdLIBS $4"
+        test -n "$(echo $mdLIBS | $GREP .$4)" || mdLIBS="$mdLIBS $4"
       fi
       AC_DEFINE(ARCHIVE_CRYPTO_$1_$2, 1, [ $1 via ARCHIVE_CRYPTO_$1_$2 supported.])
     ],

@@ -127,13 +127,13 @@ extern "C" {
  * assert that ARCHIVE_VERSION_NUMBER >= 2012108.
  */
 /* Note: Compiler will complain if this does not match archive_entry.h! */
-#define	ARCHIVE_VERSION_NUMBER 3000001
+#define	ARCHIVE_VERSION_NUMBER 3000900
 __LA_DECL int		archive_version_number(void);
 
 /*
  * Textual name/version of the library, useful for version displays.
  */
-#define	ARCHIVE_VERSION_STRING "libarchive 3.0.1b"
+#define	ARCHIVE_VERSION_STRING "libarchive 3.0.900a"
 __LA_DECL const char *	archive_version_string(void);
 
 /* Declare our basic types. */
@@ -757,6 +757,7 @@ __LA_DECL int	archive_read_disk_open_w(struct archive *, const wchar_t *);
  * you invoke this on every returned path, you'll get a full logical
  * traversal.
  */
+__LA_DECL int	archive_read_disk_can_descend(struct archive *);
 __LA_DECL int	archive_read_disk_descend(struct archive *);
 __LA_DECL int	archive_read_disk_current_filesystem(struct archive *);
 __LA_DECL int	archive_read_disk_current_filesystem_is_synthetic(struct archive *);

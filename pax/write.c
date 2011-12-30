@@ -648,7 +648,7 @@ write_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 				continue;
 		}
 #endif
-#if defined(EXT2_IOC_GETFLAGS) && defined(EXT2_NODUMP_FL)
+#if defined(EXT2_IOC_GETFLAGS) && defined(EXT2_NODUMP_FL) && defined(HAVE_WORKING_EXT2_IOC_GETFLAGS)
 		if (bsdpax->option_honor_nodump) {
 			unsigned long flags, clear;
 			archive_entry_fflags(entry, &flags, &clear);

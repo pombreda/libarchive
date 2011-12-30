@@ -135,6 +135,11 @@ __la_win_permissive_name_w(const wchar_t *wname)
 	l = GetFullPathNameW(wname, 0, NULL, NULL);
 	if (l == 0)
 		return (NULL);
+	/* NOTE: GetFullPathNameW has a bug that if the length of the file
+	 * name is just one that return imcomplete buffer size. Thus, we 
+	 * have to add three to the size to allocate a sufficient buffer
+	 * size for the full-pathname of the file name. */
+	l += 3;
 	wnp = malloc(l * sizeof(wchar_t));
 	if (wnp == NULL)
 		return (NULL);
@@ -227,27 +232,6 @@ la_CreateFile(const char *path, DWORD dwDesiredAccess, DWORD dwShareMode,
 	    hTemplateFile);
 	free(wpath);
 	return (handle);
-}
-
-/*
- * This fcntl is limited implementation.
- */
-int
-__la_fcntl(int fd, int cmd, int val)
-{
-	HANDLE handle;
-
-	handle = (HANDLE)_get_osfhandle(fd);
-	if (GetFileType(handle) == FILE_TYPE_PIPE) {
-		if (cmd == F_SETFL && val == 0) {
-			DWORD mode = PIPE_WAIT;
-			if (SetNamedPipeHandleState(
-			    handle, &mode, NULL, NULL) != 0)
-				return (0);
-		}
-	}
-	errno = EINVAL;
-	return (-1);
 }
 
 /* This can exceed MAX_PATH limitation. */

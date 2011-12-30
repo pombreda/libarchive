@@ -1018,6 +1018,18 @@ setup_sparse(struct archive_read_disk *a, struct archive_entry *entry)
 	return (ARCHIVE_OK);
 }
 
+int
+archive_read_disk_can_descend(struct archive *_a)
+{
+	struct archive_read_disk *a = (struct archive_read_disk *)_a;
+	struct tree *t = a->tree;
+
+	archive_check_magic(_a, ARCHIVE_READ_DISK_MAGIC, ARCHIVE_STATE_DATA,
+	    "archive_read_disk_can_descend");
+
+	return (t->visit_type == TREE_REGULAR && t->descend);
+}
+
 /*
  * Called by the client to mark the directory just returned from
  * tree_next() as needing to be visited.
@@ -1321,9 +1333,11 @@ setup_current_filesystem(struct archive_read_disk *a)
 		t->current_filesystem->synthetic = 0;
 #endif
 
+#if defined(MNT_NOATIME)
 	if (sfs.f_flags & MNT_NOATIME)
 		t->current_filesystem->noatime = 1;
 	else
+#endif
 		t->current_filesystem->noatime = 0;
 
 #if defined(HAVE_READDIR_R)
