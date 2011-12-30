@@ -914,6 +914,7 @@ bsdpax_test_SOURCES=						\
 	pax/test/test_option_u.c				\
 	pax/test/test_option_z.c				\
 	pax/test/test_options_listopt.c				\
+	pax/test/test_print_longpath.c				\
 	pax/test/test_strip_components.c			\
 	pax/test/test_version.c
 
@@ -938,4 +939,5 @@ bsdpax_test_EXTRA_DIST=			\
 	pax/test/list.h		\
 	pax/test/test_option_T_upper.pax.uu	\
 	pax/test/test_options_listopt.pax.Z.uu	\
+	pax/test/test_print_longpath.tar.Z.uu	\
 	pax/test/CMakeLists.txt
