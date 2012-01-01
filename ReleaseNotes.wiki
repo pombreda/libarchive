@@ -28,11 +28,11 @@ Other features:
 
 = Libarchive 2.8.5 =
 
-_Released September 3, 2011 =
+_Released September 3, 2011_
 
 = Libarchive 2.8.4 =
 
-_Released June, 2010
+_Released June, 2010_
 
 = Libarchive 2.8.3 =
 
