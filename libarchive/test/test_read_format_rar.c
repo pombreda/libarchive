@@ -974,6 +974,50 @@ test_sfx(void)
   assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 
+static void
+test_rar_multivolume_stored_file(void)
+{
+  const char *reffiles[] =
+  {
+    "test_rar_multivolume_single_file.part1.rar",
+    "test_rar_multivolume_single_file.part2.rar",
+    "test_rar_multivolume_single_file.part3.rar",
+    NULL
+  };
+  char file_buff[20111];
+  int file_size = sizeof(file_buff);
+  const char file_test_txt[] = "<P STYLE=\"margin-bottom: 0in\"><BR>\n"
+                                "</P>\n"
+                                "</BODY>\n"
+                                "</HTML>";
+  struct archive_entry *ae;
+  struct archive *a;
+
+  extract_reference_files(reffiles);
+  assert((a = archive_read_new()) != NULL);
+  assertA(0 == archive_read_support_filter_all(a));
+  assertA(0 == archive_read_support_format_all(a));
+  assertA(0 == archive_read_open_filenames(a, reffiles, 10240));
+
+  /* First header. */
+  assertA(0 == archive_read_next_header(a, &ae));
+  assertEqualString("LibarchiveAddingTest.html", archive_entry_pathname(ae));
+  assertA((int)archive_entry_mtime(ae));
+  assertA((int)archive_entry_ctime(ae));
+  assertA((int)archive_entry_atime(ae));
+  assertEqualInt(file_size, archive_entry_size(ae));
+  assertEqualInt(33188, archive_entry_mode(ae));
+  assertA(file_size == archive_read_data(a, file_buff, file_size));
+  assertEqualMem(&file_buff[file_size - sizeof(file_test_txt) + 1],
+                 file_test_txt, sizeof(file_test_txt) - 1);
+
+  /* Test EOF */
+  assertA(1 == archive_read_next_header(a, &ae));
+  assertEqualInt(1, archive_file_count(a));
+  assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+  assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+}
+
 DEFINE_TEST(test_read_format_rar)
 {
   test_basic();
@@ -989,4 +1033,5 @@ DEFINE_TEST(test_read_format_rar)
   test_windows();
   test_multivolume_rar();
   test_sfx();
+  test_rar_multivolume_stored_file();
 }

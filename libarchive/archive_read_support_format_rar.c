@@ -1501,7 +1501,8 @@ read_data_stored(struct archive_read *a, const void **buff, size_t *size,
   ssize_t bytes_avail;
 
   rar = (struct rar *)(a->format->data);
-  if (rar->bytes_remaining == 0)
+  if (rar->bytes_remaining == 0 &&
+    !(rar->main_flags & MHD_VOLUME && rar->file_flags & FHD_SPLIT_AFTER))
   {
     *buff = NULL;
     *size = 0;
