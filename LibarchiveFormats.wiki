@@ -29,7 +29,7 @@ Libarchive 3.0 supports multiple filters when writing archives.
 
  * tar (read and write, including GNU extensions)
  * pax (read and write, including GNU and star extensions)
- * cpio (read and write, including odd, news, and afio variants)
+ * cpio (read and write, including odc, newc, and afio variants)
  * [FormatISO9660 ISO9660] (read and write, including Joliet and Rockridge extensions, with some limitations)
  * [FormatZip zip] (read and write, with some limitations, uses zlib)
  * mtree (read and write, uses separate libraries for creating and verifying cryptographic hashes)
@@ -41,3 +41,4 @@ Libarchive 3.0 supports multiple filters when writing archives.
  * lha/lzh (read only, starting in libarchive 3.0)
  * rar (read only, starting in libarchive 3.0)
  * Microsoft CAB format (read only, starting in libarchive 3.0)
+ * 7-Zip (read only, starting in libarchive 3.0)
