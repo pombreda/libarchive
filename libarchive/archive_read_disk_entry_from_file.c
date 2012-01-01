@@ -192,8 +192,17 @@ archive_read_disk_entry_from_file(struct archive *_a,
 		if (fd >= 0) {
 			unsigned long stflags;
 			int r = ioctl(fd, EXT2_IOC_GETFLAGS, &stflags);
-			if (r == 0 && stflags != 0)
+			if (r == 0 && stflags != 0) {
 				archive_entry_set_fflags(entry, stflags, 0);
+#if defined(EXT2_NODUMP_FL)
+				if (a->tree != NULL && a->honor_nodump &&
+				    (stflags & EXT2_NODUMP_FL) != 0) {
+					if (initial_fd != fd)
+						close(fd);
+					return (ARCHIVE_OK);
+				}
+#endif
+			}
 		}
 	}
 #endif
@@ -246,7 +255,7 @@ archive_read_disk_entry_from_file(struct archive *_a,
 	return (r);
 }
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && defined(HAVE_COPYFILE_H)
 /*
  * The Mac OS "copyfile()" API copies the extended metadata for a
  * file into a separate file in AppleDouble format (see RFC 1740).
