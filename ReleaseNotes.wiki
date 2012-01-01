@@ -9,7 +9,7 @@ the work.
 
 = Libarchive 3.0 =
 
-_Future release: Expected Dec 2011_
+_Released: Dec 24, 2011_
 
 Major version number bumps indicate backwards-incompatible API changes:
  * The public interfaces consistently use int64_t instead of off_t, ino_t, uid_t, gid_t, and dev_t.
