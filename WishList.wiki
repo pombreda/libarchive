@@ -227,18 +227,6 @@ couple of different rmt servers.
 This would be a good project for someone who is trying
 to learn network programming.
 
-= Exploiting seekable input =
-
-This requires a little care, but ISO and Zip readers could really
-benefit from seeking when the input supports it.
-I insist that we maintain the ability to read most ISO and Zip
-files even when seek is unavailable.
-For Zip files, that may involve having two completely separate Zip readers:
-one that works in a streaming mode, and
-one that works in a seeking fashion.
-These two readers will certainly share a lot of code even though
-the overal structure will be quite different.
-
 = Seek in archives =
 
 A few people have asked for the ability to efficiently
