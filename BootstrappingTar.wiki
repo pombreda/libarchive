@@ -42,7 +42,8 @@ onto the target system and untar it.
 I've created an extremely minimal C
 program called "untar" that knows just enough about the tar format
 to extract a simple uncompressed tar archive.
-In particular, it's sufficient to unpack the libarchive
+It does not rely on libarchive, so it can be used to
+unpack the libarchive
 distribution after you decompress it.
 
 You can obtain the source for untar from:
