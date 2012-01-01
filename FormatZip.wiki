@@ -37,9 +37,9 @@ To address the issues with the streaming Zip reader described earlier, libarchiv
 Invoking `archive_read_support_format_zip()` enables both Zip readers, but if you want to use libarchive to read Zip files, it's important to understand the difference between these two readers.
 
 The older streaming cannot access some information about individual entries and does not handle self-extracting Zip archives particularly well.
-But it can read Zip archives from any data source.
+But it can read Zip archives from pipes and sockets as well as regular files.
 
-The new seeking reader can handle such archives, but it requires that you provide a seek callback in addition to the regular callbacks.
+The new seeking reader can handle self-extracting archives, but it requires that you provide a seek callback in addition to the regular callbacks.
 A seek callback can be registered with `archive_read_set_seek_callback()`.
 The interface to the seek callback is the same as the standard `fseek()` call:  It accepts an offset (a signed 64-bit integer) and a "whence" value.
 
