@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2003-2010 Tim Kientzle
- * Copyright (c) 2011 Michihiro NAKAJIMA
+ * Copyright (c) 2011-2012 Michihiro NAKAJIMA
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,20 +56,6 @@ __FBSDID("$FreeBSD$");
 #endif
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
-#endif
-#ifdef HAVE_LINUX_FS_H
-#include <linux/fs.h>	/* for Linux file flags */
-#endif
-/*
- * Some Linux distributions have both linux/ext2_fs.h and ext2fs/ext2_fs.h.
- * As the include guards don't agree, the order of include is important.
- */
-#ifdef HAVE_LINUX_EXT2_FS_H
-#include <linux/ext2_fs.h>	/* for Linux file flags */
-#endif
-#if defined(HAVE_EXT2FS_EXT2_FS_H) && !defined(__CYGWIN__)
-/* This header exists but is broken on Cygwin. */
-#include <ext2fs/ext2_fs.h>
 #endif
 #ifdef HAVE_PATHS_H
 #include <paths.h>
@@ -142,6 +128,8 @@ static void		 free_dir_list(struct archive_dir *);
 static struct archive_dir_entry *get_dir_entry(struct archive_dir *,
 			    const char *);
 static void		 init_dir_list(struct archive_dir *);
+static int		 name_filter(struct archive *, void *,
+			    struct archive_entry *);
 static int		 new_enough_mtime(struct bsdpax *,
 			     struct archive_entry *entry);
 static int		 new_enough_ctime(struct bsdpax *,
@@ -149,6 +137,8 @@ static int		 new_enough_ctime(struct bsdpax *,
 static void		 report_write(struct bsdpax *, struct archive *,
 			     struct archive_entry *, int64_t progress);
 static void		 test_for_append(struct bsdpax *);
+static int		 metadata_filter(struct archive *, void *,
+			    struct archive_entry *);
 static void		 write_archive(struct archive *, struct bsdpax *);
 static void		 write_entry(struct bsdpax *, struct archive *,
 			     struct archive_entry *);
@@ -370,7 +360,13 @@ write_archive(struct archive *a, struct bsdpax *bsdpax)
 	if (bsdpax->option_restore_atime)
 		archive_read_disk_set_atime_restored(bsdpax->diskreader);
 	archive_read_disk_set_standard_lookup(bsdpax->diskreader);
-
+	if (bsdpax->option_exclude && bsdpax->matching != NULL)
+		archive_read_disk_set_name_filter_callback(bsdpax->diskreader,
+		    name_filter, bsdpax);
+	archive_read_disk_set_metadata_filter_callback(bsdpax->diskreader,
+	    metadata_filter, bsdpax);
+	if (bsdpax->option_honor_nodump)
+		archive_read_disk_honor_nodump(bsdpax->diskreader);
 
 	if (*bsdpax->argv == NULL) {
 		/*
@@ -571,6 +567,58 @@ append_archive(struct bsdpax *bsdpax, struct archive *a, struct archive *ina)
 	return (e == ARCHIVE_EOF ? ARCHIVE_OK : e);
 }
 
+static int
+name_filter(struct archive *a, void *_data, struct archive_entry *entry)
+{
+	struct bsdpax *bsdpax = (struct bsdpax *)_data;
+
+	/*
+	 * Exclude entries that are specified.
+	 */
+	if (bsdpax->option_exclude &&
+	    lafe_excluded(bsdpax->matching, archive_entry_pathname(entry)))
+		return (0);
+	return (1);
+}
+
+static int
+metadata_filter(struct archive *a, void *_data, struct archive_entry *entry)
+{
+	struct bsdpax *bsdpax = (struct bsdpax *)_data;
+	int exclude, option_exclude;
+
+	option_exclude = bsdpax->option_exclude;
+	bsdpax->option_exclude = 0;
+	exclude = excluded_entry(bsdpax, entry);
+	bsdpax->option_exclude = option_exclude;
+	if (exclude)
+		return (0);
+
+	/*
+	 * Exclude entries that are older than archived one
+	 * which has the same name. (-u, -D options)
+	 */
+	if (bsdpax->option_keep_newer_mtime_files_br &&
+	    !new_enough_mtime(bsdpax, entry))
+		return (0);
+	if (bsdpax->option_keep_newer_ctime_files_br &&
+	    !new_enough_ctime(bsdpax, entry))
+		return (0);
+
+	/*
+	 * User has asked us not to cross mount points.
+	 */
+	if (bsdpax->option_dont_traverse_mounts) {
+		int fs = archive_read_disk_current_filesystem(a);
+		if (bsdpax->first_fs == -1)
+			bsdpax->first_fs = fs;
+		else if (bsdpax->first_fs != fs)
+			return (0);
+	}
+
+	return (1);
+}
+
 /*
  * Add the file or dir hierarchy named by 'path' to the archive
  */
@@ -579,8 +627,9 @@ write_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 {
 	struct archive *disk = bsdpax->diskreader;
 	struct archive_entry *entry = NULL, *spare_entry = NULL;
-	int first_fs = -1, r, rename = 0;
+	int r, rename = 0;
 
+	bsdpax->first_fs = -1;
 	r = archive_read_disk_open(disk, path);
 	if (r != ARCHIVE_OK) {
 		lafe_warnc(archive_errno(disk),
@@ -605,57 +654,6 @@ write_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 			else if (r < ARCHIVE_WARN)
 				continue;
 		}
-
-		/*
-		 * Exclude entries that are specified.
-		 */
-		if (excluded_entry(bsdpax, entry))
-			continue;/* Skip it. */
-
-		/*
-		 * Exclude entries that are older than archived one
-		 * which has the same name. (-u, -D options)
-		 */
-		if (bsdpax->option_keep_newer_mtime_files_br &&
-		    !new_enough_mtime(bsdpax, entry))
-			continue;
-		if (bsdpax->option_keep_newer_ctime_files_br &&
-		    !new_enough_ctime(bsdpax, entry))
-			continue;
-
-		/*
-		 * User has asked us not to cross mount points.
-		 */
-		if (bsdpax->option_dont_traverse_mounts) {
-			if (first_fs == -1)
-				first_fs =
-				    archive_read_disk_current_filesystem(disk);
-			else if (first_fs !=
-			    archive_read_disk_current_filesystem(disk))
-				continue;
-		}
-
-		/*
-		 * If this file/dir is flagged "nodump" and we're
-		 * honoring such flags, skip this file/dir.
-		 */
-#if defined(HAVE_STRUCT_STAT_ST_FLAGS) && defined(UF_NODUMP)
-		if (bsdpax->option_honor_nodump) {
-			unsigned long flags, clear;
-			archive_entry_fflags(entry, &flags, &clear);
-			/* BSD systems store flags in struct stat */
-			if (flags & UF_NODUMP)
-				continue;
-		}
-#endif
-#if defined(EXT2_IOC_GETFLAGS) && defined(EXT2_NODUMP_FL) && defined(HAVE_WORKING_EXT2_IOC_GETFLAGS)
-		if (bsdpax->option_honor_nodump) {
-			unsigned long flags, clear;
-			archive_entry_fflags(entry, &flags, &clear);
-			if (flags & EXT2_NODUMP_FL)
-				continue;
-		}
-#endif
 
 #ifdef __APPLE__
 		if (bsdpax->enable_copyfile) {
@@ -694,7 +692,8 @@ write_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 		 */
 		if (edit_pathname(bsdpax, entry)) {
 			/* Note: if user vetoes, we won't descend. */
-			if (!bsdpax->option_no_subdirs)
+			if (!bsdpax->option_no_subdirs &&
+			    archive_read_disk_can_descend(disk))
 				archive_read_disk_descend(disk);
 			continue;
 		}
@@ -711,7 +710,8 @@ write_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 			continue;
 
 		/* Note: if user vetoes, we won't descend. */
-		if (!bsdpax->option_no_subdirs)
+		if (!bsdpax->option_no_subdirs &&
+		    archive_read_disk_can_descend(disk))
 			archive_read_disk_descend(disk);
 
 		/* Display entry as we process it. */
