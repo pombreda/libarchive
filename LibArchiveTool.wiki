@@ -2,6 +2,7 @@
 
 This is just exploration for now.
 No plans, no promises.
+If this ever does get implemented, it will probably use entirely different naming and behave entirely differently.
 
 = Introduction =
 
