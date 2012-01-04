@@ -1,0 +1,89 @@
+#summary Design thoughts for a new higher-level API
+
+= Introduction =
+
+libarchive is intended to provide a very general toolbox for a variety of complex applications.
+But this level of generality is unnecessary for many applications.
+This page is intended to explore some ideas for a new API layered on top of the existing libarchive API that would provide more convenient operations.
+
+If you have ideas or suggestions about what this API should do and how we can make it general enough to support common uses while still keeping it very simple, please add comments below.
+
+= Implementation Outline =
+
+The new facility will be provided by functions that start with `archive_tool`.
+
+For functions that require an object, a new object "struct archive_tool" will be needed.
+We can't just use the current "struct archive" since this new API will often need to manage multiple libarchive handles.
+As with "struct archive", "struct archive_tool" should be a fully opaque handle so the internal workings can be extended an changed over time without breaking existing clients.
+
+Unlike lower-level libarchive functions, an `archive_tool` object is intended to be used with regular files on disk only.
+Internally, an `archive_tool` object will hold the filename of the archive, and an open read/write file descriptor.
+The `archive_tool` functions will allocate `struct archive` objects as necessary to carry out the requested operation.
+
+= Supported Operations =
+
+The following sections explore operations that might be provided by this new API by presenting short code sketches that use it.
+
+== Extract Archive ==
+
+{{{
+   struct archive_tool * t = archive_tool_new();
+   archive_tool_open_archive(t, filename);
+   archive_tool_extract_all(t);
+   archive_tool_free(t);
+}}}
+
+Extracts every entry in the specified archive to the current directory.
+
+== Add Entry to Archive ==
+
+{{{
+   struct archive_tool * t = archive_tool_new();
+   archive_tool_open_archive(t, filename);
+   archive_tool_add_file(t, new file);
+   archive_tool_free(t);
+}}}
+
+Adds a new entry using the named file on disk.
+If the archive already exists and is non-empty, then `archive_tool_add_file` may modify the archive in place or may copy the entire archive in order to add the entry.
+
+== Extract Named Entry ==
+
+{{{
+   struct archive_tool * t = archive_tool_new();
+   archive_tool_open_archive(t, filename);
+   archive_tool_extract_entry_by_name(t, name1);
+   archive_tool_extract_entry_by_name(t, name2);
+   archive_tool_free(t);
+}}}
+
+== Mixing Operations ==
+
+{{{
+   struct archive_tool * t = archive_tool_new();
+   archive_tool_open_archive(t, filename);
+   archive_tool_extract_entry_by_name(t, name1); // Note 1
+   archive_tool_extract_entry_by_name(t, name2); // Note 2
+   archive_tool_add_file(t, name3); // Note 3
+   archive_tool_free(t);
+}}}
+
+Note that the goal for the `archive_tool` API is convenience, not necessarily performance.
+By design, `archive_tool` functions can hide very time-consuming operations:
+  * Note 1: Internally, this will create a libarchive handle and read the archive from the beginning to identify and extract the named entry.
+  * Note 2: In many cases, this will have to re-read the entire archive from the beginning to identify and extract the named entry.
+  * Note 3: This may have to copy the entire archive to a new file in order to insert the new entry at the end.
+
+== Mixing with low-level libarchive operations ==
+
+{{{
+   struct archive_tool *t = archive_tool_new();
+   archive_tool_open_archive(t, filename);
+   archive_tool_add_file(t, name1);
+   struct archive *a = archive_tool_get_read_handle(t);
+   struct archive_entry *entry;
+   archive_read_next_header(a, &entry);
+}}}
+
+In this case, `archive_tool_get_read_handle` may return a `struct archive` object that was created to handle `archive_tool_add_file`, or a new `struct archive` object may have been created.
+Internally, the `archive_tool` functions will create and reuse internal `struct archive` objects; mixing high-level and low-level operations such as this will be necessary in some cases but can also cause havoc.
