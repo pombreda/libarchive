@@ -1,10 +1,13 @@
 #summary Design thoughts for a new higher-level API
 
+This is just exploration for now.
+No plans, no promises.
+
 = Introduction =
 
 libarchive is intended to provide a very general toolbox for a variety of complex applications.
 But this level of generality is unnecessary for many applications.
-This page is intended to explore some ideas for a new API layered on top of the existing libarchive API that would provide more convenient operations.
+The following explores some ideas for a new API layered on top of the existing libarchive API that would provide more convenient operations for 80% of applications.
 
 If you have ideas or suggestions about what this API should do and how we can make it general enough to support common uses while still keeping it very simple, please add comments below.
 
@@ -28,18 +31,39 @@ The following sections explore operations that might be provided by this new API
 
 {{{
    struct archive_tool * t = archive_tool_new();
-   archive_tool_open_archive(t, filename);
+   archive_tool_open_filename(t, filename);
    archive_tool_extract_all(t);
    archive_tool_free(t);
 }}}
 
 Extracts every entry in the specified archive to the current directory.
 
+== Extract with Filtering ==
+
+{{{
+  struct archive_tool * t = archive_tool_new();
+  archive_tool_open_filename(t, filename);
+  archive_tool_include_pattern(t, "^/usr/local");
+  archive_tool_exclude_pattern(t, "^/usr/local/lib");
+  archive_tool_extract_all(t);
+  archive_tool_free(t);
+}}}
+
+Note that the setup here is the opposite of libarchive:  With libarchive, you specify whether you want to read or write, then associate the handle with a file.
+Here, I'm associating an `archive_tool` object with a file and later requesting the operation.
+
+That's a much better fit for command-line wrappers such as `tar`, `cpio`, and `pax`:
+such programs could create an `archive_tool` object before they parse arguments, then use their arguments to set properties on the `archive_tool` object.
+They would only have to defer the main operation.
+This would be considerably simpler than the current `bsdtar` implementation that has to record every option in a local structure, then construct suitable archive objects from that data.
+
+In theory, we could add similar filters to cover every option needed by programs such as `tar`, `cpio`, or `pax`.
+
 == Add Entry to Archive ==
 
 {{{
    struct archive_tool * t = archive_tool_new();
-   archive_tool_open_archive(t, filename);
+   archive_tool_open_filename(t, filename);
    archive_tool_add_file(t, new file);
    archive_tool_free(t);
 }}}
@@ -51,7 +75,7 @@ If the archive already exists and is non-empty, then `archive_tool_add_file` may
 
 {{{
    struct archive_tool * t = archive_tool_new();
-   archive_tool_open_archive(t, filename);
+   archive_tool_open_filename(t, filename);
    archive_tool_extract_entry_by_name(t, name1);
    archive_tool_extract_entry_by_name(t, name2);
    archive_tool_free(t);
@@ -61,7 +85,7 @@ If the archive already exists and is non-empty, then `archive_tool_add_file` may
 
 {{{
    struct archive_tool * t = archive_tool_new();
-   archive_tool_open_archive(t, filename);
+   archive_tool_open_filename(t, filename);
    archive_tool_extract_entry_by_name(t, name1); // Note 1
    archive_tool_extract_entry_by_name(t, name2); // Note 2
    archive_tool_add_file(t, name3); // Note 3
@@ -78,7 +102,7 @@ By design, `archive_tool` functions can hide very time-consuming operations:
 
 {{{
    struct archive_tool *t = archive_tool_new();
-   archive_tool_open_archive(t, filename);
+   archive_tool_open_filename(t, filename);
    archive_tool_add_file(t, name1);
    struct archive *a = archive_tool_get_read_handle(t);
    struct archive_entry *entry;
