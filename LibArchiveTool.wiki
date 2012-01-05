@@ -18,7 +18,7 @@ The new facility will be provided by functions that start with `archive_tool`.
 
 For functions that require an object, a new object "struct archive_tool" will be needed.
 We can't just use the current "struct archive" since this new API will often need to manage multiple libarchive handles.
-As with "struct archive", "struct archive_tool" should be a fully opaque handle so the internal workings can be extended an changed over time without breaking existing clients.
+As with "struct archive", "struct archive_tool" should be a fully opaque handle so the internal workings can be extended and changed over time without breaking existing clients.
 
 Unlike lower-level libarchive functions, an `archive_tool` object is intended to be used with regular files on disk only.
 Internally, an `archive_tool` object will hold the filename of the archive, and an open read/write file descriptor.
