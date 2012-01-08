@@ -43,7 +43,7 @@ test_basic(void)
 	int64_t offset;
 	int file_count;
 #if defined(_WIN32) && !defined(__CYGWIN__)
-	wchar_t *wcwd, *fullpath;
+	wchar_t *wcwd, *wp, *fullpath;
 #endif
 
 	assertMakeDir("dir1", 0755);
@@ -397,6 +397,63 @@ test_basic(void)
 		*wcwd = L'/';
 
 	/* dir1/file1 */
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header2(a, ae));
+	assertEqualInt(0, archive_read_disk_can_descend(a));
+	assertEqualWString(archive_entry_pathname_w(ae), fullpath);
+	assertEqualInt(archive_entry_filetype(ae), AE_IFREG);
+	assertEqualInt(archive_entry_size(ae), 10);
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_data_block(a, &p, &size, &offset));
+	assertEqualInt((int)size, 10);
+	assertEqualInt((int)offset, 0);
+	assertEqualMem(p, "0123456789", 10);
+
+	/* There is no entry. */
+	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header2(a, ae));
+
+	/* Close the disk object. */
+	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
+	free(fullpath);
+
+	/*
+	 * Test for wild card '*' or '?' with "//?/" prefix.
+	 */
+	wcwd = _wgetcwd(NULL, 0);
+	fullpath = malloc(sizeof(wchar_t) * (wcslen(wcwd) + 32));
+	wcscpy(fullpath, L"//?/");
+	wcscat(fullpath, wcwd);
+	wcscat(fullpath, L"/dir1/*1");
+	free(wcwd);
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_disk_open_w(a, fullpath));
+	while ((wcwd = wcschr(fullpath, L'\\')) != NULL)
+		*wcwd = L'/';
+
+	/* dir1/file1 */
+	wp = wcsrchr(fullpath, L'/');
+	wcscpy(wp+1, L"file1");
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header2(a, ae));
+	assertEqualInt(0, archive_read_disk_can_descend(a));
+	assertEqualWString(archive_entry_pathname_w(ae), fullpath);
+	assertEqualInt(archive_entry_filetype(ae), AE_IFREG);
+	assertEqualInt(archive_entry_size(ae), 10);
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_data_block(a, &p, &size, &offset));
+	assertEqualInt((int)size, 10);
+	assertEqualInt((int)offset, 0);
+	assertEqualMem(p, "0123456789", 10);
+
+	/* dir1/sub1 */
+	wcscpy(wp+1, L"sub1");
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header2(a, ae));
+	assertEqualInt(1, archive_read_disk_can_descend(a));
+	assertEqualWString(archive_entry_pathname_w(ae), fullpath);
+	assertEqualInt(archive_entry_filetype(ae), AE_IFDIR);
+
+	/* Descend into the current object */
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_disk_descend(a));
+
+	/* dir1/sub1/file1 */
+	wcscpy(wp+1, L"sub1/file1");
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header2(a, ae));
 	assertEqualInt(0, archive_read_disk_can_descend(a));
 	assertEqualWString(archive_entry_pathname_w(ae), fullpath);
@@ -1098,7 +1155,7 @@ name_filter(struct archive *a, void *data, struct archive_entry *ae)
 }
 
 static int
-time_filter(struct archive *a, void *data, struct archive_entry *ae)
+metadata_filter(struct archive *a, void *data, struct archive_entry *ae)
 {
 	failure("CTime should be set");
 	assertEqualInt(8, archive_entry_ctime_is_set(ae));
@@ -1110,9 +1167,10 @@ time_filter(struct archive *a, void *data, struct archive_entry *ae)
 	if (archive_read_disk_can_descend(a)) {
 		/* Descend into the current object */
 		failure("archive_read_disk_can_descend should work"
-			"in time filter");
+			" in metadata filter");
 		assertEqualIntA(a, 1, archive_read_disk_can_descend(a));
-		failure("archive_read_disk_descend should work in time filter");
+		failure("archive_read_disk_descend should work"
+			" in metadata filter");
 		assertEqualIntA(a, ARCHIVE_OK, archive_read_disk_descend(a));
 	}
 	return (1);
@@ -1185,7 +1243,7 @@ test_callbacks(void)
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
 
 	/*
-	 * Test2: Traversals with a time filter.
+	 * Test2: Traversals with a metadata filter.
 	 */
 	assertUtimes("cb/f1", 886600, 0, 886600, 0);
 	assertUtimes("cb/f2", 886611, 0, 886611, 0);
@@ -1195,7 +1253,8 @@ test_callbacks(void)
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_set_name_filter_callback(a, NULL, NULL));
 	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_disk_set_time_filter_callback(a, time_filter, NULL));
+	    archive_read_disk_set_metadata_filter_callback(a, metadata_filter,
+		    NULL));
 	failure("Directory traversals should work as well");
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_disk_open(a, "cb"));
 

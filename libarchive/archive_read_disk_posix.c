@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2003-2009 Tim Kientzle
- * Copyright (c) 2010,2011 Michihiro NAKAJIMA
+ * Copyright (c) 2010-2012 Michihiro NAKAJIMA
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -443,15 +443,15 @@ archive_read_disk_new(void)
 {
 	struct archive_read_disk *a;
 
-	a = (struct archive_read_disk *)malloc(sizeof(*a));
+	a = (struct archive_read_disk *)calloc(1, sizeof(*a));
 	if (a == NULL)
 		return (NULL);
-	memset(a, 0, sizeof(*a));
 	a->archive.magic = ARCHIVE_READ_DISK_MAGIC;
 	a->archive.state = ARCHIVE_STATE_NEW;
 	a->archive.vtable = archive_read_disk_vtable();
 	a->lookup_uname = trivial_lookup_uname;
 	a->lookup_gname = trivial_lookup_gname;
+	a->enable_copyfile = 1;
 	a->entry_wd_fd = -1;
 	return (&a->archive);
 }
@@ -575,6 +575,16 @@ archive_read_disk_honor_nodump(struct archive *_a)
 	archive_check_magic(_a, ARCHIVE_READ_DISK_MAGIC,
 	    ARCHIVE_STATE_ANY, "archive_read_disk_honor_nodump");
 	a->honor_nodump = 1;
+	return (ARCHIVE_OK);
+}
+
+int
+archive_read_disk_disable_mac_copyfile(struct archive *_a)
+{
+	struct archive_read_disk *a = (struct archive_read_disk *)_a;
+	archive_check_magic(_a, ARCHIVE_READ_DISK_MAGIC,
+	    ARCHIVE_STATE_ANY, "archive_read_disk_disable_mac_copyfile");
+	a->enable_copyfile = 0;
 	return (ARCHIVE_OK);
 }
 
@@ -831,6 +841,7 @@ _archive_read_next_header2(struct archive *_a, struct archive_entry *entry)
 	struct tree *t;
 	const struct stat *st; /* info to use for this entry */
 	const struct stat *lst;/* lstat() information */
+	const char *name;
 	int descend, fd = -1, r;
 
 	archive_check_magic(_a, ARCHIVE_READ_DISK_MAGIC,
@@ -885,6 +896,18 @@ next_entry:
 		}	
 	} while (lst == NULL);
 
+#ifdef __APPLE__
+	if (a->enable_copyfile) {
+		/* If we're using copyfile(), ignore "._XXX" files. */
+		const char *bname = strrchr(tree_current_path(t), '/');
+		if (bname == NULL)
+			bname = tree_current_path(t);
+		else
+			++bname;
+		if (bname[0] == '.' && bname[1] == '_')
+			goto next_entry;
+	}
+#endif
 	archive_entry_copy_pathname(entry, tree_current_path(t));
 	if (a->name_filter_func) {
 		if (!a->name_filter_func(_a, a->name_filter_data, entry))
@@ -932,12 +955,18 @@ next_entry:
 	t->descend = descend;
 
 	archive_entry_copy_stat(entry, st);
-	if (a->time_filter_func) {
-		if (!a->time_filter_func(_a, a->time_filter_data, entry)) {
-			archive_entry_unset_atime(entry);
-			archive_entry_unset_birthtime(entry);
-			archive_entry_unset_ctime(entry);
-			archive_entry_unset_mtime(entry);
+	/* Lookup uname/gname */
+	name = archive_read_disk_uname(_a, archive_entry_uid(entry));
+	if (name != NULL)
+		archive_entry_copy_uname(entry, name);
+	name = archive_read_disk_gname(_a, archive_entry_gid(entry));
+	if (name != NULL)
+		archive_entry_copy_gname(entry, name);
+	/* Invoke a filter callback. */
+	if (a->metadata_filter_func) {
+		if (!a->metadata_filter_func(_a,
+		    a->metadata_filter_data, entry)) {
+			archive_entry_clear(entry);
 			goto next_entry;
 		}
 	}
@@ -945,10 +974,7 @@ next_entry:
 #if defined(HAVE_STRUCT_STAT_ST_FLAGS) && defined(UF_NODUMP)
 	if (a->honor_nodump) {
 		if (st->st_flags & UF_NODUMP) {
-			archive_entry_unset_atime(entry);
-			archive_entry_unset_birthtime(entry);
-			archive_entry_unset_ctime(entry);
-			archive_entry_unset_mtime(entry);
+			archive_entry_clear(entry);
 			goto next_entry;
 		}
 	}
@@ -1000,12 +1026,15 @@ next_entry:
 		unsigned long flags, clear;
 		archive_entry_fflags(entry, &flags, &clear);
 		if (flags & EXT2_NODUMP_FL) {
-			archive_entry_unset_atime(entry);
-			archive_entry_unset_birthtime(entry);
-			archive_entry_unset_ctime(entry);
-			archive_entry_unset_mtime(entry);
+			archive_entry_clear(entry);
 			goto next_entry;
 		}
+	}
+#endif
+#ifdef __APPLE__
+	if (!a->enable_copyfile) {
+		/* If we aren't using copyfile, drop the copyfile() data. */
+		archive_entry_copy_mac_metadata(entry, NULL, 0);
 	}
 #endif
 
@@ -1102,17 +1131,17 @@ archive_read_disk_set_name_filter_callback(struct archive *_a,
 }
 
 int
-archive_read_disk_set_time_filter_callback(struct archive *_a,
-    int (*_time_filter_func)(struct archive *, void *, struct archive_entry *),
-    void *_client_data)
+archive_read_disk_set_metadata_filter_callback(struct archive *_a,
+    int (*_metadata_filter_func)(struct archive *, void *,
+    struct archive_entry *), void *_client_data)
 {
 	struct archive_read_disk *a = (struct archive_read_disk *)_a;
 
 	archive_check_magic(_a, ARCHIVE_READ_DISK_MAGIC, ARCHIVE_STATE_ANY,
-	    "archive_read_disk_set_time_filter_callback");
+	    "archive_read_disk_set_metadata_filter_callback");
 
-	a->time_filter_func = _time_filter_func;
-	a->time_filter_data = _client_data;
+	a->metadata_filter_func = _metadata_filter_func;
+	a->metadata_filter_data = _client_data;
 	return (ARCHIVE_OK);
 }
 
