@@ -359,7 +359,6 @@ write_archive(struct archive *a, struct bsdpax *bsdpax)
 	}
 	if (bsdpax->option_restore_atime)
 		archive_read_disk_set_atime_restored(bsdpax->diskreader);
-	archive_read_disk_set_standard_lookup(bsdpax->diskreader);
 	if (bsdpax->option_exclude && bsdpax->matching != NULL)
 		archive_read_disk_set_name_filter_callback(bsdpax->diskreader,
 		    name_filter, bsdpax);
@@ -367,6 +366,9 @@ write_archive(struct archive *a, struct bsdpax *bsdpax)
 	    metadata_filter, bsdpax);
 	if (bsdpax->option_honor_nodump)
 		archive_read_disk_honor_nodump(bsdpax->diskreader);
+	if (!bsdpax->enable_copyfile)
+		archive_read_disk_disable_mac_copyfile(bsdpax->diskreader);
+	archive_read_disk_set_standard_lookup(bsdpax->diskreader);
 
 	if (*bsdpax->argv == NULL) {
 		/*
@@ -654,23 +656,6 @@ write_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 			else if (r < ARCHIVE_WARN)
 				continue;
 		}
-
-#ifdef __APPLE__
-		if (bsdpax->enable_copyfile) {
-			/* If we're using copyfile(), ignore "._XXX" files. */
-			const char *bname =
-			    strrchr(archive_entry_pathname(entry), '/');
-			if (bname == NULL)
-				bname = archive_entry_pathname(entry);
-			else
-				++bname;
-			if (bname[0] == '.' && bname[1] == '_')
-				continue;
-		} else {
-			/* If not, drop the copyfile() data. */
-			archive_entry_copy_mac_metadata(entry, NULL, 0);
-		}
-#endif
 
 		/*
 		 * If the user vetoes this file/directory, skip it.
