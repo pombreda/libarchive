@@ -836,8 +836,8 @@ copy_file_data_block(struct bsdpax *bsdpax, struct archive *a,
 		if (need_report())
 			report_write(bsdpax, a, entry, progress);
 
-		if (offset < progress) {
-			int64_t sparse = progress - offset;
+		if (offset > progress) {
+			int64_t sparse = offset - progress;
 			size_t ns;
 
 			if (null_buff == NULL) {
