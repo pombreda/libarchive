@@ -318,7 +318,7 @@ struct _7zip {
 	uint32_t		 bcj2_code;
 	uint64_t		 bcj2_outPos;
 
-	/* Filename character-set convertion data. */
+	/* Filename character-set conversion data. */
 	struct archive_string_conv *sconv;
 
 	char			 format_name[64];
@@ -1382,7 +1382,7 @@ decompress(struct archive_read *a, struct _7zip *zip,
 		uint64_t flush_bytes;
 
 		if (!zip->ppmd7_valid || zip->ppmd7_stat < 0 ||
-		    t_avail_in < 0 || t_avail_out <= 0) {
+		    t_avail_out <= 0) {
 			archive_set_error(&(a->archive),
 			    ARCHIVE_ERRNO_MISC,
 			    "Decompression internal error");

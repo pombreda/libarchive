@@ -119,6 +119,7 @@ need_report(void)
 }
 #endif
 
+static int		 get_filetime(const char *, int, time_t *, long *);
 static void		 long_help(void);
 static void		 only_mode(struct bsdtar *, const char *opt,
 			     const char *valid);
@@ -335,8 +336,8 @@ main(int argc, char **argv)
 			break;
 		case OPTION_INCLUDE:
 			/*
-			 * Noone else has the @archive extension, so
-			 * noone else needs this to filter entries
+			 * No one else has the @archive extension, so
+			 * no one else needs this to filter entries
 			 * when transforming archives.
 			 */
 			if (lafe_include(&bsdtar->matching, bsdtar->argument))
@@ -397,32 +398,26 @@ main(int argc, char **argv)
 			bsdtar->newer_ctime_sec = get_date(now, bsdtar->argument);
 			break;
 		case OPTION_NEWER_CTIME_THAN:
-			{
-				struct stat st;
-				if (stat(bsdtar->argument, &st) != 0)
-					lafe_errc(1, 0,
-					    "Can't open file %s", bsdtar->argument);
+			if (get_filetime(bsdtar->argument, 1/*ctime*/,
+			    &bsdtar->newer_ctime_sec,
+			    &bsdtar->newer_ctime_nsec) == 0)
 				bsdtar->newer_ctime_filter = 1;
-				bsdtar->newer_ctime_sec = st.st_ctime;
-				bsdtar->newer_ctime_nsec =
-				    ARCHIVE_STAT_CTIME_NANOS(&st);
-			}
+			else
+				lafe_errc(1, 0,
+				    "Can't open file %s", bsdtar->argument);
 			break;
 		case OPTION_NEWER_MTIME: /* GNU tar */
 			bsdtar->newer_mtime_filter = 1;
 			bsdtar->newer_mtime_sec = get_date(now, bsdtar->argument);
 			break;
 		case OPTION_NEWER_MTIME_THAN:
-			{
-				struct stat st;
-				if (stat(bsdtar->argument, &st) != 0)
-					lafe_errc(1, 0,
-					    "Can't open file %s", bsdtar->argument);
+			if (get_filetime(bsdtar->argument, 0/*mtime*/,
+			    &bsdtar->newer_mtime_sec,
+			    &bsdtar->newer_mtime_nsec) == 0)
 				bsdtar->newer_mtime_filter = 1;
-				bsdtar->newer_mtime_sec = st.st_mtime;
-				bsdtar->newer_mtime_nsec =
-				    ARCHIVE_STAT_MTIME_NANOS(&st);
-			}
+			else
+				lafe_errc(1, 0,
+				    "Can't open file %s", bsdtar->argument);
 			break;
 		case OPTION_NODUMP: /* star */
 			bsdtar->option_honor_nodump = 1;
@@ -691,6 +686,50 @@ main(int argc, char **argv)
 		lafe_warnc(0,
 		    "Error exit delayed from previous errors.");
 	return (bsdtar->return_value);
+}
+
+static int
+get_filetime(const char *path, int is_ctime, time_t *time, long *ns)
+{
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	/* NOTE: stat() on Windows cannot handle nano seconds. */
+#define EPOC_TIME (116444736000000000ui64)
+	HANDLE h;
+	WIN32_FIND_DATA d;
+	ULARGE_INTEGER utc;
+
+	h = FindFirstFile(path, &d);
+	if (h == INVALID_HANDLE_VALUE)
+		return (-1);
+	FindClose(h);
+	if (is_ctime) {
+		utc.HighPart = d.ftCreationTime.dwHighDateTime;
+		utc.LowPart = d.ftCreationTime.dwLowDateTime;
+	} else {
+		utc.HighPart = d.ftLastWriteTime.dwHighDateTime;
+		utc.LowPart = d.ftLastWriteTime.dwLowDateTime;
+	}
+	if (utc.QuadPart >= EPOC_TIME) {
+		utc.QuadPart -= EPOC_TIME;
+		*time = (time_t)(utc.QuadPart / 10000000);
+		*ns = (long)(utc.QuadPart % 10000000) * 100;
+	} else {
+		*time = 0;
+		*ns = 0;
+	}
+#else
+	struct stat st;
+	if (stat(path, &st) != 0)
+		return (-1);
+	if (is_ctime) {
+		*time = st.st_ctime;
+		*ns = ARCHIVE_STAT_CTIME_NANOS(&st);
+	} else {
+		*time = st.st_mtime;
+		*ns = ARCHIVE_STAT_MTIME_NANOS(&st);
+	}
+#endif
+	return (0);
 }
 
 static void
