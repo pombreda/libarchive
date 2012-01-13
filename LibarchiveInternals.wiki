@@ -217,11 +217,9 @@ XXX
 
 == How to add a new write filter ==
 
-The write filter architecture is currently very simple.
-I have plans to rearchitect this to support multiple filters
-in a fashion similar to how the write filter system works.
-
-When this happens, write blocking will probably become a separate filter.
+The write filter architecture works very similarly to the read
+filters, though of course there is no bid phase.
+Write filters are simply added directly to the write pipeline.
 
 == How to add a new write format ==
 
