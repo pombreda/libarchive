@@ -123,6 +123,9 @@ This does create some problems correctly handling slightly damaged input.
 For decompression filters, rejecting damaged input is probably wise,
 but libarchive should provide tools for forcing the format handler so that damaged archives can be read even if they fail the initial tasting.
 
+Starting with libarchive 3.0, some bidders inspect bytes from the end of the file instead of the beginning.
+This requires that the input file support seeking, so such bidders are designed to always fail if seeking is not available.
+
 === Read format lifecycle ===
 
 A read format handler has a fairly straightforward lifecycle.
