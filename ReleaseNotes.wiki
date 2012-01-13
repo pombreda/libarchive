@@ -10,6 +10,15 @@ the work.
 Alpha and Beta releases are not listed here.
 They are not recommended for general use, though we usually leave them available in the Downloads section for historical reference.
 
+= Libarchive 3.1 =
+
+_Anticipated: Spring 2012?_
+
+  * Switch bsdtar to use archive_read_disk for directory traversals - Michihiro has mostly finished this
+  * Pax front-end?  Michihiro has been working on this for a while.
+  * Multivolume RAR support?  Andres has this prototyped in a branch.
+  * NFS4 ACL support - Tim has been working on this off and on for some time.
+
 = Libarchive 3.0.3 =
 
 _Released: Jan 12, 2012_
