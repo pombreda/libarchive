@@ -3,7 +3,7 @@
 Also see [WishList] for new feature ideas that would be nice to see
 someday but aren't in the following schedule.
 Since libarchive depends entirely on volunteer labor, the scheduling
-here is pure guesswork.
+and features for future releases are pure guesswork.
 The reality will depend on who is interested enough to actually do
 the work.
 
