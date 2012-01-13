@@ -35,11 +35,38 @@ It includes all of the information included in typical
 `struct stat` as well as the filename, link information,
 file flags, ACLs, and extended attributes.
 
-XXX set/unset tracking XXX
+=== set/unset tracking ===
 
-XXX charset conversion handling XXX
+For many of the fields, the entry tracks whether or not the
+value has been set and provides calls to test whether it has
+been set and to unset it.
 
-XXX relation to platform-native `struct stat` XXX
+For example, there is a big difference between an entry with
+a zero file size (it has no contents) and an entry whose size is
+unset (because we don't know the size).
+The latter situation occurs with file formats such as Zip files
+read in streaming mode.
+
+=== charset conversion handling ===
+
+XXX
+
+=== working with `struct stat` ===
+
+Of course, the entry object duplicates a lot of the information in the
+platform native `struct stat` (or the ByHandleFileInformation structure,
+which serves the same purpose on Windows).
+
+There are convenience functions to copy all of the data from
+`struct stat` into an entry object or return a `struct stat` object
+populated from the entry object.
+
+On 32-bit Linux and other systems that support more than one
+`struct stat`, you need to be very careful that your program is
+compiled in the same manner as libarchive.
+(Libarchive on Linux is always compiled with `FILE_OFFSET_BITS=64`.)
+Otherwise, you will get nonsensical results from the use
+of these functions.
 
 ---------------------------------------------------------------
 
