@@ -59,6 +59,8 @@ Solaris and possibly others.)
 = Pax front-end =
 
 It should be feasible to build a POSIX-compliant pax on top of libarchive.
+Michihiro has been working on this for a while in an SVN branch;
+he would certainly appreciate assistance.
 
 = cpio as archive translation =
 
@@ -110,34 +112,12 @@ that can't utilize such information.
 feed to a cpio writer currently pulls ACLs, extended attributes,
 and user/group names that are never actually used.)
 
-= Directory traversals in archive_read_disk =
+= Filtering directory traversals in archive_read_disk =
 
-Libarchive is a toolkit for handling long lists of filesystem objects.
-The most obvious glaring hole is that you cannot ask libarchive
-to enumerate the filesystem objects in a directory tree.
-The `archive_read_disk` API is the obvious place to put this capability.
-Getting an initial implementation working should be straightforward;
-just copy the "tree.c" code from bsdtar and extend it to
-return a series of archive_entry objects instead of just filenames.
-The archive_entry virtualization above would help here but
-is not a prerequisite.
-
-Once the basic tree iteration is supported, there's a hard
-problem around file filtering that will need to be solved before
-the directory traversal from libarchive can actually be used
-in bsdtar, for instance.
-In particular, tar wants to filter the files; doing
-this efficiently requires doing it as early as possible.
-(In particular, filesystem traversals would like to avoid
-descending into directory trees if nothing in that tree
-will ever be visited.)
-
-The simplest approach is to support a conditional descent
-similar to what tree.c already supports.
-This has the drawback of not being fully parallel with
-the archive_read API, so I'm considering more complex
-approaches that would register filter callbacks of
-some sort.
+Now that archive_read_disk can handle directory
+traversals, there's a tricky
+problem around file filtering that will need some
+creative thought.
 
 = Explicit read pipelines =
 
@@ -226,6 +206,15 @@ couple of different rmt servers.
 
 This would be a good project for someone who is trying
 to learn network programming.
+
+= Seeking input files =
+
+This is partially supported now, but could be improved
+further:
+When the input supports full seeking, the Zip
+and 7-Zip readers can exploit that to read the archive directory
+from the end of the archive first, then seek to the individual
+files as needed.
 
 = Seek in archives =
 
