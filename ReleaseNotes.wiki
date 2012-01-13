@@ -7,7 +7,17 @@ here is pure guesswork.
 The reality will depend on who is interested enough to actually do
 the work.
 
-= Libarchive 3.0 =
+Alpha and Beta releases are not listed here.
+They are not recommended for general use, though we usually leave them available in the Downloads section for historical reference.
+
+= Libarchive 3.0.3 =
+
+_Released: Jan 12, 2012_
+
+ * A fairly serious bug (described in [http://code.google.com/p/libarchive/issues/detail?id=222 Issue 222]) that caused crashes when archiving sparse files is fixed.
+ * There are also a number of other portability and build fixes.
+
+= Libarchive 3.0.2 =
 
 _Released: Dec 24, 2011_
 
