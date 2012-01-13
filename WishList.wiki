@@ -56,6 +56,26 @@ portions for more operating systems.  (Currently, only Linux and
 FreeBSD are fully supported; it should be easy to add Mac OS and
 Solaris and possibly others.)
 
+= Linux `FILE_OFFSET_BITS` intelligence =
+
+Libarchive is always compiled with `FILE_OFFSET_BITS=64` on Linux.
+Of course, this is not the default on 32-bit Linux systems, which leads
+to a common point of confusion among people who use libarchive on Linux.
+
+Some of these problems have disappeared since libarchive 3.0 switched
+to using `int64_t` for file sizes and offsets instead of `off_t`.
+But there is still an issue with `struct stat`.
+
+Through careful macro trickery, we could define several versions of
+`archive_entry_copy_stat()` so that:
+ * `archive_entry_copy_stat32()` accepts a `struct stat32`
+ * `archive_entry_copy_stat64()` accepts a `struct stat64`
+ * `archive_entry_copy_stat()` refers to whichever of the above is appropriate for the current compilation environment.
+
+If done correctly, programs that use `FILE_OFFSET_BITS=32`
+or `FILE_OFFSET_BITS=64` on Linux could compile and link
+correctly against the same libarchive library without issues.
+
 = Pax front-end =
 
 It should be feasible to build a POSIX-compliant pax on top of libarchive.
