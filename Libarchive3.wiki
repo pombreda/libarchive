@@ -2,11 +2,14 @@
 
 = Introduction =
 
-*Note:* This page is under development and will change as libarchive 3.0 development progresses.
+Libarchive 3.0 was released in late December 2011.
+It represents nearly two years of development since libarchive 2.8 was released in early 2010.
+It also represents only the second API/ABI breakage since libarchive was first released in 2006.
 
-Libarchive 3.0 should be available sometime in mid-2010.
-For most users, the transition from libarchive 2.x should be nearly invisible.
-It should require few if any changes to ensure that your code can compile against either libarchive 2.x or libarchive 3.0.
+For most users, the transition from libarchive 2.x should be nearly invisible,
+with at most a few minor changes to ensure that your code can compile against either libarchive 2.x or libarchive 3.0.
+
+Most of the changes involve either removing functionality that has long been deprecated (and for which alternatives have existed for some time) and the adjustment of a number of function argument and return types to provide better portability.
 
 The libarchive 3.0 release will also be deprecating some older functionality.
 This functionality will not be completely removed until libarchive 4.0, which should provide a transition window of at least two full years.
@@ -27,14 +30,12 @@ If you are still using any of the old functions listed here, you should have alr
 = Functions with argument changes =
 
 These changes will break binary compatibility; the libarchive 3.0 distribution will have a new shared library version to reflect these changes.
-Most of these changes involve the use of portable wide types such as `int64_t` instead of less-portable types such as `off_t`, `gid_t`, `uid_t`, and `ino_t`.
-nlinks should be made int64_t as well.
-The rdev functions should use int64_t too, as the platform support differs.
-The dev functions are different as they are referring to the current platform.
+Most of these changes involve the use of portable wide types such as `int64_t` instead of less-portable types such as `off_t`, `gid_t`, `uid_t`, `dev_t`, and `ino_t`.
 
 || *Function name*                             ||
 || archive_entry_ino()                         ||
 || archive_entry_set_ino()                     ||
+|| ... many others ...                             ||
 
 There are a few cases where these changes will affect your source code:
 
@@ -56,6 +57,8 @@ int64_t my_skip_function(struct archive *a, void *v, int64_t o)
 
 The old function name will continue to be supported until libarchive 4.0
 is released, at which point the old name will be removed.
+So you can use the old function name for compatibility with libarchive 2.x.
+After 2012, you should plan to switch to the new names for compatibility with libarchive 4.0.
 This should provide libarchive users with a transition window of at least two full years.
 
 The new functions will sometimes have slightly different functionality.
