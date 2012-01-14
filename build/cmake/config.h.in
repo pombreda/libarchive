@@ -603,6 +603,9 @@ typedef uint64_t uintmax_t;
 /* Define to 1 if you have the `link' function. */
 #cmakedefine HAVE_LINK 1
 
+/* Define to 1 if you have the <linux/types.h> header file. */
+#cmakedefine HAVE_LINUX_TYPES_H 1
+
 /* Define to 1 if you have the <linux/fiemap.h> header file. */
 #cmakedefine HAVE_LINUX_FIEMAP_H 1
 
@@ -784,6 +787,9 @@ typedef uint64_t uintmax_t;
 
 /* Define to 1 if `f_namemax' is a member of `struct statfs'. */
 #cmakedefine HAVE_STRUCT_STATFS_F_NAMEMAX 1
+
+/* Define to 1 if `f_iosize' is a member of `struct statvfs'. */
+#cmakedefine HAVE_STRUCT_STATVFS_F_IOSIZE 1
 
 /* Define to 1 if `st_birthtime' is a member of `struct stat'. */
 #cmakedefine HAVE_STRUCT_STAT_ST_BIRTHTIME 1

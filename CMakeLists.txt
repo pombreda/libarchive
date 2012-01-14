@@ -77,9 +77,17 @@ IF(ENABLE_TEST)
 ENDIF(ENABLE_TEST)
 
 IF(WIN32)
-  SET(_WIN32_WINNT 0x0500 CACHE INTERNAL "Setting _WIN32_WINNT to 0x0500 for Windows 2000 APIs")
-  SET(WINVER 0x0500 CACHE INTERNAL "Setting WINVER to 0x0500 for Windows 2000 APIs")
+  IF(MSVC60)
+    SET(WINVER 0x0400)
+  ELSE()
+    SET(WINVER 0x0500)
+  ENDIF()
+  SET(_WIN32_WINNT ${WINVER})
 ENDIF(WIN32)
+
+IF("${CMAKE_C_PLATFORM_ID}" MATCHES "^(HP-UX)$")
+  ADD_DEFINITIONS(-D_XOPEN_SOURCE=500) # Ask wchar.h for mbstate_t
+ENDIF()
 
 #
 INCLUDE(CheckCSourceCompiles)
@@ -180,6 +188,8 @@ IF(ZLIB_FOUND)
     CHECK_C_SOURCE_Runs(
       "#ifndef ZLIB_WINAPI\n#define ZLIB_WINAPI\n#endif\n#include <zlib.h>\nint main() {uLong f = zlibCompileFlags(); return (f&(1U<<10))?0:-1; }"
       ZLIB_WINAPI)
+    SET(CMAKE_REQUIRED_INCLUDES)
+    SET(CMAKE_REQUIRED_LIBRARIES)
   ENDIF(WIN32 AND NOT CYGWIN)
 ENDIF(ZLIB_FOUND)
 MARK_AS_ADVANCED(CLEAR ZLIB_INCLUDE_DIR)
@@ -247,6 +257,7 @@ LA_CHECK_INCLUDE_FILE("inttypes.h" HAVE_INTTYPES_H)
 LA_CHECK_INCLUDE_FILE("io.h" HAVE_IO_H)
 LA_CHECK_INCLUDE_FILE("langinfo.h" HAVE_LANGINFO_H)
 LA_CHECK_INCLUDE_FILE("limits.h" HAVE_LIMITS_H)
+LA_CHECK_INCLUDE_FILE("linux/types.h" HAVE_LINUX_TYPES_H)
 LA_CHECK_INCLUDE_FILE("linux/fiemap.h" HAVE_LINUX_FIEMAP_H)
 LA_CHECK_INCLUDE_FILE("linux/fs.h" HAVE_LINUX_FS_H)
 LA_CHECK_INCLUDE_FILE("linux/magic.h" HAVE_LINUX_MAGIC_H)
@@ -798,6 +809,12 @@ CHECK_STRUCT_MEMBER("struct stat" st_blksize
 # Check for st_flags in struct stat (BSD fflags)
 CHECK_STRUCT_MEMBER("struct stat" st_flags
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_FLAGS)
+
+IF(HAVE_SYS_STATVFS_H)
+  CHECK_STRUCT_MEMBER("struct statvfs" f_iosize
+    "sys/types.h;sys/statvfs.h" HAVE_STRUCT_STATVFS_F_IOSIZE)
+ENDIF()
+
 #
 #
 CHECK_STRUCT_MEMBER("struct tm" tm_sec

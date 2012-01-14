@@ -32,6 +32,30 @@ __FBSDID("$FreeBSD$");
 # endif
 #endif
 
+/*
+ * Test if the current filesytem is mounted with noatime option.
+ */
+static int
+atimeIsUpdated(void)
+{
+	const char *fn = "fs_noatime";
+	struct stat st;
+
+	if (!assertMakeFile(fn, 0666, "a"))
+		return (0);
+	if (!assertUtimes(fn, 1, 0, 1, 0))
+		return (0);
+	/* Test the file contents in order to update its atime. */
+	if (!assertTextFileContents("a", fn))
+		return (0);
+	if (stat(fn, &st) != 0)
+		return (0);
+	/* Is atime updated? */
+	if (st.st_atime > 1)
+		return (1);
+	return (0);
+}
+
 static void
 test_basic(void)
 {
@@ -1000,6 +1024,11 @@ test_restore_atime(void)
 	size_t size;
 	int64_t offset;
 	int file_count;
+
+	if (!atimeIsUpdated()) {
+		skipping("Can't test restoring atime on this filesystem");
+		return;
+	}
 
 	assertMakeDir("at", 0755);
 	assertMakeFile("at/f1", 0644, "0123456789");
