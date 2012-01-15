@@ -104,6 +104,10 @@ static int		 copy_file_data_block(struct bsdpax *, struct archive *,
 static int		 copy_hierarchy(struct bsdpax *, struct archive *,
 			     const char *);
 static char *		 make_destpath(struct bsdpax *, const char *);
+static int		 metadata_filter(struct archive *, void *,
+			     struct archive_entry *);
+static int		 name_filter(struct archive *, void *,
+			     struct archive_entry *);
 
 void
 pax_mode_copy(struct bsdpax *bsdpax)
@@ -150,6 +154,15 @@ copy_disk(struct archive *a, struct bsdpax *bsdpax)
 	}
 	if (bsdpax->option_restore_atime)
 		archive_read_disk_set_atime_restored(bsdpax->diskreader);
+	if (bsdpax->option_exclude && bsdpax->matching != NULL)
+		archive_read_disk_set_name_filter_callback(bsdpax->diskreader,
+		    name_filter, bsdpax);
+	archive_read_disk_set_metadata_filter_callback(bsdpax->diskreader,
+	    metadata_filter, bsdpax);
+	if (bsdpax->option_honor_nodump)
+		archive_read_disk_honor_nodump(bsdpax->diskreader);
+	if (!bsdpax->enable_copyfile)
+		archive_read_disk_disable_mac_copyfile(bsdpax->diskreader);
 	archive_read_disk_set_standard_lookup(bsdpax->diskreader);
 
 	/* Create and setup another disk reader. */
@@ -210,6 +223,67 @@ copy_disk(struct archive *a, struct bsdpax *bsdpax)
 	archive_write_free(a);
 }
 
+
+static int
+name_filter(struct archive *a, void *_data, struct archive_entry *entry)
+{
+	struct bsdpax *bsdpax = (struct bsdpax *)_data;
+
+	/*
+	 * Exclude entries that are specified.
+	 */
+	if (bsdpax->option_exclude &&
+	    lafe_excluded(bsdpax->matching, archive_entry_pathname(entry)))
+		return (0);
+	return (1);
+}
+
+static int
+metadata_filter(struct archive *a, void *_data, struct archive_entry *entry)
+{
+	struct bsdpax *bsdpax = (struct bsdpax *)_data;
+	int exclude, option_exclude;
+
+	/*
+	 * Do not copy destination directory itself.
+	 */
+	if (bsdpax->dest_dev == archive_entry_dev(entry) &&
+	    bsdpax->dest_ino == archive_entry_ino(entry)) {
+		lafe_warnc(0,
+		    "Cannot copy destination directory itself %s",
+		    bsdpax->destdir);
+		return (0);
+	}
+
+	option_exclude = bsdpax->option_exclude;
+	bsdpax->option_exclude = 0;
+	exclude = excluded_entry(bsdpax, entry);
+	bsdpax->option_exclude = option_exclude;
+	if (exclude)
+		return (0);
+
+	/*
+	 * Exclude entries that are older than archived one
+	 * which has the same name. (-u, -D option.)
+	 */
+	if (!disk_new_enough(bsdpax,
+	      make_destpath(bsdpax, archive_entry_pathname(entry)), entry, 0))
+		return (0);
+
+	/*
+	 * User has asked us not to cross mount points.
+	 */
+	if (bsdpax->option_dont_traverse_mounts) {
+		int fs = archive_read_disk_current_filesystem(a);
+		if (bsdpax->first_fs == -1)
+			bsdpax->first_fs = fs;
+		else if (bsdpax->first_fs != fs)
+			return (0);
+	}
+
+	return (1);
+}
+
 /*
  * Add the file or dir hierarchy named by 'path' to the archive
  */
@@ -218,9 +292,10 @@ copy_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 {
 	struct archive *disk = bsdpax->diskreader;
 	struct archive_entry *entry = NULL, *spare_entry = NULL;
-	int first_fs = -1, r, rename = 0;
+	int r, rename = 0;
 	char *hardlinkpath = NULL;
 
+	bsdpax->first_fs = -1;
 	r = archive_read_disk_open(disk, path);
 	if (r != ARCHIVE_OK) {
 		lafe_warnc(archive_errno(disk),
@@ -249,83 +324,6 @@ copy_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 			else if (r < ARCHIVE_WARN)
 				continue;
 		}
-
-		/*
-		 * Do not copy destination directory itself.
-		 */
-		if (bsdpax->dest_dev == archive_entry_dev(entry) &&
-		    bsdpax->dest_ino == archive_entry_ino(entry)) {
-			lafe_warnc(0,
-			    "Cannot copy destination directory itself %s",
-			    bsdpax->destdir);
-			continue;
-		}
-
-		/*
-		 * Exclude entries that are specified.
-		 */
-		if (excluded_entry(bsdpax, entry))
-			continue;/* Skip it. */
-
-		/*
-		 * Exclude entries that are older than archived one
-		 * which has the same name. (-u, -D option.)
-		 */
-		if (!disk_new_enough(bsdpax,
-		      make_destpath(bsdpax, archive_entry_pathname(entry)),
-		      entry, 0))
-			continue;
-
-		/*
-		 * User has asked us not to cross mount points.
-		 */
-		if (bsdpax->option_dont_traverse_mounts) {
-			if (first_fs == -1)
-				first_fs =
-				    archive_read_disk_current_filesystem(disk);
-			else if (first_fs !=
-			    archive_read_disk_current_filesystem(disk))
-				continue;
-		}
-
-		/*
-		 * If this file/dir is flagged "nodump" and we're
-		 * honoring such flags, skip this file/dir.
-		 */
-#if defined(HAVE_STRUCT_STAT_ST_FLAGS) && defined(UF_NODUMP)
-		if (bsdpax->option_honor_nodump) {
-			unsigned long flags, clear;
-			archive_entry_fflags(entry, &flags, &clear);
-			/* BSD systems store flags in struct stat */
-			if (flags & UF_NODUMP)
-				continue;
-		}
-#endif
-#if defined(EXT2_IOC_GETFLAGS) && defined(EXT2_NODUMP_FL)
-		if (bsdpax->option_honor_nodump) {
-			unsigned long flags, clear;
-			archive_entry_fflags(entry, &flags, &clear);
-			if (flags & EXT2_NODUMP_FL)
-				continue;
-		}
-#endif
-
-#ifdef __APPLE__
-		if (bsdpax->enable_copyfile) {
-			/* If we're using copyfile(), ignore "._XXX" files. */
-			const char *bname =
-			    strrchr(archive_entry_pathname(entry), '/');
-			if (bname == NULL)
-				bname = archive_entry_pathname(entry);
-			else
-				++bname;
-			if (bname[0] == '.' && bname[1] == '_')
-				continue;
-		} else {
-			/* If not, drop the copyfile() data. */
-			archive_entry_copy_mac_metadata(entry, NULL, 0);
-		}
-#endif
 
 		if (bsdpax->option_link &&
 		    archive_entry_filetype(entry) == AE_IFREG)
