@@ -213,6 +213,9 @@ By default, the archive is always read to the very end, since
 there can be multiple entries with the same name and, by convention,
 later entries overwrite earlier entries.
 This option is provided as a performance optimization.
+.It Fl Fl nodump
+(Write and Copy modes only)
+Honor the nodump file flag by skipping this file.
 .It Fl Fl null
 Filenames or patterns are separated by null characters,
 not by newlines.

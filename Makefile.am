@@ -911,6 +911,7 @@ bsdpax_test_SOURCES=						\
 	pax/test/test_option_l.c				\
 	pax/test/test_option_lzma.c				\
 	pax/test/test_option_n.c				\
+	pax/test/test_option_nodump.c				\
 	pax/test/test_option_null.c				\
 	pax/test/test_option_o.c				\
 	pax/test/test_option_s.c				\

@@ -306,6 +306,9 @@ main(int argc, char **argv)
 		case 'l':
 			bsdpax->option_link = 1;
 			break;
+		case OPTION_NODUMP:
+			bsdpax->option_honor_nodump = 1;
+			break;
 		case OPTION_NULL:
 			bsdpax->option_null = 1;
 			break;

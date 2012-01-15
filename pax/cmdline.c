@@ -90,6 +90,7 @@ static const struct bsdpax_option {
 	{ "lzip",			0, OPTION_LZIP },
 	{ "lzma",			0, OPTION_LZMA },
 	{ "no-recursion",		0, 'd' },
+	{ "nodump",			0, OPTION_NODUMP },
 	{ "norecurse",			0, 'd' },
 	{ "null",			0, OPTION_NULL },
 	{ "one-file-system",		0, 'X' },
