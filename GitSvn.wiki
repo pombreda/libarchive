@@ -44,6 +44,7 @@ svn-remote.svn.url=http://libarchive.googlecode.com/svn
 svn-remote.svn.fetch=trunk:refs/remotes/trunk
 svn-remote.svn.tags=release/*:refs/tags/release/*
 svn-remote.svn.fetch=branches/ferringb-workspace/libarchive:refs/remotes/ferringb-workspace-libarchive
+svn-remote.svn.fetch=branches/multivolume:refs/remotes/multivolume
 svn-remote.svn.fetch=branches/nfs4:refs/remotes/nfs4
 svn-remote.svn.fetch=branches/pax_fe:refs/remotes/pax_fe
 svn-remote.svn.fetch=branches/rseek:refs/remotes/rseek
