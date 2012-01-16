@@ -26,6 +26,7 @@ git config svn-remote.svn.tags release/*:refs/tags/release/*
 {{{
 git config --unset svn-remote.svn.branches
 git config --add svn-remote.svn.fetch branches/ferringb-workspace/libarchive:refs/remotes/ferringb-workspace-libarchive
+git config --add svn-remote.svn.fetch branches/multivolume:refs/remotes/multivolume
 git config --add svn-remote.svn.fetch branches/nfs4:refs/remotes/nfs4
 git config --add svn-remote.svn.fetch branches/pax_fe:refs/remotes/pax_fe
 git config --add svn-remote.svn.fetch branches/rseek:refs/remotes/rseek
