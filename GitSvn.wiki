@@ -16,6 +16,10 @@ cd libarchive
 {{{
 git svn init --stdlayout http://libarchive.googlecode.com/svn
 }}}
+NOTE: If you're a dev, use the following command instead.
+{{{
+git svn init --stdlayout https://libarchive.googlecode.com/svn --username=<googlecode_username>
+}}}
 
 3. Change the git config setting for tracking libarchive's tag to point to the "release" directory in libarchive's svn repository.
 {{{
