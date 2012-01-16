@@ -60,6 +60,7 @@ git svn fetch
 git branch -a
 * master
   remotes/ferringb-workspace-libarchive
+  remotes/multivolume
   remotes/nfs4
   remotes/pax_fe
   remotes/rseek
@@ -68,4 +69,5 @@ git tag -l
 release/2.6
 release/2.7
 release/2.8
+release/3.0
 }}}
