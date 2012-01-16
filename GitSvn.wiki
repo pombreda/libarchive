@@ -8,32 +8,32 @@ It is often desirable to be able to use another SCM other than svn to make chang
 
 1. Make a directory where the libarchive source tree is to be placed and change into that directory.
 {{{
-$ mkdir libarchive
-$ cd libarchive
+mkdir libarchive
+cd libarchive
 }}}
 
 2. Initialize the new directory as a git repository to track libarchive svn repository using git-svn.
 {{{
-$ git svn init --stdlayout http://libarchive.googlecode.com/svn
+git svn init --stdlayout http://libarchive.googlecode.com/svn
 }}}
 
 3. Change the git config setting for tracking libarchive's tag to point to the "release" directory in libarchive's svn repository.
 {{{
-$ git config svn-remote.svn.tags release/*:refs/tags/release/*
+git config svn-remote.svn.tags release/*:refs/tags/release/*
 }}}
 
 4. Because there is at least one branch that is not in a standard location, each individual branch has to be tracked via individual "fetch" config options. Thus, remove the "branches" config option and add "fetch" config options for each branch.
 {{{
-$ git config --unset svn-remote.svn.branches
-$ git config --add svn-remote.svn.fetch branches/ferringb-workspace/libarchive:refs/remotes/ferringb-workspace-libarchive
-$ git config --add svn-remote.svn.fetch branches/nfs4:refs/remotes/nfs4
-$ git config --add svn-remote.svn.fetch branches/pax_fe:refs/remotes/pax_fe
-$ git config --add svn-remote.svn.fetch branches/rseek:refs/remotes/rseek
+git config --unset svn-remote.svn.branches
+git config --add svn-remote.svn.fetch branches/ferringb-workspace/libarchive:refs/remotes/ferringb-workspace-libarchive
+git config --add svn-remote.svn.fetch branches/nfs4:refs/remotes/nfs4
+git config --add svn-remote.svn.fetch branches/pax_fe:refs/remotes/pax_fe
+git config --add svn-remote.svn.fetch branches/rseek:refs/remotes/rseek
 }}}
 
 5. Check your git configuration before proceeding. Your git configuration should look like this.
 {{{
-$ git config -l
+git config -l
 ...[snip]...
 svn-remote.svn.url=http://libarchive.googlecode.com/svn
 svn-remote.svn.fetch=trunk:refs/remotes/trunk
@@ -46,19 +46,19 @@ svn-remote.svn.fetch=branches/rseek:refs/remotes/rseek
 
 6. Once you verified the git repository is setup properly, fetch the sources.
 {{{
-$ git svn fetch
+git svn fetch
 }}}
 
 7. Check that all branches and tags were fetched.
 {{{
-$ git branch -a
+git branch -a
 * master
   remotes/ferringb-workspace-libarchive
   remotes/nfs4
   remotes/pax_fe
   remotes/rseek
   remotes/trunk
-$ git tag -l
+git tag -l
 release/2.6
 release/2.7
 release/2.8
