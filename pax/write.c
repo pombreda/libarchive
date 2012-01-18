@@ -359,7 +359,7 @@ write_archive(struct archive *a, struct bsdpax *bsdpax)
 	}
 	if (bsdpax->option_restore_atime)
 		archive_read_disk_set_atime_restored(bsdpax->diskreader);
-	if (bsdpax->option_exclude && bsdpax->matching != NULL)
+	if (bsdpax->option_exclude)
 		archive_read_disk_set_name_filter_callback(bsdpax->diskreader,
 		    name_filter, bsdpax);
 	archive_read_disk_set_metadata_filter_callback(bsdpax->diskreader,
@@ -510,7 +510,7 @@ append_archive(struct bsdpax *bsdpax, struct archive *a, struct archive *ina)
 		/*
 		 * Exclude entries that are specified.
 		 */
-		if (excluded_entry(bsdpax, in_entry))
+		if (archive_matching_excluded_ae(bsdpax->matching, in_entry))
 			continue;/* Skip it. */
 
 		if (bsdpax->option_interactive) {
@@ -578,7 +578,7 @@ name_filter(struct archive *a, void *_data, struct archive_entry *entry)
 	 * Exclude entries that are specified.
 	 */
 	if (bsdpax->option_exclude &&
-	    lafe_excluded(bsdpax->matching, archive_entry_pathname(entry)))
+	    archive_matching_path_excluded_ae(bsdpax->matching, entry))
 		return (0);
 	return (1);
 }
@@ -587,13 +587,8 @@ static int
 metadata_filter(struct archive *a, void *_data, struct archive_entry *entry)
 {
 	struct bsdpax *bsdpax = (struct bsdpax *)_data;
-	int exclude, option_exclude;
 
-	option_exclude = bsdpax->option_exclude;
-	bsdpax->option_exclude = 0;
-	exclude = excluded_entry(bsdpax, entry);
-	bsdpax->option_exclude = option_exclude;
-	if (exclude)
+	if (archive_matching_excluded_ae(bsdpax->matching, entry))
 		return (0);
 
 	/*

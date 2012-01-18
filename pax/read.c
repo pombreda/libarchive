@@ -78,12 +78,13 @@ struct progress_data {
 static void	list_item_verbose(struct bsdpax *, FILE *,
 		    struct archive_entry *);
 static void	read_archive(struct bsdpax *bsdpax, char mode, struct archive *);
+static int	unmatched_inclusions_warn(struct archive *, const char *);
 
 void
 pax_mode_list(struct bsdpax *bsdpax)
 {
 	read_archive(bsdpax, PAXMODE_LIST, NULL);
-	if (lafe_unmatched_inclusions_warn(bsdpax->matching,
+	if (unmatched_inclusions_warn(bsdpax->matching,
 	    "Not found in archive") != 0)
 		bsdpax->return_value = 1;
 }
@@ -102,7 +103,7 @@ pax_mode_read(struct bsdpax *bsdpax)
 
 	read_archive(bsdpax, PAXMODE_READ, writer);
 
-	if (lafe_unmatched_inclusions_warn(bsdpax->matching,
+	if (unmatched_inclusions_warn(bsdpax->matching,
 	    "Not found in archive") != 0)
 		bsdpax->return_value = 1;
 	archive_write_free(writer);
@@ -159,9 +160,14 @@ read_archive(struct bsdpax *bsdpax, char mode, struct archive *writer)
 
 	while (*bsdpax->argv) {
 		if (bsdpax->option_exclude)
-			lafe_exclude(&bsdpax->matching, *bsdpax->argv);
+			r = archive_matching_exclude_pattern(bsdpax->matching,
+			    *bsdpax->argv);
 		else
-			lafe_include(&bsdpax->matching, *bsdpax->argv);
+			r = archive_matching_include_pattern(bsdpax->matching,
+			    *bsdpax->argv);
+		if (r != ARCHIVE_OK)
+			lafe_errc(1, 0, "Error : %s",
+			    archive_error_string(bsdpax->matching));
 		bsdpax->argv++;
 	}
 
@@ -204,7 +210,8 @@ read_archive(struct bsdpax *bsdpax, char mode, struct archive *writer)
 	for (;;) {
 		/* Support --fast-read option */
 		if (bsdpax->option_fast_read &&
-		    lafe_unmatched_inclusions(bsdpax->matching) == 0)
+		    archive_matching_path_unmatched_inclusions(
+		      bsdpax->matching) == 0)
 			break;
 
 		r = archive_read_next_header(a, &entry);
@@ -224,12 +231,6 @@ read_archive(struct bsdpax *bsdpax, char mode, struct archive *writer)
 			break;
 
 		/*
-		 * Exclude entries that are specified.
-		 */
-		if (excluded_entry(bsdpax, entry))
-			continue;/* Skip it. */
-
-		/*
 		 * Note that pattern exclusions are checked before
 		 * pathname rewrites are handled.  This gives more
 		 * control over exclusions, since rewrites always lose
@@ -238,8 +239,7 @@ read_archive(struct bsdpax *bsdpax, char mode, struct archive *writer)
 		 * rewrite, there would be no way to exclude foo1/bar
 		 * while allowing foo2/bar.)
 		 */
-		if (lafe_excluded(bsdpax->matching,
-		    archive_entry_pathname(entry)))
+		if (archive_matching_excluded_ae(bsdpax->matching, entry))
 			continue; /* Excluded by a pattern test. */
 
 		if (mode == PAXMODE_LIST) {
@@ -480,3 +480,22 @@ list_item_verbose(struct bsdpax *bsdpax, FILE *out, struct archive_entry *entry)
 	else if (archive_entry_symlink(entry)) /* Symbolic link */
 		safe_fprintf(out, " -> %s", archive_entry_symlink(entry));
 }
+
+static int
+unmatched_inclusions_warn(struct archive *matching, const char *msg)
+{
+	const char *p;
+	int r;
+
+	if (matching == NULL)
+		return (0);
+
+	while ((r = archive_matching_path_unmatched_inclusions_next(
+	    matching, &p)) == ARCHIVE_OK)
+		lafe_warnc(0, "%s: %s", p, msg);
+	if (r == ARCHIVE_FATAL)
+		lafe_errc(1, errno, "Out of memory");
+
+	return (archive_matching_path_unmatched_inclusions(matching));
+}
+

@@ -226,6 +226,9 @@ main(int argc, char **argv)
 	if (getenv(COPYFILE_DISABLE_VAR))
 		bsdpax->enable_copyfile = 0;
 #endif
+	bsdpax->matching = archive_matching_new();
+	if (bsdpax->matching == NULL)
+		lafe_errc(1, 0, "Out of memory");
 
 	bsdpax->argv = argv;
 	bsdpax->argc = argc;
@@ -527,7 +530,7 @@ main(int argc, char **argv)
 		break;
 	}
 
-	lafe_cleanup_exclusions(&bsdpax->matching);
+	archive_matching_free(bsdpax->matching);
 #if HAVE_REGEX_H
 	cleanup_substitution(bsdpax);
 #endif
@@ -711,14 +714,12 @@ parse_option_T(struct bsdpax *bsdpax, time_t now, const char *opt)
 		/* Parse 'to date'. */
 		*p++ = '\0';
 		t = get_date(now, p);
-		if (flag & USE_MTIME) {
-			bsdpax->older_mtime_filter = 1;
-			bsdpax->older_mtime_sec = t;
-		}
-		if (flag & USE_CTIME) {
-			bsdpax->older_ctime_filter = 1;
-			bsdpax->older_ctime_sec = t;
-		}
+		if (flag & USE_MTIME)
+			archive_matching_older_mtime(bsdpax->matching, t,
+			    LONG_MAX);
+		if (flag & USE_CTIME)
+			archive_matching_older_ctime(bsdpax->matching, t,
+			    LONG_MAX);
 	}
 	p = s;
 	while (*p == ' ' || *p == '\t')
@@ -726,14 +727,10 @@ parse_option_T(struct bsdpax *bsdpax, time_t now, const char *opt)
 	if (strlen(p) > 0) {
 		/* Parse 'from date'. */
 		t = get_date(now, p);
-		if (flag & USE_MTIME) {
-			bsdpax->newer_mtime_filter = 1;
-			bsdpax->newer_mtime_sec = t;
-		}
-		if (flag & USE_CTIME) {
-			bsdpax->newer_ctime_filter = 1;
-			bsdpax->newer_ctime_sec = t;
-		}
+		if (flag & USE_MTIME)
+			archive_matching_newer_mtime(bsdpax->matching, t, -1);
+		if (flag & USE_CTIME)
+			archive_matching_newer_ctime(bsdpax->matching, t, -1);
 	}
 	free(s);
 }

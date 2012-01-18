@@ -49,29 +49,11 @@ struct bsdpax {
 	size_t		  destdir_len;
 	int64_t		  dest_dev;
 	int64_t		  dest_ino;
-	int		  newer_ctime_filter;
-	time_t		  newer_ctime_sec; /* -T<date>/m */
-	int		  newer_mtime_filter;
-	time_t		  newer_mtime_sec; /* -T <date>/m */
-	int		  older_ctime_filter;
-	time_t		  older_ctime_sec; /* -T ,<date>/c */
-	int		  older_mtime_filter;
-	time_t		  older_mtime_sec; /* -T ,<date>/m */
 	int		  bytes_per_block; /* -b block_size */
 	int		  bytes_in_last_block; /* See -b handling. */
 	int		  verbose;   /* -v */
 	int		  extract_flags; /* Flags for extract operation */
 	int		  strip_components; /* Remove this many leading dirs */
-	struct id_array {
-		size_t	  size;/* Allocated size */
-		size_t	  cnt;
-		int64_t	 *ids;
-	}		  gid, uid;
-	struct name_array {
-		size_t	  size;/* Allocated size */
-		size_t	  cnt;
-		char	**names;
-	}		  gname, uname;
 	char		  mode; /* Program mode */
 #define PAXMODE_LIST	1
 #define PAXMODE_READ	2
@@ -138,7 +120,7 @@ struct bsdpax {
 	size_t			 buff_size;	/* for write.c */
 	char			*destpath;	/* for copy.c */
 	size_t			 destpath_size;	/* for copy.c */
-	struct lafe_matching	*matching;	/* for matching.c */
+	struct archive		*matching;	/* for matching.c */
 	struct security		*security;	/* for read.c */
 	struct name_cache	*uname_cache;	/* for write.c */
 	struct siginfo_data	*siginfo;	/* for siginfo.c */

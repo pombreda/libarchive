@@ -564,167 +564,38 @@ pathcmp(const char *a, const char *b)
 	return (*(const unsigned char *)a - *(const unsigned char *)b);
 }
 
-static void
-add_id(struct id_array *ids, int64_t id)
-{
-	if (ids->cnt + 1 >= ids->size) {
-		if (ids->size == 0)
-			ids->size = 10;
-		else
-			ids->size *= 2;
-		ids->ids = realloc(ids->ids, sizeof(*ids->ids) * ids->size);
-		if (ids->ids == NULL)
-			lafe_errc(1, ENOMEM, "Can't allocate memory");
-	}
-	ids->ids[ids->cnt++] = id;
-}
-
-static int
-match_id(struct id_array *ids, int64_t id)
-{
-	int i;
-
-	if (ids->cnt == 0)
-		return (0);
-	for (i = 0; i < (int)ids->cnt; i++) {
-		if (ids->ids[i] == id)
-			return (1);
-	}
-	return (-1);
-}
-
-static void
-add_name(struct name_array *ids, const char *name)
-{
-	if (ids->cnt + 1 >= ids->size) {
-		if (ids->size == 0)
-			ids->size = 10;
-		else
-			ids->size *= 2;
-		ids->names = realloc(ids->names,
-		    sizeof(*ids->names) * ids->size);
-		if (ids->names == NULL)
-			lafe_errc(1, ENOMEM, "Can't allocate memory");
-	}
-	ids->names[ids->cnt++] = strdup(name);
-}
-
-static int
-match_name(struct name_array *ids, const char *name)
-{
-	int i;
-
-	if (ids->cnt == 0)
-		return (0);
-	if (name == NULL)
-		return (-1);
-	for (i = 0; i < (int)ids->cnt; i++) {
-		if (strcmp(ids->names[i], name) == 0)
-			return (1);
-	}
-	return (-1);
-}
-
 int
 add_user(struct bsdpax *bsdpax, const char *user)
 {
-	int id;
+	int id, r;
 
 	if (user[0] == '#') {
 		id = atoi(user+1);
 		if (id < 0)
 			return (-1);
-		add_id(&bsdpax->uid, id);
+		r = archive_matching_include_uid(bsdpax->matching, id);
 	} else if (user[0] == '\\' && user[1] == '#')
-		add_name(&bsdpax->uname, user+1);
+		r = archive_matching_include_uname(bsdpax->matching, user+1);
 	else
-		add_name(&bsdpax->uname, user);
-	return (0);
+		r = archive_matching_include_uname(bsdpax->matching, user);
+	return (r);
 }
 
 int
 add_group(struct bsdpax *bsdpax, const char *group)
 {
-	int id;
+	int id, r;
 
 	if (group[0] == '#') {
 		id = atoi(group+1);
 		if (id < 0)
 			return (-1);
-		add_id(&bsdpax->gid, id);
+		r = archive_matching_include_gid(bsdpax->matching, id);
 	} else if (group[0] == '\\' && group[1] == '#')
-		add_name(&bsdpax->gname, group+1);
+		r = archive_matching_include_gname(bsdpax->matching, group+1);
 	else
-		add_name(&bsdpax->gname, group);
-	return (0);
-}
-
-int
-excluded_entry(struct bsdpax *bsdpax, struct archive_entry *entry)
-{
-	time_t sec;
-
-	/*
-	 * Exclude entries that are too old.
-	 */
-	if (bsdpax->newer_ctime_filter) {
-		/* Use ctime if format provides, else mtime. */
-		if (archive_entry_ctime_is_set(entry))
-			sec = archive_entry_ctime(entry);
-		else if (archive_entry_mtime_is_set(entry))
-			sec = archive_entry_mtime(entry);
-		else
-			sec = 0;
-		if (sec < bsdpax->newer_ctime_sec)
-			return (1); /* Too old, skip it. */
-	}
-	if (bsdpax->newer_mtime_filter) {
-		if (archive_entry_mtime_is_set(entry))
-			sec = archive_entry_mtime(entry);
-		else
-			sec = 0;
-		if (sec < bsdpax->newer_mtime_sec)
-			return (1); /* Too old, skip it. */
-	}
-
-	/*
-	 * Exclude entries that are too new.
-	 */
-	if (bsdpax->older_ctime_filter) {
-		/* Use ctime if format provides, else mtime. */
-		if (archive_entry_ctime_is_set(entry))
-			sec = archive_entry_ctime(entry);
-		else if (archive_entry_mtime_is_set(entry))
-			sec = archive_entry_mtime(entry);
-		else
-			sec = 0;
-		if (sec > bsdpax->older_ctime_sec)
-			return (1); /* Too new, skip it. */
-	}
-	if (bsdpax->older_mtime_filter) {
-		if (archive_entry_mtime_is_set(entry))
-			sec = archive_entry_mtime(entry);
-		else
-			sec = 0;
-		if (sec > bsdpax->older_mtime_sec)
-			return (1); /* Too new, skip it. */
-	}
-
-	/*
-	 * Exclude entries that are specified.
-	 */
-	if (bsdpax->option_exclude &&
-	    lafe_excluded(bsdpax->matching, archive_entry_pathname(entry)))
-		return (1);
-	if (match_id(&bsdpax->uid, archive_entry_uid(entry)) < 0)
-		return (1);
-	if (match_name(&bsdpax->uname, archive_entry_uname(entry)) < 0)
-		return (1);
-	if (match_id(&bsdpax->gid, archive_entry_gid(entry)) < 0)
-		return (1);
-	if (match_name(&bsdpax->gname, archive_entry_gname(entry)) < 0)
-		return (1);
-	return (0);
+		r = archive_matching_include_gname(bsdpax->matching, group);
+	return (r);
 }
 
 int

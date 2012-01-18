@@ -105,8 +105,11 @@ libarchive_la_SOURCES=						\
 	libarchive/archive_entry_stat.c				\
 	libarchive/archive_entry_strmode.c			\
 	libarchive/archive_entry_xattr.c			\
+	libarchive/archive_matching.c				\
 	libarchive/archive_options.c				\
 	libarchive/archive_options_private.h			\
+	libarchive/archive_pathmatch.c				\
+	libarchive/archive_pathmatch.h				\
 	libarchive/archive_platform.h				\
 	libarchive/archive_ppmd_private.h			\
 	libarchive/archive_ppmd7.c				\
@@ -258,6 +261,10 @@ libarchive_test_SOURCES=					\
 	libarchive/test/test_archive_api_feature.c		\
 	libarchive/test/test_archive_clear_error.c		\
 	libarchive/test/test_archive_crypto.c			\
+	libarchive/test/test_archive_matching_owner.c		\
+	libarchive/test/test_archive_matching_path.c		\
+	libarchive/test/test_archive_matching_time.c		\
+	libarchive/test/test_archive_pathmatch.c		\
 	libarchive/test/test_archive_read_close_twice.c		\
 	libarchive/test/test_archive_read_close_twice_open_fd.c	\
 	libarchive/test/test_archive_read_close_twice_open_filename.c	\
@@ -581,14 +588,9 @@ libarchive_fe_la_SOURCES=			\
 	libarchive_fe/matching.c		\
 	libarchive_fe/matching.h		\
 	libarchive_fe/options.h			\
-	libarchive_fe/options.c			\
-	libarchive_fe/pathmatch.c		\
-	libarchive_fe/pathmatch.h
+	libarchive_fe/options.c
 
-libarchive_fe_la_CPPFLAGS=\
-	-I$(top_srcdir)/libarchive \
-	$(PLATFORMCPPFLAGS)
-
+libarchive_fe_la_CPPFLAGS= -I$(top_srcdir)/libarchive
 #
 #
 # bsdtar source, docs, etc.
@@ -602,8 +604,6 @@ bsdtar_SOURCES=				\
 		tar/cmdline.c		\
 		tar/read.c		\
 		tar/subst.c		\
-		tar/tree.c		\
-		tar/tree.h		\
 		tar/util.c		\
 		tar/write.c
 
@@ -795,8 +795,7 @@ bsdcpio_test_SOURCES=						\
 	cpio/test/test_option_z.c				\
 	cpio/test/test_owner_parse.c				\
 	cpio/test/test_passthrough_dotdot.c			\
-	cpio/test/test_passthrough_reverse.c			\
-	cpio/test/test_pathmatch.c
+	cpio/test/test_passthrough_reverse.c
 
 bsdcpio_test_CPPFLAGS= \
 	-I$(top_srcdir)/libarchive -I$(top_srcdir)/libarchive_fe \

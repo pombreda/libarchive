@@ -26,8 +26,6 @@ IF (ENABLE_PAX)
     ../libarchive_fe/matching.h
     ../libarchive_fe/options.c
     ../libarchive_fe/options.h
-    ../libarchive_fe/pathmatch.c
-    ../libarchive_fe/pathmatch.h
   )
   INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../libarchive_fe)
   IF(WIN32 AND NOT CYGWIN)
