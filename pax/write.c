@@ -196,10 +196,19 @@ pax_mode_write(struct bsdpax *bsdpax)
 		}
 	}
 
+	if (bsdpax->option_keep_newer_mtime_files_ar) {
+		bsdpax->matching2 = archive_matching_new();
+		if (bsdpax->matching2 == NULL)
+			lafe_errc(1, 0, "Out of memory");
+	}
 	lafe_set_options(bsdpax->options, archive_write_set_options, a);
 	if (ARCHIVE_OK != archive_write_open_file(a, bsdpax->filename))
 		lafe_errc(1, 0, "%s", archive_error_string(a));
 	write_archive(a, bsdpax);
+	if (bsdpax->matching2 != NULL) {
+		archive_matching_free(bsdpax->matching2);
+		bsdpax->matching2 = NULL;
+	}
 }
 
 void
@@ -209,7 +218,6 @@ pax_mode_append(struct bsdpax *bsdpax)
 	struct archive		*a;
 	struct archive_entry	*entry;
 	int			 format;
-	char			 need_list;
 
 	format = ARCHIVE_FORMAT_TAR_PAX_RESTRICTED;
 
@@ -232,12 +240,11 @@ pax_mode_append(struct bsdpax *bsdpax)
 		    archive_error_string(a));
 	}
 
-	/* If option -u or -Z are specified, make a list. */
-	if (bsdpax->option_keep_newer_mtime_files_br ||
-	    bsdpax->option_keep_newer_mtime_files_ar)
-		need_list = 1;
-	else
-		need_list = 0;
+	if (bsdpax->option_keep_newer_mtime_files_ar) {
+		bsdpax->matching2 = archive_matching_new();
+		if (bsdpax->matching2 == NULL)
+			lafe_errc(1, 0, "Out of memory");
+	}
 	/* Build a list of all entries and their recorded mod times. */
 	while (0 == archive_read_next_header(a, &entry)) {
 		if (archive_compression(a) != ARCHIVE_COMPRESSION_NONE) {
@@ -246,11 +253,18 @@ pax_mode_append(struct bsdpax *bsdpax)
 			lafe_errc(1, 0,
 			    "Cannot append to compressed archive.");
 		}
-		if (need_list)
+		if (bsdpax->option_keep_newer_mtime_files_br) {
 			if (archive_matching_pathname_newer_mtime_ae(
 			    bsdpax->matching, entry) != ARCHIVE_OK)
 				lafe_errc(1, 0, "Error : %s",
 				    archive_error_string(bsdpax->matching));
+		}
+		if (bsdpax->option_keep_newer_mtime_files_ar) {
+			if (archive_matching_pathname_newer_mtime_ae(
+			    bsdpax->matching2, entry) != ARCHIVE_OK)
+				lafe_errc(1, 0, "Error : %s",
+				    archive_error_string(bsdpax->matching2));
+		}
 		/* Record the last format determination we see */
 		format = archive_format(a);
 		/* Keep going until we hit end-of-archive */
@@ -273,6 +287,10 @@ pax_mode_append(struct bsdpax *bsdpax)
 
 	write_archive(a, bsdpax);
 
+	if (bsdpax->matching2 != NULL) {
+		archive_matching_free(bsdpax->matching2);
+		bsdpax->matching2 = NULL;
+	}
 	close(bsdpax->fd);
 	bsdpax->fd = -1;
 }
@@ -612,14 +630,28 @@ write_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 		 * Exclude entries that are older than archived one which
 		 * has the same name. (-Z options)
 		 */
-		if (bsdpax->option_keep_newer_mtime_files_ar &&
-		    archive_matching_time_excluded_ae(bsdpax->matching, entry))
+		if (bsdpax->matching2 != NULL &&
+		    archive_matching_time_excluded_ae(bsdpax->matching2, entry))
 			continue;
 
 		/* Note: if user vetoes, we won't descend. */
 		if (!bsdpax->option_no_subdirs &&
 		    archive_read_disk_can_descend(disk))
 			archive_read_disk_descend(disk);
+
+		/* Update timestamps archived in the archive file. */ 
+		if (bsdpax->option_keep_newer_mtime_files_br) {
+			if (archive_matching_pathname_newer_mtime_ae(
+			    bsdpax->matching, entry) != ARCHIVE_OK)
+				lafe_errc(1, 0, "Error : %s",
+				    archive_error_string(bsdpax->matching));
+		}
+		if (bsdpax->option_keep_newer_mtime_files_ar) {
+			if (archive_matching_pathname_newer_mtime_ae(
+			    bsdpax->matching2, entry) != ARCHIVE_OK)
+				lafe_errc(1, 0, "Error : %s",
+				    archive_error_string(bsdpax->matching2));
+		}
 
 		/* Display entry as we process it. */
 		if (bsdpax->verbose)

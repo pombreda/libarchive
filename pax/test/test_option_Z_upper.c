@@ -113,7 +113,7 @@ DEFINE_TEST(test_option_Z_upper)
 	assertMakeFile("mid", 0644, "xmid");
 	assertMakeFile("new", 0644, "xnew");
 	assertUtimes("old", 801122, 0, 901120, 0);
-	assertUtimes("mid", 801122, 0, 901120, 0);
+	assertUtimes("mid", 801122, 0, 901121, 0);
 	assertUtimes("new", 801122, 0, 901120, 0);
 	assertEqualInt(0,
 	    systemf("%s -waZf archive.pax -s /mid/old/ old mid new "
@@ -126,8 +126,42 @@ DEFINE_TEST(test_option_Z_upper)
 		">x.out 2>x.err", testprog));
 	assertEmptyFile("x.out");
 	assertEmptyFile("x.err");
-	assertFileMtime("old", 901120, 0);
+	assertFileMtime("old", 901121, 0);
 	assertFileContents("xmid", 4, "old");
+	assertFileMtime("mid", 901122, 0);
+	assertFileContents("mid", 3, "mid");
+	assertFileMtime("new", 901144, 0);
+	assertFileContents("new", 3, "new");
+	assertChdir("../..");
+
+	/* Test 4: Do not overwrite both 'mid' and 'new' files during append
+	 * mode(-wa) and 'old' is overwritten by a new 'old'. */
+	assertMakeDir("test4", 0755);
+	assertEqualInt(0,
+	    systemf("%s -wf test4/archive.pax old mid new "
+		">test4/c.out 2>test4/c.err", testprog));
+	assertChdir("test4");
+	assertEmptyFile("c.out");
+	assertEmptyFile("c.err");
+	assertMakeFile("old", 0644, "xold");
+	assertMakeFile("mid", 0644, "xmid");
+	assertMakeFile("new", 0644, "xnew");
+	assertUtimes("old", 801122, 0, 901120, 0);
+	assertUtimes("mid", 801122, 0, 901120, 0);
+	assertUtimes("new", 801122, 0, 901120, 0);
+	assertEqualInt(0,
+	    systemf("%s -waZf archive.pax -s /mid/old/ old mid new "
+		">wa.out 2>wa.err", testprog));
+	assertEmptyFile("wa.out");
+	assertEmptyFile("wa.err");
+	assertMakeDir("test41", 0755);
+	assertChdir("test41");
+	assertEqualInt(0, systemf("%s -rf ../archive.pax "
+		">x.out 2>x.err", testprog));
+	assertEmptyFile("x.out");
+	assertEmptyFile("x.err");
+	assertFileMtime("old", 901120, 0);
+	assertFileContents("xold", 4, "old");
 	assertFileMtime("mid", 901122, 0);
 	assertFileContents("mid", 3, "mid");
 	assertFileMtime("new", 901144, 0);
