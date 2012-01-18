@@ -81,59 +81,18 @@ __FBSDID("$FreeBSD$");
 #include "err.h"
 #include "line_reader.h"
 
-/* Fixed size of uname/gname caches. */
-#define	name_cache_size 101
-
 #ifndef O_BINARY
 #define	O_BINARY 0
 #endif
 
-static const char * const NO_NAME = "(noname)";
-
-struct archive_dir_entry {
-	time_t			 mtime_sec;
-	int			 mtime_nsec;
-	time_t			 ctime_sec;
-	int			 ctime_nsec;
-	char			*name;
-};
-
-struct archive_dir {
-	struct archive_dir_entry *list;
-	int			 allocated_size;
-	int			 size;
-};
-
-struct name_cache {
-	int	probes;
-	int	hits;
-	size_t	size;
-	struct {
-		id_t id;
-		const char *name;
-	} cache[name_cache_size];
-};
-
-static void		 add_dir_list(struct bsdpax *bsdpax,
-			    struct archive_entry*);
 static int		 append_archive(struct bsdpax *, struct archive *,
 			     struct archive *ina);
 static int		 append_archive_filename(struct bsdpax *,
 			     struct archive *, const char *fname);
 static int		 copy_file_data_block(struct bsdpax *, struct archive *,
 			     struct archive *, struct archive_entry *);
-static struct archive_dir_entry *find_dir_entry(struct archive_dir *,
-			    const char *);
-static void		 free_dir_list(struct archive_dir *);
-static struct archive_dir_entry *get_dir_entry(struct archive_dir *,
-			    const char *);
-static void		 init_dir_list(struct archive_dir *);
 static int		 name_filter(struct archive *, void *,
 			    struct archive_entry *);
-static int		 new_enough_mtime(struct bsdpax *,
-			     struct archive_entry *entry);
-static int		 new_enough_ctime(struct bsdpax *,
-			     struct archive_entry *entry);
 static void		 report_write(struct bsdpax *, struct archive *,
 			     struct archive_entry *, int64_t progress);
 static void		 test_for_append(struct bsdpax *);
@@ -250,11 +209,7 @@ pax_mode_append(struct bsdpax *bsdpax)
 	struct archive		*a;
 	struct archive_entry	*entry;
 	int			 format;
-	struct archive_dir	 archive_dir;
 	char			 need_list;
-
-	bsdpax->archive_dir = &archive_dir;
-	init_dir_list(&archive_dir);
 
 	format = ARCHIVE_FORMAT_TAR_PAX_RESTRICTED;
 
@@ -277,10 +232,9 @@ pax_mode_append(struct bsdpax *bsdpax)
 		    archive_error_string(a));
 	}
 
+	/* If option -u or -Z are specified, make a list. */
 	if (bsdpax->option_keep_newer_mtime_files_br ||
-	    bsdpax->option_keep_newer_ctime_files_br ||
-	    bsdpax->option_keep_newer_mtime_files_ar ||
-	    bsdpax->option_keep_newer_ctime_files_ar)
+	    bsdpax->option_keep_newer_mtime_files_ar)
 		need_list = 1;
 	else
 		need_list = 0;
@@ -293,7 +247,10 @@ pax_mode_append(struct bsdpax *bsdpax)
 			    "Cannot append to compressed archive.");
 		}
 		if (need_list)
-			add_dir_list(bsdpax, entry);
+			if (archive_matching_pathname_newer_mtime_ae(
+			    bsdpax->matching, entry) != ARCHIVE_OK)
+				lafe_errc(1, 0, "Error : %s",
+				    archive_error_string(bsdpax->matching));
 		/* Record the last format determination we see */
 		format = archive_format(a);
 		/* Keep going until we hit end-of-archive */
@@ -318,9 +275,6 @@ pax_mode_append(struct bsdpax *bsdpax)
 
 	close(bsdpax->fd);
 	bsdpax->fd = -1;
-
-	free_dir_list(&archive_dir);
-	bsdpax->archive_dir = NULL;
 }
 
 /*
@@ -498,16 +452,6 @@ append_archive(struct bsdpax *bsdpax, struct archive *a, struct archive *ina)
 
 	while (ARCHIVE_OK == (e = archive_read_next_header(ina, &in_entry))) {
 		/*
-		 * Exclude entries that are older than archived one which
-		 * has the same name. (-u, -D option.)
-		 */
-		if (bsdpax->option_keep_newer_mtime_files_br &&
-		    !new_enough_mtime(bsdpax, in_entry))
-			continue;
-		if (bsdpax->option_keep_newer_ctime_files_br &&
-		    !new_enough_ctime(bsdpax, in_entry))
-			continue;
-		/*
 		 * Exclude entries that are specified.
 		 */
 		if (archive_matching_excluded_ae(bsdpax->matching, in_entry))
@@ -523,13 +467,10 @@ append_archive(struct bsdpax *bsdpax, struct archive *a, struct archive *ina)
 
 		/*
 		 * Exclude entries that are older than archived one which
-		 * has the same name. (-Z, -Y option.)
+		 * has the same name. (-Z option.)
 		 */
 		if (bsdpax->option_keep_newer_mtime_files_ar &&
-		    !new_enough_mtime(bsdpax, in_entry))
-			continue;
-		if (bsdpax->option_keep_newer_ctime_files_ar &&
-		    !new_enough_ctime(bsdpax, in_entry))
+		    archive_matching_time_excluded_ae(bsdpax->matching, in_entry))
 			continue;
 
 		if (bsdpax->verbose)
@@ -589,17 +530,6 @@ metadata_filter(struct archive *a, void *_data, struct archive_entry *entry)
 	struct bsdpax *bsdpax = (struct bsdpax *)_data;
 
 	if (archive_matching_excluded_ae(bsdpax->matching, entry))
-		return (0);
-
-	/*
-	 * Exclude entries that are older than archived one
-	 * which has the same name. (-u, -D options)
-	 */
-	if (bsdpax->option_keep_newer_mtime_files_br &&
-	    !new_enough_mtime(bsdpax, entry))
-		return (0);
-	if (bsdpax->option_keep_newer_ctime_files_br &&
-	    !new_enough_ctime(bsdpax, entry))
 		return (0);
 
 	/*
@@ -680,13 +610,10 @@ write_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 
 		/*
 		 * Exclude entries that are older than archived one which
-		 * has the same name. (-Z, -Y options)
+		 * has the same name. (-Z options)
 		 */
 		if (bsdpax->option_keep_newer_mtime_files_ar &&
-		    !new_enough_mtime(bsdpax, entry))
-			continue;
-		if (bsdpax->option_keep_newer_ctime_files_ar &&
-		    !new_enough_ctime(bsdpax, entry))
+		    archive_matching_time_excluded_ae(bsdpax->matching, entry))
 			continue;
 
 		/* Note: if user vetoes, we won't descend. */
@@ -873,169 +800,6 @@ copy_file_data_block(struct bsdpax *bsdpax, struct archive *a,
 		return (-1);
 	}
 	return (0);
-}
-
-/*
- * Test if the specified file is new enough to include in the archive.
- */
-static int
-new_enough_mtime(struct bsdpax *bsdpax, struct archive_entry *entry)
-{
-	struct archive_dir_entry *p;
-	const char * path = archive_entry_pathname(entry);
-
-	/*
-	 * In -u mode, we only write an entry if it's newer than
-	 * what was already in the archive.
-	 */
-	if (bsdpax->archive_dir != NULL &&
-	    (p = find_dir_entry(bsdpax->archive_dir, path)) != NULL)
-		return (p->mtime_sec < archive_entry_mtime(entry));
-
-	/* If the file wasn't rejected, include it. */
-	return (1);
-}
-
-static int
-new_enough_ctime(struct bsdpax *bsdpax, struct archive_entry *entry)
-{
-	struct archive_dir_entry *p;
-	const char * path = archive_entry_pathname(entry);
-
-	/*
-	 * In -u mode, we only write an entry if it's newer than
-	 * what was already in the archive.
-	 */
-	if (bsdpax->archive_dir != NULL &&
-	    (p = find_dir_entry(bsdpax->archive_dir, path)) != NULL)
-		return (p->ctime_sec < archive_entry_ctime(entry));
-
-	/* If the file wasn't rejected, include it. */
-	return (1);
-}
-
-/*
- * Add an entry to the entry list for 'a' mode.
- */
-static void
-add_dir_list(struct bsdpax *bsdpax, struct archive_entry *entry)
-{
-	struct archive_dir_entry	*p;
-	const char *path = archive_entry_pathname(entry);
-
-	/*
-	 * Search entire list to see if this file has appeared before.
-	 * If it has, override the timestamp data.
-	 */
-	p = get_dir_entry(bsdpax->archive_dir, path);
-	if (p->name == NULL) {
-		p->name = strdup(path);
-		if (p->name == NULL)
-			lafe_errc(1, ENOMEM, "Cannot allocate memory");
-	}
-	p->mtime_sec = archive_entry_mtime(entry);
-	p->mtime_nsec = archive_entry_mtime_nsec(entry);
-	p->ctime_sec = archive_entry_ctime(entry);
-	p->ctime_nsec = archive_entry_ctime_nsec(entry);
-}
-
-static void
-init_dir_list(struct archive_dir *adir)
-{
-	memset(adir, 0, sizeof(struct archive_dir));
-}
-
-static void
-free_dir_list(struct archive_dir *adir)
-{
-	free(adir->list);
-}
-
-static struct archive_dir_entry *
-find_dir_entry(struct archive_dir *adir, const char *name)
-{
-	int t, m, n, b;
-
-	t = 0;
-	b = adir->size-1;
-	while (b >= t) {
-		m = (t + b) / 2;
-		n = strcmp(adir->list[m].name, name);
-		if (n < 0)
-			t = m + 1;
-		else if (n > 0)
-			b = m - 1;
-		else
-			return (&(adir->list[m]));
-	}
-	return (NULL);
-}
-
-static struct archive_dir_entry *
-get_dir_entry(struct archive_dir *adir, const char *name)
-{
-	int t, m, n, b;
-
-	t = 0;
-	b = adir->size -1;
-	while (b >= t) {
-		m = (t + b) / 2;
-		n = strcmp(adir->list[m].name, name);
-		if (n < 0)
-			t = m + 1;
-		else if (n > 0)
-			b = m - 1;
-		else
-			return (&(adir->list[m]));
-	}
-
-	/*
-	 * Initial allocating memory for archive_dir_entry.
-	 */
-	if (adir->allocated_size <= 0) {
-		adir->list = malloc(32 * sizeof(struct archive_dir_entry));
-		if (adir->list == NULL)
-			lafe_errc(1, ENOMEM, "Cannot allocate memory");
-		adir->allocated_size = 32;
-		adir->size = 1;
-		/* Always return the first entry of archive_dir_entry list. */
-		adir->list[0].name = NULL;
-		return (&(adir->list[0]));
-	}
-
-	/*
-	 * If atrchive_dir does not have enough list size, expand the list size.
-	 */
-	if (adir->allocated_size < adir->size + 1) {
-		adir->list = realloc(adir->list, adir->allocated_size * 2 *
-		    sizeof(struct archive_dir_entry));
-		if (adir->list == NULL)
-			lafe_errc(1, ENOMEM, "Cannot allocate memory");
-	}
-
-	/*
-	 * Find out the insert point.
-	 */
-	t --;
-	if (t < 0)
-		t = 0;
-	b ++;
-	if (b >= adir->size)
-		b = adir->size -1;
-	for (m = t; m <= b; m++) {
-		if (strcmp(adir->list[m].name, name) > 0)
-			break;
-	}
-
-	/*
-	 * Shift following archive_dir_entry list for new one.
-	 */
-	if (m < adir->size)
-		memmove(&(adir->list[m+1]), &(adir->list[m]),
-		    (adir->size - m) * sizeof(struct archive_dir_entry));
-	adir->list[m].name = NULL;
-	adir->size ++;
-	return (&(adir->list[m]));
 }
 
 static void

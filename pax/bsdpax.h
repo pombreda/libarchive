@@ -113,7 +113,6 @@ struct bsdpax {
 	struct archive		*diskenough;	/* for write.c/copy.c/util.c */
 	struct archive_entry	*entryenough;	/* for util.c */
 	struct archive_entry_linkresolver *resolver; /* for write.c */
-	struct archive_dir	*archive_dir;	/* for write.c */
 	struct name_cache	*gname_cache;	/* for write.c */
 	int			 first_fs;	/* for write.c */
 	char			*buff;		/* for write.c */
