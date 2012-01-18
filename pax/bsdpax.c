@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2011 Michihiro NAKAJIMA
+ * Copyright (c) 2011-2012 Michihiro NAKAJIMA
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -459,9 +459,9 @@ main(int argc, char **argv)
 		only_mode(bsdpax, "-Z",
 		    PAXMODE_READ | PAXMODE_WRITE | PAXMODE_COPY);
 	if (bsdpax->option_keep_newer_ctime_files_br)
-		only_mode(bsdpax, "-D", PAXMODE_COPY);
+		only_mode(bsdpax, "-D", PAXMODE_READ | PAXMODE_COPY);
 	if (bsdpax->option_keep_newer_ctime_files_ar)
-		only_mode(bsdpax, "-Y", PAXMODE_COPY);
+		only_mode(bsdpax, "-Y", PAXMODE_READ | PAXMODE_COPY);
 	if (bsdpax->option_no_subdirs)
 		only_mode(bsdpax, "-d", PAXMODE_WRITE | PAXMODE_COPY);
 	if (bsdpax->option_interactive)

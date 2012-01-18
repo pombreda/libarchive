@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2011 Michihiro NAKAJIMA
+ * Copyright (c) 2011-2012 Michihiro NAKAJIMA
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,16 +49,23 @@ DEFINE_TEST(test_option_D_upper)
 	sleepUntilAfter(st.st_mtime);
 	assertMakeFile("new", 0644, "new");
 
-	/* Test 1: During extract mode(-r), cannot use -D option. */
+	/* Test 1: Do not overwrite both 'old' and 'mid' files during
+	 * extract mode(-r). */
 	assertEqualInt(0,
-	    systemf("%s -wf test1/archive.pax old mid new "
+	    systemf("%s -wf test1/archive.pax --format pax old mid new "
 		    ">test1/c.out 2>test1/c.err", testprog));
 	assertChdir("test1");
 	assertEmptyFile("c.out");
 	assertEmptyFile("c.err");
-	assert(0 != systemf("%s -rDf archive.pax >x.out 2>x.err", testprog));
+	assertEqualInt(0,
+	    systemf("%s -rDf archive.pax >x.out 2>x.err", testprog));
 	assertEmptyFile("x.out");
-	assertNonEmptyFile("x.err");
+	assertEmptyFile("x.err");
+	failure("A file should not be overwritten");
+	assertFileContents("xold", 4, "old");
+	assertFileContents("xmid", 4, "mid");
+	failure("A file should be overwritten");
+	assertFileContents("new", 3, "new");
 	assertChdir("..");
 
 	/* Test 2: Do not overwrite both 'old' and 'mid' files during
