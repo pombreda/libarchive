@@ -469,7 +469,7 @@ append_archive(struct bsdpax *bsdpax, struct archive *a, struct archive *ina)
 		/*
 		 * Exclude entries that are specified.
 		 */
-		if (archive_matching_excluded_ae(bsdpax->matching, in_entry))
+		if (archive_matching_excluded(bsdpax->matching, in_entry))
 			continue;/* Skip it. */
 
 		if (bsdpax->option_interactive) {
@@ -485,7 +485,7 @@ append_archive(struct bsdpax *bsdpax, struct archive *a, struct archive *ina)
 		 * has the same name. (-Z option.)
 		 */
 		if (bsdpax->option_keep_newer_mtime_files_ar &&
-		    archive_matching_time_excluded_ae(bsdpax->matching, in_entry))
+		    archive_matching_time_excluded(bsdpax->matching2, in_entry))
 			continue;
 
 		if (bsdpax->verbose)
@@ -610,8 +610,8 @@ write_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 		 * Exclude entries that are older than archived one which
 		 * has the same name. (-Z options)
 		 */
-		if (bsdpax->matching2 != NULL &&
-		    archive_matching_time_excluded_ae(bsdpax->matching2, entry))
+		if (bsdpax->option_keep_newer_mtime_files_ar &&
+		    archive_matching_time_excluded(bsdpax->matching2, entry))
 			continue;
 
 		/* Note: if user vetoes, we won't descend. */

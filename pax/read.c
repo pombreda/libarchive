@@ -239,7 +239,7 @@ read_archive(struct bsdpax *bsdpax, char mode, struct archive *writer)
 		 * rewrite, there would be no way to exclude foo1/bar
 		 * while allowing foo2/bar.)
 		 */
-		if (archive_matching_excluded_ae(bsdpax->matching, entry))
+		if (archive_matching_excluded(bsdpax->matching, entry))
 			continue; /* Excluded by a pattern test. */
 
 		if (mode == PAXMODE_LIST) {
