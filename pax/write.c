@@ -327,16 +327,12 @@ write_archive(struct archive *a, struct bsdpax *bsdpax)
 		archive_read_disk_set_symlink_physical(bsdpax->diskreader);
 		break;
 	}
-	if (bsdpax->option_restore_atime)
-		archive_read_disk_set_atime_restored(bsdpax->diskreader);
 	archive_read_disk_set_matching(bsdpax->diskreader,
 	    bsdpax->matching, NULL, NULL);
 	archive_read_disk_set_metadata_filter_callback(bsdpax->diskreader,
 	    metadata_filter, bsdpax);
-	if (bsdpax->option_honor_nodump)
-		archive_read_disk_honor_nodump(bsdpax->diskreader);
-	if (!bsdpax->enable_copyfile)
-		archive_read_disk_disable_mac_copyfile(bsdpax->diskreader);
+	archive_read_disk_set_behavior(bsdpax->diskreader,
+	    bsdpax->readdisk_flags);
 	archive_read_disk_set_standard_lookup(bsdpax->diskreader);
 
 	if (*bsdpax->argv == NULL) {

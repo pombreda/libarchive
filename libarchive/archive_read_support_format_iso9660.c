@@ -1907,6 +1907,19 @@ parse_file_info(struct archive_read *a, struct file_info *parent,
 				free(file);
 				return (NULL);
 			}
+			/*
+			 * A file size of symbolic link files in ISO images
+			 * made by makefs is not zero and its location is
+			 * the same as those of next regular file. That is
+			 * the same as hard like file and it causes unexpected
+			 * error. 
+			 */
+			if (file->size > 0 &&
+			    (file->mode & AE_IFMT) == AE_IFLNK) {
+				file->size = 0;
+				file->number = -1;
+				file->offset = -1;
+			}
 		} else
 			/* If there isn't SUSP, disable parsing
 			 * rock ridge extensions. */
@@ -3085,6 +3098,8 @@ isodate7(const unsigned char *v)
 {
 	struct tm tm;
 	int offset;
+	time_t t;
+
 	memset(&tm, 0, sizeof(tm));
 	tm.tm_year = v[0];
 	tm.tm_mon = v[1] - 1;
@@ -3098,7 +3113,10 @@ isodate7(const unsigned char *v)
 		tm.tm_hour -= offset / 4;
 		tm.tm_min -= (offset % 4) * 15;
 	}
-	return (time_from_tm(&tm));
+	t = time_from_tm(&tm);
+	if (t == (time_t)-1)
+		return ((time_t)0);
+	return (t);
 }
 
 static time_t
@@ -3106,6 +3124,8 @@ isodate17(const unsigned char *v)
 {
 	struct tm tm;
 	int offset;
+	time_t t;
+
 	memset(&tm, 0, sizeof(tm));
 	tm.tm_year = (v[0] - '0') * 1000 + (v[1] - '0') * 100
 	    + (v[2] - '0') * 10 + (v[3] - '0')
@@ -3121,7 +3141,10 @@ isodate17(const unsigned char *v)
 		tm.tm_hour -= offset / 4;
 		tm.tm_min -= (offset % 4) * 15;
 	}
-	return (time_from_tm(&tm));
+	t = time_from_tm(&tm);
+	if (t == (time_t)-1)
+		return ((time_t)0);
+	return (t);
 }
 
 static time_t
@@ -3135,7 +3158,8 @@ time_from_tm(struct tm *t)
 #else
 	/* Else use direct calculation using POSIX assumptions. */
 	/* First, fix up tm_yday based on the year/month/day. */
-	mktime(t);
+	if (mktime(t) == (time_t)-1)
+		return ((time_t)-1);
 	/* Then we can compute timegm() from first principles. */
 	return (t->tm_sec + t->tm_min * 60 + t->tm_hour * 3600
 	    + t->tm_yday * 86400 + (t->tm_year - 70) * 31536000

@@ -221,10 +221,10 @@ main(int argc, char **argv)
 	 * Enable Mac OS "copyfile()" extension by default.
 	 * This has no effect on other platforms.
 	 */
-	bsdpax->enable_copyfile = 1;
+	bsdpax->readdisk_flags |= ARCHIVE_READDISK_MAC_COPYFILE;
 #ifdef COPYFILE_DISABLE_VAR
 	if (getenv(COPYFILE_DISABLE_VAR))
-		bsdpax->enable_copyfile = 0;
+		bsdpax->readdisk_flags &= ~ARCHIVE_READDISK_MAC_COPYFILE;
 #endif
 	bsdpax->matching = archive_matching_new();
 	if (bsdpax->matching == NULL)
@@ -268,7 +268,7 @@ main(int argc, char **argv)
 			bsdpax->option_no_subdirs = 1;
 			break;
 		case OPTION_DISABLE_COPYFILE: /* Mac OS X */
-			bsdpax->enable_copyfile = 0;
+			bsdpax->readdisk_flags &= ~ARCHIVE_READDISK_MAC_COPYFILE;
 			break;
 		case 'f':
 			bsdpax->filename = bsdpax->argument;
@@ -310,7 +310,7 @@ main(int argc, char **argv)
 			bsdpax->option_link = 1;
 			break;
 		case OPTION_NODUMP:
-			bsdpax->option_honor_nodump = 1;
+			bsdpax->readdisk_flags |= ARCHIVE_READDISK_HONOR_NODUMP;
 			break;
 		case OPTION_NULL:
 			bsdpax->option_null = 1;
@@ -398,7 +398,7 @@ main(int argc, char **argv)
 			parse_option_T(bsdpax, now, bsdpax->argument);
 			break;
 		case 't':
-			bsdpax->option_restore_atime = 1;
+			bsdpax->readdisk_flags |= ARCHIVE_READDISK_RESTORE_ATIME;
 			break;
 		case 'u':
 			bsdpax->option_keep_newer_mtime_files_br = 1;

@@ -53,6 +53,7 @@ struct bsdpax {
 	int		  bytes_in_last_block; /* See -b handling. */
 	int		  verbose;   /* -v */
 	int		  extract_flags; /* Flags for extract operation */
+	int		  readdisk_flags; /* Flags for read disk operation */
 	int		  strip_components; /* Remove this many leading dirs */
 	char		  mode; /* Program mode */
 #define PAXMODE_LIST	1
@@ -72,7 +73,6 @@ struct bsdpax {
 	char		  option_keep_newer_ctime_files_br;/* -D option */
 	char		  option_keep_newer_mtime_files_ar;/* -Z option */
 	char		  option_keep_newer_ctime_files_ar;/* -Y option */
-	char		  option_honor_nodump; /* --nodump */
 	char		  option_interactive; /* -i */
 	char		  option_link; /* -l */
 	char		  option_no_owner; /* -o */
@@ -81,12 +81,10 @@ struct bsdpax {
 	char		  option_null; /* --null */
 	char		  option_no_atime;/* -p a */
 	char		  option_no_mtime;/* -p m */
-	char		  option_restore_atime; /* -t */
 	char		  option_stdout; /* -O */
 	char		  option_unlink_first; /* -U */
 	char		  option_warn_links; /* --check-links */
 	char		  day_first; /* show day before month in -v output */
-	char		  enable_copyfile; /* For Mac OS */
 
 	/* Option parser state */
 	int		  getopt_state;
