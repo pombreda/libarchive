@@ -91,8 +91,6 @@ static int		 append_archive_filename(struct bsdpax *,
 			     struct archive *, const char *fname);
 static int		 copy_file_data_block(struct bsdpax *, struct archive *,
 			     struct archive *, struct archive_entry *);
-static int		 name_filter(struct archive *, void *,
-			    struct archive_entry *);
 static void		 report_write(struct bsdpax *, struct archive *,
 			     struct archive_entry *, int64_t progress);
 static void		 test_for_append(struct bsdpax *);
@@ -331,9 +329,8 @@ write_archive(struct archive *a, struct bsdpax *bsdpax)
 	}
 	if (bsdpax->option_restore_atime)
 		archive_read_disk_set_atime_restored(bsdpax->diskreader);
-	if (bsdpax->option_exclude)
-		archive_read_disk_set_name_filter_callback(bsdpax->diskreader,
-		    name_filter, bsdpax);
+	archive_read_disk_set_matching(bsdpax->diskreader,
+	    bsdpax->matching, NULL, NULL);
 	archive_read_disk_set_metadata_filter_callback(bsdpax->diskreader,
 	    metadata_filter, bsdpax);
 	if (bsdpax->option_honor_nodump)
@@ -529,26 +526,9 @@ append_archive(struct bsdpax *bsdpax, struct archive *a, struct archive *ina)
 }
 
 static int
-name_filter(struct archive *a, void *_data, struct archive_entry *entry)
-{
-	struct bsdpax *bsdpax = (struct bsdpax *)_data;
-
-	/*
-	 * Exclude entries that are specified.
-	 */
-	if (bsdpax->option_exclude &&
-	    archive_matching_path_excluded_ae(bsdpax->matching, entry))
-		return (0);
-	return (1);
-}
-
-static int
 metadata_filter(struct archive *a, void *_data, struct archive_entry *entry)
 {
 	struct bsdpax *bsdpax = (struct bsdpax *)_data;
-
-	if (archive_matching_excluded_ae(bsdpax->matching, entry))
-		return (0);
 
 	/*
 	 * User has asked us not to cross mount points.

@@ -106,8 +106,6 @@ static int		 copy_hierarchy(struct bsdpax *, struct archive *,
 static char *		 make_destpath(struct bsdpax *, const char *);
 static int		 metadata_filter(struct archive *, void *,
 			     struct archive_entry *);
-static int		 name_filter(struct archive *, void *,
-			     struct archive_entry *);
 
 void
 pax_mode_copy(struct bsdpax *bsdpax)
@@ -154,9 +152,8 @@ copy_disk(struct archive *a, struct bsdpax *bsdpax)
 	}
 	if (bsdpax->option_restore_atime)
 		archive_read_disk_set_atime_restored(bsdpax->diskreader);
-	if (bsdpax->option_exclude)
-		archive_read_disk_set_name_filter_callback(bsdpax->diskreader,
-		    name_filter, bsdpax);
+	archive_read_disk_set_matching(bsdpax->diskreader,
+		bsdpax->matching, NULL, NULL);
 	archive_read_disk_set_metadata_filter_callback(bsdpax->diskreader,
 	    metadata_filter, bsdpax);
 	if (bsdpax->option_honor_nodump)
@@ -225,20 +222,6 @@ copy_disk(struct archive *a, struct bsdpax *bsdpax)
 
 
 static int
-name_filter(struct archive *a, void *_data, struct archive_entry *entry)
-{
-	struct bsdpax *bsdpax = (struct bsdpax *)_data;
-
-	/*
-	 * Exclude entries that are specified.
-	 */
-	if (bsdpax->option_exclude &&
-	    archive_matching_path_excluded_ae(bsdpax->matching, entry))
-		return (0);
-	return (1);
-}
-
-static int
 metadata_filter(struct archive *a, void *_data, struct archive_entry *entry)
 {
 	struct bsdpax *bsdpax = (struct bsdpax *)_data;
@@ -253,9 +236,6 @@ metadata_filter(struct archive *a, void *_data, struct archive_entry *entry)
 		    bsdpax->destdir);
 		return (0);
 	}
-
-	if (archive_matching_excluded_ae(bsdpax->matching, entry))
-		return (0);
 
 	/*
 	 * Exclude entries that are older than archived one
