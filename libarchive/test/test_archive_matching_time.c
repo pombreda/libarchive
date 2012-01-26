@@ -78,7 +78,7 @@ test_newer_time(void)
 }
 
 static void
-test_newer_than_file_mbs(void)
+test_newer_mtime_than_file_mbs(void)
 {
 	struct archive *a;
 	struct archive_entry *ae;
@@ -96,91 +96,38 @@ test_newer_than_file_mbs(void)
 		return;
 	}
 
-	assertMakeDir("test_newer_than_file_mbs", 0777);
-	assertChdir("test_newer_than_file_mbs");
-
-	assertMakeFile("old", 0666, "old");
-	sleepUntilAfter(time(NULL));
-	assertMakeFile("mid", 0666, "mid");
-	sleepUntilAfter(time(NULL));
-	assertMakeFile("new", 0666, "new");
-
 	/*
-	 * Test 'newer mtime than'.
+	 * Test: newer mtime than a file specified in MBS file name.
 	 */
-	assertEqualIntA(m, 0, archive_matching_newer_mtime_than(m, "mid"));
+	assertEqualIntA(m, 0,
+		archive_matching_newer_mtime_than(m, "mid_mtime"));
 
-	/* Verify 'old' file. */
-	archive_entry_copy_pathname(ae, "old");
+	/* Verify 'old_mtime' file. */
+	archive_entry_copy_pathname(ae, "old_mtime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
+	failure("old_mtime should be excluded");
 	assertEqualInt(1, archive_matching_time_excluded(m, ae));
 	assertEqualInt(1, archive_matching_excluded(m, ae));
 
-	/* Verify 'mid' file. */
+	/* Verify 'mid_mtime' file. */
 	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "mid");
+	archive_entry_copy_pathname(ae, "mid_mtime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
+	failure("mid_mtime should be excluded");
 	assertEqualInt(1, archive_matching_time_excluded(m, ae));
 	assertEqualInt(1, archive_matching_excluded(m, ae));
 
-	/* Verify 'new' file. */
+	/* Verify 'new_mtime' file. */
 	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "new");
+	archive_entry_copy_pathname(ae, "new_mtime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should not be excluded");
+	failure("new_mtime should not be excluded");
 	assertEqualInt(0, archive_matching_time_excluded(m, ae));
 	assertEqualInt(0, archive_matching_excluded(m, ae));
 
-	/*
-	 * Test 'newer ctime than'.
-	 */
-	archive_matching_free(m);
-	if (!assert((m = archive_matching_new()) != NULL)) {
-		assertChdir("..");
-		archive_entry_free(ae);
-		archive_read_free(a);
-		return;
-	}
-	assertUtimes("old", 10002, 0, 10002, 0);
-	sleepUntilAfter(time(NULL));
-	assertUtimes("mid", 10001, 0, 10001, 0);
-	sleepUntilAfter(time(NULL));
-	assertUtimes("new", 10000, 0, 10000, 0);
-	assertEqualIntA(m, 0, archive_matching_newer_ctime_than(m, "mid"));
-
-	/* Verify 'old' file. */
-	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "old");
-	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
-	assertEqualInt(1, archive_matching_time_excluded(m, ae));
-	assertEqualInt(1, archive_matching_excluded(m, ae));
-
-	/* Verify 'mid' file. */
-	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "mid");
-	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
-	assertEqualInt(1, archive_matching_time_excluded(m, ae));
-	assertEqualInt(1, archive_matching_excluded(m, ae));
-
-	/* Verify 'new' file. */
-	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "new");
-	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should not be excluded");
-	assertEqualInt(0, archive_matching_time_excluded(m, ae));
-	assertEqualInt(0, archive_matching_excluded(m, ae));
-
-	assertChdir("..");
 	/* Clean up. */
 	archive_read_free(a);
 	archive_entry_free(ae);
@@ -188,7 +135,7 @@ test_newer_than_file_mbs(void)
 }
 
 static void
-test_newer_than_file_wcs(void)
+test_newer_ctime_than_file_mbs(void)
 {
 	struct archive *a;
 	struct archive_entry *ae;
@@ -206,91 +153,153 @@ test_newer_than_file_wcs(void)
 		return;
 	}
 
-	assertMakeDir("test_newer_than_file_wcs", 0777);
-	assertChdir("test_newer_than_file_wcs");
-
-	assertMakeFile("old", 0666, "old");
-	sleepUntilAfter(time(NULL));
-	assertMakeFile("mid", 0666, "mid");
-	sleepUntilAfter(time(NULL));
-	assertMakeFile("new", 0666, "new");
-
 	/*
-	 * Test 'newer mtime than'.
+	 * Test: newer ctime than a file specified in MBS file name.
 	 */
-	assertEqualIntA(m, 0, archive_matching_newer_mtime_than_w(m, L"mid"));
+	assertEqualIntA(m, 0,
+		archive_matching_newer_ctime_than(m, "mid_ctime"));
 
-	/* Verify 'old' file. */
-	archive_entry_copy_pathname(ae, "old");
+	/* Verify 'old_ctime' file. */
+	archive_entry_copy_pathname(ae, "old_ctime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
+	failure("old_ctime should be excluded");
 	assertEqualInt(1, archive_matching_time_excluded(m, ae));
 	assertEqualInt(1, archive_matching_excluded(m, ae));
 
-	/* Verify 'mid' file. */
+	/* Verify 'mid_ctime' file. */
 	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "mid");
+	archive_entry_copy_pathname(ae, "mid_ctime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
+	failure("mid_ctime should be excluded");
 	assertEqualInt(1, archive_matching_time_excluded(m, ae));
 	assertEqualInt(1, archive_matching_excluded(m, ae));
 
-	/* Verify 'new' file. */
+	/* Verify 'new_ctime' file. */
 	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "new");
+	archive_entry_copy_pathname(ae, "new_ctime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should not be excluded");
+	failure("new_ctime should not be excluded");
 	assertEqualInt(0, archive_matching_time_excluded(m, ae));
 	assertEqualInt(0, archive_matching_excluded(m, ae));
 
-	/*
-	 * Test 'newer ctime than'.
-	 */
+	/* Clean up. */
+	archive_read_free(a);
+	archive_entry_free(ae);
 	archive_matching_free(m);
-	if (!assert((m = archive_matching_new()) != NULL)) {
-		assertChdir("..");
-		archive_entry_free(ae);
-		archive_read_free(a);
+}
+
+static void
+test_newer_mtime_than_file_wcs(void)
+{
+	struct archive *a;
+	struct archive_entry *ae;
+	struct archive *m;
+
+	if (!assert((m = archive_matching_new()) != NULL))
+		return;
+	if (!assert((ae = archive_entry_new()) != NULL)) {
+		archive_matching_free(m);
 		return;
 	}
-	assertUtimes("old", 10002, 0, 10002, 0);
-	sleepUntilAfter(time(NULL));
-	assertUtimes("mid", 10001, 0, 10001, 0);
-	sleepUntilAfter(time(NULL));
-	assertUtimes("new", 10000, 0, 10000, 0);
-	assertEqualIntA(m, 0, archive_matching_newer_ctime_than_w(m, L"mid"));
+	if (!assert((a = archive_read_disk_new()) != NULL)) {
+		archive_matching_free(m);
+		archive_entry_free(ae);
+		return;
+	}
 
-	/* Verify 'old' file. */
-	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "old");
+	/*
+	 * Test: newer mtime than a file specified in WCS file name.
+	 */
+	assertEqualIntA(m, 0,
+		archive_matching_newer_mtime_than_w(m, L"mid_mtime"));
+
+	/* Verify 'old_mtime' file. */
+	archive_entry_copy_pathname(ae, "old_mtime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
+	failure("old_mtime should be excluded");
 	assertEqualInt(1, archive_matching_time_excluded(m, ae));
 	assertEqualInt(1, archive_matching_excluded(m, ae));
 
-	/* Verify 'mid' file. */
+	/* Verify 'mid_mtime' file. */
 	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "mid");
+	archive_entry_copy_pathname(ae, "mid_mtime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
+	failure("mid_mtime should be excluded");
 	assertEqualInt(1, archive_matching_time_excluded(m, ae));
 	assertEqualInt(1, archive_matching_excluded(m, ae));
 
-	/* Verify 'new' file. */
+	/* Verify 'new_mtime' file. */
 	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "new");
+	archive_entry_copy_pathname(ae, "new_mtime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should not be excluded");
+	failure("new_mtime should not be excluded");
 	assertEqualInt(0, archive_matching_time_excluded(m, ae));
 	assertEqualInt(0, archive_matching_excluded(m, ae));
 
-	assertChdir("..");
+	/* Clean up. */
+	archive_read_free(a);
+	archive_entry_free(ae);
+	archive_matching_free(m);
+}
+
+static void
+test_newer_ctime_than_file_wcs(void)
+{
+	struct archive *a;
+	struct archive_entry *ae;
+	struct archive *m;
+
+	if (!assert((m = archive_matching_new()) != NULL))
+		return;
+	if (!assert((ae = archive_entry_new()) != NULL)) {
+		archive_matching_free(m);
+		return;
+	}
+	if (!assert((a = archive_read_disk_new()) != NULL)) {
+		archive_matching_free(m);
+		archive_entry_free(ae);
+		return;
+	}
+
+	/*
+	 * Test: newer ctime than a file specified in WCS file name.
+	 */
+	assertEqualIntA(m, 0,
+		archive_matching_newer_ctime_than_w(m, L"mid_ctime"));
+
+	/* Verify 'old_ctime' file. */
+	archive_entry_clear(ae);
+	archive_entry_copy_pathname(ae, "old_ctime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("old_ctime should be excluded");
+	assertEqualInt(1, archive_matching_time_excluded(m, ae));
+	assertEqualInt(1, archive_matching_excluded(m, ae));
+
+	/* Verify 'mid_ctime' file. */
+	archive_entry_clear(ae);
+	archive_entry_copy_pathname(ae, "mid_ctime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("mid_ctime should be excluded");
+	assertEqualInt(1, archive_matching_time_excluded(m, ae));
+	assertEqualInt(1, archive_matching_excluded(m, ae));
+
+	/* Verify 'new_ctime' file. */
+	archive_entry_clear(ae);
+	archive_entry_copy_pathname(ae, "new_ctime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("new_ctime should not be excluded");
+	assertEqualInt(0, archive_matching_time_excluded(m, ae));
+	assertEqualInt(0, archive_matching_excluded(m, ae));
+
 	/* Clean up. */
 	archive_read_free(a);
 	archive_entry_free(ae);
@@ -349,7 +358,7 @@ test_older_time(void)
 }
 
 static void
-test_older_than_file_mbs(void)
+test_older_mtime_than_file_mbs(void)
 {
 	struct archive *a;
 	struct archive_entry *ae;
@@ -367,91 +376,38 @@ test_older_than_file_mbs(void)
 		return;
 	}
 
-	assertMakeDir("test_older_than_file_mbs", 0777);
-	assertChdir("test_older_than_file_mbs");
-
-	assertMakeFile("old", 0666, "old");
-	sleepUntilAfter(time(NULL));
-	assertMakeFile("mid", 0666, "mid");
-	sleepUntilAfter(time(NULL));
-	assertMakeFile("new", 0666, "new");
-
 	/*
-	 * Test 'older mtime than'.
+	 * Test: older mtime than a file specified in MBS file name.
 	 */
-	assertEqualIntA(m, 0, archive_matching_older_mtime_than(m, "mid"));
+	assertEqualIntA(m, 0,
+		archive_matching_older_mtime_than(m, "mid_mtime"));
 
-	/* Verify 'old' file. */
-	archive_entry_copy_pathname(ae, "old");
+	/* Verify 'old_mtime' file. */
+	archive_entry_copy_pathname(ae, "old_mtime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should not be excluded");
+	failure("old_mtime should not be excluded");
 	assertEqualInt(0, archive_matching_time_excluded(m, ae));
 	assertEqualInt(0, archive_matching_excluded(m, ae));
 
-	/* Verify 'mid' file. */
+	/* Verify 'mid_mtime' file. */
 	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "mid");
+	archive_entry_copy_pathname(ae, "mid_mtime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
+	failure("mid_mtime should be excluded");
 	assertEqualInt(1, archive_matching_time_excluded(m, ae));
 	assertEqualInt(1, archive_matching_excluded(m, ae));
 
-	/* Verify 'new' file. */
+	/* Verify 'new_mtime' file. */
 	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "new");
+	archive_entry_copy_pathname(ae, "new_mtime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
+	failure("new_mtime should be excluded");
 	assertEqualInt(1, archive_matching_time_excluded(m, ae));
 	assertEqualInt(1, archive_matching_excluded(m, ae));
 
-	/*
-	 * Test 'older ctime than'.
-	 */
-	archive_matching_free(m);
-	if (!assert((m = archive_matching_new()) != NULL)) {
-		assertChdir("..");
-		archive_entry_free(ae);
-		archive_read_free(a);
-		return;
-	}
-	assertUtimes("old", 10002, 0, 10002, 0);
-	sleepUntilAfter(time(NULL));
-	assertUtimes("mid", 10001, 0, 10001, 0);
-	sleepUntilAfter(time(NULL));
-	assertUtimes("new", 10000, 0, 10000, 0);
-	assertEqualIntA(m, 0, archive_matching_older_ctime_than(m, "mid"));
-
-	/* Verify 'old' file. */
-	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "old");
-	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should not be excluded");
-	assertEqualInt(0, archive_matching_time_excluded(m, ae));
-	assertEqualInt(0, archive_matching_excluded(m, ae));
-
-	/* Verify 'mid' file. */
-	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "mid");
-	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
-	assertEqualInt(1, archive_matching_time_excluded(m, ae));
-	assertEqualInt(1, archive_matching_excluded(m, ae));
-
-	/* Verify 'new' file. */
-	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "new");
-	assertEqualIntA(a, ARCHIVE_OK,
-	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
-	assertEqualInt(1, archive_matching_time_excluded(m, ae));
-	assertEqualInt(1, archive_matching_excluded(m, ae));
-
-	assertChdir("..");
 	/* Clean up. */
 	archive_read_free(a);
 	archive_entry_free(ae);
@@ -459,7 +415,7 @@ test_older_than_file_mbs(void)
 }
 
 static void
-test_older_than_file_wcs(void)
+test_older_ctime_than_file_mbs(void)
 {
 	struct archive *a;
 	struct archive_entry *ae;
@@ -477,91 +433,390 @@ test_older_than_file_wcs(void)
 		return;
 	}
 
-	assertMakeDir("test_older_than_file_wcs", 0777);
-	assertChdir("test_older_than_file_wcs");
-
-	assertMakeFile("old", 0666, "old");
-	sleepUntilAfter(time(NULL));
-	assertMakeFile("mid", 0666, "mid");
-	sleepUntilAfter(time(NULL));
-	assertMakeFile("new", 0666, "new");
-
 	/*
-	 * Test 'older mtime than'.
+	 * Test: older ctime than a file specified in MBS file name.
 	 */
-	assertEqualIntA(m, 0, archive_matching_older_mtime_than_w(m, L"mid"));
+	assertEqualIntA(m, 0,
+		archive_matching_older_ctime_than(m, "mid_ctime"));
 
-	/* Verify 'old' file. */
-	archive_entry_copy_pathname(ae, "old");
+	/* Verify 'old_ctime' file. */
+	archive_entry_clear(ae);
+	archive_entry_copy_pathname(ae, "old_ctime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should not be excluded");
+	failure("old_ctime should not be excluded");
 	assertEqualInt(0, archive_matching_time_excluded(m, ae));
 	assertEqualInt(0, archive_matching_excluded(m, ae));
 
-	/* Verify 'mid' file. */
+	/* Verify 'mid_ctime' file. */
 	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "mid");
+	archive_entry_copy_pathname(ae, "mid_ctime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
+	failure("mid_ctime should be excluded");
 	assertEqualInt(1, archive_matching_time_excluded(m, ae));
 	assertEqualInt(1, archive_matching_excluded(m, ae));
 
-	/* Verify 'new' file. */
+	/* Verify 'new_ctime' file. */
 	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "new");
+	archive_entry_copy_pathname(ae, "new_ctime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
+	failure("new_ctime should be excluded");
 	assertEqualInt(1, archive_matching_time_excluded(m, ae));
 	assertEqualInt(1, archive_matching_excluded(m, ae));
 
-	/*
-	 * Test 'older ctime than'.
-	 */
+	/* Clean up. */
+	archive_read_free(a);
+	archive_entry_free(ae);
 	archive_matching_free(m);
-	if (!assert((m = archive_matching_new()) != NULL)) {
-		assertChdir("..");
-		archive_entry_free(ae);
-		archive_read_free(a);
+}
+
+static void
+test_older_mtime_than_file_wcs(void)
+{
+	struct archive *a;
+	struct archive_entry *ae;
+	struct archive *m;
+
+	if (!assert((m = archive_matching_new()) != NULL))
+		return;
+	if (!assert((ae = archive_entry_new()) != NULL)) {
+		archive_matching_free(m);
 		return;
 	}
-	assertUtimes("old", 10002, 0, 10002, 0);
-	sleepUntilAfter(time(NULL));
-	assertUtimes("mid", 10001, 0, 10001, 0);
-	sleepUntilAfter(time(NULL));
-	assertUtimes("new", 10000, 0, 10000, 0);
-	assertEqualIntA(m, 0, archive_matching_older_ctime_than_w(m, L"mid"));
+	if (!assert((a = archive_read_disk_new()) != NULL)) {
+		archive_matching_free(m);
+		archive_entry_free(ae);
+		return;
+	}
 
-	/* Verify 'old' file. */
-	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "old");
+	/*
+	 * Test: older mtime than a file specified in WCS file name.
+	 */
+	assertEqualIntA(m, 0,
+		archive_matching_older_mtime_than_w(m, L"mid_mtime"));
+
+	/* Verify 'old_mtime' file. */
+	archive_entry_copy_pathname(ae, "old_mtime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should not be excluded");
+	failure("old_mtime should not be excluded");
 	assertEqualInt(0, archive_matching_time_excluded(m, ae));
 	assertEqualInt(0, archive_matching_excluded(m, ae));
 
-	/* Verify 'mid' file. */
+	/* Verify 'mid_mtime' file. */
 	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "mid");
+	archive_entry_copy_pathname(ae, "mid_mtime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
+	failure("mid_mtime should be excluded");
 	assertEqualInt(1, archive_matching_time_excluded(m, ae));
 	assertEqualInt(1, archive_matching_excluded(m, ae));
 
-	/* Verify 'new' file. */
+	/* Verify 'new_mtime' file. */
 	archive_entry_clear(ae);
-	archive_entry_copy_pathname(ae, "new");
+	archive_entry_copy_pathname(ae, "new_mtime");
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
-	failure("It should be excluded");
+	failure("new_mtime should be excluded");
 	assertEqualInt(1, archive_matching_time_excluded(m, ae));
 	assertEqualInt(1, archive_matching_excluded(m, ae));
 
-	assertChdir("..");
+	/* Clean up. */
+	archive_read_free(a);
+	archive_entry_free(ae);
+	archive_matching_free(m);
+}
+
+static void
+test_older_ctime_than_file_wcs(void)
+{
+	struct archive *a;
+	struct archive_entry *ae;
+	struct archive *m;
+
+	if (!assert((m = archive_matching_new()) != NULL))
+		return;
+	if (!assert((ae = archive_entry_new()) != NULL)) {
+		archive_matching_free(m);
+		return;
+	}
+	if (!assert((a = archive_read_disk_new()) != NULL)) {
+		archive_matching_free(m);
+		archive_entry_free(ae);
+		return;
+	}
+
+	/*
+	 * Test: older ctime than a file specified in WCS file name.
+	 */
+	assertEqualIntA(m, 0,
+		archive_matching_older_ctime_than_w(m, L"mid_ctime"));
+
+	/* Verify 'old_ctime' file. */
+	archive_entry_clear(ae);
+	archive_entry_copy_pathname(ae, "old_ctime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("old_ctime should not be excluded");
+	assertEqualInt(0, archive_matching_time_excluded(m, ae));
+	assertEqualInt(0, archive_matching_excluded(m, ae));
+
+	/* Verify 'mid_ctime' file. */
+	archive_entry_clear(ae);
+	archive_entry_copy_pathname(ae, "mid_ctime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("mid_ctime should be excluded");
+	assertEqualInt(1, archive_matching_time_excluded(m, ae));
+	assertEqualInt(1, archive_matching_excluded(m, ae));
+
+	/* Verify 'new_ctime' file. */
+	archive_entry_clear(ae);
+	archive_entry_copy_pathname(ae, "new_ctime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("new_ctime should be excluded");
+	assertEqualInt(1, archive_matching_time_excluded(m, ae));
+	assertEqualInt(1, archive_matching_excluded(m, ae));
+
+	/* Clean up. */
+	archive_read_free(a);
+	archive_entry_free(ae);
+	archive_matching_free(m);
+}
+
+static void
+test_mtime_between_files_mbs(void)
+{
+	struct archive *a;
+	struct archive_entry *ae;
+	struct archive *m;
+
+	if (!assert((m = archive_matching_new()) != NULL))
+		return;
+	if (!assert((ae = archive_entry_new()) != NULL)) {
+		archive_matching_free(m);
+		return;
+	}
+	if (!assert((a = archive_read_disk_new()) != NULL)) {
+		archive_matching_free(m);
+		archive_entry_free(ae);
+		return;
+	}
+
+	/*
+	 * Test: mtime between  file specified in MBS file name.
+	 */
+	assertEqualIntA(m, 0,
+		archive_matching_newer_mtime_than(m, "old_mtime"));
+	assertEqualIntA(m, 0,
+		archive_matching_older_mtime_than(m, "new_mtime"));
+
+	/* Verify 'old_mtime' file. */
+	archive_entry_copy_pathname(ae, "old_mtime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("old_mtime should be excluded");
+	assertEqualInt(1, archive_matching_time_excluded(m, ae));
+	assertEqualInt(1, archive_matching_excluded(m, ae));
+
+	/* Verify 'mid_mtime' file. */
+	archive_entry_clear(ae);
+	archive_entry_copy_pathname(ae, "mid_mtime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("mid_mtime should not be excluded");
+	assertEqualInt(0, archive_matching_time_excluded(m, ae));
+	assertEqualInt(0, archive_matching_excluded(m, ae));
+
+	/* Verify 'new_mtime' file. */
+	archive_entry_clear(ae);
+	archive_entry_copy_pathname(ae, "new_mtime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("new_mtime should be excluded");
+	assertEqualInt(1, archive_matching_time_excluded(m, ae));
+	assertEqualInt(1, archive_matching_excluded(m, ae));
+
+	/* Clean up. */
+	archive_read_free(a);
+	archive_entry_free(ae);
+	archive_matching_free(m);
+}
+
+static void
+test_mtime_between_files_wcs(void)
+{
+	struct archive *a;
+	struct archive_entry *ae;
+	struct archive *m;
+
+	if (!assert((m = archive_matching_new()) != NULL))
+		return;
+	if (!assert((ae = archive_entry_new()) != NULL)) {
+		archive_matching_free(m);
+		return;
+	}
+	if (!assert((a = archive_read_disk_new()) != NULL)) {
+		archive_matching_free(m);
+		archive_entry_free(ae);
+		return;
+	}
+
+	/*
+	 * Test: mtime between  file specified in WCS file name.
+	 */
+	assertEqualIntA(m, 0,
+		archive_matching_newer_mtime_than_w(m, L"old_mtime"));
+	assertEqualIntA(m, 0,
+		archive_matching_older_mtime_than_w(m, L"new_mtime"));
+
+	/* Verify 'old_mtime' file. */
+	archive_entry_copy_pathname(ae, "old_mtime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("old_mtime should be excluded");
+	assertEqualInt(1, archive_matching_time_excluded(m, ae));
+	assertEqualInt(1, archive_matching_excluded(m, ae));
+
+	/* Verify 'mid_mtime' file. */
+	archive_entry_clear(ae);
+	archive_entry_copy_pathname(ae, "mid_mtime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("mid_mtime should not be excluded");
+	assertEqualInt(0, archive_matching_time_excluded(m, ae));
+	assertEqualInt(0, archive_matching_excluded(m, ae));
+
+	/* Verify 'new_mtime' file. */
+	archive_entry_clear(ae);
+	archive_entry_copy_pathname(ae, "new_mtime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("new_mtime should be excluded");
+	assertEqualInt(1, archive_matching_time_excluded(m, ae));
+	assertEqualInt(1, archive_matching_excluded(m, ae));
+
+	/* Clean up. */
+	archive_read_free(a);
+	archive_entry_free(ae);
+	archive_matching_free(m);
+}
+
+static void
+test_ctime_between_files_mbs(void)
+{
+	struct archive *a;
+	struct archive_entry *ae;
+	struct archive *m;
+
+	if (!assert((m = archive_matching_new()) != NULL))
+		return;
+	if (!assert((ae = archive_entry_new()) != NULL)) {
+		archive_matching_free(m);
+		return;
+	}
+	if (!assert((a = archive_read_disk_new()) != NULL)) {
+		archive_matching_free(m);
+		archive_entry_free(ae);
+		return;
+	}
+
+	/*
+	 * Test: ctime between files specified in MBS file name.
+	 */
+	assertEqualIntA(m, 0,
+		archive_matching_newer_ctime_than(m, "old_ctime"));
+	assertEqualIntA(m, 0,
+		archive_matching_older_ctime_than(m, "new_ctime"));
+
+	/* Verify 'old_ctime' file. */
+	archive_entry_copy_pathname(ae, "old_ctime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("old_ctime should be excluded");
+	assertEqualInt(1, archive_matching_time_excluded(m, ae));
+	assertEqualInt(1, archive_matching_excluded(m, ae));
+
+	/* Verify 'mid_ctime' file. */
+	archive_entry_clear(ae);
+	archive_entry_copy_pathname(ae, "mid_ctime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("mid_ctime should not be excluded");
+	assertEqualInt(0, archive_matching_time_excluded(m, ae));
+	assertEqualInt(0, archive_matching_excluded(m, ae));
+
+	/* Verify 'new_ctime' file. */
+	archive_entry_clear(ae);
+	archive_entry_copy_pathname(ae, "new_ctime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("new_ctime should be excluded");
+	assertEqualInt(1, archive_matching_time_excluded(m, ae));
+	assertEqualInt(1, archive_matching_excluded(m, ae));
+
+	/* Clean up. */
+	archive_read_free(a);
+	archive_entry_free(ae);
+	archive_matching_free(m);
+}
+
+static void
+test_ctime_between_files_wcs(void)
+{
+	struct archive *a;
+	struct archive_entry *ae;
+	struct archive *m;
+
+	if (!assert((m = archive_matching_new()) != NULL))
+		return;
+	if (!assert((ae = archive_entry_new()) != NULL)) {
+		archive_matching_free(m);
+		return;
+	}
+	if (!assert((a = archive_read_disk_new()) != NULL)) {
+		archive_matching_free(m);
+		archive_entry_free(ae);
+		return;
+	}
+
+	/*
+	 * Test: ctime between files specified in WCS file name.
+	 */
+	assertEqualIntA(m, 0,
+		archive_matching_newer_ctime_than_w(m, L"old_ctime"));
+	assertEqualIntA(m, 0,
+		archive_matching_older_ctime_than_w(m, L"new_ctime"));
+
+	/* Verify 'old_ctime' file. */
+	archive_entry_copy_pathname(ae, "old_ctime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("old_ctime should be excluded");
+	assertEqualInt(1, archive_matching_time_excluded(m, ae));
+	assertEqualInt(1, archive_matching_excluded(m, ae));
+
+	/* Verify 'mid_ctime' file. */
+	archive_entry_clear(ae);
+	archive_entry_copy_pathname(ae, "mid_ctime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("mid_ctime should not be excluded");
+	assertEqualInt(0, archive_matching_time_excluded(m, ae));
+	assertEqualInt(0, archive_matching_excluded(m, ae));
+
+	/* Verify 'new_ctime' file. */
+	archive_entry_clear(ae);
+	archive_entry_copy_pathname(ae, "new_ctime");
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_entry_from_file(a, ae, -1, NULL));
+	failure("new_ctime should be excluded");
+	assertEqualInt(1, archive_matching_time_excluded(m, ae));
+	assertEqualInt(1, archive_matching_excluded(m, ae));
+
 	/* Clean up. */
 	archive_read_free(a);
 	archive_entry_free(ae);
@@ -618,6 +873,10 @@ excluded(struct archive *m)
 	assertEqualInt(1, archive_matching_time_excluded(m, ae));
 	assertEqualInt(1, archive_matching_excluded(m, ae));
 
+	/*
+	 * "file4" is not registered, that sort of a file should not be
+	 * excluded with any mtime.
+	 */
 	archive_entry_copy_pathname(ae, "file4");
 	archive_entry_set_mtime(ae, 7879, 999);
 	failure("It should not be excluded");
@@ -638,49 +897,7 @@ excluded(struct archive *m)
 }
 
 static void
-test_newer_pathname_mbs(void)
-{
-	struct archive *m;
-
-	if (!assert((m = archive_matching_new()) != NULL))
-		return;
-
-	assertEqualIntA(m, 0,
-	    archive_matching_pathname_newer_mtime(m, "file1", 7880, 0));
-	assertEqualIntA(m, 0,
-	    archive_matching_pathname_newer_mtime(m, "file2", 1, 0));
-	assertEqualIntA(m, 0,
-	    archive_matching_pathname_newer_mtime(m, "file3", 99999, 0));
-
-	excluded(m);
-
-	/* Clean up. */
-	archive_matching_free(m);
-}
-
-static void
-test_newer_pathname_wcs(void)
-{
-	struct archive *m;
-
-	if (!assert((m = archive_matching_new()) != NULL))
-		return;
-
-	assertEqualIntA(m, 0,
-	    archive_matching_pathname_newer_mtime_w(m, L"file1", 7880, 0));
-	assertEqualIntA(m, 0,
-	    archive_matching_pathname_newer_mtime_w(m, L"file2", 1, 0));
-	assertEqualIntA(m, 0,
-	    archive_matching_pathname_newer_mtime_w(m, L"file3", 99999, 0));
-
-	excluded(m);
-
-	/* Clean up. */
-	archive_matching_free(m);
-}
-
-static void
-test_newer_archive_entry(void)
+test_pathname_newer_mtime(void)
 {
 	struct archive_entry *ae;
 	struct archive *m;
@@ -694,13 +911,13 @@ test_newer_archive_entry(void)
 
 	archive_entry_copy_pathname(ae, "file1");
 	archive_entry_set_mtime(ae, 7880, 0);
-	assertEqualIntA(m, 0, archive_matching_pathname_newer_mtime_ae(m, ae));
+	assertEqualIntA(m, 0, archive_matching_pathname_newer_mtime(m, ae));
 	archive_entry_copy_pathname(ae, "file2");
 	archive_entry_set_mtime(ae, 1, 0);
-	assertEqualIntA(m, 0, archive_matching_pathname_newer_mtime_ae(m, ae));
+	assertEqualIntA(m, 0, archive_matching_pathname_newer_mtime(m, ae));
 	archive_entry_copy_pathname(ae, "file3");
 	archive_entry_set_mtime(ae, 99999, 0);
-	assertEqualIntA(m, 0, archive_matching_pathname_newer_mtime_ae(m, ae));
+	assertEqualIntA(m, 0, archive_matching_pathname_newer_mtime(m, ae));
 
 	excluded(m);
 
@@ -711,13 +928,61 @@ test_newer_archive_entry(void)
 
 DEFINE_TEST(test_archive_matching_time)
 {
+	struct stat st;
+
+	/* Test: matching newer times. */
 	test_newer_time();
-	test_newer_than_file_mbs();
-	test_newer_than_file_wcs();
+	/* Test: matching older times. */
 	test_older_time();
-	test_older_than_file_mbs();
-	test_older_than_file_wcs();
-	test_newer_pathname_mbs();
-	test_newer_pathname_wcs();
-	test_newer_archive_entry();
+
+	/*
+	 * Create sample files for tests matching mtime.
+	 * ctimes of those files may be all the same or the ctime of
+	 * new_mtime may be older than old_mtime.
+	 */
+	assertMakeFile("new_mtime", 0666, "new");
+	assertUtimes("new_mtime", 10002, 0, 10002, 0);
+	assertMakeFile("mid_mtime", 0666, "mid");
+	assertUtimes("mid_mtime", 10001, 0, 10001, 0);
+	assertMakeFile("old_mtime", 0666, "old");
+	assertUtimes("old_mtime", 10000, 0, 10000, 0);
+
+	/*
+	 * Create sample files for tests matching ctime.
+	 * the mtime of mid_ctime is older than old_ctime and also the mtime
+	 * of new_ctime is older than both mid_ctime and old_ctime.
+	 */
+	assertMakeFile("old_ctime", 0666, "old");
+	assertUtimes("old_ctime", 10002, 0, 10002, 0);
+	assertEqualInt(0, stat("old_ctime", &st));
+	sleepUntilAfter(st.st_ctime);
+	assertMakeFile("mid_ctime", 0666, "mid");
+	assertUtimes("mid_ctime", 10001, 0, 10001, 0);
+	assertEqualInt(0, stat("mid_ctime", &st));
+	sleepUntilAfter(st.st_ctime);
+	assertMakeFile("new_ctime", 0666, "new");
+	assertUtimes("new_ctime", 10000, 0, 10000, 0);
+
+	/*
+	 * Test: matching mtime which indicated by files on the disk.
+	 */
+	test_newer_mtime_than_file_mbs();
+	test_newer_mtime_than_file_wcs();
+	test_older_mtime_than_file_mbs();
+	test_older_mtime_than_file_wcs();
+	test_mtime_between_files_mbs();
+	test_mtime_between_files_wcs();
+
+	/*
+	 * Test: matching ctime which indicated by files on the disk.
+	 */
+	test_newer_ctime_than_file_mbs();
+	test_newer_ctime_than_file_wcs();
+	test_older_ctime_than_file_mbs();
+	test_older_ctime_than_file_wcs();
+	test_ctime_between_files_mbs();
+	test_ctime_between_files_wcs();
+
+	/* Test: matching both pathname and mtime. */
+	test_pathname_newer_mtime();
 }

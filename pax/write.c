@@ -252,13 +252,13 @@ pax_mode_append(struct bsdpax *bsdpax)
 			    "Cannot append to compressed archive.");
 		}
 		if (bsdpax->option_keep_newer_mtime_files_br) {
-			if (archive_matching_pathname_newer_mtime_ae(
+			if (archive_matching_pathname_newer_mtime(
 			    bsdpax->matching, entry) != ARCHIVE_OK)
 				lafe_errc(1, 0, "Error : %s",
 				    archive_error_string(bsdpax->matching));
 		}
 		if (bsdpax->option_keep_newer_mtime_files_ar) {
-			if (archive_matching_pathname_newer_mtime_ae(
+			if (archive_matching_pathname_newer_mtime(
 			    bsdpax->matching2, entry) != ARCHIVE_OK)
 				lafe_errc(1, 0, "Error : %s",
 				    archive_error_string(bsdpax->matching2));
@@ -617,13 +617,13 @@ write_hierarchy(struct bsdpax *bsdpax, struct archive *a, const char *path)
 
 		/* Update timestamps archived in the archive file. */ 
 		if (bsdpax->option_keep_newer_mtime_files_br) {
-			if (archive_matching_pathname_newer_mtime_ae(
+			if (archive_matching_pathname_newer_mtime(
 			    bsdpax->matching, entry) != ARCHIVE_OK)
 				lafe_errc(1, 0, "Error : %s",
 				    archive_error_string(bsdpax->matching));
 		}
 		if (bsdpax->option_keep_newer_mtime_files_ar) {
-			if (archive_matching_pathname_newer_mtime_ae(
+			if (archive_matching_pathname_newer_mtime(
 			    bsdpax->matching2, entry) != ARCHIVE_OK)
 				lafe_errc(1, 0, "Error : %s",
 				    archive_error_string(bsdpax->matching2));

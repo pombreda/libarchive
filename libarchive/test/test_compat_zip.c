@@ -348,6 +348,94 @@ test_compat_zip_5(void)
 	free(p);
 }
 
+/*
+ * Issue 225: Errors extracting MSDOS Zip archives with directories.
+ */
+static void
+compat_zip_6_verify(struct archive *a)
+{
+	struct archive_entry *ae;
+
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualString("New Folder/New Folder/", archive_entry_pathname(ae));
+	assertEqualInt(AE_IFDIR, archive_entry_filetype(ae));
+	/* Zip timestamps are local time, so vary by time zone. */
+	/* TODO: A more complex assert would work here; we could
+	   verify that it's within +/- 24 hours of a particular value. */
+	/* assertEqualInt(1327314468, archive_entry_mtime(ae)); */
+	assertEqualInt(0, archive_entry_size(ae));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualString("New Folder/New Folder/New Text Document.txt", archive_entry_pathname(ae));
+	assertEqualInt(AE_IFREG, archive_entry_filetype(ae));
+	/* Zip timestamps are local time, so vary by time zone. */
+	/* assertEqualInt(1327314476, archive_entry_mtime(ae)); */
+	assertEqualInt(11, archive_entry_size(ae));
+	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
+}
+
+static void
+test_compat_zip_6(void)
+{
+	const char *refname = "test_compat_zip_6.zip";
+	struct archive *a;
+	void *p;
+	size_t s;
+
+	extract_reference_file(refname);
+	p = slurpfile(&s, refname);
+
+	assert((a = archive_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, read_open_memory_seek(a, p, s, 7));
+	compat_zip_6_verify(a);
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_free(a));
+
+	assert((a = archive_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, read_open_memory(a, p, s, 7));
+	compat_zip_6_verify(a);
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_free(a));
+	free(p);
+}
+
+/*
+ * Issue 226: Try to reproduce hang when reading archives where the
+ * length-at-end marker ends exactly on a block boundary.
+ */
+static void
+test_compat_zip_7(void)
+{
+	const char *refname = "test_compat_zip_7.xps";
+	struct archive *a;
+	struct archive_entry *ae;
+	void *p;
+	size_t s;
+	int i;
+
+	extract_reference_file(refname);
+	p = slurpfile(&s, refname);
+
+	for (i = 1; i < 1000; ++i) {
+		assert((a = archive_read_new()) != NULL);
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_zip(a));
+		assertEqualIntA(a, ARCHIVE_OK, read_open_memory_minimal(a, p, s, i));
+
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_data_skip(a));
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_data_skip(a));
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_data_skip(a));
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_data_skip(a));
+
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_free(a));
+	}
+	free(p);
+}
+
 DEFINE_TEST(test_compat_zip)
 {
 	test_compat_zip_1();
@@ -355,6 +443,8 @@ DEFINE_TEST(test_compat_zip)
 	test_compat_zip_3();
 	test_compat_zip_4();
 	test_compat_zip_5();
+	test_compat_zip_6();
+	test_compat_zip_7();
 }
 
 
